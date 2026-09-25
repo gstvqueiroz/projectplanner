@@ -54,7 +54,7 @@ public partial class MainWindow : Window
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        if (_fechamentoConfirmado || DataContext is not MainWindowViewModel { TemAlteracoesNaoSalvas: true } vm)
+        if (_fechamentoConfirmado || DataContext is not MainWindowViewModel { PossuiAlteracoesNaoSalvas: true } vm)
             return;
 
         e.Cancel = true;

@@ -4,7 +4,7 @@
         xmlns:v="using:ProjectPlanner.App.Views"
         x:Class="ProjectPlanner.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/ProjectPlanner.ico"
         Title="{Binding Titulo}"
         Width="1340" Height="700" MinWidth="900" MinHeight="400">
 
@@ -16,6 +16,7 @@
                 <Button Content="Novo" Command="{Binding NovoProjetoCommand}" />
                 <Button Content="Abrir…" Command="{Binding AbrirProjetoCommand}" />
                 <Button Content="Salvar" Command="{Binding SalvarProjetoCommand}" />
+                <Button Content="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
                 <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <Button Content="Adicionar tarefa" Command="{Binding AdicionarTarefaCommand}" />
                 <Button Content="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />

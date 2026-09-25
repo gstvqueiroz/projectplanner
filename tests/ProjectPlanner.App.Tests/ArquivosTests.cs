@@ -32,8 +32,8 @@ public class ArquivosTests
         _ambiente.Repositorio.Salvos.Should().ContainSingle()
             .Which.Should().Be((_vm.Cronograma, Caminho));
         _vm.CaminhoArquivo.Should().Be(Caminho);
-        _vm.TemAlteracoesNaoSalvas.Should().BeFalse();
-        _vm.Titulo.Should().Be("Projeto sem título — ProjectPlanner");
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
+        _vm.Titulo.Should().Be("obra — ProjectPlanner");
         _vm.Mensagem.Should().Be($"Projeto salvo em {Caminho}");
     }
 
@@ -58,7 +58,7 @@ public class ArquivosTests
         await _vm.SalvarProjetoCommand.ExecuteAsync(null);
 
         _ambiente.Repositorio.Salvos.Should().BeEmpty();
-        _vm.TemAlteracoesNaoSalvas.Should().BeTrue();
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
     }
 
     [Fact]
@@ -71,8 +71,8 @@ public class ArquivosTests
         var salvar = () => _vm.SalvarProjetoCommand.ExecuteAsync(null);
 
         await salvar.Should().NotThrowAsync();
-        _vm.Mensagem.Should().Be("Não foi possível salvar o projeto. Disco cheio.");
-        _vm.TemAlteracoesNaoSalvas.Should().BeTrue();
+        _vm.Mensagem.Should().Be("Não foi possível salvar o projeto. Erro de leitura ou gravação: Disco cheio.");
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
         _vm.CaminhoArquivo.Should().BeNull();
     }
 
@@ -96,7 +96,7 @@ public class ArquivosTests
         _vm.CaminhoArquivo.Should().Be(Caminho);
         _vm.Tarefas.Select(t => (t.Numero, t.Nome, t.Predecessoras)).Should().Equal((1, "X", ""), (2, "Y", "1II+1"));
         _vm.Tarefas[1].InicioMaisCedo.Should().Be(Ambiente.DiaUtil(1));
-        _vm.TemAlteracoesNaoSalvas.Should().BeFalse();
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class ArquivosTests
 
         _ambiente.Repositorio.Salvos.Should().BeEmpty();
         _vm.Tarefas.Should().BeEmpty();
-        _vm.TemAlteracoesNaoSalvas.Should().BeFalse();
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class ArquivosTests
         await _vm.NovoProjetoCommand.ExecuteAsync(null);
 
         _vm.Tarefas.Should().ContainSingle();
-        _vm.TemAlteracoesNaoSalvas.Should().BeTrue();
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
     }
 
     [Fact]

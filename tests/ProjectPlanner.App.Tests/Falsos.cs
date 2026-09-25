@@ -26,6 +26,42 @@ public sealed class RepositorioFalso : IProjetoRepository
     }
 }
 
+/// <summary>
+/// Repositório em memória que guarda só os dados do projeto, como o arquivo faria, e reconstrói um
+/// cronograma novo a cada Abrir (nunca devolve o mesmo objeto que recebeu).
+/// </summary>
+public sealed class RepositorioEmMemoria : IProjetoRepository
+{
+    private readonly Dictionary<string, Func<Cronograma>> _arquivos = [];
+
+    public IReadOnlyCollection<string> Arquivos => _arquivos.Keys;
+
+    public void Salvar(Cronograma cronograma, string caminhoArquivo)
+    {
+        var (id, nome, inicio) = (cronograma.Id, cronograma.Nome, cronograma.DataInicio);
+        var tarefas = cronograma.Tarefas.Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido)).ToList();
+        var vinculos = cronograma.Predecessoras.ToList();
+        _arquivos[caminhoArquivo] = () =>
+        {
+            var reconstruido = new Cronograma(id, nome, inicio);
+            foreach (var t in tarefas)
+            {
+                var tarefa = new Tarefa(t.Id, t.Nome, t.DataInicio, t.Duracao);
+                tarefa.AtualizarPercentualConcluido(t.PercentualConcluido);
+                reconstruido.AdicionarTarefa(tarefa);
+            }
+            foreach (var vinculo in vinculos)
+                reconstruido.AdicionarPredecessora(vinculo);
+            return reconstruido;
+        };
+    }
+
+    public Cronograma Abrir(string caminhoArquivo) =>
+        _arquivos.TryGetValue(caminhoArquivo, out var abrir)
+            ? abrir()
+            : throw new FileNotFoundException("Não existe.", caminhoArquivo);
+}
+
 /// <summary>Diálogos com respostas programadas.</summary>
 public sealed class DialogosFalsos : IDialogosService
 {

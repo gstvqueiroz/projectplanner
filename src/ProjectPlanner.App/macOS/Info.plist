@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Modelo do Info.plist do ProjectPlanner.app; o scripts/publicar.sh troca __VERSAO__ pela versão do Directory.Build.props. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>ProjectPlanner</string>
+  <key>CFBundleDisplayName</key><string>ProjectPlanner</string>
+  <key>CFBundleIdentifier</key><string>com.gustavodossantosqueiroz.projectplanner</string>
+  <key>CFBundleExecutable</key><string>ProjectPlanner</string>
+  <key>CFBundleIconFile</key><string>ProjectPlanner</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>__VERSAO__</string>
+  <key>CFBundleVersion</key><string>__VERSAO__</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>© 2026 gustavodossantosqueiroz</string>
+</dict>
+</plist>

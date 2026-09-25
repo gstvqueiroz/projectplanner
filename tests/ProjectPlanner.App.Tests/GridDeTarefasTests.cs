@@ -14,7 +14,7 @@ public class GridDeTarefasTests
         vm.NomeProjeto.Should().Be("Projeto sem título");
         vm.InicioProjeto.Should().Be(Ambiente.Segunda);
         vm.Tarefas.Should().BeEmpty();
-        vm.TemAlteracoesNaoSalvas.Should().BeFalse();
+        vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
         vm.Titulo.Should().Be("Projeto sem título — ProjectPlanner");
     }
 
@@ -32,8 +32,8 @@ public class GridDeTarefasTests
         vm.Tarefas[1].Duracao.Should().Be(1);
         vm.Tarefas[1].DataInicio.Should().Be(Ambiente.Segunda);
         vm.TarefaSelecionada.Should().BeSameAs(vm.Tarefas[1]);
-        vm.TemAlteracoesNaoSalvas.Should().BeTrue();
-        vm.Titulo.Should().EndWith(" * — ProjectPlanner");
+        vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
+        vm.Titulo.Should().Be("*Projeto sem título — ProjectPlanner");
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class GridDeTarefasTests
 
         vm.NomeProjeto = "Obra da sede";
 
-        vm.Titulo.Should().Be("Obra da sede * — ProjectPlanner");
+        vm.Titulo.Should().Be("*Obra da sede — ProjectPlanner");
     }
 
     [Fact]

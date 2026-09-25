@@ -480,3 +480,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Executáveis gerados por scripts/publicar.sh
+publicacao/
+# ...exceto os perfis de publicação do app (não têm senhas; ver PUBLISHING.md)
+!src/ProjectPlanner.App/Properties/PublishProfiles/*.pubxml

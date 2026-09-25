@@ -5,6 +5,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- O executável se chama ProjectPlanner(.exe); versão, autor e produto vêm do Directory.Build.props. -->
+    <AssemblyName>ProjectPlanner</AssemblyName>
+    <AssemblyTitle>ProjectPlanner</AssemblyTitle>
+    <Description>Planejamento de projetos com cronograma, caminho crítico e gráfico de Gantt.</Description>
+    <ApplicationIcon>Assets\ProjectPlanner.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +30,14 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
   </ItemGroup>
+
+  <!-- Na publicação (ver PUBLISHING.md), só o que o usuário precisa: sem símbolos de depuração (.pdb),
+       nem os do Core/Data nem os nativos que vêm nos pacotes do SkiaSharp. -->
+  <Target Name="RemoverSimbolosDaPublicacao" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\ProjectPlanner.Core\ProjectPlanner.Core.csproj" />

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Data.Common;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Models;
@@ -51,11 +50,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     /// <summary>Arquivo do projeto; nulo enquanto ele nunca foi salvo.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Titulo))]
     public partial string? CaminhoArquivo { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Titulo))]
-    public partial bool TemAlteracoesNaoSalvas { get; private set; }
+    public partial bool PossuiAlteracoesNaoSalvas { get; private set; }
 
     /// <summary>Texto da barra de status: o último aviso ou erro.</summary>
     [ObservableProperty]
@@ -65,7 +65,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [ObservableProperty]
     public partial DateTime? TerminoProjeto { get; private set; }
 
-    public string Titulo => $"{_cronograma.Nome}{(TemAlteracoesNaoSalvas ? " *" : "")} — ProjectPlanner";
+    /// <summary>"*obra — ProjectPlanner": o arquivo (ou o nome do projeto, se nunca foi salvo), com * quando há alterações.</summary>
+    public string Titulo => $"{(PossuiAlteracoesNaoSalvas ? "*" : "")}{NomeParaExibir} — ProjectPlanner";
+
+    private string NomeParaExibir =>
+        CaminhoArquivo is null ? _cronograma.Nome : Path.GetFileNameWithoutExtension(CaminhoArquivo);
 
     public string NomeProjeto
     {
@@ -115,14 +119,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             Carregar(_repositorio.Abrir(caminho), caminho);
             Mensagem = $"Projeto aberto: {caminho}";
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or DbException)
+        catch (Exception ex)
         {
-            Mensagem = $"Não foi possível abrir o projeto. {ex.Message}";
+            // Qualquer falha de arquivo vira mensagem; o projeto atual continua aberto.
+            Mensagem = $"Não foi possível abrir o projeto. {MensagensDeErro.Descrever(ex)}";
         }
     }
 
     [RelayCommand]
     private Task SalvarProjeto() => SalvarAsync();
+
+    [RelayCommand]
+    private Task SalvarComoProjeto() => SalvarAsync(perguntarOndeSalvar: true);
 
     [RelayCommand]
     private void AdicionarTarefa()
@@ -157,11 +165,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             Mensagem = "Cronograma recalculado.";
     }
 
-    /// <summary>Salva no arquivo atual ou, se o projeto nunca foi salvo, pergunta onde salvar.</summary>
+    /// <summary>
+    /// Salva no arquivo atual. Pergunta onde salvar quando o projeto nunca foi salvo ou quando
+    /// <paramref name="perguntarOndeSalvar"/> é verdadeiro ("Salvar como"); o arquivo escolhido
+    /// passa a ser o do projeto.
+    /// </summary>
     /// <returns>Se o projeto foi salvo.</returns>
-    public async Task<bool> SalvarAsync()
+    public async Task<bool> SalvarAsync(bool perguntarOndeSalvar = false)
     {
-        var caminho = CaminhoArquivo ?? await _dialogos.EscolherArquivoParaSalvarAsync(_cronograma.Nome);
+        var caminho = perguntarOndeSalvar || CaminhoArquivo is null
+            ? await _dialogos.EscolherArquivoParaSalvarAsync(NomeParaExibir)
+            : CaminhoArquivo;
         if (caminho is null)
             return false;
 
@@ -169,14 +183,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         {
             _repositorio.Salvar(_cronograma, caminho);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DbException)
+        catch (Exception ex)
         {
-            Mensagem = $"Não foi possível salvar o projeto. {ex.Message}";
+            // Sem permissão, disco cheio, arquivo em uso...: vira mensagem, e as alterações continuam pendentes.
+            Mensagem = $"Não foi possível salvar o projeto. {MensagensDeErro.Descrever(ex)}";
             return false;
         }
 
         CaminhoArquivo = caminho;
-        TemAlteracoesNaoSalvas = false;
+        PossuiAlteracoesNaoSalvas = false;
         Mensagem = $"Projeto salvo em {caminho}";
         return true;
     }
@@ -188,10 +203,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// <returns>Se pode seguir e descartar o projeto atual.</returns>
     public async Task<bool> PodeDescartarAlteracoesAsync()
     {
-        if (!TemAlteracoesNaoSalvas)
+        if (!PossuiAlteracoesNaoSalvas)
             return true;
 
-        return await _dialogos.PerguntarSobreAlteracoesPendentesAsync(_cronograma.Nome) switch
+        return await _dialogos.PerguntarSobreAlteracoesPendentesAsync(NomeParaExibir) switch
         {
             RespostaAlteracoesPendentes.Salvar => await SalvarAsync(),
             RespostaAlteracoesPendentes.NaoSalvar => true,
@@ -240,7 +255,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     private void MarcarAlteracao()
     {
-        TemAlteracoesNaoSalvas = true;
+        PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
         Mensagem = "";
         Recalcular();
@@ -277,7 +292,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
         TarefaSelecionada = null;
         CaminhoArquivo = caminho;
-        TemAlteracoesNaoSalvas = false;
+        PossuiAlteracoesNaoSalvas = false;
         Mensagem = "";
         LimparRecusas();
         OnPropertyChanged(nameof(NomeProjeto));

@@ -32,7 +32,7 @@ public class PredecessorasNaGridTests
             new Predecessora(_b.Tarefa.Id, _c.Tarefa.Id, TipoDependencia.SS, 2));
         _c.Predecessoras.Should().Be("1; 2II+2", "a coluna volta na forma canônica");
         _c.InicioMaisCedo.Should().Be(Ambiente.DiaUtil(5), "A (dias 0 a 4) → TI → dia 5; B II+2 → dia 2");
-        _vm.TemAlteracoesNaoSalvas.Should().BeTrue();
+        _vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
     }
 
     [Fact]

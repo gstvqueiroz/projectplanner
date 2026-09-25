@@ -18,6 +18,17 @@ public class Cronograma
     private readonly List<Tarefa> _tarefas = [];
     private readonly List<Predecessora> _predecessoras = [];
 
+    public Cronograma(DateTime dataInicio)
+    {
+        DataInicio = DiasUteis.ProximoOuMesmo(dataInicio.Date);
+    }
+
+    /// <summary>
+    /// Início do projeto: no cálculo do cronograma, nenhuma tarefa começa antes dele. Como nas
+    /// tarefas, o horário é descartado e um fim de semana vai para a segunda-feira seguinte.
+    /// </summary>
+    public DateTime DataInicio { get; }
+
     /// <summary>Tarefas na ordem em que foram adicionadas.</summary>
     public IReadOnlyCollection<Tarefa> Tarefas => _tarefas.AsReadOnly();
 

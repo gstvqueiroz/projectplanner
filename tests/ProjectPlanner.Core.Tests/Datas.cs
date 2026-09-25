@@ -20,4 +20,35 @@ public static class Datas
     public static readonly DateTime UltimaSegunda = new(9999, 12, 27);
 
     public static TheoryData<DateTime> FimDeSemana => new() { Sabado, Domingo };
+
+    // Conversões independentes do código de produção, para conferir o CPM em números de dia útil.
+
+    /// <summary>Data do dia útil <paramref name="numero"/>, contando <see cref="Segunda"/> como dia 0.</summary>
+    public static DateTime DiaUtil(int numero)
+    {
+        var data = Segunda;
+        while (numero > 0)
+        {
+            data = data.AddDays(1);
+            if (!EhFimDeSemana(data))
+                numero--;
+        }
+        return data;
+    }
+
+    /// <summary>Número do dia útil de <paramref name="data"/>, contando <see cref="Segunda"/> como dia 0.</summary>
+    public static int NumeroDoDiaUtil(DateTime data)
+    {
+        if (data < Segunda || EhFimDeSemana(data))
+            throw new ArgumentOutOfRangeException(nameof(data), data, "Esperado um dia útil a partir de Segunda.");
+
+        var numero = 0;
+        for (var dia = Segunda.AddDays(1); dia <= data; dia = dia.AddDays(1))
+            if (!EhFimDeSemana(dia))
+                numero++;
+        return numero;
+    }
+
+    private static bool EhFimDeSemana(DateTime data) =>
+        data.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 }

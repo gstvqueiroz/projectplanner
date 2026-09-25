@@ -17,6 +17,13 @@ namespace ProjectPlanner.Core;
 /// término. Alterar o término recalcula a duração, e um término anterior ao início é rejeitado.</item>
 /// </list>
 /// Toda violação lança <see cref="DomainValidationException"/> e deixa a tarefa inalterada.
+/// <para>
+/// <see cref="DataInicio"/> e <see cref="DataTermino"/> são as datas planejadas, informadas pelo
+/// usuário. As datas do caminho crítico (<see cref="InicioMaisCedo"/>, <see cref="TerminoMaisCedo"/>,
+/// <see cref="InicioMaisTarde"/>, <see cref="TerminoMaisTarde"/>) e a <see cref="Folga"/> são o
+/// resultado do último <see cref="CalculadoraCronograma.Calcular"/>. Elas ficam nulas até o primeiro
+/// cálculo e não se atualizam sozinhas quando a tarefa ou o cronograma mudam: é preciso recalcular.
+/// </para>
 /// </remarks>
 public class Tarefa
 {
@@ -45,6 +52,24 @@ public class Tarefa
 
     /// <summary>Percentual concluído, de 0 a 100.</summary>
     public int PercentualConcluido { get; private set; }
+
+    /// <summary>Início mais cedo (ES), do último cálculo do cronograma.</summary>
+    public DateTime? InicioMaisCedo { get; private set; }
+
+    /// <summary>Término mais cedo (EF), do último cálculo do cronograma.</summary>
+    public DateTime? TerminoMaisCedo { get; private set; }
+
+    /// <summary>Início mais tarde (LS), do último cálculo do cronograma.</summary>
+    public DateTime? InicioMaisTarde { get; private set; }
+
+    /// <summary>Término mais tarde (LF), do último cálculo do cronograma.</summary>
+    public DateTime? TerminoMaisTarde { get; private set; }
+
+    /// <summary>Folga total em dias úteis: LS − ES (igual a LF − EF). Nunca é negativa.</summary>
+    public int? Folga { get; private set; }
+
+    /// <summary>Se a tarefa é crítica (folga zero). Falso antes do primeiro cálculo.</summary>
+    public bool EhCritica => Folga == 0;
 
     public void Renomear(string nome) => Nome = ValidarNome(nome);
 
@@ -83,6 +108,16 @@ public class Tarefa
                 $"O percentual concluído deve estar entre 0 e 100 (informado: {percentual}).");
 
         PercentualConcluido = percentual;
+    }
+
+    internal void DefinirDatasCalculadas(DateTime inicioMaisCedo, DateTime terminoMaisCedo,
+        DateTime inicioMaisTarde, DateTime terminoMaisTarde, int folga)
+    {
+        InicioMaisCedo = inicioMaisCedo;
+        TerminoMaisCedo = terminoMaisCedo;
+        InicioMaisTarde = inicioMaisTarde;
+        TerminoMaisTarde = terminoMaisTarde;
+        Folga = folga;
     }
 
     private static string ValidarNome(string nome)

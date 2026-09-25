@@ -8,7 +8,7 @@ public sealed class MontadorCronograma
 {
     private readonly Dictionary<string, Tarefa> _tarefas = [];
 
-    public Cronograma Cronograma { get; } = new(Datas.Segunda);
+    public Cronograma Cronograma { get; } = new("Projeto", Datas.Segunda);
 
     public Tarefa this[string nome] => _tarefas[nome];
 

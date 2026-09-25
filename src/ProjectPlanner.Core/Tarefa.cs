@@ -28,8 +28,17 @@ namespace ProjectPlanner.Core;
 public class Tarefa
 {
     public Tarefa(string nome, DateTime dataInicio, int duracao)
+        : this(Guid.NewGuid(), nome, dataInicio, duracao)
     {
-        Id = Guid.NewGuid();
+    }
+
+    /// <summary>Reconstrói uma tarefa já existente, mantendo o Id (por exemplo, ao abrir um arquivo).</summary>
+    public Tarefa(Guid id, string nome, DateTime dataInicio, int duracao)
+    {
+        if (id == Guid.Empty)
+            throw new DomainValidationException(nameof(Id), "O id da tarefa é obrigatório.");
+
+        Id = id;
         Nome = ValidarNome(nome);
         ValidarDuracao(duracao);
         DataInicio = NormalizarInicio(dataInicio);

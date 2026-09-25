@@ -113,7 +113,7 @@ public class CalculadoraCronogramaTests
     [Fact]
     public void Calcular_CronogramaVazio_TerminaNoInicioDoProjeto()
     {
-        var resultado = CalculadoraCronograma.Calcular(new Cronograma(Segunda));
+        var resultado = CalculadoraCronograma.Calcular(new Cronograma("Projeto", Segunda));
 
         resultado.DataTermino.Should().Be(Segunda);
         resultado.TarefasCriticas.Should().BeEmpty();
@@ -157,7 +157,7 @@ public class CalculadoraCronogramaTests
     public void Calcular_NaoAlteraAsDatasPlanejadas()
     {
         var planejada = new DateTime(2027, 3, 1);
-        var cronograma = new Cronograma(Segunda);
+        var cronograma = new Cronograma("Projeto", Segunda);
         var tarefa = new Tarefa("A", planejada, 4);
         cronograma.AdicionarTarefa(tarefa);
 
@@ -189,7 +189,7 @@ public class CalculadoraCronogramaTests
     public void Calcular_ComFimDoProjetoAlemDaMaiorDataSuportada_LancaExcecaoSemAlterarAsTarefas()
     {
         // Começando na última segunda representável, A (5 dias) acaba em 31/12/9999 e B não cabe.
-        var cronograma = new Cronograma(UltimaSegunda);
+        var cronograma = new Cronograma("Projeto", UltimaSegunda);
         var a = new Tarefa("A", Segunda, 5);
         var b = new Tarefa("B", Segunda, 1);
         cronograma.AdicionarTarefa(a);

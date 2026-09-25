@@ -1,7 +1,7 @@
 namespace ProjectPlanner.Core;
 
 /// <summary>
-/// Agrega as tarefas de um projeto e o grafo de dependências entre elas.
+/// O projeto: suas tarefas e o grafo de dependências entre elas.
 /// </summary>
 /// <remarks>
 /// As dependências ficam numa lista única de arestas (<see cref="Predecessora"/>), e não dentro de
@@ -9,7 +9,8 @@ namespace ProjectPlanner.Core;
 /// <list type="bullet">
 /// <item>as duas tarefas precisam pertencer ao cronograma;</item>
 /// <item>só existe um vínculo por par (predecessora, sucessora); para mudar tipo ou lag, remova e adicione de novo;</item>
-/// <item>nenhum vínculo pode fechar um ciclo.</item>
+/// <item>nenhum vínculo pode fechar um ciclo;</item>
+/// <item>remover uma tarefa remove junto os vínculos dela, sem religar as vizinhas (como no MS Project).</item>
 /// </list>
 /// Toda violação lança <see cref="DomainValidationException"/> e deixa o cronograma inalterado.
 /// </remarks>
@@ -18,10 +19,33 @@ public class Cronograma
     private readonly List<Tarefa> _tarefas = [];
     private readonly List<Predecessora> _predecessoras = [];
 
-    public Cronograma(DateTime dataInicio)
+    public Cronograma(string nome, DateTime dataInicio)
+        : this(Guid.NewGuid(), nome, dataInicio)
     {
+    }
+
+    /// <summary>Reconstrói um projeto já existente, mantendo o Id (por exemplo, ao abrir um arquivo).</summary>
+    public Cronograma(Guid id, string nome, DateTime dataInicio)
+    {
+        if (id == Guid.Empty)
+            throw new DomainValidationException(nameof(Id), "O id do projeto é obrigatório.");
+        if (string.IsNullOrWhiteSpace(nome))
+            throw new DomainValidationException(nameof(Nome), "O nome do projeto é obrigatório.");
+
+        Id = id;
+        Nome = nome.Trim();
         DataInicio = DiasUteis.ProximoOuMesmo(dataInicio.Date);
     }
+
+    public Guid Id { get; }
+
+    public string Nome { get; }
+
+    /// <summary>Quando o projeto foi salvo pela primeira vez (UTC); nulo se nunca foi salvo.</summary>
+    public DateTime? DataCriacao { get; private set; }
+
+    /// <summary>Quando o projeto foi salvo pela última vez (UTC); nulo se nunca foi salvo.</summary>
+    public DateTime? DataUltimaModificacao { get; private set; }
 
     /// <summary>
     /// Início do projeto: no cálculo do cronograma, nenhuma tarefa começa antes dele. Como nas
@@ -43,6 +67,14 @@ public class Cronograma
                 $"A tarefa \"{tarefa.Nome}\" já pertence ao cronograma.");
 
         _tarefas.Add(tarefa);
+    }
+
+    /// <summary>Remove a tarefa e todos os vínculos em que ela é predecessora ou sucessora.</summary>
+    public void RemoverTarefa(Guid tarefaId)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        _predecessoras.RemoveAll(p => p.TarefaOrigemId == tarefaId || p.TarefaDestinoId == tarefaId);
+        _tarefas.Remove(tarefa);
     }
 
     /// <exception cref="CircularDependencyException">O vínculo fecharia um ciclo.</exception>
@@ -88,6 +120,13 @@ public class Cronograma
     {
         ObterTarefa(tarefaId, nameof(Tarefas));
         return _predecessoras.Where(p => p.TarefaDestinoId == tarefaId).ToList();
+    }
+
+    /// <summary>Usado pela persistência ao salvar e ao abrir um arquivo.</summary>
+    internal void DefinirDatasDoArquivo(DateTime criacao, DateTime ultimaModificacao)
+    {
+        DataCriacao = criacao;
+        DataUltimaModificacao = ultimaModificacao;
     }
 
     private Tarefa ObterTarefa(Guid id, string propriedade) =>

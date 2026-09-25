@@ -4,7 +4,7 @@ namespace ProjectPlanner.Core.Tests;
 
 public class CronogramaPredecessorasTests
 {
-    private readonly Cronograma _cronograma = new(Segunda);
+    private readonly Cronograma _cronograma = new("Projeto", Segunda);
     private readonly Tarefa _a, _b, _c, _d, _e;
 
     public CronogramaPredecessorasTests()

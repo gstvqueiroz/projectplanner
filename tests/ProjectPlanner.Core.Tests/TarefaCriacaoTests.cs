@@ -27,6 +27,28 @@ public class TarefaCriacaoTests
     }
 
     [Fact]
+    public void Reconstruir_ComId_MantemOIdEAplicaAsMesmasRegras()
+    {
+        var id = Guid.NewGuid();
+
+        var tarefa = new Tarefa(id, " Revisar ", Sabado, 2);
+
+        tarefa.Id.Should().Be(id);
+        tarefa.Nome.Should().Be("Revisar");
+        tarefa.DataInicio.Should().Be(ProximaSegunda);
+        tarefa.DataTermino.Should().Be(ProximaTerca);
+    }
+
+    [Fact]
+    public void Reconstruir_ComIdVazio_LancaExcecao()
+    {
+        var criar = () => new Tarefa(Guid.Empty, "Tarefa", Segunda, 1);
+
+        criar.Should().Throw<DomainValidationException>()
+            .Which.Propriedade.Should().Be(nameof(Tarefa.Id));
+    }
+
+    [Fact]
     public void Criar_ComEspacosNasPontasDoNome_RemoveOsEspacos()
     {
         var tarefa = new Tarefa("  Revisar contrato \t", Segunda, 1);

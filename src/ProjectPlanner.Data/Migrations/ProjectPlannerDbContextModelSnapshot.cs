@@ -108,16 +108,28 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<Guid>("ProjetoId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("TarefaPaiId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TarefaPaiId");
 
                     b.HasIndex("ProjetoId", "Ordem")
                         .IsUnique();
 
                     b.ToTable("Tarefas", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Tarefas_Duracao", "Duracao > 0");
+                            t.HasCheckConstraint("CK_Tarefas_Duracao", "(Tipo = 0 AND Duracao > 0) OR (Tipo = 1 AND Duracao = 0) OR (Tipo = 2 AND Duracao >= 0)");
+
+                            t.HasCheckConstraint("CK_Tarefas_PaiDiferenteDelaMesma", "TarefaPaiId IS NULL OR TarefaPaiId <> Id");
 
                             t.HasCheckConstraint("CK_Tarefas_PercentualConcluido", "PercentualConcluido BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_Tarefas_Tipo", "Tipo BETWEEN 0 AND 2");
                         });
                 });
 
@@ -143,6 +155,11 @@ namespace ProjectPlanner.Data.Migrations
                         .HasForeignKey("ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
+                        .WithMany()
+                        .HasForeignKey("TarefaPaiId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 #pragma warning restore 612, 618
         }

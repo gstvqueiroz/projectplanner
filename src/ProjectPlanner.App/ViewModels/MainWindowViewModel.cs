@@ -14,6 +14,11 @@ namespace ProjectPlanner.App.ViewModels;
 /// Toda alteração aceita marca o projeto como alterado e recalcula o cronograma na hora, como o MS
 /// Project; o comando Recalcular continua disponível para pedir o cálculo explicitamente. Alterações
 /// recusadas pelo domínio aparecem como erro no campo e na barra de status, sem exceção na tela.
+/// <para>
+/// <see cref="Tarefas"/> tem todas as linhas, na ordem do cronograma (o Nº é a posição nela). A grid
+/// mostra <see cref="LinhasVisiveis"/>: as mesmas, menos as que estão dentro de um resumo recolhido; o
+/// Gantt esconde as mesmas, para que as duas listas continuem lado a lado.
+/// </para>
 /// </remarks>
 public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronograma
 {
@@ -24,6 +29,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
     private Cronograma _cronograma;
+    private IReadOnlyDictionary<Guid, string> _edt = new Dictionary<Guid, string>();
+    private IReadOnlySet<Guid> _ocultas = new HashSet<Guid>();
+    private bool _mudandoEstrutura;
 
     public MainWindowViewModel(IProjetoRepository repositorio, ICalculadoraCronograma calculadora,
         IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas)
@@ -34,7 +42,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _dialogos = dialogos;
         _relogio = relogio;
         _cronograma = NovoCronograma();
-        Gantt.BarraClicada += tarefaId => TarefaSelecionada = Tarefas.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
+        Gantt.BarraClicada += tarefaId => TarefaSelecionada = LinhasVisiveis.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
         // Um controle só para o caminho crítico: o do Gantt também liga e desliga o fundo das linhas na grid.
         Gantt.PropertyChanged += (_, e) =>
         {
@@ -45,7 +53,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         Carregar(_cronograma, caminho: null);
     }
 
+    /// <summary>Todas as linhas, na ordem do cronograma: cada resumo seguido das suas subtarefas.</summary>
     public ObservableCollection<TarefaViewModel> Tarefas { get; } = [];
+
+    /// <summary>As linhas que a grid mostra: todas, menos as que estão dentro de um resumo recolhido.</summary>
+    public ObservableCollection<TarefaViewModel> LinhasVisiveis { get; } = [];
 
     /// <summary>O Gantt ao lado da grid, refeito a cada recálculo.</summary>
     public GanttViewModel Gantt { get; } = new();
@@ -62,6 +74,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoverTarefaCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AdicionarSubtarefaCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RebaixarCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PromoverCommand))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
 
     /// <summary>
@@ -162,31 +177,120 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [RelayCommand]
     private Task SalvarComoProjeto() => SalvarAsync(perguntarOndeSalvar: true);
 
+    /// <summary>Adiciona uma tarefa no fim da lista, no primeiro nível.</summary>
     [RelayCommand]
     private void AdicionarTarefa()
     {
         var tarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
         _cronograma.AdicionarTarefa(tarefa);
-        var linha = new TarefaViewModel(tarefa, Tarefas.Count + 1, this);
-        Tarefas.Add(linha);
-        TarefaSelecionada = linha;
-        MarcarAlteracao();
+        AposMudarAEstrutura(selecionar: tarefa);
     }
 
-    [RelayCommand(CanExecute = nameof(PodeRemoverTarefa))]
-    private void RemoverTarefa()
+    /// <summary>Adiciona uma tarefa como última subtarefa da selecionada, que vira resumo (e é expandido).</summary>
+    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
+    private void AdicionarSubtarefa()
+    {
+        var pai = TarefaSelecionada!;
+        var tarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
+        if (!MudarEstrutura(() => _cronograma.AdicionarTarefa(tarefa, pai.Tarefa.Id)))
+            return;
+        Expandir(pai);
+        AposMudarAEstrutura(selecionar: tarefa);
+    }
+
+    /// <summary>
+    /// Recua a selecionada um nível (Alt+Shift+→): ela vira a última subtarefa da tarefa de cima no
+    /// mesmo nível, que vira resumo (e é expandido).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
+    private void Rebaixar()
     {
         var linha = TarefaSelecionada!;
-        var indice = Tarefas.IndexOf(linha);
+        if (!MudarEstrutura(() => _cronograma.Rebaixar(linha.Tarefa.Id)))
+            return;
+        Expandir(LinhaDe(linha.Tarefa.TarefaPaiId!.Value));
+        AposMudarAEstrutura(selecionar: linha.Tarefa);
+    }
+
+    /// <summary>
+    /// Sobe a selecionada um nível (Alt+Shift+←): ela sai do resumo em que está e vai para logo depois
+    /// dele; as tarefas abaixo dela continuam no resumo.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(PodePromover))]
+    private void Promover()
+    {
+        var linha = TarefaSelecionada!;
+        if (MudarEstrutura(() => _cronograma.Promover(linha.Tarefa.Id)))
+            AposMudarAEstrutura(selecionar: linha.Tarefa);
+    }
+
+    /// <summary>Remove a selecionada; um resumo sai com todas as subtarefas, depois de confirmar.</summary>
+    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
+    private async Task RemoverTarefa()
+    {
+        var linha = TarefaSelecionada!;
+        if (linha.EhResumo)
+        {
+            var subtarefas = _cronograma.DescendentesDe(linha.Tarefa.Id).Count;
+            var quais = subtarefas == 1 ? "a subtarefa dele" : $"as {subtarefas} subtarefas dele";
+            if (!await _dialogos.ConfirmarAsync("Remover resumo", $"Remover o resumo \"{linha.Nome}\" e {quais}?", "Remover"))
+                return;
+        }
+
+        var posicao = LinhasVisiveis.IndexOf(linha);
         _cronograma.RemoverTarefa(linha.Tarefa.Id);
-        Tarefas.RemoveAt(indice);
-        for (var i = indice; i < Tarefas.Count; i++)
-            Tarefas[i].Numero = i + 1;
-        TarefaSelecionada = Tarefas.Count == 0 ? null : Tarefas[Math.Min(indice, Tarefas.Count - 1)];
+        SincronizarLinhas();
+        TarefaSelecionada = LinhasVisiveis.Count == 0 ? null : LinhasVisiveis[Math.Clamp(posicao, 0, LinhasVisiveis.Count - 1)];
         MarcarAlteracao();
     }
 
-    private bool PodeRemoverTarefa() => TarefaSelecionada is not null;
+    private bool HaTarefaSelecionada() => TarefaSelecionada is not null;
+
+    private bool PodePromover() => TarefaSelecionada?.Tarefa.TarefaPaiId is not null;
+
+    /// <summary>
+    /// Num resumo, duração, datas, % e predecessoras vêm das subtarefas: a grid não entra em edição
+    /// nessas células e avisa por quê.
+    /// </summary>
+    public void AvisarValorCalculadoNoResumo() =>
+        Mensagem = "Num resumo, esse valor é calculado a partir das subtarefas.";
+
+    // Aplica uma mudança de estrutura no cronograma; se o domínio recusar, só mostra o motivo.
+    private bool MudarEstrutura(Action mudanca)
+    {
+        try
+        {
+            mudanca();
+            return true;
+        }
+        catch (DomainValidationException ex)
+        {
+            Mensagem = ex.Message;
+            return false;
+        }
+    }
+
+    // Expande o resumo que acabou de receber uma subtarefa. As linhas visíveis e o Gantt são refeitos
+    // logo em seguida (AposMudarAEstrutura), já com a tarefa nova calculada.
+    private void Expandir(TarefaViewModel resumo)
+    {
+        _mudandoEstrutura = true;
+        try
+        {
+            resumo.Expandido = true;
+        }
+        finally
+        {
+            _mudandoEstrutura = false;
+        }
+    }
+
+    private void AposMudarAEstrutura(Tarefa selecionar)
+    {
+        SincronizarLinhas();
+        TarefaSelecionada = LinhaDe(selecionar.Id);
+        MarcarAlteracao();
+    }
 
     [RelayCommand]
     private void RecalcularCronograma()
@@ -248,6 +352,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         NotacaoPredecessoras.Formatar(_cronograma.PredecessorasDe(tarefa.Id)
             .Select(p => new ItemPredecessora(NumeroDa(p.TarefaOrigemId), p.Tipo, p.Lag)));
 
+    string IEdicaoCronograma.EdtDe(Tarefa tarefa) =>
+        _edt.TryGetValue(tarefa.Id, out var codigo) ? codigo : _cronograma.EdtDe(tarefa.Id);
+
+    int IEdicaoCronograma.NivelDe(Tarefa tarefa) => _cronograma.NivelDe(tarefa.Id);
+
+    void IEdicaoCronograma.ExpansaoMudou(TarefaViewModel linha)
+    {
+        if (_mudandoEstrutura)
+            return;
+        // A selecionada não fica escondida: se ela está dentro do resumo recolhido, a seleção vai para ele.
+        if (!linha.Expandido && TarefaSelecionada is { } selecionada
+            && _cronograma.DescendentesDe(linha.Tarefa.Id).Contains(selecionada.Tarefa))
+            TarefaSelecionada = linha;
+        AtualizarLinhasVisiveis(avisarOGantt: true);
+    }
+
     string IEdicaoCronograma.TextoSucessoras(Tarefa tarefa) =>
         NotacaoPredecessoras.Formatar(_cronograma.Predecessoras
             .Where(p => p.TarefaOrigemId == tarefa.Id)
@@ -307,7 +427,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         {
             var resultado = _calculadora.Calcular(_cronograma);
             TerminoProjeto = resultado.DataTermino;
-            Gantt.Atualizar(_cronograma, resultado);
+            Gantt.Atualizar(_cronograma, resultado, _ocultas);
         }
         catch (DomainValidationException ex)
         {
@@ -325,8 +445,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         _cronograma = cronograma;
         Tarefas.Clear();
-        foreach (var (tarefa, indice) in cronograma.Tarefas.Select((t, i) => (t, i)))
-            Tarefas.Add(new TarefaViewModel(tarefa, indice + 1, this));
+        SincronizarLinhas();
 
         TarefaSelecionada = null;
         CaminhoArquivo = caminho;
@@ -340,6 +459,60 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     }
 
     private Cronograma NovoCronograma() => new(NomePadrao, _relogio.GetLocalNow().Date);
+
+    private TarefaViewModel LinhaDe(Guid tarefaId) => Tarefas.First(t => t.Tarefa.Id == tarefaId);
+
+    // Depois de uma mudança na estrutura: refaz as linhas na ordem do cronograma, reaproveitando as
+    // que já existiam (e o estado delas, como recolhido), renumera e atualiza a EDT e as visíveis. O
+    // Gantt é atualizado pelo recálculo que vem em seguida, já com as tarefas novas calculadas.
+    private void SincronizarLinhas()
+    {
+        var existentes = Tarefas.ToDictionary(l => l.Tarefa.Id);
+        var linhas = _cronograma.Tarefas
+            .Select(t => existentes.TryGetValue(t.Id, out var linha) ? linha : new TarefaViewModel(t, 0, this))
+            .ToList();
+        Reordenar(Tarefas, linhas);
+        for (var i = 0; i < linhas.Count; i++)
+            linhas[i].Numero = i + 1;
+        _edt = _cronograma.NumeracaoEdt();
+        AtualizarLinhasVisiveis(avisarOGantt: false);
+        PromoverCommand.NotifyCanExecuteChanged();
+    }
+
+    // Esconde as linhas que estão dentro de algum resumo recolhido (em qualquer nível acima).
+    private void AtualizarLinhasVisiveis(bool avisarOGantt)
+    {
+        var porId = Tarefas.ToDictionary(l => l.Tarefa.Id);
+        var ocultas = new HashSet<Guid>();
+        foreach (var linha in Tarefas) // em pré-ordem, o resumo vem antes das subtarefas
+            if (linha.Tarefa.TarefaPaiId is { } pai && (ocultas.Contains(pai) || !porId[pai].Expandido))
+                ocultas.Add(linha.Tarefa.Id);
+
+        _ocultas = ocultas;
+        Reordenar(LinhasVisiveis, Tarefas.Where(l => !ocultas.Contains(l.Tarefa.Id)).ToList());
+        if (avisarOGantt)
+            Gantt.DefinirTarefasOcultas(ocultas);
+    }
+
+    // Leva a coleção ao conteúdo e à ordem desejados mexendo só no que mudou, para a grid não perder
+    // a rolagem. Uma linha que muda de lugar sai e entra de novo: o DataGrid não reposiciona a linha
+    // num Move (ela continuaria desenhada no lugar antigo).
+    private static void Reordenar(ObservableCollection<TarefaViewModel> colecao, IReadOnlyList<TarefaViewModel> desejada)
+    {
+        var manter = desejada.ToHashSet();
+        for (var i = colecao.Count - 1; i >= 0; i--)
+            if (!manter.Contains(colecao[i]))
+                colecao.RemoveAt(i);
+        for (var i = 0; i < desejada.Count; i++)
+        {
+            if (i < colecao.Count && ReferenceEquals(colecao[i], desejada[i]))
+                continue;
+            var atual = colecao.IndexOf(desejada[i]);
+            if (atual >= 0)
+                colecao.RemoveAt(atual);
+            colecao.Insert(i, desejada[i]);
+        }
+    }
 
     private int NumeroDa(Guid tarefaId) => Tarefas.First(t => t.Tarefa.Id == tarefaId).Numero;
 

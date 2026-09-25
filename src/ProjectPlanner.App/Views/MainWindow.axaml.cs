@@ -19,9 +19,14 @@ public partial class MainWindow : Window
     // Arrastar a borda de um cabeçalho muda a largura muitas vezes por segundo: grava só quando para.
     private readonly DispatcherTimer _larguraParou = new() { Interval = TimeSpan.FromMilliseconds(400) };
 
+    // Num resumo, estas colunas vêm das subtarefas (ver AvisarValorCalculadoNoResumo).
+    private static readonly HashSet<string> CalculadasNoResumo =
+        ["Duracao", "Inicio", "Termino", "PercentualConcluido", "Predecessoras"];
+
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, AtalhosDaEstrutura, RoutingStrategies.Tunnel);
         _larguraParou.Tick += (_, _) =>
         {
             _larguraParou.Stop();
@@ -111,6 +116,30 @@ public partial class MainWindow : Window
         {
             RoutedEvent = PointerWheelChangedEvent,
         });
+    }
+
+    private void GradeBeginningEdit(object? sender, DataGridBeginningEditEventArgs e)
+    {
+        if (e.Row.DataContext is TarefaViewModel { EhResumo: true } && e.Column.Tag is string coluna
+            && CalculadasNoResumo.Contains(coluna) && DataContext is MainWindowViewModel vm)
+        {
+            e.Cancel = true;
+            vm.AvisarValorCalculadoNoResumo();
+        }
+    }
+
+    // Alt+Shift+→ e Alt+Shift+← (Option no Mac) rebaixam e promovem a tarefa selecionada, como no MS
+    // Project. Durante a edição de um texto, a combinação continua sendo do texto (seleção por palavra).
+    private void AtalhosDaEstrutura(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers != (KeyModifiers.Alt | KeyModifiers.Shift) || e.Key is not (Key.Left or Key.Right)
+            || e.Source is TextBox || DataContext is not MainWindowViewModel vm)
+            return;
+
+        var comando = e.Key == Key.Right ? vm.RebaixarCommand : vm.PromoverCommand;
+        if (comando.CanExecute(null))
+            comando.Execute(null);
+        e.Handled = true;
     }
 
     // O primeiro Esc cancela só a célula (o DataGrid relê o valor, que ainda é o recusado); o segundo

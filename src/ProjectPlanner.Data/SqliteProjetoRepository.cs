@@ -19,6 +19,13 @@ namespace ProjectPlanner.Data;
 /// DataTermino é gravada para quem ler o arquivo por fora; ao abrir, ela é recalculada a partir de
 /// DataInicio e Duracao.
 /// </para>
+/// <para>
+/// A estrutura vai em TarefaPaiId, com as tarefas gravadas em pré-ordem (Ordem): o pai sempre vem
+/// antes das subtarefas, então ao abrir a árvore se monta numa passada só. A coluna Tipo, como a
+/// DataTermino, é para quem ler o arquivo por fora: ao abrir, o tipo vem da estrutura e da duração. Os
+/// valores de um resumo (datas, duração, percentual) são os calculados no último cálculo, e são
+/// recalculados a partir das subtarefas no próximo.
+/// </para>
 /// </remarks>
 public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IProjetoRepository
 {
@@ -103,6 +110,8 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             DataTermino = t.DataTermino,
             PercentualConcluido = t.PercentualConcluido,
             Notas = t.Notas,
+            Tipo = t.Tipo,
+            TarefaPaiId = t.TarefaPaiId,
         }));
 
         contexto.Predecessoras.AddRange(cronograma.Predecessoras.Select((p, ordem) => new PredecessoraRegistro
@@ -148,10 +157,13 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
 
         foreach (var registro in contexto.Tarefas.AsNoTracking().OrderBy(t => t.Ordem))
         {
-            var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, registro.Duracao);
+            // Um resumo só com marcos tem duração 0 e seria lido como marco, que não pode ter
+            // subtarefas; como os valores do resumo são recalculados, ele entra com pelo menos 1 dia.
+            var duracao = registro.Tipo == TipoTarefa.Resumo ? Math.Max(registro.Duracao, 1) : registro.Duracao;
+            var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, duracao);
             tarefa.AtualizarPercentualConcluido(registro.PercentualConcluido);
             tarefa.AlterarNotas(registro.Notas);
-            cronograma.AdicionarTarefa(tarefa);
+            cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);
         }
 
         foreach (var registro in contexto.Predecessoras.AsNoTracking().OrderBy(p => p.Ordem))

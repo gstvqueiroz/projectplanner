@@ -56,6 +56,12 @@ public sealed record OpcoesGantt
             : throw new ArgumentOutOfRangeException(nameof(AlturaVisivel), value, "A altura visível não pode ser negativa.");
     }
 
+    /// <summary>
+    /// Tarefas que não aparecem (as de um resumo recolhido na grid): não ganham linha, e os vínculos
+    /// delas não são desenhados. A barra do resumo continua cobrindo todas as subtarefas.
+    /// </summary>
+    public IReadOnlySet<Guid> TarefasOcultas { get; init; } = new HashSet<Guid>();
+
     /// <summary>Cultura dos rótulos do cabeçalho (nomes de meses, formato de datas).</summary>
     public CultureInfo Cultura { get; init; } = CultureInfo.CurrentCulture;
 }
@@ -68,7 +74,7 @@ public sealed record OpcoesGantt
 /// <param name="FimEixo">Último dia desenhado (inclusivo).</param>
 /// <param name="Largura">Largura total do eixo, de <see cref="InicioEixo"/> ao fim de <see cref="FimEixo"/>.</param>
 /// <param name="Altura">Altura total das linhas, ou a altura visível, se ela for maior.</param>
-/// <param name="Barras">Uma por tarefa, na ordem do cronograma (a mesma da grid).</param>
+/// <param name="Barras">Uma por tarefa visível, na ordem do cronograma (a mesma da grid).</param>
 /// <param name="Setas">Uma por vínculo, na ordem do cronograma.</param>
 /// <param name="FinsDeSemana">Uma coluna por sábado e domingo do eixo, em ordem, para o fundo diferenciado.</param>
 public sealed record LayoutGantt(
@@ -84,7 +90,10 @@ public sealed record LayoutGantt(
 /// <summary>A faixa vertical de um dia no eixo.</summary>
 public sealed record ColunaDia(DateTime Dia, double X, double Largura);
 
-/// <summary>A barra de uma tarefa, do começo do Início cedo ao fim do Término cedo.</summary>
+/// <summary>
+/// A barra de uma tarefa, do começo do Início cedo ao fim do Término cedo. Num marco, é o quadrado
+/// onde fica o losango, centrado no instante do marco; num resumo, vai de ponta a ponta das subtarefas.
+/// </summary>
 /// <param name="Linha">Linha da tarefa (0 = primeira), a mesma da grid.</param>
 /// <param name="LarguraConcluida">Parte da barra que corresponde ao percentual concluído, a partir de <see cref="X"/>.</param>
 /// <param name="FimDaFolga">X do fim do Término tarde, quando a tarefa tem folga; a linha de folga vai de <see cref="Direita"/> até aqui.</param>
@@ -98,7 +107,8 @@ public sealed record BarraGantt(
     double Altura,
     double LarguraConcluida,
     double? FimDaFolga,
-    bool EhCritica)
+    bool EhCritica,
+    TipoTarefa Tipo)
 {
     public double Direita => X + Largura;
 

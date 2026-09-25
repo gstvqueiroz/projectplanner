@@ -25,6 +25,12 @@ internal sealed class TarefaRegistro
     public DateTime DataTermino { get; set; }
     public int PercentualConcluido { get; set; }
     public string? Notas { get; set; }
+
+    /// <summary>Gravado para quem ler o arquivo por fora; ao abrir, o tipo vem da estrutura e da duração.</summary>
+    public TipoTarefa Tipo { get; set; }
+
+    /// <summary>O resumo em que a tarefa está; nulo no primeiro nível.</summary>
+    public Guid? TarefaPaiId { get; set; }
 }
 
 internal sealed class PredecessoraRegistro

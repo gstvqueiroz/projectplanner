@@ -8,7 +8,7 @@ namespace ProjectPlanner.App.Services;
 
 /// <summary>
 /// Diálogos nativos do sistema (no macOS, os painéis Abrir/Salvar do Finder) pelo StorageProvider do
-/// Avalonia, e a pergunta de alterações pendentes numa janela modal própria.
+/// Avalonia, e as perguntas (alterações pendentes, confirmações) em janelas modais próprias.
 /// </summary>
 public sealed class DialogosAvalonia : IDialogosService
 {
@@ -49,4 +49,7 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task<RespostaAlteracoesPendentes> PerguntarSobreAlteracoesPendentesAsync(string nomeProjeto) =>
         new AlteracoesPendentesWindow(nomeProjeto).ShowDialog<RespostaAlteracoesPendentes>(JanelaPrincipal);
+
+    public Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao) =>
+        new ConfirmacaoWindow(titulo, mensagem, textoDoBotao).ShowDialog<bool>(JanelaPrincipal);
 }

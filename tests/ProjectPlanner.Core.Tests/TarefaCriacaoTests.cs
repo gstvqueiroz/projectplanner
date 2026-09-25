@@ -69,11 +69,11 @@ public class TarefaCriacaoTests
             .Which.Propriedade.Should().Be(nameof(Tarefa.Nome));
     }
 
+    // Duração 0 não é mais erro: cria um marco (Bloco 11, ver TarefaMarcoTests).
     [Theory]
-    [InlineData(0)]
     [InlineData(-1)]
     [InlineData(int.MinValue)]
-    public void Criar_ComDuracaoZeroOuNegativa_LancaExcecao(int duracao)
+    public void Criar_ComDuracaoNegativa_LancaExcecao(int duracao)
     {
         var criar = () => new Tarefa("Tarefa", Segunda, duracao);
 

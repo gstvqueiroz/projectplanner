@@ -1,7 +1,7 @@
 namespace ProjectPlanner.Core;
 
 /// <summary>
-/// O projeto: suas tarefas e o grafo de dependências entre elas.
+/// O projeto: suas tarefas, a estrutura delas (resumos e subtarefas) e o grafo de dependências entre elas.
 /// </summary>
 /// <remarks>
 /// As dependências ficam numa lista única de arestas (<see cref="Predecessora"/>), e não dentro de
@@ -10,8 +10,15 @@ namespace ProjectPlanner.Core;
 /// <item>as duas tarefas precisam pertencer ao cronograma;</item>
 /// <item>só existe um vínculo por par (predecessora, sucessora); para mudar tipo ou lag, remova e adicione de novo;</item>
 /// <item>nenhum vínculo pode fechar um ciclo;</item>
-/// <item>remover uma tarefa remove junto os vínculos dela, sem religar as vizinhas (como no MS Project).</item>
+/// <item>remover uma tarefa remove junto os vínculos dela, sem religar as vizinhas (como no MS Project);</item>
+/// <item>resumos não têm vínculos: o caminho crítico passa pelas subtarefas.</item>
 /// </list>
+/// <para>
+/// A estrutura fica em <see cref="Tarefa.TarefaPaiId"/>, e a lista <see cref="Tarefas"/> está sempre em
+/// pré-ordem: cada tarefa vem seguida de todas as suas subtarefas, em qualquer nível (como a lista de
+/// tópicos do MS Project). Uma tarefa é resumo enquanto tem subtarefas; marcos não podem ter
+/// subtarefas; e uma tarefa com vínculos não pode virar resumo. Não há limite de níveis.
+/// </para>
 /// Toda violação lança <see cref="DomainValidationException"/> e deixa o cronograma inalterado.
 /// </remarks>
 public class Cronograma
@@ -51,8 +58,11 @@ public class Cronograma
     /// </summary>
     public DateTime DataInicio { get; private set; }
 
-    /// <summary>Tarefas na ordem em que foram adicionadas.</summary>
-    public IReadOnlyCollection<Tarefa> Tarefas => _tarefas.AsReadOnly();
+    /// <summary>
+    /// Tarefas na ordem da estrutura (pré-ordem): cada tarefa seguida de todas as suas subtarefas. É a
+    /// ordem das linhas da grid e o número (Nº) usado nas predecessoras.
+    /// </summary>
+    public IReadOnlyList<Tarefa> Tarefas => _tarefas.AsReadOnly();
 
     /// <summary>Todos os vínculos, na ordem em que foram adicionados.</summary>
     public IReadOnlyCollection<Predecessora> Predecessoras => _predecessoras.AsReadOnly();
@@ -62,22 +72,167 @@ public class Cronograma
     /// <summary>Muda o início do projeto. As datas planejadas das tarefas não mudam; recalcule o cronograma.</summary>
     public void AlterarDataInicio(DateTime dataInicio) => DataInicio = NormalizarInicio(dataInicio);
 
-    public void AdicionarTarefa(Tarefa tarefa)
+    /// <summary>Adiciona a tarefa no fim da lista, no primeiro nível.</summary>
+    public void AdicionarTarefa(Tarefa tarefa) => AdicionarTarefa(tarefa, paiId: null);
+
+    /// <summary>
+    /// Adiciona a tarefa no fim da lista (sem pai) ou como última subtarefa de <paramref name="paiId"/>,
+    /// que passa a ser um resumo.
+    /// </summary>
+    public void AdicionarTarefa(Tarefa tarefa, Guid? paiId)
     {
         ArgumentNullException.ThrowIfNull(tarefa);
         if (_tarefas.Exists(t => t.Id == tarefa.Id))
             throw new DomainValidationException(nameof(Tarefas),
                 $"A tarefa \"{tarefa.Nome}\" já pertence ao cronograma.");
+        if (paiId == tarefa.Id)
+            throw SubtarefaDeSiMesma();
 
-        _tarefas.Add(tarefa);
+        var pai = paiId is { } id ? ObterTarefa(id, nameof(Tarefa.TarefaPaiId)) : null;
+        if (pai is not null)
+            ValidarPodeTerSubtarefas(pai);
+
+        _tarefas.Insert(pai is null ? _tarefas.Count : FimDaSubarvore(pai), tarefa);
+        tarefa.DefinirPai(pai?.Id);
+        tarefa.DefinirSeEhResumo(false);
+        pai?.DefinirSeEhResumo(true);
     }
 
-    /// <summary>Remove a tarefa e todos os vínculos em que ela é predecessora ou sucessora.</summary>
+    /// <summary>
+    /// Remove a tarefa, as subtarefas dela (em todos os níveis) e todos os vínculos dessas tarefas.
+    /// Se o resumo em que ela estava ficar sem subtarefas, ele volta a ser tarefa comum (ou marco).
+    /// </summary>
     public void RemoverTarefa(Guid tarefaId)
     {
         var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
-        _predecessoras.RemoveAll(p => p.TarefaOrigemId == tarefaId || p.TarefaDestinoId == tarefaId);
-        _tarefas.Remove(tarefa);
+        var removidas = RetirarSubarvore(tarefa).Select(t => t.Id).ToHashSet();
+        _predecessoras.RemoveAll(p => removidas.Contains(p.TarefaOrigemId) || removidas.Contains(p.TarefaDestinoId));
+        AtualizarSeEhResumo(tarefa.TarefaPaiId);
+    }
+
+    /// <summary>
+    /// Recua a tarefa um nível: ela passa a ser a última subtarefa da tarefa de cima que está no mesmo
+    /// nível (que vira resumo), levando junto as próprias subtarefas. A ordem das linhas não muda.
+    /// </summary>
+    public void Rebaixar(Guid tarefaId)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        var indice = _tarefas.IndexOf(tarefa);
+        // Em pré-ordem, a irmã de cima é a última tarefa antes desta com o mesmo pai.
+        var irma = _tarefas.Take(indice).LastOrDefault(t => t.TarefaPaiId == tarefa.TarefaPaiId)
+            ?? throw new DomainValidationException(nameof(Tarefa.TarefaPaiId),
+                $"Não há tarefa acima de \"{tarefa.Nome}\" no mesmo nível para ser o resumo dela.");
+        ValidarPodeTerSubtarefas(irma);
+
+        tarefa.DefinirPai(irma.Id);
+        irma.DefinirSeEhResumo(true);
+    }
+
+    /// <summary>
+    /// Sobe a tarefa um nível: ela sai do resumo em que está, com as próprias subtarefas, e vai para
+    /// logo depois dele, no nível dele. As tarefas abaixo dela continuam no resumo. Se o resumo ficar
+    /// sem subtarefas, ele volta a ser tarefa comum (ou marco).
+    /// </summary>
+    public void Promover(Guid tarefaId)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        var pai = tarefa.TarefaPaiId is { } paiId
+            ? ObterTarefa(paiId, nameof(Tarefa.TarefaPaiId))
+            : throw new DomainValidationException(nameof(Tarefa.TarefaPaiId),
+                $"\"{tarefa.Nome}\" já está no primeiro nível.");
+
+        var subarvore = RetirarSubarvore(tarefa);
+        _tarefas.InsertRange(FimDaSubarvore(pai), subarvore);
+        tarefa.DefinirPai(pai.TarefaPaiId);
+        AtualizarSeEhResumo(pai.Id);
+    }
+
+    /// <summary>
+    /// Move a tarefa, com as próprias subtarefas, para ser a última subtarefa de
+    /// <paramref name="novoPaiId"/> (que vira resumo), ou para o fim da lista, no primeiro nível, quando
+    /// ele é nulo. Se o resumo de onde ela saiu ficar sem subtarefas, ele volta a ser tarefa comum.
+    /// </summary>
+    /// <exception cref="DomainValidationException">
+    /// O novo pai é a própria tarefa ou uma subtarefa dela (a estrutura teria um ciclo), é um marco, ou
+    /// tem vínculos e viraria resumo.
+    /// </exception>
+    public void DefinirPai(Guid tarefaId, Guid? novoPaiId)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        Tarefa? novoPai = null;
+        if (novoPaiId is { } id)
+        {
+            if (id == tarefaId)
+                throw SubtarefaDeSiMesma();
+            novoPai = ObterTarefa(id, nameof(Tarefa.TarefaPaiId));
+            if (EhDescendente(novoPai, tarefa))
+                throw new DomainValidationException(nameof(Tarefa.TarefaPaiId),
+                    $"\"{novoPai.Nome}\" é subtarefa de \"{tarefa.Nome}\"; colocar \"{tarefa.Nome}\" dentro dela " +
+                    "criaria um ciclo na estrutura.");
+            ValidarPodeTerSubtarefas(novoPai);
+        }
+
+        var paiAnterior = tarefa.TarefaPaiId;
+        var subarvore = RetirarSubarvore(tarefa);
+        _tarefas.InsertRange(novoPai is null ? _tarefas.Count : FimDaSubarvore(novoPai), subarvore);
+        tarefa.DefinirPai(novoPai?.Id);
+        novoPai?.DefinirSeEhResumo(true);
+        AtualizarSeEhResumo(paiAnterior);
+    }
+
+    /// <summary>Subtarefas diretas da tarefa, na ordem da lista.</summary>
+    public IReadOnlyList<Tarefa> FilhasDe(Guid tarefaId)
+    {
+        ObterTarefa(tarefaId, nameof(Tarefas));
+        return _tarefas.Where(t => t.TarefaPaiId == tarefaId).ToList();
+    }
+
+    /// <summary>Todas as subtarefas da tarefa, em qualquer nível, na ordem da lista.</summary>
+    public IReadOnlyList<Tarefa> DescendentesDe(Guid tarefaId)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        var inicio = _tarefas.IndexOf(tarefa) + 1;
+        return _tarefas.GetRange(inicio, FimDaSubarvore(tarefa) - inicio);
+    }
+
+    /// <summary>Profundidade da tarefa na estrutura: 0 no primeiro nível, 1 numa subtarefa, e assim por diante.</summary>
+    public int NivelDe(Guid tarefaId)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        var nivel = 0;
+        while (tarefa.TarefaPaiId is { } paiId)
+        {
+            nivel++;
+            tarefa = _tarefas.Find(t => t.Id == paiId)!;
+        }
+        return nivel;
+    }
+
+    /// <summary>Código da tarefa na EDT (estrutura analítica do projeto): 1, 1.1, 1.2, 1.2.1, 2...</summary>
+    public string EdtDe(Guid tarefaId)
+    {
+        ObterTarefa(tarefaId, nameof(Tarefas));
+        return NumeracaoEdt()[tarefaId];
+    }
+
+    /// <summary>
+    /// Código de todas as tarefas na EDT: as do primeiro nível são numeradas 1, 2, 3... na ordem da
+    /// lista, e as subtarefas de uma tarefa de código c são c.1, c.2... Depende só da estrutura.
+    /// </summary>
+    public IReadOnlyDictionary<Guid, string> NumeracaoEdt()
+    {
+        var codigos = new Dictionary<Guid, string>(_tarefas.Count);
+        var ultimaNumeracao = new Dictionary<Guid, int>(); // por pai; Guid.Empty = primeiro nível
+        foreach (var tarefa in _tarefas)
+        {
+            var pai = tarefa.TarefaPaiId ?? Guid.Empty;
+            var numero = ultimaNumeracao.GetValueOrDefault(pai) + 1;
+            ultimaNumeracao[pai] = numero;
+            codigos[tarefa.Id] = tarefa.TarefaPaiId is { } paiId
+                ? $"{codigos[paiId]}.{numero}"
+                : numero.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return codigos;
     }
 
     /// <exception cref="CircularDependencyException">O vínculo fecharia um ciclo.</exception>
@@ -89,6 +244,11 @@ public class Cronograma
         ArgumentNullException.ThrowIfNull(predecessora);
         var origem = ObterTarefa(predecessora.TarefaOrigemId, nameof(Predecessora.TarefaOrigemId));
         var destino = ObterTarefa(predecessora.TarefaDestinoId, nameof(Predecessora.TarefaDestinoId));
+        foreach (var ponta in new[] { origem, destino })
+            if (ponta.EhResumo)
+                throw new DomainValidationException(nameof(Predecessoras),
+                    $"\"{ponta.Nome}\" é um resumo, e resumos não têm predecessoras nem sucessoras. " +
+                    "Vincule as subtarefas dele.");
 
         if (Encontrar(origem.Id, destino.Id) is not null)
             throw new DomainValidationException(nameof(Predecessoras),
@@ -138,6 +298,57 @@ public class Cronograma
             : nome.Trim();
 
     private static DateTime NormalizarInicio(DateTime dataInicio) => DiasUteis.ProximoOuMesmo(dataInicio.Date);
+
+    private static DomainValidationException SubtarefaDeSiMesma() =>
+        new(nameof(Tarefa.TarefaPaiId), "Uma tarefa não pode ser subtarefa de si mesma.");
+
+    // Uma tarefa só vira resumo se não for marco nem tiver vínculos (resumos não têm vínculos).
+    private void ValidarPodeTerSubtarefas(Tarefa pai)
+    {
+        if (pai.EhResumo)
+            return;
+        if (pai.EhMarco)
+            throw new DomainValidationException(nameof(Tarefa.TarefaPaiId),
+                $"\"{pai.Nome}\" é um marco, e marcos não têm subtarefas.");
+        if (_predecessoras.Exists(p => p.TarefaOrigemId == pai.Id || p.TarefaDestinoId == pai.Id))
+            throw new DomainValidationException(nameof(Tarefa.TarefaPaiId),
+                $"\"{pai.Nome}\" tem vínculos (predecessoras ou sucessoras) e não pode virar resumo, porque " +
+                "resumos não têm vínculos. Remova os vínculos dela primeiro.");
+    }
+
+    private void AtualizarSeEhResumo(Guid? tarefaId)
+    {
+        if (tarefaId is { } id)
+            _tarefas.Find(t => t.Id == id)!.DefinirSeEhResumo(_tarefas.Exists(t => t.TarefaPaiId == id));
+    }
+
+    // Posição logo depois da última subtarefa (em qualquer nível) da tarefa: em pré-ordem, as
+    // subtarefas vêm todas em seguida a ela.
+    private int FimDaSubarvore(Tarefa tarefa)
+    {
+        var fim = _tarefas.IndexOf(tarefa) + 1;
+        while (fim < _tarefas.Count && EhDescendente(_tarefas[fim], tarefa))
+            fim++;
+        return fim;
+    }
+
+    // Tira da lista a tarefa e todas as subtarefas dela, na ordem, e as devolve.
+    private List<Tarefa> RetirarSubarvore(Tarefa tarefa)
+    {
+        var inicio = _tarefas.IndexOf(tarefa);
+        var quantidade = FimDaSubarvore(tarefa) - inicio;
+        var subarvore = _tarefas.GetRange(inicio, quantidade);
+        _tarefas.RemoveRange(inicio, quantidade);
+        return subarvore;
+    }
+
+    private bool EhDescendente(Tarefa tarefa, Tarefa ancestral)
+    {
+        for (var pai = tarefa.TarefaPaiId; pai is { } id; pai = _tarefas.Find(t => t.Id == id)!.TarefaPaiId)
+            if (id == ancestral.Id)
+                return true;
+        return false;
+    }
 
     private Tarefa ObterTarefa(Guid id, string propriedade) =>
         _tarefas.Find(t => t.Id == id)

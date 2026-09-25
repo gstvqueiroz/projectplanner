@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ProjectPlanner.App.Views.ConfirmacaoWindow"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <StackPanel Margin="20" Spacing="16" MaxWidth="420">
+        <TextBlock x:Name="Mensagem" TextWrapping="Wrap" />
+        <!-- A ação não tem desfazer: Enter e Esc cancelam, e só o clique confirma. -->
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Cancelar" Click="Cancelar" IsCancel="True" IsDefault="True" />
+            <Button x:Name="Confirmar" Click="Confirmado" Classes="accent" />
+        </StackPanel>
+    </StackPanel>
+</Window>

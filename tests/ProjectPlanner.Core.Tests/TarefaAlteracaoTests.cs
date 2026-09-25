@@ -54,10 +54,11 @@ public class TarefaAlteracaoTests
         tarefa.DataTermino.Should().Be(ProximaSegunda);
     }
 
+    // Duração 0 não é mais erro: transforma a tarefa em marco (Bloco 11, ver TarefaMarcoTests).
     [Theory]
-    [InlineData(0)]
+    [InlineData(-1)]
     [InlineData(-3)]
-    public void AlterarDuracao_ZeroOuNegativa_LancaExcecaoEMantemATarefaInalterada(int duracao)
+    public void AlterarDuracao_Negativa_LancaExcecaoEMantemATarefaInalterada(int duracao)
     {
         var tarefa = NovaTarefa();
         var antes = EstadoDe(tarefa);

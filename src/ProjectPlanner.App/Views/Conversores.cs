@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
@@ -15,4 +16,19 @@ public static class Conversores
 
     public static readonly IValueConverter SimOuVazio =
         new FuncValueConverter<bool, string>(valor => valor ? "Sim" : "");
+
+    /// <summary>Recuo do nome na grid conforme o nível da tarefa na estrutura.</summary>
+    public static readonly IValueConverter RecuoDoNivel =
+        new FuncValueConverter<int, Thickness>(nivel => new Thickness(nivel * ColunaNomeDaTarefa.RecuoPorNivel, 0, 0, 0));
+
+    /// <summary>Recuo do nome em edição: o do nível mais o espaço do ▾/▸, para o texto não sair do lugar.</summary>
+    public static readonly IValueConverter RecuoDaEdicao =
+        new FuncValueConverter<int, Thickness>(nivel =>
+            new Thickness(nivel * ColunaNomeDaTarefa.RecuoPorNivel + ColunaNomeDaTarefa.LarguraDoSimbolo, 0, 0, 0));
+
+    public static readonly IValueConverter OpacoSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 1 : 0);
+
+    /// <summary>Linhas de resumo em negrito, como no MS Project.</summary>
+    public static readonly IValueConverter NegritoSeVerdadeiro =
+        new FuncValueConverter<bool, FontWeight>(valor => valor ? FontWeight.SemiBold : FontWeight.Normal);
 }

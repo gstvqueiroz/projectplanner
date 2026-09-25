@@ -24,8 +24,15 @@ namespace ProjectPlanner.Core.Gantt;
 /// </para>
 /// <para>
 /// As linhas seguem a ordem do cronograma, a mesma da grid, para que a linha N da grid e a barra N
-/// fiquem lado a lado. As barras vão do começo do Início cedo ao fim do Término cedo (o cronograma
-/// calculado); a folga, quando existe, vai do fim da barra ao fim do Término tarde.
+/// fiquem lado a lado. As tarefas de <see cref="OpcoesGantt.TarefasOcultas"/> (as de um resumo
+/// recolhido) não ganham linha, e os vínculos delas não são desenhados. As barras vão do começo do
+/// Início cedo ao fim do Término cedo (o cronograma calculado); a folga, quando existe, vai do fim da
+/// barra ao fim do Término tarde.
+/// </para>
+/// <para>
+/// Um marco é um losango centrado no instante dele: a borda direita do dia quando ele fica no fim do
+/// dia (<see cref="Tarefa.MarcoNoFimDoDia"/>), a esquerda quando fica no começo. Um resumo vai do
+/// começo mais cedo ao fim mais tarde entre as tarefas abaixo dele (incluindo as ocultas), sem folga.
 /// </para>
 /// <para>
 /// Cada seta sai do ponto da predecessora que o tipo do vínculo relaciona e chega no ponto da sucessora,
@@ -62,12 +69,16 @@ public static class CalculadoraLayoutGantt
             fimEixo = fimVisivel;
         var eixo = new Eixo(inicioEixo, opcoes.PixelsPorDia);
 
-        var barras = cronograma.Tarefas.Select((tarefa, linha) => Barra(tarefa, linha, eixo, opcoes)).ToList();
+        var extensao = Extensoes(cronograma, eixo);
+        var ocultas = opcoes.TarefasOcultas;
+        var barras = cronograma.Tarefas.Where(t => !ocultas.Contains(t.Id))
+            .Select((tarefa, linha) => Barra(tarefa, linha, extensao[tarefa.Id], eixo, opcoes)).ToList();
         var barraPorTarefa = barras.ToDictionary(b => b.TarefaId);
         var vinculosCriticos = resultado.CaminhosCriticos
             .SelectMany(caminho => caminho.Zip(caminho.Skip(1), (a, b) => (a.Id, b.Id)))
             .ToHashSet();
         var setas = cronograma.Predecessoras
+            .Where(p => barraPorTarefa.ContainsKey(p.TarefaOrigemId) && barraPorTarefa.ContainsKey(p.TarefaDestinoId))
             .Select(p => Seta(p, barraPorTarefa[p.TarefaOrigemId], barraPorTarefa[p.TarefaDestinoId],
                 vinculosCriticos.Contains((p.TarefaOrigemId, p.TarefaDestinoId)), opcoes))
             .ToList();
@@ -103,15 +114,55 @@ public static class CalculadoraLayoutGantt
         }
     }
 
-    private static BarraGantt Barra(Tarefa tarefa, int linha, Eixo eixo, OpcoesGantt opcoes)
+    // Do começo ao fim de cada tarefa no eixo: tarefas comuns do começo do primeiro dia ao fim do
+    // último; marcos no próprio instante; resumos do menor começo ao maior fim das subtarefas (a lista
+    // está em pré-ordem, então de trás para frente cada resumo vem depois de todas as subtarefas).
+    private static Dictionary<Guid, (double Inicio, double Fim)> Extensoes(Cronograma cronograma, Eixo eixo)
     {
-        var x = eixo.InicioDoDia(tarefa.InicioMaisCedo!.Value);
-        var largura = eixo.FimDoDia(tarefa.TerminoMaisCedo!.Value) - x;
-        var y = linha * opcoes.AlturaLinha + (opcoes.AlturaLinha - opcoes.AlturaBarra) / 2;
-        var fimDaFolga = tarefa.Folga > 0 ? eixo.FimDoDia(tarefa.TerminoMaisTarde!.Value) : (double?)null;
+        var extensao = new Dictionary<Guid, (double Inicio, double Fim)>();
+        for (var i = cronograma.Tarefas.Count - 1; i >= 0; i--)
+        {
+            var tarefa = cronograma.Tarefas[i];
+            extensao[tarefa.Id] = tarefa.Tipo switch
+            {
+                TipoTarefa.Resumo => cronograma.Tarefas.Where(t => t.TarefaPaiId == tarefa.Id)
+                    .Select(t => extensao[t.Id])
+                    .Aggregate((a, b) => (Math.Min(a.Inicio, b.Inicio), Math.Max(a.Fim, b.Fim))),
+                TipoTarefa.Marco => (eixo.XDoMarco(tarefa.InicioMaisCedo!.Value, tarefa.MarcoNoFimDoDia),
+                    eixo.XDoMarco(tarefa.InicioMaisCedo!.Value, tarefa.MarcoNoFimDoDia)),
+                _ => (eixo.InicioDoDia(tarefa.InicioMaisCedo!.Value), eixo.FimDoDia(tarefa.TerminoMaisCedo!.Value)),
+            };
+        }
+        return extensao;
+    }
 
-        return new BarraGantt(tarefa.Id, tarefa.Nome, linha, x, y, largura, opcoes.AlturaBarra,
-            largura * tarefa.PercentualConcluido / 100, fimDaFolga, tarefa.EhCritica);
+    private static BarraGantt Barra(Tarefa tarefa, int linha, (double Inicio, double Fim) extensao, Eixo eixo,
+        OpcoesGantt opcoes)
+    {
+        var y = linha * opcoes.AlturaLinha + (opcoes.AlturaLinha - opcoes.AlturaBarra) / 2;
+        switch (tarefa.Tipo)
+        {
+            case TipoTarefa.Marco:
+            {
+                // O losango tem a altura da barra e fica centrado no instante do marco.
+                var meiaLargura = opcoes.AlturaBarra / 2;
+                double? fimDaFolga = tarefa.Folga > 0
+                    ? eixo.XDoMarco(tarefa.TerminoMaisTarde!.Value, tarefa.MarcoTardeNoFimDoDia)
+                    : null;
+                return new BarraGantt(tarefa.Id, tarefa.Nome, linha, extensao.Inicio - meiaLargura, y,
+                    2 * meiaLargura, opcoes.AlturaBarra, 0, fimDaFolga, tarefa.EhCritica, TipoTarefa.Marco);
+            }
+            case TipoTarefa.Resumo:
+                return new BarraGantt(tarefa.Id, tarefa.Nome, linha, extensao.Inicio, y,
+                    extensao.Fim - extensao.Inicio, opcoes.AlturaBarra, 0, null, tarefa.EhCritica, TipoTarefa.Resumo);
+            default:
+            {
+                var largura = extensao.Fim - extensao.Inicio;
+                var fimDaFolga = tarefa.Folga > 0 ? eixo.FimDoDia(tarefa.TerminoMaisTarde!.Value) : (double?)null;
+                return new BarraGantt(tarefa.Id, tarefa.Nome, linha, extensao.Inicio, y, largura, opcoes.AlturaBarra,
+                    largura * tarefa.PercentualConcluido / 100, fimDaFolga, tarefa.EhCritica, TipoTarefa.Normal);
+            }
+        }
     }
 
     private static SetaGantt Seta(Predecessora vinculo, BarraGantt origem, BarraGantt destino, bool critica, OpcoesGantt opcoes)
@@ -240,5 +291,7 @@ public static class CalculadoraLayoutGantt
         public double InicioDoDia(DateTime dia) => (dia.Date - Inicio).Days * PixelsPorDia;
 
         public double FimDoDia(DateTime dia) => ((dia.Date - Inicio).Days + 1) * PixelsPorDia;
+
+        public double XDoMarco(DateTime dia, bool noFimDoDia) => noFimDoDia ? FimDoDia(dia) : InicioDoDia(dia);
     }
 }

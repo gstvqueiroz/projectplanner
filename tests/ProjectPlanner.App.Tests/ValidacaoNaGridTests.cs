@@ -25,11 +25,11 @@ public class ValidacaoNaGridTests
         editar.Should().NotThrow();
         _tarefa.HasErrors.Should().BeTrue();
         _tarefa.GetErrors(nameof(TarefaViewModel.Duracao)).Cast<string>().Should().ContainSingle()
-            .Which.Should().Be("A duração deve ser maior que zero (informado: -3).");
+            .Which.Should().Be("A duração não pode ser negativa (informado: -3).");
         _tarefa.Duracao.Should().Be(-3, "o valor digitado continua visível para ser corrigido");
         _tarefa.Tarefa.Duracao.Should().Be(5);
         _vm.Mensagem.Should().Be(
-            "Linha 1, Duração: A duração deve ser maior que zero (informado: -3). Corrija o valor ou tecle Esc para desfazer.");
+            "Linha 1, Duração: A duração não pode ser negativa (informado: -3). Corrija o valor ou tecle Esc para desfazer.");
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class ValidacaoNaGridTests
     [Fact]
     public void CorrigirOValor_LimpaOErro()
     {
-        _tarefa.Duracao = 0;
+        _tarefa.Duracao = -1; // 0 deixou de ser erro no Bloco 11: faz da tarefa um marco
 
         _tarefa.Duracao = 4;
 

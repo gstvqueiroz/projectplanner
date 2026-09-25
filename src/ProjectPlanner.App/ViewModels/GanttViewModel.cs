@@ -29,6 +29,7 @@ public sealed partial class GanttViewModel : ViewModelBase
 
     private Cronograma? _cronograma;
     private ResultadoCronograma? _resultado;
+    private IReadOnlySet<Guid> _ocultas = new HashSet<Guid>();
     private double _larguraVisivel;
     private double _alturaVisivel;
 
@@ -67,11 +68,28 @@ public sealed partial class GanttViewModel : ViewModelBase
 
     public void ClicarNaBarra(Guid tarefaId) => BarraClicada?.Invoke(tarefaId);
 
-    /// <summary>Passa a mostrar um cronograma recém-calculado.</summary>
-    public void Atualizar(Cronograma cronograma, ResultadoCronograma resultado)
+    /// <summary>
+    /// Passa a mostrar um cronograma recém-calculado, sem as tarefas <paramref name="ocultas"/> (as de
+    /// resumos recolhidos na grid; nulo mantém as de antes).
+    /// </summary>
+    public void Atualizar(Cronograma cronograma, ResultadoCronograma resultado, IReadOnlySet<Guid>? ocultas = null)
     {
         _cronograma = cronograma;
         _resultado = resultado;
+        if (ocultas is not null)
+            _ocultas = ocultas;
+        RefazerLayout();
+    }
+
+    /// <summary>
+    /// As tarefas que a grid escondeu (dentro de resumos recolhidos): somem daqui também, para que as
+    /// linhas continuem lado a lado. Não recalcula nada.
+    /// </summary>
+    public void DefinirTarefasOcultas(IReadOnlySet<Guid> ocultas)
+    {
+        if (_ocultas.SetEquals(ocultas))
+            return;
+        _ocultas = ocultas;
         RefazerLayout();
     }
 
@@ -116,5 +134,6 @@ public sealed partial class GanttViewModel : ViewModelBase
             {
                 LarguraVisivel = _larguraVisivel,
                 AlturaVisivel = _alturaVisivel,
+                TarefasOcultas = _ocultas,
             });
 }

@@ -20,7 +20,7 @@ public class ColunasTests
 
         Ordem(colunas).Should().Equal(ColunasViewModel.Padrao.Select(p => p.Id));
         colunas.Colunas.Should().OnlyContain(c => c.Visivel);
-        colunas["Nome"].Largura.Should().Be(130);
+        colunas["Nome"].Largura.Should().Be(220);
         colunas["Notas"].Largura.Should().Be(200);
         _preferencias.Gravacoes.Should().Be(0);
     }
@@ -63,17 +63,17 @@ public class ColunasTests
     public void ReordenarERedimensionarNaGrade_GuardaPosicaoELargura()
     {
         var colunas = Colunas();
-        // O usuário arrastou Notas para a 3ª posição e alargou Nome para 220.
+        // O usuário arrastou Notas para a 3ª posição e alargou Nome para 300.
         var ordem = ColunasViewModel.Padrao.Select(p => p.Id).Where(id => id != "Notas").ToList();
         ordem.Insert(2, "Notas");
-        var daGrade = ordem.Select((id, i) => (id, i, id == "Nome" ? 220d : colunas[id].Largura));
+        var daGrade = ordem.Select((id, i) => (id, i, id == "Nome" ? 300d : colunas[id].Largura));
 
         colunas.RegistrarLayoutDaGrade(daGrade);
 
         Ordem(colunas).Take(4).Should().Equal("Numero", "Edt", "Notas", "Nome");
-        colunas["Nome"].Largura.Should().Be(220);
+        colunas["Nome"].Largura.Should().Be(300);
         _preferencias.Salvo!.Colunas.Single(c => c.Id == "Notas").Posicao.Should().Be(2);
-        _preferencias.Salvo.Colunas.Single(c => c.Id == "Nome").Largura.Should().Be(220);
+        _preferencias.Salvo.Colunas.Single(c => c.Id == "Nome").Largura.Should().Be(300);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class ColunasTests
 
         colunas.RegistrarLayoutDaGrade([("Nome", colunas["Nome"].Posicao, largura)]);
 
-        colunas["Nome"].Largura.Should().Be(130);
+        colunas["Nome"].Largura.Should().Be(220);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class ColunasTests
         var colunas = Colunas();
 
         colunas["Nome"].Visivel.Should().BeTrue();
-        colunas["Nome"].Largura.Should().Be(130);
+        colunas["Nome"].Largura.Should().Be(220);
         colunas["Numero"].Largura.Should().Be(70);
         colunas["Edt"].Visivel.Should().BeTrue();
         colunas.Colunas.Select(c => c.Posicao).Order().Should().Equal(Enumerable.Range(0, colunas.Colunas.Count));

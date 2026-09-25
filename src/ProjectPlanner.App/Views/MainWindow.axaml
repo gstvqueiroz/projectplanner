@@ -14,16 +14,23 @@
         <Border DockPanel.Dock="Top" Padding="8" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <!-- WrapPanel: em janelas estreitas os controles da direita passam para uma segunda linha. -->
-            <WrapPanel ItemSpacing="6" LineSpacing="6">
+            <WrapPanel ItemSpacing="4" LineSpacing="6">
                 <Button Content="Novo" Command="{Binding NovoProjetoCommand}" />
                 <Button Content="Abrir…" Command="{Binding AbrirProjetoCommand}" />
                 <Button Content="Salvar" Command="{Binding SalvarProjetoCommand}" />
                 <Button Content="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
-                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <Border Width="1" Height="24" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <Button Content="Adicionar tarefa" Command="{Binding AdicionarTarefaCommand}" />
                 <Button Content="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
-                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
-                <Button Content="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
+                <!-- Estrutura: subtarefa nova dentro da selecionada; subir e descer um nível (atalhos do MS Project). -->
+                <Button Content="Subtarefa" Command="{Binding AdicionarSubtarefaCommand}"
+                        ToolTip.Tip="Adicionar uma subtarefa dentro da tarefa selecionada" />
+                <Button Content="←" Command="{Binding PromoverCommand}" MinWidth="32"
+                        ToolTip.Tip="Promover: tira a tarefa do resumo, um nível acima (Alt+Shift+←)" />
+                <Button Content="→" Command="{Binding RebaixarCommand}" MinWidth="32"
+                        ToolTip.Tip="Rebaixar: coloca a tarefa dentro da tarefa de cima, um nível abaixo (Alt+Shift+→)" />
+                <Border Width="1" Height="24" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <Button Content="Recalcular" Command="{Binding RecalcularCronogramaCommand}" ToolTip.Tip="Recalcular o cronograma" />
                 <!-- Colunas da grid: mostrar/ocultar e restaurar o layout padrão. Ordem e largura mudam
                      arrastando os cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
                 <Button Content="Colunas ▾">
@@ -47,15 +54,15 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
-                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <Border Width="1" Height="24" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <TextBlock Text="Zoom:" VerticalAlignment="Center" ToolTip.Tip="Zoom do Gantt" />
-                <Slider Width="130" VerticalAlignment="Center"
+                <Slider Width="100" VerticalAlignment="Center"
                         Minimum="{x:Static vm:GanttViewModel.EscalaMinima}"
                         Maximum="{x:Static vm:GanttViewModel.EscalaMaxima}"
                         Value="{Binding Gantt.PixelsPorDia}" />
                 <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center" MinWidth="62" />
                 <!-- Opções de exibição, valem só durante a sessão (não vão para o .pplan). -->
-                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <Border Width="1" Height="24" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <TextBlock Text="Mostrar:" VerticalAlignment="Center" />
                 <CheckBox Content="Seleção" IsChecked="{Binding MostrarSelecao}" VerticalAlignment="Center"
                           ToolTip.Tip="Destacar a tarefa selecionada na grid e no Gantt" />
@@ -89,10 +96,11 @@
                   Grid.Column="0"
                   RowHeight="{x:Static vm:GanttViewModel.AlturaLinhaDaGrade}"
                   ColumnHeaderHeight="{x:Static vm:GanttViewModel.AlturaCabecalho}"
-                  ItemsSource="{Binding Tarefas}"
+                  ItemsSource="{Binding LinhasVisiveis}"
                   SelectedItem="{Binding TarefaSelecionada}"
                   SelectionMode="Single"
                   CellEditEnded="GradeCellEditEnded"
+                  BeginningEdit="GradeBeginningEdit"
                   AutoGenerateColumns="False"
                   CanUserSortColumns="False"
                   CanUserReorderColumns="True"
@@ -125,6 +133,8 @@
                 <Style Selector="DataGridRow" x:DataType="vm:TarefaViewModel">
                     <Setter Property="Background"
                             Value="{Binding DestacarComoCritica, Converter={x:Static v:Conversores.FundoDaTarefaCritica}}" />
+                    <Setter Property="FontWeight"
+                            Value="{Binding EhResumo, Converter={x:Static v:Conversores.NegritoSeVerdadeiro}}" />
                 </Style>
             </DataGrid.Styles>
 
@@ -132,7 +142,8 @@
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Numero" Header="Nº" Width="65" Binding="{Binding Numero}" IsReadOnly="True" />
                 <!-- EDT: por enquanto igual ao Nº; fica hierárquica quando houver tarefas-resumo (Bloco 11). -->
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Edt" Header="EDT" Width="75" Binding="{Binding Edt}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Nome" Header="Nome" Binding="{Binding Nome}" Width="130" />
+                <!-- Nome recuado pelo nível, com ▾/▸ nos resumos e ◆ nos marcos (ver ColunaNomeDaTarefa). -->
+                <v:ColunaNomeDaTarefa x:DataType="vm:TarefaViewModel" Tag="Nome" Header="Nome" Binding="{Binding Nome}" Width="220" />
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Duracao" Header="Duração&#x0a;(dias)" Width="104" Binding="{Binding Duracao}" />
 
                 <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Inicio" Header="Início" Width="104">

@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore.Design;
 namespace ProjectPlanner.Data;
 
 /// <summary>
-/// Schema de um arquivo de projeto. As exclusões em cascata (Projetos → Tarefas → Predecessoras)
-/// ficam no próprio banco, então valem também para quem mexer no arquivo por fora.
+/// Schema de um arquivo de projeto. As exclusões em cascata (Projetos → Tarefas → Predecessoras, e
+/// resumo → subtarefas) ficam no próprio banco, então valem também para quem mexer no arquivo por fora.
 /// </summary>
 internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbContext> options)
     : DbContext(options)
@@ -26,13 +26,20 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
         {
             tarefa.ToTable("Tarefas", t =>
             {
-                t.HasCheckConstraint("CK_Tarefas_Duracao", "Duracao > 0");
+                // Tarefa comum: duração > 0; marco: duração 0; resumo: a duração calculada, 0 ou mais.
+                t.HasCheckConstraint("CK_Tarefas_Duracao",
+                    "(Tipo = 0 AND Duracao > 0) OR (Tipo = 1 AND Duracao = 0) OR (Tipo = 2 AND Duracao >= 0)");
                 t.HasCheckConstraint("CK_Tarefas_PercentualConcluido", "PercentualConcluido BETWEEN 0 AND 100");
+                t.HasCheckConstraint("CK_Tarefas_Tipo", "Tipo BETWEEN 0 AND 2");
+                t.HasCheckConstraint("CK_Tarefas_PaiDiferenteDelaMesma", "TarefaPaiId IS NULL OR TarefaPaiId <> Id");
             });
             tarefa.HasKey(t => t.Id);
             tarefa.HasOne<ProjetoRegistro>().WithMany()
                 .HasForeignKey(t => t.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+            tarefa.HasOne<TarefaRegistro>().WithMany()
+                .HasForeignKey(t => t.TarefaPaiId).OnDelete(DeleteBehavior.Cascade);
             tarefa.HasIndex(t => new { t.ProjetoId, t.Ordem }).IsUnique();
+            tarefa.HasIndex(t => t.TarefaPaiId);
         });
 
         modelBuilder.Entity<PredecessoraRegistro>(vinculo =>

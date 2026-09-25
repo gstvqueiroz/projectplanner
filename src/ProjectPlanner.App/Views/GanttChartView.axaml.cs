@@ -6,14 +6,16 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using ProjectPlanner.App.ViewModels;
+using ProjectPlanner.Core;
 using ProjectPlanner.Core.Gantt;
 
 namespace ProjectPlanner.App.Views;
 
 /// <summary>
 /// Desenha o <see cref="GanttViewModel.Layout"/>: cabeçalho de tempo, barras (vermelhas as críticas,
-/// azuis as demais, com a parte concluída escurecida), linhas de folga, setas de dependência e o fundo
-/// levemente acinzentado dos fins de semana. A tarefa selecionada ganha um contorno na linha (o mesmo da
+/// azuis as demais, com a parte concluída escurecida), losangos dos marcos (pretos, ou vermelhos se
+/// críticos), barras "chapéu" dos resumos (escuras, sem cor de crítica, como no MS Project), linhas de
+/// folga, setas de dependência e o fundo levemente acinzentado dos fins de semana. A tarefa selecionada ganha um contorno na linha (o mesmo da
 /// grid) e na barra; clicar numa barra seleciona a tarefa. Não
 /// calcula posição nenhuma; tudo vem pronto da <see cref="CalculadoraLayoutGantt"/>.
 /// </summary>
@@ -36,6 +38,8 @@ public partial class GanttChartView : UserControl
     // Seleção: o mesmo cinza-azulado do contorno da linha selecionada na grid (MainWindow.axaml).
     private static readonly IBrush ContornoDaLinha = new SolidColorBrush(Color.Parse("#6A8CAF"));
     private static readonly IBrush ContornoDaBarra = new SolidColorBrush(Color.Parse("#263238"));
+    private static readonly IBrush Marco = new SolidColorBrush(Color.Parse("#212121"));
+    private static readonly IBrush Resumo = new SolidColorBrush(Color.Parse("#37474F"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
     // Fins de semana: cinza a ~9% de opacidade (#80808018), ≈ #F4F4F4 sobre branco. Translúcido para
     // funcionar também no tema escuro.
@@ -208,7 +212,7 @@ public partial class GanttChartView : UserControl
     {
         // A folga corre logo abaixo da barra (como no MS Project), para não cruzar o nome da tarefa.
         var yFolga = barra.Y + barra.Altura + 2;
-        if (barra.FimDaFolga is { } fimDaFolga)
+        if (barra.FimDaFolga is { } fimDaFolga && fimDaFolga > barra.Direita)
             Corpo.Children.Add(new Line
             {
                 StartPoint = new Point(barra.Direita, yFolga),
@@ -217,24 +221,32 @@ public partial class GanttChartView : UserControl
                 StrokeThickness = 2,
             });
 
-        var retangulo = new Rectangle
+        Shape forma = barra.Tipo switch
         {
-            Width = barra.Largura,
-            Height = barra.Altura,
-            Fill = viewModel.PintarComoCritica(barra) ? Critica : NaoCritica,
-            Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : null,
-            StrokeThickness = 1.5,
-            RadiusX = 2,
-            RadiusY = 2,
-            Cursor = new Cursor(StandardCursorType.Hand),
+            TipoTarefa.Marco => Losango(barra, viewModel.PintarComoCritica(barra) ? Critica : Marco),
+            TipoTarefa.Resumo => Chapeu(barra),
+            _ => new Rectangle
+            {
+                Width = barra.Largura,
+                Height = barra.Altura,
+                Fill = viewModel.PintarComoCritica(barra) ? Critica : NaoCritica,
+                RadiusX = 2,
+                RadiusY = 2,
+            },
         };
-        ToolTip.SetTip(retangulo, barra.Nome);
-        retangulo.PointerPressed += (_, e) =>
+        forma.Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : null;
+        forma.StrokeThickness = 1.5;
+        forma.Cursor = new Cursor(StandardCursorType.Hand);
+        ToolTip.SetTip(forma, barra.Nome);
+        forma.PointerPressed += (_, e) =>
         {
             viewModel.ClicarNaBarra(barra.TarefaId);
             e.Handled = true;
         };
-        Posicionar(Corpo, retangulo, barra.X, barra.Y);
+        if (forma is Rectangle)
+            Posicionar(Corpo, forma, barra.X, barra.Y);
+        else
+            Corpo.Children.Add(forma);
 
         if (barra.LarguraConcluida > 0)
             Posicionar(Corpo, new Rectangle
@@ -252,6 +264,43 @@ public partial class GanttChartView : UserControl
             FontSize = 11,
             IsHitTestVisible = false,
         }, barra.Direita + DistanciaDoRotulo, barra.CentroY - 8);
+    }
+
+    // O marco: um losango da altura da barra, centrado no instante dele.
+    private static Polygon Losango(BarraGantt barra, IBrush cor) => new()
+    {
+        Points =
+        [
+            new Point(barra.X, barra.CentroY),
+            new Point(barra.X + barra.Largura / 2, barra.Y),
+            new Point(barra.Direita, barra.CentroY),
+            new Point(barra.X + barra.Largura / 2, barra.Y + barra.Altura),
+        ],
+        Fill = cor,
+    };
+
+    // O resumo: uma barra fina na parte de cima da linha, com as pontas descendo em triângulo (o
+    // "chapéu" do MS Project), de ponta a ponta das subtarefas.
+    private static Polygon Chapeu(BarraGantt barra)
+    {
+        var (inicio, fim) = barra.Largura >= 4 ? (barra.X, barra.Direita) : (barra.X - 3, barra.X + 3);
+        var topo = barra.Y;
+        var espessura = barra.Altura * 0.4;
+        var perna = barra.Altura * 0.35;
+        var ponta = Math.Min(5, (fim - inicio) / 2);
+        return new Polygon
+        {
+            Points =
+            [
+                new Point(inicio, topo),
+                new Point(fim, topo),
+                new Point(fim, topo + espessura + perna),
+                new Point(fim - ponta, topo + espessura),
+                new Point(inicio + ponta, topo + espessura),
+                new Point(inicio, topo + espessura + perna),
+            ],
+            Fill = Resumo,
+        };
     }
 
     private void DesenharSeta(SetaGantt seta, GanttViewModel viewModel)

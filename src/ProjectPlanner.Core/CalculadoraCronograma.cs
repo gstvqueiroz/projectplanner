@@ -23,6 +23,24 @@ namespace ProjectPlanner.Core;
 /// de data além do início do projeto, a folga nunca é negativa.</item>
 /// </list>
 /// <para>
+/// Só as tarefas comuns e os marcos (as folhas da estrutura) entram no cálculo. Os resumos não têm
+/// vínculos e recebem, no final, os valores agregados das subtarefas (<see cref="CalculadoraResumos"/>).
+/// </para>
+/// <para>
+/// Um marco entra com duração 0 nas mesmas fórmulas: no dia útil p, ele é a fronteira entre o fim do
+/// dia p − 1 e o começo do dia p (o mesmo instante de trabalho), e EF = ES − 1. Para mostrar uma data,
+/// ele fica no instante de quem o determina, como no MS Project: ligado ao término de outra tarefa
+/// (FS ou FF), no fim do dia em que ela termina (<see cref="Tarefa.MarcoNoFimDoDia"/>); ligado ao
+/// início (SS ou SF), sem predecessora ou no início do projeto, no começo do dia. No empate, vale o
+/// começo do dia, que é mais tarde no relógio. As datas tarde do marco usam o mesmo lado do dia, sem
+/// passar do fim do projeto. Um marco depois de uma tarefa que termina na sexta fica na sexta, e a
+/// sucessora dele começa na segunda; um marco no começo de um dia é seguido no mesmo dia.
+/// </para>
+/// <para>
+/// O fim do projeto é o instante mais tarde em que alguma folha termina: o fim do último dia de
+/// trabalho, ou o começo do dia de um marco que venha depois dele.
+/// </para>
+/// <para>
 /// As tarefas só recebem os resultados depois que todo o cálculo deu certo. Em caso de erro,
 /// nenhuma é alterada.
 /// </para>
@@ -35,10 +53,11 @@ public static class CalculadoraCronograma
     public static ResultadoCronograma Calcular(Cronograma cronograma)
     {
         ArgumentNullException.ThrowIfNull(cronograma);
-        if (cronograma.Tarefas.Count == 0)
+        var folhas = cronograma.Tarefas.Where(t => !t.EhResumo).ToList();
+        if (folhas.Count == 0)
             return new ResultadoCronograma(cronograma.DataInicio, [], []);
 
-        var ordem = OrdenarTopologicamente(cronograma.Tarefas, cronograma.Predecessoras);
+        var ordem = OrdenarTopologicamente(folhas, cronograma.Predecessoras);
         var predecessorasDe = cronograma.Predecessoras.ToLookup(p => p.TarefaDestinoId);
         var sucessorasDe = cronograma.Predecessoras.ToLookup(p => p.TarefaOrigemId);
 
@@ -51,31 +70,81 @@ public static class CalculadoraCronograma
             cedo[tarefa.Id] = Periodo.ComInicio(inicio, tarefa.Duracao);
         }
 
-        var fimDoProjeto = cedo.Values.Max(p => p.Termino);
-        if (fimDoProjeto > int.MaxValue || DiasUteis.Adicionar(cronograma.DataInicio, (int)fimDoProjeto) is null)
+        var porId = ordem.ToDictionary(t => t.Id);
+        var marcoNoFimDoDia = new Dictionary<Guid, bool>();
+        foreach (var marco in ordem.Where(t => t.Duracao == 0))
+            marcoNoFimDoDia[marco.Id] = FicaNoFimDoDia(marco, predecessorasDe[marco.Id], cedo, marcoNoFimDoDia, porId);
+
+        // Instantes em meios-dias: o começo do dia útil d é 2d, e o fim dele é 2d + 1.
+        long InstanteDoTermino(Tarefa tarefa) => tarefa.Duracao > 0
+            ? 2 * cedo[tarefa.Id].Termino + 1
+            : Instante(cedo[tarefa.Id].Inicio, marcoNoFimDoDia[tarefa.Id]);
+        var fimDoProjeto = ordem.Max(InstanteDoTermino);
+        var diaDoFim = fimDoProjeto / 2;
+        if (diaDoFim > int.MaxValue || DiasUteis.Adicionar(cronograma.DataInicio, (int)diaDoFim) is null)
             throw new DomainValidationException(nameof(Tarefa.TerminoMaisCedo),
                 "O término calculado do projeto ultrapassa a maior data suportada (31/12/9999).");
 
+        var ultimoDia = cedo.Values.Max(p => p.Termino);
         var tarde = new Dictionary<Guid, Periodo>();
         foreach (var tarefa in Enumerable.Reverse(ordem))
         {
-            var termino = fimDoProjeto;
+            var termino = ultimoDia;
             foreach (var vinculo in sucessorasDe[tarefa.Id])
                 termino = Math.Min(termino, TerminoMaximo(vinculo, tarde[vinculo.TarefaDestinoId], tarefa.Duracao));
             tarde[tarefa.Id] = Periodo.ComTermino(termino, tarefa.Duracao);
         }
 
-        // Todo dia calculado fica entre 0 e o fim do projeto, que já cabe numa data.
+        // Todo dia mostrado fica entre 0 e o dia do fim do projeto, que já cabe numa data.
         DateTime Data(long dia) => DiasUteis.Adicionar(cronograma.DataInicio, (int)dia)!.Value;
         foreach (var tarefa in ordem)
         {
             var (c, t) = (cedo[tarefa.Id], tarde[tarefa.Id]);
-            tarefa.DefinirDatasCalculadas(Data(c.Inicio), Data(c.Termino), Data(t.Inicio), Data(t.Termino),
-                (int)(t.Inicio - c.Inicio));
+            var folga = (int)(t.Inicio - c.Inicio);
+            if (tarefa.Duracao > 0)
+            {
+                tarefa.DefinirDatasCalculadas(Data(c.Inicio), Data(c.Termino), Data(t.Inicio), Data(t.Termino), folga);
+                continue;
+            }
+
+            var noFim = marcoNoFimDoDia[tarefa.Id];
+            var instanteCedo = Instante(c.Inicio, noFim);
+            var instanteTarde = Math.Min(Instante(t.Inicio, noFim), fimDoProjeto);
+            tarefa.DefinirDatasCalculadas(Data(instanteCedo / 2), Data(instanteCedo / 2),
+                Data(instanteTarde / 2), Data(instanteTarde / 2), folga, noFim, instanteTarde % 2 == 1);
         }
 
+        CalculadoraResumos.Atualizar(cronograma);
+
         var criticas = ordem.Where(t => t.EhCritica).ToList();
-        return new ResultadoCronograma(Data(fimDoProjeto), criticas, CaminhosCriticos(criticas, sucessorasDe, cedo));
+        return new ResultadoCronograma(Data(diaDoFim), criticas, CaminhosCriticos(criticas, sucessorasDe, cedo));
+    }
+
+    // Instante de um marco na fronteira p (em meios-dias): o fim do dia p − 1 ou o começo do dia p.
+    private static long Instante(long fronteira, bool noFimDoDia) => noFimDoDia ? 2 * fronteira - 1 : 2 * fronteira;
+
+    // Um marco fica no instante de quem fixa o seu início: o término de uma tarefa comum (FS, FF) é o
+    // fim de um dia; o início dela (SS, SF), o começo; um marco predecessor passa o seu próprio lado.
+    // No início do projeto, e no empate, vale o começo do dia.
+    private static bool FicaNoFimDoDia(Tarefa marco, IEnumerable<Predecessora> vinculos,
+        Dictionary<Guid, Periodo> cedo, Dictionary<Guid, bool> marcoNoFimDoDia, Dictionary<Guid, Tarefa> porId)
+    {
+        var inicio = cedo[marco.Id].Inicio;
+        if (inicio == 0)
+            return false;
+
+        var noFim = false;
+        foreach (var vinculo in vinculos)
+        {
+            var origem = porId[vinculo.TarefaOrigemId];
+            if (InicioMinimo(vinculo, cedo[origem.Id], 0) != inicio)
+                continue;
+            var doTermino = vinculo.Tipo is TipoDependencia.FS or TipoDependencia.FF;
+            if (!(origem.Duracao == 0 ? marcoNoFimDoDia[origem.Id] : doTermino))
+                return false;
+            noFim = true;
+        }
+        return noFim;
     }
 
     /// <summary>

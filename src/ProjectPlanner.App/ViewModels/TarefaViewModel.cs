@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.Core;
 
 namespace ProjectPlanner.App.ViewModels;
@@ -23,6 +24,15 @@ public interface IEdicaoCronograma
 
     /// <summary>Se o destaque das tarefas críticas está ligado (o mesmo controle do Gantt).</summary>
     bool MostrarCaminhoCritico { get; }
+
+    /// <summary>Código da tarefa na EDT: 1, 1.1, 1.2, 2...</summary>
+    string EdtDe(Tarefa tarefa);
+
+    /// <summary>Profundidade da tarefa na estrutura: 0 no primeiro nível.</summary>
+    int NivelDe(Tarefa tarefa);
+
+    /// <summary>O usuário recolheu ou expandiu o resumo desta linha.</summary>
+    void ExpansaoMudou(TarefaViewModel linha);
 
     /// <summary>Uma alteração foi aplicada: marca o projeto como alterado e recalcula.</summary>
     void TarefaAlterada();
@@ -50,7 +60,7 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         nameof(Nome), nameof(Duracao), nameof(DataInicio), nameof(DataTermino), nameof(PercentualConcluido),
         nameof(Predecessoras), nameof(InicioMaisCedo), nameof(TerminoMaisCedo), nameof(InicioMaisTarde),
         nameof(TerminoMaisTarde), nameof(Folga), nameof(EhCritica), nameof(Sucessoras), nameof(Notas),
-        nameof(DestacarComoCritica),
+        nameof(DestacarComoCritica), nameof(Edt), nameof(Nivel), nameof(EhResumo), nameof(EhMarco),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -69,11 +79,31 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     [NotifyPropertyChangedFor(nameof(Edt))]
     public partial int Numero { get; set; }
 
+    /// <summary>Código da EDT (estrutura analítica): 1, 1.1, 1.2, 1.2.1, 2...</summary>
+    public string Edt => _edicao.EdtDe(Tarefa);
+
+    /// <summary>Profundidade na estrutura (0 no primeiro nível), para o recuo do nome na grid.</summary>
+    public int Nivel => _edicao.NivelDe(Tarefa);
+
+    public bool EhResumo => Tarefa.EhResumo;
+
+    public bool EhMarco => Tarefa.EhMarco;
+
     /// <summary>
-    /// Código da EDT (estrutura analítica). Sem tarefas-resumo ainda, é o próprio número da linha;
-    /// passa a ser hierárquico (1, 1.1, 1.2...) quando houver resumos (Bloco 11).
+    /// Se as subtarefas deste resumo aparecem na grid e no Gantt. É estado da tela (não vai para o
+    /// arquivo nem marca o projeto como alterado); ao abrir, tudo começa expandido.
     /// </summary>
-    public string Edt => Numero.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SimboloExpansao))]
+    public partial bool Expandido { get; set; } = true;
+
+    /// <summary>▾ expandido, ▸ recolhido.</summary>
+    public string SimboloExpansao => Expandido ? "▾" : "▸";
+
+    partial void OnExpandidoChanged(bool value) => _edicao.ExpansaoMudou(this);
+
+    [RelayCommand]
+    private void AlternarExpansao() => Expandido = !Expandido;
 
     public string Nome
     {

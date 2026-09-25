@@ -10,6 +10,10 @@ public interface IDialogosService
     Task<string?> EscolherArquivoParaSalvarAsync(string nomeSugerido);
 
     Task<RespostaAlteracoesPendentes> PerguntarSobreAlteracoesPendentesAsync(string nomeProjeto);
+
+    /// <summary>Pede confirmação antes de uma ação que não dá para desfazer.</summary>
+    /// <returns>Se o usuário confirmou (fechar o diálogo vale como não).</returns>
+    Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao);
 }
 
 public enum RespostaAlteracoesPendentes

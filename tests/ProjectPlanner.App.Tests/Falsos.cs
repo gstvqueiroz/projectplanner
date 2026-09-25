@@ -40,17 +40,20 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
     public void Salvar(Cronograma cronograma, string caminhoArquivo)
     {
         var (id, nome, inicio) = (cronograma.Id, cronograma.Nome, cronograma.DataInicio);
-        var tarefas = cronograma.Tarefas.Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas)).ToList();
+        var tarefas = cronograma.Tarefas
+            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo))
+            .ToList();
         var vinculos = cronograma.Predecessoras.ToList();
         _arquivos[caminhoArquivo] = () =>
         {
             var reconstruido = new Cronograma(id, nome, inicio);
             foreach (var t in tarefas)
             {
-                var tarefa = new Tarefa(t.Id, t.Nome, t.DataInicio, t.Duracao);
+                // Como no arquivo: um resumo entra com pelo menos 1 dia (é recalculado).
+                var tarefa = new Tarefa(t.Id, t.Nome, t.DataInicio, t.EhResumo ? Math.Max(t.Duracao, 1) : t.Duracao);
                 tarefa.AtualizarPercentualConcluido(t.PercentualConcluido);
                 tarefa.AlterarNotas(t.Notas);
-                reconstruido.AdicionarTarefa(tarefa);
+                reconstruido.AdicionarTarefa(tarefa, t.TarefaPaiId);
             }
             foreach (var vinculo in vinculos)
                 reconstruido.AdicionarPredecessora(vinculo);
@@ -88,6 +91,18 @@ public sealed class DialogosFalsos : IDialogosService
     {
         VezesQuePerguntouSobreAlteracoes++;
         return Task.FromResult(RespostaAlteracoesPendentes);
+    }
+
+    /// <summary>A resposta às confirmações (Remover resumo...).</summary>
+    public bool Confirmar { get; set; } = true;
+
+    /// <summary>As mensagens de confirmação mostradas, em ordem.</summary>
+    public List<string> Confirmacoes { get; } = [];
+
+    public Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao)
+    {
+        Confirmacoes.Add(mensagem);
+        return Task.FromResult(Confirmar);
     }
 }
 

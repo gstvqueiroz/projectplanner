@@ -36,9 +36,36 @@ public sealed partial class GanttViewModel : ViewModelBase
     [ObservableProperty]
     public partial double PixelsPorDia { get; set; } = EscalaInicial;
 
+    /// <summary>
+    /// Opção de exibição (só da sessão): falso pinta as tarefas e setas críticas na cor comum. Não
+    /// muda o cálculo; <see cref="BarraGantt.EhCritica"/> continua como o CPM calculou.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool MostrarCaminhoCritico { get; set; } = true;
+
+    /// <summary>
+    /// A tarefa cuja barra aparece destacada: a selecionada na grid, repassada pela janela principal
+    /// (nula quando não há seleção ou quando o destaque de seleção está desligado).
+    /// </summary>
+    [ObservableProperty]
+    public partial Guid? TarefaDestacada { get; set; }
+
+    /// <summary>O usuário clicou na barra de uma tarefa; a janela principal a seleciona.</summary>
+    public event Action<Guid>? BarraClicada;
+
     /// <summary>O que desenhar; nulo quando não há cronograma calculado.</summary>
     [ObservableProperty]
     public partial LayoutGantt? Layout { get; private set; }
+
+    /// <summary>Se a barra vai na cor de crítica: crítica no cálculo e com o destaque ligado.</summary>
+    public bool PintarComoCritica(BarraGantt barra) => MostrarCaminhoCritico && barra.EhCritica;
+
+    /// <summary>Se a seta vai na cor de crítica: parte de um caminho crítico e com o destaque ligado.</summary>
+    public bool PintarComoCritica(SetaGantt seta) => MostrarCaminhoCritico && seta.EhCritica;
+
+    public bool EstaDestacada(BarraGantt barra) => TarefaDestacada == barra.TarefaId;
+
+    public void ClicarNaBarra(Guid tarefaId) => BarraClicada?.Invoke(tarefaId);
 
     /// <summary>Passa a mostrar um cronograma recém-calculado.</summary>
     public void Atualizar(Cronograma cronograma, ResultadoCronograma resultado)

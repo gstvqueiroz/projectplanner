@@ -13,24 +13,32 @@
         <!-- Barra de ferramentas -->
         <Border DockPanel.Dock="Top" Padding="8" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
+            <!-- WrapPanel: em janelas estreitas os controles da direita passam para uma segunda linha. -->
+            <WrapPanel ItemSpacing="6" LineSpacing="6">
                 <Button Content="Novo" Command="{Binding NovoProjetoCommand}" />
                 <Button Content="Abrir…" Command="{Binding AbrirProjetoCommand}" />
                 <Button Content="Salvar" Command="{Binding SalvarProjetoCommand}" />
                 <Button Content="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
-                <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <Button Content="Adicionar tarefa" Command="{Binding AdicionarTarefaCommand}" />
                 <Button Content="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
-                <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <Button Content="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
-                <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
-                <TextBlock Text="Zoom do Gantt:" VerticalAlignment="Center" />
-                <Slider Width="160" VerticalAlignment="Center"
+                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <TextBlock Text="Zoom:" VerticalAlignment="Center" ToolTip.Tip="Zoom do Gantt" />
+                <Slider Width="130" VerticalAlignment="Center"
                         Minimum="{x:Static vm:GanttViewModel.EscalaMinima}"
                         Maximum="{x:Static vm:GanttViewModel.EscalaMaxima}"
                         Value="{Binding Gantt.PixelsPorDia}" />
-                <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center" MinWidth="70" />
-            </StackPanel>
+                <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center" MinWidth="62" />
+                <!-- Opções de exibição, valem só durante a sessão (não vão para o .pplan). -->
+                <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <TextBlock Text="Mostrar:" VerticalAlignment="Center" />
+                <CheckBox Content="Seleção" IsChecked="{Binding MostrarSelecao}" VerticalAlignment="Center"
+                          ToolTip.Tip="Destacar a tarefa selecionada na grid e no Gantt" />
+                <CheckBox Content="Caminho crítico" IsChecked="{Binding Gantt.MostrarCaminhoCritico}" VerticalAlignment="Center"
+                          ToolTip.Tip="Pintar de vermelho as tarefas e vínculos críticos no Gantt" />
+            </WrapPanel>
         </Border>
 
         <!-- Dados do projeto -->
@@ -66,11 +74,29 @@
                   CanUserSortColumns="False"
                   CanUserReorderColumns="False"
                   GridLinesVisibility="All"
+                  Classes.semSelecao="{Binding !MostrarSelecao}"
                   BorderThickness="1"
                   BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <DataGrid.Styles>
                 <Style Selector="DataGridCell">
                     <Setter Property="FontSize" Value="13" />
+                </Style>
+                <!-- Seleção sutil: em vez do fundo azul do tema, um contorno cinza-azulado de 2 px desenhado
+                     no retângulo de fundo da linha (não muda a altura, que precisa bater com o Gantt).
+                     A mesma cor contorna a linha no Gantt (GanttChartView). -->
+                <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+                    <Setter Property="Fill" Value="Transparent" />
+                    <Setter Property="Stroke" Value="#6A8CAF" />
+                    <Setter Property="StrokeThickness" Value="2" />
+                    <Setter Property="Opacity" Value="1" />
+                </Style>
+                <!-- "Mostrar seleção" desligado: nenhum destaque na linha nem na célula atual. A seleção
+                     continua existindo (Remover tarefa, edição inline). -->
+                <Style Selector="DataGrid.semSelecao DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+                    <Setter Property="Opacity" Value="0" />
+                </Style>
+                <Style Selector="DataGrid.semSelecao DataGridCell /template/ Grid#FocusVisual">
+                    <Setter Property="IsVisible" Value="False" />
                 </Style>
                 <Style Selector="DataGridRow" x:DataType="vm:TarefaViewModel">
                     <Setter Property="Background"

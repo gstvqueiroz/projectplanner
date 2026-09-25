@@ -13,7 +13,8 @@ namespace ProjectPlanner.App.Views;
 /// <summary>
 /// Desenha o <see cref="GanttViewModel.Layout"/>: cabeçalho de tempo, barras (vermelhas as críticas,
 /// azuis as demais, com a parte concluída escurecida), linhas de folga, setas de dependência e o fundo
-/// levemente acinzentado dos fins de semana. Não
+/// levemente acinzentado dos fins de semana. A tarefa selecionada ganha um contorno na linha (o mesmo da
+/// grid) e na barra; clicar numa barra seleciona a tarefa. Não
 /// calcula posição nenhuma; tudo vem pronto da <see cref="CalculadoraLayoutGantt"/>.
 /// </summary>
 public partial class GanttChartView : UserControl
@@ -32,6 +33,9 @@ public partial class GanttChartView : UserControl
     private static readonly IBrush Concluida = new SolidColorBrush(Color.FromArgb(0x80, 0, 0, 0));
     private static readonly IBrush LinhaDeFolga = new SolidColorBrush(Color.Parse("#9E9E9E"));
     private static readonly IBrush SetaNaoCritica = new SolidColorBrush(Color.Parse("#607D8B"));
+    // Seleção: o mesmo cinza-azulado do contorno da linha selecionada na grid (MainWindow.axaml).
+    private static readonly IBrush ContornoDaLinha = new SolidColorBrush(Color.Parse("#6A8CAF"));
+    private static readonly IBrush ContornoDaBarra = new SolidColorBrush(Color.Parse("#263238"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
     // Fins de semana: cinza a ~9% de opacidade (#80808018), ≈ #F4F4F4 sobre branco. Translúcido para
     // funcionar também no tema escuro.
@@ -79,7 +83,8 @@ public partial class GanttChartView : UserControl
 
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(GanttViewModel.Layout))
+        if (e.PropertyName is nameof(GanttViewModel.Layout) or nameof(GanttViewModel.MostrarCaminhoCritico)
+            or nameof(GanttViewModel.TarefaDestacada))
             Desenhar();
     }
 
@@ -121,10 +126,12 @@ public partial class GanttChartView : UserControl
 
         DesenharCabecalho(layout.Escala);
         DesenharGradeDeFundo(layout);
+        foreach (var barra in layout.Barras.Where(_viewModel.EstaDestacada))
+            DesenharContornoDaLinha(barra, layout.Largura);
         foreach (var barra in layout.Barras)
-            DesenharBarra(barra);
+            DesenharBarra(barra, _viewModel);
         foreach (var seta in layout.Setas)
-            DesenharSeta(seta);
+            DesenharSeta(seta, _viewModel);
     }
 
     private void DesenharCabecalho(EscalaGantt escala)
@@ -186,7 +193,18 @@ public partial class GanttChartView : UserControl
             });
     }
 
-    private void DesenharBarra(BarraGantt barra)
+    // Contorno de 2 px na linha inteira, por dentro dela, continuando o da linha na grid.
+    private void DesenharContornoDaLinha(BarraGantt barra, double largura) =>
+        Posicionar(Corpo, new Rectangle
+        {
+            Width = largura,
+            Height = GanttViewModel.AlturaLinha,
+            Stroke = ContornoDaLinha,
+            StrokeThickness = 2,
+            IsHitTestVisible = false,
+        }, 0, barra.Linha * GanttViewModel.AlturaLinha);
+
+    private void DesenharBarra(BarraGantt barra, GanttViewModel viewModel)
     {
         // A folga corre logo abaixo da barra (como no MS Project), para não cruzar o nome da tarefa.
         var yFolga = barra.Y + barra.Altura + 2;
@@ -203,11 +221,19 @@ public partial class GanttChartView : UserControl
         {
             Width = barra.Largura,
             Height = barra.Altura,
-            Fill = barra.EhCritica ? Critica : NaoCritica,
+            Fill = viewModel.PintarComoCritica(barra) ? Critica : NaoCritica,
+            Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : null,
+            StrokeThickness = 1.5,
             RadiusX = 2,
             RadiusY = 2,
+            Cursor = new Cursor(StandardCursorType.Hand),
         };
         ToolTip.SetTip(retangulo, barra.Nome);
+        retangulo.PointerPressed += (_, e) =>
+        {
+            viewModel.ClicarNaBarra(barra.TarefaId);
+            e.Handled = true;
+        };
         Posicionar(Corpo, retangulo, barra.X, barra.Y);
 
         if (barra.LarguraConcluida > 0)
@@ -228,14 +254,15 @@ public partial class GanttChartView : UserControl
         }, barra.Direita + DistanciaDoRotulo, barra.CentroY - 8);
     }
 
-    private void DesenharSeta(SetaGantt seta)
+    private void DesenharSeta(SetaGantt seta, GanttViewModel viewModel)
     {
-        var cor = seta.EhCritica ? Critica : SetaNaoCritica;
+        var critica = viewModel.PintarComoCritica(seta);
+        var cor = critica ? Critica : SetaNaoCritica;
         Corpo.Children.Add(new Polyline
         {
             Points = seta.Pontos.Select(p => new Point(p.X, p.Y)).ToList(),
             Stroke = cor,
-            StrokeThickness = seta.EhCritica ? 1.6 : 1.2,
+            StrokeThickness = critica ? 1.6 : 1.2,
         });
         Corpo.Children.Add(new Polygon
         {

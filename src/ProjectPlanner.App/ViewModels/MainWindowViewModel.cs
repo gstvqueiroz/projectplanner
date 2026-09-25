@@ -33,6 +33,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _dialogos = dialogos;
         _relogio = relogio;
         _cronograma = NovoCronograma();
+        Gantt.BarraClicada += tarefaId => TarefaSelecionada = Tarefas.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
         Carregar(_cronograma, caminho: null);
     }
 
@@ -44,9 +45,27 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// <summary>O projeto aberto (para testes; a tela usa só as propriedades do ViewModel).</summary>
     internal Cronograma Cronograma => _cronograma;
 
+    /// <summary>
+    /// A tarefa selecionada: a única fonte da seleção. A grid se liga a ela, e o Gantt recebe dela a
+    /// barra a destacar (<see cref="GanttViewModel.TarefaDestacada"/>); clicar numa barra muda esta.
+    /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoverTarefaCommand))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
+
+    /// <summary>
+    /// Opção de exibição (só da sessão): falso esconde o destaque da linha selecionada na grid e da barra
+    /// no Gantt. A seleção continua existindo e valendo para remover e editar.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool MostrarSelecao { get; set; } = true;
+
+    partial void OnTarefaSelecionadaChanged(TarefaViewModel? value) => AtualizarDestaqueNoGantt();
+
+    partial void OnMostrarSelecaoChanged(bool value) => AtualizarDestaqueNoGantt();
+
+    private void AtualizarDestaqueNoGantt() =>
+        Gantt.TarefaDestacada = MostrarSelecao ? TarefaSelecionada?.Tarefa.Id : null;
 
     /// <summary>Arquivo do projeto; nulo enquanto ele nunca foi salvo.</summary>
     [ObservableProperty]

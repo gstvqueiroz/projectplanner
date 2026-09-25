@@ -24,6 +24,7 @@ internal sealed class TarefaRegistro
     public DateTime DataInicio { get; set; }
     public DateTime DataTermino { get; set; }
     public int PercentualConcluido { get; set; }
+    public string? Notas { get; set; }
 }
 
 internal sealed class PredecessoraRegistro

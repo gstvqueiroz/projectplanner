@@ -62,6 +62,13 @@ public class Tarefa
     /// <summary>Percentual concluído, de 0 a 100.</summary>
     public int PercentualConcluido { get; private set; }
 
+    /// <summary>
+    /// Anotações livres sobre a tarefa, sem limite nem formato. Nulo quando não há nenhuma: texto vazio
+    /// ou só com espaços vira nulo; qualquer outro texto é guardado exatamente como veio (com quebras de
+    /// linha e espaços), já que é do usuário.
+    /// </summary>
+    public string? Notas { get; private set; }
+
     /// <summary>Início mais cedo (ES), do último cálculo do cronograma.</summary>
     public DateTime? InicioMaisCedo { get; private set; }
 
@@ -109,6 +116,8 @@ public class Tarefa
         Duracao = DiasUteis.ContarInclusivo(DataInicio, termino);
         DataTermino = termino;
     }
+
+    public void AlterarNotas(string? notas) => Notas = string.IsNullOrWhiteSpace(notas) ? null : notas;
 
     public void AtualizarPercentualConcluido(int percentual)
     {

@@ -13,6 +13,7 @@ public static class Servicos
         .AddSingleton<IProjetoRepository>(s => new SqliteProjetoRepository(s.GetRequiredService<TimeProvider>()))
         .AddSingleton<ICalculadoraCronograma, CalculadoraCronogramaServico>()
         .AddSingleton<IDialogosService, DialogosAvalonia>()
+        .AddSingleton<IPreferenciasColunas, ArquivoPreferenciasColunas>()
         .AddTransient<MainWindowViewModel>()
         .BuildServiceProvider();
 }

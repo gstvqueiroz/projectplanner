@@ -1,3 +1,4 @@
+using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.Core;
@@ -39,7 +40,7 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
     public void Salvar(Cronograma cronograma, string caminhoArquivo)
     {
         var (id, nome, inicio) = (cronograma.Id, cronograma.Nome, cronograma.DataInicio);
-        var tarefas = cronograma.Tarefas.Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido)).ToList();
+        var tarefas = cronograma.Tarefas.Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas)).ToList();
         var vinculos = cronograma.Predecessoras.ToList();
         _arquivos[caminhoArquivo] = () =>
         {
@@ -48,6 +49,7 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
             {
                 var tarefa = new Tarefa(t.Id, t.Nome, t.DataInicio, t.Duracao);
                 tarefa.AtualizarPercentualConcluido(t.PercentualConcluido);
+                tarefa.AlterarNotas(t.Notas);
                 reconstruido.AdicionarTarefa(tarefa);
             }
             foreach (var vinculo in vinculos)
@@ -101,6 +103,22 @@ public sealed class CalculadoraEspia : ICalculadoraCronograma
     }
 }
 
+/// <summary>Preferências de colunas em memória, que registram cada gravação.</summary>
+public sealed class PreferenciasEmMemoria : IPreferenciasColunas
+{
+    public LayoutColunas? Salvo { get; set; }
+
+    public int Gravacoes { get; private set; }
+
+    public LayoutColunas? Carregar() => Salvo;
+
+    public void Salvar(LayoutColunas layout)
+    {
+        Salvo = layout;
+        Gravacoes++;
+    }
+}
+
 /// <summary>Relógio parado em UTC, para que "hoje" não dependa do fuso da máquina.</summary>
 public sealed class RelogioFixo(DateTimeOffset agora) : TimeProvider
 {
@@ -119,7 +137,9 @@ public sealed class Ambiente
     public CalculadoraEspia Calculadora { get; } = new();
     public RelogioFixo Relogio { get; } = new(new DateTimeOffset(2026, 9, 28, 12, 0, 0, TimeSpan.Zero));
 
-    public MainWindowViewModel CriarViewModel() => new(Repositorio, Calculadora, Dialogos, Relogio);
+    public PreferenciasEmMemoria Preferencias { get; } = new();
+
+    public MainWindowViewModel CriarViewModel() => new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")

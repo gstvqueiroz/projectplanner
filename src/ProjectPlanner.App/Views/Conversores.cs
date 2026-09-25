@@ -5,10 +5,11 @@ namespace ProjectPlanner.App.Views;
 
 public static class Conversores
 {
-    // Laranja translúcido, para funcionar tanto no tema claro quanto no escuro.
-    private static readonly IBrush FundoCritico = new SolidColorBrush(Color.FromArgb(0x60, 0xFF, 0x8C, 0x00));
+    // Vermelho suave translúcido (#2EE53935, ≈ #FADBDA sobre branco): a mesma família do vermelho das
+    // barras críticas no Gantt, bem mais claro, e translúcido para funcionar também no tema escuro.
+    private static readonly IBrush FundoCritico = new SolidColorBrush(Color.FromArgb(0x2E, 0xE5, 0x39, 0x35));
 
-    /// <summary>Fundo das linhas de tarefas críticas.</summary>
+    /// <summary>Fundo das linhas de tarefas críticas (quando o destaque do caminho crítico está ligado).</summary>
     public static readonly IValueConverter FundoDaTarefaCritica =
         new FuncValueConverter<bool, IBrush?>(critica => critica ? FundoCritico : null);
 

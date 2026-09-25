@@ -102,6 +102,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             DataInicio = t.DataInicio,
             DataTermino = t.DataTermino,
             PercentualConcluido = t.PercentualConcluido,
+            Notas = t.Notas,
         }));
 
         contexto.Predecessoras.AddRange(cronograma.Predecessoras.Select((p, ordem) => new PredecessoraRegistro
@@ -149,6 +150,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
         {
             var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, registro.Duracao);
             tarefa.AtualizarPercentualConcluido(registro.PercentualConcluido);
+            tarefa.AlterarNotas(registro.Notas);
             cronograma.AdicionarTarefa(tarefa);
         }
 

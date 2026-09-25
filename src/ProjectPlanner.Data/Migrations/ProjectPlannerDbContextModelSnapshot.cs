@@ -96,6 +96,9 @@ namespace ProjectPlanner.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Notas")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Ordem")
                         .HasColumnType("INTEGER");
 

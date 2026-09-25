@@ -26,14 +26,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private Cronograma _cronograma;
 
     public MainWindowViewModel(IProjetoRepository repositorio, ICalculadoraCronograma calculadora,
-        IDialogosService dialogos, TimeProvider relogio)
+        IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas)
     {
+        Colunas = new ColunasViewModel(preferenciasColunas);
         _repositorio = repositorio;
         _calculadora = calculadora;
         _dialogos = dialogos;
         _relogio = relogio;
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += tarefaId => TarefaSelecionada = Tarefas.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
+        // Um controle só para o caminho crítico: o do Gantt também liga e desliga o fundo das linhas na grid.
+        Gantt.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(GanttViewModel.MostrarCaminhoCritico))
+                foreach (var linha in Tarefas)
+                    linha.AtualizarTela();
+        };
         Carregar(_cronograma, caminho: null);
     }
 
@@ -41,6 +49,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     /// <summary>O Gantt ao lado da grid, refeito a cada recálculo.</summary>
     public GanttViewModel Gantt { get; } = new();
+
+    /// <summary>Quais colunas da grid aparecem, em que ordem e largura (preferência do usuário, não do projeto).</summary>
+    public ColunasViewModel Colunas { get; }
 
     /// <summary>O projeto aberto (para testes; a tela usa só as propriedades do ViewModel).</summary>
     internal Cronograma Cronograma => _cronograma;
@@ -236,6 +247,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     string IEdicaoCronograma.TextoPredecessoras(Tarefa tarefa) =>
         NotacaoPredecessoras.Formatar(_cronograma.PredecessorasDe(tarefa.Id)
             .Select(p => new ItemPredecessora(NumeroDa(p.TarefaOrigemId), p.Tipo, p.Lag)));
+
+    string IEdicaoCronograma.TextoSucessoras(Tarefa tarefa) =>
+        NotacaoPredecessoras.Formatar(_cronograma.Predecessoras
+            .Where(p => p.TarefaOrigemId == tarefa.Id)
+            .Select(p => new ItemPredecessora(NumeroDa(p.TarefaDestinoId), p.Tipo, p.Lag))
+            .OrderBy(item => item.Linha));
+
+    bool IEdicaoCronograma.MostrarCaminhoCritico => Gantt.MostrarCaminhoCritico;
 
     void IEdicaoCronograma.DefinirPredecessoras(Tarefa tarefa, string texto)
     {

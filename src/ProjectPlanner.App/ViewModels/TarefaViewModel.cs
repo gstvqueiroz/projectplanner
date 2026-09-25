@@ -15,6 +15,15 @@ public interface IEdicaoCronograma
     /// <exception cref="DomainValidationException">Algum vínculo viola as regras do cronograma.</exception>
     void DefinirPredecessoras(Tarefa tarefa, string texto);
 
+    /// <summary>
+    /// Sucessoras da tarefa, na mesma notação das predecessoras vista do outro lado: o número da
+    /// sucessora com o tipo e o lag do vínculo (a tarefa 1 com sucessora "3II+2" é a predecessora "1II+2" da 3).
+    /// </summary>
+    string TextoSucessoras(Tarefa tarefa);
+
+    /// <summary>Se o destaque das tarefas críticas está ligado (o mesmo controle do Gantt).</summary>
+    bool MostrarCaminhoCritico { get; }
+
     /// <summary>Uma alteração foi aplicada: marca o projeto como alterado e recalcula.</summary>
     void TarefaAlterada();
 
@@ -40,7 +49,8 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     [
         nameof(Nome), nameof(Duracao), nameof(DataInicio), nameof(DataTermino), nameof(PercentualConcluido),
         nameof(Predecessoras), nameof(InicioMaisCedo), nameof(TerminoMaisCedo), nameof(InicioMaisTarde),
-        nameof(TerminoMaisTarde), nameof(Folga), nameof(EhCritica),
+        nameof(TerminoMaisTarde), nameof(Folga), nameof(EhCritica), nameof(Sucessoras), nameof(Notas),
+        nameof(DestacarComoCritica),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -56,7 +66,14 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
 
     /// <summary>Número da linha (1, 2, 3...), usado na notação de predecessoras.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Edt))]
     public partial int Numero { get; set; }
+
+    /// <summary>
+    /// Código da EDT (estrutura analítica). Sem tarefas-resumo ainda, é o próprio número da linha;
+    /// passa a ser hierárquico (1, 1.1, 1.2...) quando houver resumos (Bloco 11).
+    /// </summary>
+    public string Edt => Numero.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public string Nome
     {
@@ -99,6 +116,18 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
             () => _edicao.DefinirPredecessoras(Tarefa, value ?? ""));
     }
 
+    /// <summary>Tarefas que dependem desta (somente leitura; muda editando as predecessoras delas).</summary>
+    public string Sucessoras => _edicao.TextoSucessoras(Tarefa);
+
+    /// <summary>Anotações livres; vazio quando não há.</summary>
+    public string Notas
+    {
+        get => ValorExibido(nameof(Notas), Tarefa.Notas ?? "");
+        set => Alterar(nameof(Notas), "Notas", value,
+            (string.IsNullOrWhiteSpace(value) ? null : value) == Tarefa.Notas,
+            () => Tarefa.AlterarNotas(value));
+    }
+
     // Resultado do último cálculo do cronograma (somente leitura).
     public DateTime? InicioMaisCedo => Tarefa.InicioMaisCedo;
     public DateTime? TerminoMaisCedo => Tarefa.TerminoMaisCedo;
@@ -106,6 +135,9 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     public DateTime? TerminoMaisTarde => Tarefa.TerminoMaisTarde;
     public int? Folga => Tarefa.Folga;
     public bool EhCritica => Tarefa.EhCritica;
+
+    /// <summary>Se a linha aparece com o fundo de crítica: crítica no cálculo e com o destaque ligado.</summary>
+    public bool DestacarComoCritica => EhCritica && _edicao.MostrarCaminhoCritico;
 
     /// <summary>Avisa a tela de que os dados da tarefa podem ter mudado (depois de um recálculo, por exemplo).</summary>
     public void AtualizarTela()

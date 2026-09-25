@@ -24,6 +24,29 @@
                 <Button Content="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
                 <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <Button Content="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
+                <!-- Colunas da grid: mostrar/ocultar e restaurar o layout padrão. Ordem e largura mudam
+                     arrastando os cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
+                <Button Content="Colunas ▾">
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <StackPanel Spacing="2" MinWidth="220">
+                                <TextBlock Text="Colunas visíveis" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                <ItemsControl ItemsSource="{Binding Colunas.Colunas}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ColunaViewModel">
+                                            <CheckBox Content="{Binding Titulo}" IsChecked="{Binding Visivel}"
+                                                      IsEnabled="{Binding PodeOcultar}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Separator Margin="0,4" />
+                                <Button Content="Restaurar layout padrão de colunas"
+                                        Command="{Binding Colunas.RestaurarPadraoCommand}"
+                                        HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <Border Width="1" Height="24" Margin="6,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <TextBlock Text="Zoom:" VerticalAlignment="Center" ToolTip.Tip="Zoom do Gantt" />
                 <Slider Width="130" VerticalAlignment="Center"
@@ -72,7 +95,8 @@
                   CellEditEnded="GradeCellEditEnded"
                   AutoGenerateColumns="False"
                   CanUserSortColumns="False"
-                  CanUserReorderColumns="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
                   GridLinesVisibility="All"
                   Classes.semSelecao="{Binding !MostrarSelecao}"
                   BorderThickness="1"
@@ -100,16 +124,18 @@
                 </Style>
                 <Style Selector="DataGridRow" x:DataType="vm:TarefaViewModel">
                     <Setter Property="Background"
-                            Value="{Binding EhCritica, Converter={x:Static v:Conversores.FundoDaTarefaCritica}}" />
+                            Value="{Binding DestacarComoCritica, Converter={x:Static v:Conversores.FundoDaTarefaCritica}}" />
                 </Style>
             </DataGrid.Styles>
 
             <DataGrid.Columns>
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Nº" Width="65" Binding="{Binding Numero}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Nome" Binding="{Binding Nome}" Width="130" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Duração&#x0a;(dias)" Width="104" Binding="{Binding Duracao}" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Numero" Header="Nº" Width="65" Binding="{Binding Numero}" IsReadOnly="True" />
+                <!-- EDT: por enquanto igual ao Nº; fica hierárquica quando houver tarefas-resumo (Bloco 11). -->
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Edt" Header="EDT" Width="75" Binding="{Binding Edt}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Nome" Header="Nome" Binding="{Binding Nome}" Width="130" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Duracao" Header="Duração&#x0a;(dias)" Width="104" Binding="{Binding Duracao}" />
 
-                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Header="Início" Width="104">
+                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Inicio" Header="Início" Width="104">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:TarefaViewModel">
                             <TextBlock Text="{Binding DataInicio, StringFormat={}{0:d}}" VerticalAlignment="Center" Margin="12,0" />
@@ -122,7 +148,7 @@
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Header="Término" Width="104">
+                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Termino" Header="Término" Width="104">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:TarefaViewModel">
                             <TextBlock Text="{Binding DataTermino, StringFormat={}{0:d}}" VerticalAlignment="Center" Margin="12,0" />
@@ -135,16 +161,18 @@
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="%&#x0a;Concl." Width="80" Binding="{Binding PercentualConcluido}" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Predecessoras" Binding="{Binding Predecessoras}" Width="130" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="PercentualConcluido" Header="%&#x0a;Concl." Width="80" Binding="{Binding PercentualConcluido}" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Predecessoras" Header="Predecessoras" Binding="{Binding Predecessoras}" Width="130" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Sucessoras" Header="Sucessoras" Binding="{Binding Sucessoras}" Width="130" IsReadOnly="True" />
 
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Início&#x0a;cedo" Width="104" Binding="{Binding InicioMaisCedo, StringFormat={}{0:d}}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Término&#x0a;cedo" Width="104" Binding="{Binding TerminoMaisCedo, StringFormat={}{0:d}}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Início&#x0a;tarde" Width="104" Binding="{Binding InicioMaisTarde, StringFormat={}{0:d}}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Término&#x0a;tarde" Width="104" Binding="{Binding TerminoMaisTarde, StringFormat={}{0:d}}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Folga&#x0a;(dias)" Width="85" Binding="{Binding Folga}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Header="Crítica" Width="90"
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="InicioMaisCedo" Header="Início&#x0a;cedo" Width="104" Binding="{Binding InicioMaisCedo, StringFormat={}{0:d}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="TerminoMaisCedo" Header="Término&#x0a;cedo" Width="104" Binding="{Binding TerminoMaisCedo, StringFormat={}{0:d}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="InicioMaisTarde" Header="Início&#x0a;tarde" Width="104" Binding="{Binding InicioMaisTarde, StringFormat={}{0:d}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="TerminoMaisTarde" Header="Término&#x0a;tarde" Width="104" Binding="{Binding TerminoMaisTarde, StringFormat={}{0:d}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Folga" Header="Folga&#x0a;(dias)" Width="85" Binding="{Binding Folga}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Critica" Header="Crítica" Width="90"
                                     Binding="{Binding EhCritica, Converter={x:Static v:Conversores.SimOuVazio}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Notas" Header="Notas" Binding="{Binding Notas}" Width="200" />
             </DataGrid.Columns>
         </DataGrid>
 

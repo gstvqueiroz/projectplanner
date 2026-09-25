@@ -21,6 +21,13 @@
                 <Button Content="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
                 <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <Button Content="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
+                <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                <TextBlock Text="Zoom do Gantt:" VerticalAlignment="Center" />
+                <Slider Width="160" VerticalAlignment="Center"
+                        Minimum="{x:Static vm:GanttViewModel.EscalaMinima}"
+                        Maximum="{x:Static vm:GanttViewModel.EscalaMaxima}"
+                        Value="{Binding Gantt.PixelsPorDia}" />
+                <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center" MinWidth="70" />
             </StackPanel>
         </Border>
 
@@ -40,8 +47,16 @@
             <TextBlock Text="{Binding Mensagem}" TextTrimming="CharacterEllipsis" />
         </Border>
 
+        <!-- Grid à esquerda e Gantt à direita, com divisor arrastável. As linhas e o cabeçalho dos dois
+             têm a mesma altura (GanttViewModel.AlturaLinha e AlturaCabecalho), e a grid comanda a
+             rolagem vertical do Gantt (ver MainWindow.axaml.cs). -->
+        <Grid ColumnDefinitions="620,6,*" Margin="8,0,8,8">
         <!-- Grid de tarefas. Nº, Predecessoras editáveis na notação "2; 3II+2" (ver NotacaoPredecessoras). -->
-        <DataGrid ItemsSource="{Binding Tarefas}"
+        <DataGrid x:Name="Grade"
+                  Grid.Column="0"
+                  RowHeight="{x:Static vm:GanttViewModel.AlturaLinhaDaGrade}"
+                  ColumnHeaderHeight="{x:Static vm:GanttViewModel.AlturaCabecalho}"
+                  ItemsSource="{Binding Tarefas}"
                   SelectedItem="{Binding TarefaSelecionada}"
                   SelectionMode="Single"
                   CellEditEnded="GradeCellEditEnded"
@@ -50,8 +65,7 @@
                   CanUserReorderColumns="False"
                   GridLinesVisibility="All"
                   BorderThickness="1"
-                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                  Margin="8,0,8,8">
+                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <DataGrid.Styles>
                 <Style Selector="DataGridCell">
                     <Setter Property="FontSize" Value="13" />
@@ -105,5 +119,12 @@
                                     Binding="{Binding EhCritica, Converter={x:Static v:Conversores.SimOuVazio}}" IsReadOnly="True" />
             </DataGrid.Columns>
         </DataGrid>
+
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Transparent" />
+
+        <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <v:GanttChartView x:Name="Gantt" DataContext="{Binding Gantt}" />
+        </Border>
+        </Grid>
     </DockPanel>
 </Window>

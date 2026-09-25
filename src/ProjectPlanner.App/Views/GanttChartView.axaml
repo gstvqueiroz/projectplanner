@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectPlanner.App.ViewModels"
+             x:Class="ProjectPlanner.App.Views.GanttChartView"
+             x:DataType="vm:GanttViewModel">
+
+    <!-- A altura do cabeçalho vem de GanttViewModel.AlturaCabecalho (definida no código). -->
+    <Grid x:Name="Linhas" RowDefinitions="48,*">
+        <!-- Cabeçalho de tempo: rola só na horizontal, acompanhando o corpo. -->
+        <ScrollViewer x:Name="RolagemCabecalho" Grid.Row="0"
+                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+            <Canvas x:Name="Cabecalho" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        </ScrollViewer>
+
+        <!-- Corpo: a rolagem vertical é comandada pela grid; a roda do mouse é repassada a ela. -->
+        <ScrollViewer x:Name="RolagemCorpo" Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
+            <Canvas x:Name="Corpo" ClipToBounds="True" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

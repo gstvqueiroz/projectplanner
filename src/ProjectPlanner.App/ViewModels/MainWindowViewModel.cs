@@ -39,6 +39,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     public ObservableCollection<TarefaViewModel> Tarefas { get; } = [];
 
+    /// <summary>O Gantt ao lado da grid, refeito a cada recálculo.</summary>
+    public GanttViewModel Gantt { get; } = new();
+
     /// <summary>O projeto aberto (para testes; a tela usa só as propriedades do ViewModel).</summary>
     internal Cronograma Cronograma => _cronograma;
 
@@ -249,11 +252,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         var calculou = true;
         try
         {
-            TerminoProjeto = _calculadora.Calcular(_cronograma).DataTermino;
+            var resultado = _calculadora.Calcular(_cronograma);
+            TerminoProjeto = resultado.DataTermino;
+            Gantt.Atualizar(_cronograma, resultado);
         }
         catch (DomainValidationException ex)
         {
             Mensagem = $"Não foi possível calcular o cronograma. {ex.Message}";
+            Gantt.Limpar();
             calculou = false;
         }
 

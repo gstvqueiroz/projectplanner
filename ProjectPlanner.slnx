@@ -5,6 +5,7 @@
     <Project Path="src/ProjectPlanner.Data/ProjectPlanner.Data.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ProjectPlanner.App.Tests/ProjectPlanner.App.Tests.csproj" />
     <Project Path="tests/ProjectPlanner.Core.Tests/ProjectPlanner.Core.Tests.csproj" />
     <Project Path="tests/ProjectPlanner.Data.Tests/ProjectPlanner.Data.Tests.csproj" />
   </Folder>

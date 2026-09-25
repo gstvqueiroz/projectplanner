@@ -38,6 +38,40 @@ public class CronogramaTarefasTests
     }
 
     [Fact]
+    public void Renomear_TrocaONomeSemEspacosNasPontas()
+    {
+        var cronograma = new Cronograma("Projeto", Segunda);
+
+        cronograma.Renomear("  Obra nova ");
+
+        cronograma.Nome.Should().Be("Obra nova");
+    }
+
+    [Fact]
+    public void Renomear_ComNomeVazio_LancaExcecaoEMantemONome()
+    {
+        var cronograma = new Cronograma("Projeto", Segunda);
+
+        var renomear = () => cronograma.Renomear(" ");
+
+        renomear.Should().Throw<DomainValidationException>()
+            .Which.Propriedade.Should().Be(nameof(Cronograma.Nome));
+        cronograma.Nome.Should().Be("Projeto");
+    }
+
+    [Fact]
+    public void AlterarDataInicio_DescartaHorarioEMoveFimDeSemanaParaSegunda()
+    {
+        var cronograma = new Cronograma("Projeto", Segunda);
+
+        cronograma.AlterarDataInicio(Quarta.AddHours(10));
+        cronograma.DataInicio.Should().Be(Quarta);
+
+        cronograma.AlterarDataInicio(Sabado);
+        cronograma.DataInicio.Should().Be(ProximaSegunda);
+    }
+
+    [Fact]
     public void ReconstruirCronograma_MantemOId()
     {
         var id = Guid.NewGuid();

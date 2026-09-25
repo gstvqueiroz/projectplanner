@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.DependencyInjection;
+using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.App.Views;
 
@@ -17,10 +19,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            var servicos = Servicos.Configurar();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainViewModel(),
+                DataContext = servicos.GetRequiredService<MainWindowViewModel>(),
             };
+            desktop.Exit += (_, _) => servicos.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();

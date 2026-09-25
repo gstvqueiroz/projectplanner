@@ -29,17 +29,15 @@ public class Cronograma
     {
         if (id == Guid.Empty)
             throw new DomainValidationException(nameof(Id), "O id do projeto é obrigatório.");
-        if (string.IsNullOrWhiteSpace(nome))
-            throw new DomainValidationException(nameof(Nome), "O nome do projeto é obrigatório.");
 
         Id = id;
-        Nome = nome.Trim();
-        DataInicio = DiasUteis.ProximoOuMesmo(dataInicio.Date);
+        Nome = ValidarNome(nome);
+        DataInicio = NormalizarInicio(dataInicio);
     }
 
     public Guid Id { get; }
 
-    public string Nome { get; }
+    public string Nome { get; private set; }
 
     /// <summary>Quando o projeto foi salvo pela primeira vez (UTC); nulo se nunca foi salvo.</summary>
     public DateTime? DataCriacao { get; private set; }
@@ -51,13 +49,18 @@ public class Cronograma
     /// Início do projeto: no cálculo do cronograma, nenhuma tarefa começa antes dele. Como nas
     /// tarefas, o horário é descartado e um fim de semana vai para a segunda-feira seguinte.
     /// </summary>
-    public DateTime DataInicio { get; }
+    public DateTime DataInicio { get; private set; }
 
     /// <summary>Tarefas na ordem em que foram adicionadas.</summary>
     public IReadOnlyCollection<Tarefa> Tarefas => _tarefas.AsReadOnly();
 
     /// <summary>Todos os vínculos, na ordem em que foram adicionados.</summary>
     public IReadOnlyCollection<Predecessora> Predecessoras => _predecessoras.AsReadOnly();
+
+    public void Renomear(string nome) => Nome = ValidarNome(nome);
+
+    /// <summary>Muda o início do projeto. As datas planejadas das tarefas não mudam; recalcule o cronograma.</summary>
+    public void AlterarDataInicio(DateTime dataInicio) => DataInicio = NormalizarInicio(dataInicio);
 
     public void AdicionarTarefa(Tarefa tarefa)
     {
@@ -128,6 +131,13 @@ public class Cronograma
         DataCriacao = criacao;
         DataUltimaModificacao = ultimaModificacao;
     }
+
+    private static string ValidarNome(string nome) =>
+        string.IsNullOrWhiteSpace(nome)
+            ? throw new DomainValidationException(nameof(Nome), "O nome do projeto é obrigatório.")
+            : nome.Trim();
+
+    private static DateTime NormalizarInicio(DateTime dataInicio) => DiasUteis.ProximoOuMesmo(dataInicio.Date);
 
     private Tarefa ObterTarefa(Guid id, string propriedade) =>
         _tarefas.Find(t => t.Id == id)

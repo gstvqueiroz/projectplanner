@@ -12,7 +12,15 @@ namespace ProjectPlanner.Core.Gantt;
 /// de X = (dia − início do eixo) × escala até o X do dia seguinte. O eixo começa
 /// <see cref="DiasAntesDoInicio"/> dias antes do início do projeto (para caber a volta das setas que
 /// saem do começo das primeiras barras) e termina no domingo que fica pelo menos
-/// <see cref="DiasDepoisDoFim"/> dias depois do fim do projeto.
+/// <see cref="DiasDepoisDoFim"/> dias depois do fim do projeto. Se isso não preencher a
+/// <see cref="OpcoesGantt.LarguraVisivel"/>, o eixo segue até preenchê-la (último dia possivelmente
+/// cortado pela borda). Sem tarefas, o fim do projeto é o próprio início, então o eixo é só a área
+/// visível a partir de 3 dias antes do início do projeto (que num projeto novo é hoje).
+/// </para>
+/// <para>
+/// Sábados e domingos vêm em <see cref="LayoutGantt.FinsDeSemana"/>, em todo o eixo, inclusive nos dias
+/// sem tarefa, para a tela pintar um fundo discreto. É só uma pista visual: o cálculo continua em dias
+/// úteis de segunda a sexta, como sempre.
 /// </para>
 /// <para>
 /// As linhas seguem a ordem do cronograma, a mesma da grid, para que a linha N da grid e a barra N
@@ -49,6 +57,9 @@ public static class CalculadoraLayoutGantt
 
         var inicioEixo = SomarDias(cronograma.DataInicio, -DiasAntesDoInicio);
         var fimEixo = DomingoEmOuDepois(SomarDias(resultado.DataTermino, DiasDepoisDoFim));
+        var fimVisivel = SomarDias(inicioEixo, DiasParaPreencher(opcoes.LarguraVisivel, opcoes.PixelsPorDia) - 1);
+        if (fimVisivel > fimEixo)
+            fimEixo = fimVisivel;
         var eixo = new Eixo(inicioEixo, opcoes.PixelsPorDia);
 
         var barras = cronograma.Tarefas.Select((tarefa, linha) => Barra(tarefa, linha, eixo, opcoes)).ToList();
@@ -61,8 +72,35 @@ public static class CalculadoraLayoutGantt
                 vinculosCriticos.Contains((p.TarefaOrigemId, p.TarefaDestinoId)), opcoes))
             .ToList();
 
-        return new LayoutGantt(inicioEixo, fimEixo, eixo.FimDoDia(fimEixo), barras.Count * opcoes.AlturaLinha,
-            barras, setas, Escala(inicioEixo, fimEixo, eixo, opcoes));
+        var finsDeSemana = DiasDeFimDeSemana(inicioEixo, fimEixo)
+            .Select(dia => new ColunaDia(dia, eixo.InicioDoDia(dia), opcoes.PixelsPorDia))
+            .ToList();
+
+        return new LayoutGantt(inicioEixo, fimEixo, eixo.FimDoDia(fimEixo),
+            Math.Max(barras.Count * opcoes.AlturaLinha, opcoes.AlturaVisivel),
+            barras, setas, Escala(inicioEixo, fimEixo, eixo, opcoes), finsDeSemana);
+    }
+
+    /// <summary>Quantos dias inteiros ou parciais cabem numa largura, nessa escala (pelo menos 1).</summary>
+    public static int DiasParaPreencher(double largura, double pixelsPorDia)
+    {
+        if (!(pixelsPorDia > 0))
+            throw new ArgumentOutOfRangeException(nameof(pixelsPorDia), pixelsPorDia, "A escala precisa ser maior que zero.");
+        if (!(largura >= 0))
+            throw new ArgumentOutOfRangeException(nameof(largura), largura, "A largura não pode ser negativa.");
+        return (int)Math.Min(Math.Max(1, Math.Ceiling(largura / pixelsPorDia)), int.MaxValue);
+    }
+
+    /// <summary>Os sábados e domingos de <paramref name="de"/> a <paramref name="ate"/> (inclusive), em ordem.</summary>
+    public static IEnumerable<DateTime> DiasDeFimDeSemana(DateTime de, DateTime ate)
+    {
+        for (var dia = de.Date; dia <= ate.Date; dia = dia.AddDays(1))
+        {
+            if (dia.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                yield return dia;
+            if (dia == DateTime.MaxValue.Date)
+                yield break;
+        }
     }
 
     private static BarraGantt Barra(Tarefa tarefa, int linha, Eixo eixo, OpcoesGantt opcoes)

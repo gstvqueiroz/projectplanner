@@ -5,7 +5,10 @@ namespace ProjectPlanner.Core.Gantt;
 /// <summary>Parâmetros de desenho do Gantt, em pixels (ou na unidade que a tela usar).</summary>
 public sealed record OpcoesGantt
 {
-    public OpcoesGantt(double pixelsPorDia, double alturaLinha = 30)
+    /// <summary>Escala usada quando nenhuma é informada: 30 px por dia.</summary>
+    public const double EscalaPadrao = 30;
+
+    public OpcoesGantt(double pixelsPorDia = EscalaPadrao, double alturaLinha = 30)
     {
         if (!(pixelsPorDia > 0))
             throw new ArgumentOutOfRangeException(nameof(pixelsPorDia), pixelsPorDia, "A escala precisa ser maior que zero.");
@@ -31,6 +34,28 @@ public sealed record OpcoesGantt
     /// <summary>Comprimento da ponta da seta.</summary>
     public double TamanhoPontaSeta { get; init; } = 6;
 
+    /// <summary>
+    /// Largura da área visível do Gantt. O eixo se estende até preenchê-la, mesmo sem tarefas para
+    /// tanto; 0 (o padrão) não estende nada.
+    /// </summary>
+    public double LarguraVisivel
+    {
+        get;
+        init => field = value >= 0 ? value
+            : throw new ArgumentOutOfRangeException(nameof(LarguraVisivel), value, "A largura visível não pode ser negativa.");
+    }
+
+    /// <summary>
+    /// Altura da área visível do Gantt. A <see cref="LayoutGantt.Altura"/> é pelo menos ela, para a
+    /// grade de dias ir até embaixo mesmo com poucas linhas; 0 (o padrão) não estende nada.
+    /// </summary>
+    public double AlturaVisivel
+    {
+        get;
+        init => field = value >= 0 ? value
+            : throw new ArgumentOutOfRangeException(nameof(AlturaVisivel), value, "A altura visível não pode ser negativa.");
+    }
+
     /// <summary>Cultura dos rótulos do cabeçalho (nomes de meses, formato de datas).</summary>
     public CultureInfo Cultura { get; init; } = CultureInfo.CurrentCulture;
 }
@@ -42,9 +67,10 @@ public sealed record OpcoesGantt
 /// <param name="InicioEixo">Dia desenhado em X = 0.</param>
 /// <param name="FimEixo">Último dia desenhado (inclusivo).</param>
 /// <param name="Largura">Largura total do eixo, de <see cref="InicioEixo"/> ao fim de <see cref="FimEixo"/>.</param>
-/// <param name="Altura">Altura total das linhas.</param>
+/// <param name="Altura">Altura total das linhas, ou a altura visível, se ela for maior.</param>
 /// <param name="Barras">Uma por tarefa, na ordem do cronograma (a mesma da grid).</param>
 /// <param name="Setas">Uma por vínculo, na ordem do cronograma.</param>
+/// <param name="FinsDeSemana">Uma coluna por sábado e domingo do eixo, em ordem, para o fundo diferenciado.</param>
 public sealed record LayoutGantt(
     DateTime InicioEixo,
     DateTime FimEixo,
@@ -52,7 +78,11 @@ public sealed record LayoutGantt(
     double Altura,
     IReadOnlyList<BarraGantt> Barras,
     IReadOnlyList<SetaGantt> Setas,
-    EscalaGantt Escala);
+    EscalaGantt Escala,
+    IReadOnlyList<ColunaDia> FinsDeSemana);
+
+/// <summary>A faixa vertical de um dia no eixo.</summary>
+public sealed record ColunaDia(DateTime Dia, double X, double Largura);
 
 /// <summary>A barra de uma tarefa, do começo do Início cedo ao fim do Término cedo.</summary>
 /// <param name="Linha">Linha da tarefa (0 = primeira), a mesma da grid.</param>

@@ -12,7 +12,8 @@ namespace ProjectPlanner.App.Views;
 
 /// <summary>
 /// Desenha o <see cref="GanttViewModel.Layout"/>: cabeçalho de tempo, barras (vermelhas as críticas,
-/// azuis as demais, com a parte concluída escurecida), linhas de folga e setas de dependência. Não
+/// azuis as demais, com a parte concluída escurecida), linhas de folga, setas de dependência e o fundo
+/// levemente acinzentado dos fins de semana. Não
 /// calcula posição nenhuma; tudo vem pronto da <see cref="CalculadoraLayoutGantt"/>.
 /// </summary>
 public partial class GanttChartView : UserControl
@@ -32,6 +33,9 @@ public partial class GanttChartView : UserControl
     private static readonly IBrush LinhaDeFolga = new SolidColorBrush(Color.Parse("#9E9E9E"));
     private static readonly IBrush SetaNaoCritica = new SolidColorBrush(Color.Parse("#607D8B"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
+    // Fins de semana: cinza a ~9% de opacidade (#80808018), ≈ #F4F4F4 sobre branco. Translúcido para
+    // funcionar também no tema escuro.
+    private static readonly IBrush FimDeSemana = new SolidColorBrush(Color.FromArgb(0x18, 0x80, 0x80, 0x80));
     private static readonly IBrush GradeForte = new SolidColorBrush(Color.FromArgb(0x60, 0x80, 0x80, 0x80));
 
     private GanttViewModel? _viewModel;
@@ -42,6 +46,7 @@ public partial class GanttChartView : UserControl
         InitializeComponent();
         Linhas.RowDefinitions[0].Height = new GridLength(GanttViewModel.AlturaCabecalho);
         RolagemCorpo.ScrollChanged += CorpoRolou;
+        RolagemCorpo.SizeChanged += (_, e) => _viewModel?.AtualizarAreaVisivel(e.NewSize.Width, e.NewSize.Height);
         RolagemCorpo.AddHandler(PointerWheelChangedEvent, TratarRodaDoMouse, RoutingStrategies.Tunnel);
     }
 
@@ -65,7 +70,10 @@ public partial class GanttChartView : UserControl
             _viewModel.PropertyChanged -= LayoutMudou;
         _viewModel = DataContext as GanttViewModel;
         if (_viewModel is not null)
+        {
             _viewModel.PropertyChanged += LayoutMudou;
+            _viewModel.AtualizarAreaVisivel(RolagemCorpo.Bounds.Width, RolagemCorpo.Bounds.Height);
+        }
         Desenhar();
     }
 
@@ -152,6 +160,14 @@ public partial class GanttChartView : UserControl
 
     private void DesenharGradeDeFundo(LayoutGantt layout)
     {
+        foreach (var coluna in layout.FinsDeSemana)
+            Posicionar(Corpo, new Rectangle
+            {
+                Width = coluna.Largura,
+                Height = Corpo.Height,
+                Fill = FimDeSemana,
+                IsHitTestVisible = false,
+            }, coluna.X, 0);
         foreach (var marca in layout.Escala.Inferior)
             Corpo.Children.Add(new Line
             {

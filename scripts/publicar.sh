@@ -5,8 +5,9 @@
 #   scripts/publicar.sh win-x64    # só um (win-x64, win-arm64 ou osx-arm64)
 #
 # Resultado em publicacao/:
-#   ProjectPlanner-<versão>-win-x64.zip     (contém ProjectPlanner.exe)
-#   ProjectPlanner-<versão>-win-arm64.zip   (contém ProjectPlanner.exe)
+#   ProjectPlanner-x64.exe                  (o de PCs Intel/AMD, solto, para copiar direto)
+#   ProjectPlanner-<versão>-win-x64.zip     (contém ProjectPlanner-x64.exe)
+#   ProjectPlanner-<versão>-win-arm64.zip   (contém ProjectPlanner-ARM64.exe)
 #   ProjectPlanner-<versão>-osx-arm64.zip   (contém ProjectPlanner.app)
 set -euo pipefail
 
@@ -17,11 +18,24 @@ versao="$(dotnet msbuild "$app" -getProperty:Version)"
 
 publicar_windows() {
     local rid="$1"
+    # A arquitetura vai no nome do .exe: com o mesmo nome nos dois, é fácil abrir o ARM64 num PC
+    # Intel/AMD, e o Windows só diz "Este aplicativo não pode ser executado em seu PC".
+    local exe
+    case "$rid" in
+        win-x64) exe="ProjectPlanner-x64.exe" ;;
+        win-arm64) exe="ProjectPlanner-ARM64.exe" ;;
+    esac
     echo "==> $rid (versão $versao)"
-    rm -rf "${saida:?}/$rid"
+    rm -rf "${saida:?}/$rid" "$saida/$exe"
     dotnet publish "$app" -p:PublishProfile="$rid"
-    (cd "$saida/$rid" && zip -q -j "$saida/ProjectPlanner-$versao-$rid.zip" ProjectPlanner.exe)
-    echo "    $saida/$rid/ProjectPlanner.exe"
+    mv "$saida/$rid/ProjectPlanner.exe" "$saida/$rid/$exe"
+    rm -f "$saida/ProjectPlanner-$versao-$rid.zip"
+    (cd "$saida/$rid" && zip -q -j "$saida/ProjectPlanner-$versao-$rid.zip" "$exe")
+    # O x64 (a maioria dos PCs) também fica solto, para copiar sem precisar extrair.
+    if [ "$rid" = win-x64 ]; then
+        cp "$saida/$rid/$exe" "$saida/$exe"
+    fi
+    echo "    $saida/$rid/$exe"
 }
 
 publicar_mac() {
@@ -63,4 +77,4 @@ case "$alvo" in
 esac
 
 echo
-ls -lh "$saida"/ProjectPlanner-"$versao"-*.zip
+ls -lh "$saida"/ProjectPlanner-"$versao"-*.zip "$saida"/ProjectPlanner-*.exe 2>/dev/null || true

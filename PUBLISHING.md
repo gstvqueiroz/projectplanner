@@ -6,13 +6,13 @@ Como gerar os executáveis distribuíveis a partir do Mac.
 
 | RID | Arquivo para distribuir | Roda em |
 |---|---|---|
-| `win-x64` | `publicacao/ProjectPlanner-<versão>-win-x64.zip`, que contém `ProjectPlanner.exe` | Windows 10/11 em PCs Intel/AMD (a maioria) |
-| `win-arm64` | `publicacao/ProjectPlanner-<versão>-win-arm64.zip`, que contém `ProjectPlanner.exe` | Windows 11 em ARM (Surface Pro X, Copilot+ PCs, máquinas virtuais Windows ARM no Mac) |
+| `win-x64` | `publicacao/ProjectPlanner-x64.exe` (ou o `.zip` `ProjectPlanner-<versão>-win-x64.zip`, que contém o mesmo arquivo) | Windows 10/11 em PCs Intel/AMD (a maioria) |
+| `win-arm64` | `publicacao/ProjectPlanner-<versão>-win-arm64.zip`, que contém `ProjectPlanner-ARM64.exe` | Windows 11 em ARM (Surface Pro X, Copilot+ PCs, máquinas virtuais Windows ARM no Mac) |
 | `osx-arm64` | `publicacao/ProjectPlanner-<versão>-osx-arm64.zip`, que contém `ProjectPlanner.app` | Macs Apple Silicon (M1 ou mais novo), macOS 12+ |
 
 Todos são **self-contained**: levam o runtime do .NET junto e não exigem instalar nada na máquina de destino.
 
-- **Windows:** um único `ProjectPlanner.exe` (cerca de 50 MB). As bibliotecas nativas (Skia, HarfBuzz e SQLite) vêm dentro dele e são extraídas automaticamente na primeira execução.
+- **Windows:** um único `.exe` (cerca de 50 MB), com a arquitetura no nome. As bibliotecas nativas (Skia, HarfBuzz e SQLite) vêm dentro dele e são extraídas automaticamente na primeira execução.
 - **macOS:** o `.app` é uma pasta com o executável e as dependências (cerca de 120 MB; o `.zip` tem 46 MB).
 
 Os arquivos de projeto do usuário usam a extensão **`.pplan`** (um banco SQLite por dentro).
@@ -56,8 +56,9 @@ Os arquivos de projeto do usuário usam a extensão **`.pplan`** (um banco SQLit
      ProjectPlanner-0.7.0-win-x64.zip      ← mande este para quem usa Windows
      ProjectPlanner-0.7.0-win-arm64.zip
      ProjectPlanner-0.7.0-osx-arm64.zip    ← ou este, para Mac
-     win-x64/ProjectPlanner.exe
-     win-arm64/ProjectPlanner.exe
+     ProjectPlanner-x64.exe                ← ou este, solto, para copiar direto
+     win-x64/ProjectPlanner-x64.exe
+     win-arm64/ProjectPlanner-ARM64.exe
      ProjectPlanner.app
    ```
 
@@ -101,16 +102,25 @@ No .NET 10, o ícone e os metadados entram no `.exe` mesmo compilando no Mac (co
 
 **No Windows, estando num Mac:** o `.exe` não roda no macOS. As opções são:
 
-- **Máquina virtual:** [UTM](https://mac.getutm.app) (gratuito) ou Parallels, com Windows 11 ARM. O Windows ARM roda o `ProjectPlanner.exe` do `win-arm64` nativamente e o do `win-x64` por emulação. Copie o `.zip` para a máquina virtual, extraia e dê duplo clique.
+- **Máquina virtual:** [UTM](https://mac.getutm.app) (gratuito) ou Parallels, com Windows 11 ARM. O Windows ARM roda o `ProjectPlanner-ARM64.exe` nativamente e o do `win-x64` por emulação. Copie o `.zip` para a máquina virtual, extraia e dê duplo clique.
 - **Um PC com Windows:** mande o `ProjectPlanner-<versão>-win-x64.zip`.
 
 Sem Windows à mão, dá para conferir o binário gerado:
 
 ```bash
-file publicacao/win-x64/ProjectPlanner.exe   # PE32+ executable (GUI) x86-64, for MS Windows
-file publicacao/win-arm64/ProjectPlanner.exe # PE32+ executable (GUI) Aarch64, for MS Windows
-ls -lh publicacao/win-*/ProjectPlanner.exe   # cerca de 50 MB cada
+file publicacao/win-x64/ProjectPlanner-x64.exe     # PE32+ executable (GUI) x86-64, for MS Windows
+file publicacao/win-arm64/ProjectPlanner-ARM64.exe # PE32+ executable (GUI) Aarch64, for MS Windows
+ls -lh publicacao/win-*/ProjectPlanner-*.exe        # cerca de 50 MB cada
 ```
+
+## Qual `.exe` usar no Windows
+
+Na dúvida, veja em **Configurações → Sistema → Sobre → Tipo de sistema**:
+
+- "processador baseado em x64" (quase todos os PCs Intel/AMD): **`ProjectPlanner-x64.exe`**.
+- "processador baseado em ARM": **`ProjectPlanner-ARM64.exe`** (o x64 também roda, por emulação, só que mais devagar).
+
+Abrir o ARM64 num PC x64 dá a mensagem "Este aplicativo não pode ser executado em seu PC".
 
 ## Primeira execução em outras máquinas
 

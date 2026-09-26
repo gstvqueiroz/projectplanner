@@ -1,7 +1,7 @@
 ﻿; Instalador do ProjectPlanner para Windows (NSIS 3). Quem o gera é o scripts/publicar.sh (ver PUBLISHING.md):
 ; O arquivo é UTF-8 com BOM, e o makensis precisa de um locale UTF-8 para ler os acentos (o publicar.sh o define).
 ;
-;   makensis -DVERSAO=0.13.0 -DARQUITETURA=x64 -DEXE=<.exe publicado> \
+;   makensis -DVERSAO=0.15.0 -DARQUITETURA=x64 -DEXE=<.exe publicado> \
 ;            -DICONE_APP=<ProjectPlanner.ico> -DICONE_ARQUIVO=<ProjetoPplan.ico> -DSAIDA=<instalador.exe> ProjectPlanner.nsi
 ;
 ; Instala só para o usuário atual, sem pedir administrador, em %LOCALAPPDATA%\Programs\ProjectPlanner:

@@ -33,7 +33,7 @@ public class ArquivosTests
             .Which.Should().Be((_vm.Cronograma, Caminho));
         _vm.CaminhoArquivo.Should().Be(Caminho);
         _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
-        _vm.Titulo.Should().Be("obra — ProjectPlanner");
+        _vm.Titulo.Should().Be($"obra.pplan — ProjectPlanner {VersaoDoProduto.Atual}");
         _vm.Mensagem.Should().Be($"Projeto salvo em {Caminho}");
     }
 

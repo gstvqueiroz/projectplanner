@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -32,6 +33,40 @@ public partial class MainWindow : Window
             _larguraParou.Stop();
             RegistrarColunas();
         };
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (DataContext is MainWindowViewModel vm)
+            MontarMenuDeColunas(vm.Colunas);
+    }
+
+    // Exibir > Colunas: uma caixa por coluna (a do Nome fica marcada e desabilitada, porque não pode
+    // sumir) e, depois de uma linha, "Restaurar layout padrão de colunas". Marcar uma coluna não fecha o
+    // menu, para dar para escolher várias de uma vez, como no painel "Colunas ▾" da barra antiga.
+    private void MontarMenuDeColunas(ColunasViewModel colunas)
+    {
+        MenuColunas.Items.Clear();
+        foreach (var coluna in colunas.Colunas)
+        {
+            var item = new MenuItem
+            {
+                Header = coluna.Titulo,
+                ToggleType = MenuItemToggleType.CheckBox,
+                StaysOpenOnClick = true,
+                IsEnabled = coluna.PodeOcultar,
+                DataContext = coluna,
+            };
+            item.Bind(MenuItem.IsCheckedProperty, new Binding(nameof(ColunaViewModel.Visivel)) { Mode = BindingMode.TwoWay });
+            MenuColunas.Items.Add(item);
+        }
+        MenuColunas.Items.Add(new Separator());
+        MenuColunas.Items.Add(new MenuItem
+        {
+            Header = "Restaurar layout padrão de colunas",
+            Command = colunas.RestaurarPadraoCommand,
+        });
     }
 
     // As colunas do DataGrid seguem o ColunasViewModel (visibilidade, ordem e largura), e o que o usuário

@@ -1,8 +1,10 @@
 <Project>
-  <!-- Metadados comuns a todos os projetos. A cada nova versão distribuível, mude <Version> aqui
-       (ver PUBLISHING.md); ela vai para o .exe do Windows e para o Info.plist do .app. -->
+  <!-- Metadados comuns a todos os projetos. <Version> é a versão do produto, num lugar só: MAJOR.MINOR.PATCH,
+       com MINOR igual ao número do bloco (Bloco 15 = 0.15.0). Ela vai para o título da janela
+       (VersaoDoProduto), para o .exe do Windows, para o instalador, para o Info.plist do .app e para o
+       nome dos .zip; o scripts/publicar.sh pede para confirmá-la antes de publicar (ver PUBLISHING.md). -->
   <PropertyGroup>
-    <Version>0.13.0</Version>
+    <Version>0.15.0</Version>
     <Product>ProjectPlanner</Product>
     <Authors>gustavodossantosqueiroz</Authors>
     <Company>gustavodossantosqueiroz</Company>

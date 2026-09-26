@@ -3,6 +3,10 @@
 #
 #   scripts/publicar.sh            # todos: win-x64, win-arm64 e osx-arm64
 #   scripts/publicar.sh win-x64    # só um (win-x64, win-arm64 ou osx-arm64)
+#   scripts/publicar.sh --versao 0.15.0 osx-arm64   # confirma a versão sem perguntar
+#
+# Antes de gerar qualquer coisa, o script mostra a versão do Directory.Build.props e pede para confirmá-la
+# (a versão do bloco: Bloco 15 = 0.15.0). Sem terminal para perguntar, a confirmação vem por --versao.
 #
 # Resultado em publicacao/:
 #   ProjectPlanner-<versão>-win-x64-instalador.exe    (instalador: associa os arquivos .pplan; precisa do makensis)
@@ -79,7 +83,47 @@ publicar_mac() {
     echo "    $pacote"
 }
 
+uso() {
+    echo "Uso: $0 [--versao X.Y.Z] [win-x64 | win-arm64 | osx-arm64 | todos]" >&2
+    exit 1
+}
+
+# Nada é gerado sem confirmar a versão: esquecer de subi-la produziria pacotes novos com o número antigo.
+confirmar_versao() {
+    echo "Versão no Directory.Build.props: $versao"
+    if compgen -G "$saida/ProjectPlanner-$versao-*.zip" >/dev/null; then
+        echo "    Atenção: já existem pacotes desta versão em publicacao/; serão substituídos."
+    fi
+    if [ -n "$confirmada" ]; then
+        if [ "$confirmada" != "$versao" ]; then
+            echo "A versão confirmada ($confirmada) não é a do Directory.Build.props ($versao). Nada foi publicado." >&2
+            exit 1
+        fi
+    elif [ -t 0 ]; then
+        read -r -p "Publicar a versão $versao? [s/N] " resposta
+        case "$resposta" in
+            s | S | sim | Sim) ;;
+            *) echo "Publicação cancelada." >&2; exit 1 ;;
+        esac
+    else
+        echo "Confirme a versão para publicar: $0 --versao $versao $alvo" >&2
+        exit 1
+    fi
+}
+
+confirmada=""
+if [ "${1:-}" = "--versao" ]; then
+    [ $# -ge 2 ] || uso
+    confirmada="$2"
+    shift 2
+fi
 alvo="${1:-todos}"
+case "$alvo" in
+    win-x64 | win-arm64 | osx-arm64 | todos) ;;
+    *) uso ;;
+esac
+confirmar_versao
+
 mkdir -p "$saida"
 case "$alvo" in
     win-x64 | win-arm64) publicar_windows "$alvo" ;;
@@ -88,10 +132,6 @@ case "$alvo" in
         publicar_windows win-x64
         publicar_windows win-arm64
         publicar_mac
-        ;;
-    *)
-        echo "Uso: $0 [win-x64 | win-arm64 | osx-arm64 | todos]" >&2
-        exit 1
         ;;
 esac
 

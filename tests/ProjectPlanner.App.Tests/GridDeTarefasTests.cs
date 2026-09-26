@@ -1,3 +1,4 @@
+using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
 
 namespace ProjectPlanner.App.Tests;
@@ -15,7 +16,7 @@ public class GridDeTarefasTests
         vm.InicioProjeto.Should().Be(Ambiente.Segunda);
         vm.Tarefas.Should().BeEmpty();
         vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
-        vm.Titulo.Should().Be("Projeto sem título — ProjectPlanner");
+        vm.Titulo.Should().Be($"Projeto sem título — ProjectPlanner {VersaoDoProduto.Atual}");
     }
 
     [Fact]
@@ -33,7 +34,7 @@ public class GridDeTarefasTests
         vm.Tarefas[1].DataInicio.Should().Be(Ambiente.Segunda);
         vm.TarefaSelecionada.Should().BeSameAs(vm.Tarefas[1]);
         vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
-        vm.Titulo.Should().Be("*Projeto sem título — ProjectPlanner");
+        vm.Titulo.Should().Be($"*Projeto sem título — ProjectPlanner {VersaoDoProduto.Atual}");
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class GridDeTarefasTests
 
         vm.NomeProjeto = "Obra da sede";
 
-        vm.Titulo.Should().Be("*Obra da sede — ProjectPlanner");
+        vm.Titulo.Should().Be($"*Obra da sede — ProjectPlanner {VersaoDoProduto.Atual}");
     }
 
     [Fact]

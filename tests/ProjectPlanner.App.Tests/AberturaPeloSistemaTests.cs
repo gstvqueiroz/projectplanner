@@ -124,7 +124,7 @@ public class AberturaPeloSistemaTests
 
         _ambiente.Repositorio.Abertos.Should().Equal(caminho);
         vm.Tarefas.Select(t => t.Nome).Should().Equal("Fundação", "Estrutura");
-        (vm.CaminhoArquivo, vm.Titulo).Should().Be((caminho, "obra — ProjectPlanner"));
+        (vm.CaminhoArquivo, vm.Titulo).Should().Be((caminho, $"obra.pplan — ProjectPlanner {VersaoDoProduto.Atual}"));
         _ambiente.Calculadora.Chamadas.Should().BeGreaterThan(chamadas);
         vm.TerminoProjeto.Should().Be(new DateTime(2026, 10, 2));
         vm.Mensagem.Should().Be($"Projeto aberto: {caminho}");

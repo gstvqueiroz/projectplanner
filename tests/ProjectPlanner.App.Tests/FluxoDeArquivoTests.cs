@@ -53,7 +53,7 @@ public class FluxoDeArquivoTests
 
         Retrato(reaberta).Should().BeEquivalentTo(antes, o => o.WithStrictOrdering());
         reaberta.PossuiAlteracoesNaoSalvas.Should().BeFalse();
-        reaberta.Titulo.Should().Be("obra — ProjectPlanner");
+        reaberta.Titulo.Should().Be($"obra.pplan — ProjectPlanner {VersaoDoProduto.Atual}");
     }
 
     [Fact]
@@ -65,15 +65,15 @@ public class FluxoDeArquivoTests
 
         Ambiente.AdicionarTarefa(vm, "A", 2);
         vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
-        vm.Titulo.Should().Be("*Projeto sem título — ProjectPlanner");
+        vm.Titulo.Should().Be($"*Projeto sem título — ProjectPlanner {VersaoDoProduto.Atual}");
 
         await vm.SalvarProjetoCommand.ExecuteAsync(null);
         vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
-        vm.Titulo.Should().Be("obra — ProjectPlanner");
+        vm.Titulo.Should().Be($"obra.pplan — ProjectPlanner {VersaoDoProduto.Atual}");
 
         vm.Tarefas[0].Duracao = 3;
         vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
-        vm.Titulo.Should().Be("*obra — ProjectPlanner");
+        vm.Titulo.Should().Be($"*obra.pplan — ProjectPlanner {VersaoDoProduto.Atual}");
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class FluxoDeArquivoTests
         _ambiente.Dialogos.VezesQuePerguntouOndeSalvar.Should().Be(2, "o segundo Salvar vai direto para o arquivo novo");
         _ambiente.Dialogos.NomeSugerido.Should().Be("obra");
         vm.CaminhoArquivo.Should().Be("/projetos/obra-v2.pplan");
-        vm.Titulo.Should().Be("obra-v2 — ProjectPlanner");
+        vm.Titulo.Should().Be($"obra-v2.pplan — ProjectPlanner {VersaoDoProduto.Atual}");
         _repositorio.Arquivos.Should().BeEquivalentTo([Obra, "/projetos/obra-v2.pplan"]);
     }
 

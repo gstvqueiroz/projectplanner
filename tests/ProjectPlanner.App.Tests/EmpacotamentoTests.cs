@@ -7,16 +7,8 @@ namespace ProjectPlanner.App.Tests;
 // Estes testes garantem que ela continua batendo com a extensão que o programa usa e com os ícones do repositório.
 public class EmpacotamentoTests
 {
-    private static readonly string Raiz = RaizDoRepositorio();
+    private static readonly string Raiz = PastaDoRepositorio.Raiz;
     private static readonly string PastaDoApp = Path.Combine(Raiz, "src", "ProjectPlanner.App");
-
-    private static string RaizDoRepositorio()
-    {
-        for (var pasta = new DirectoryInfo(AppContext.BaseDirectory); pasta is not null; pasta = pasta.Parent)
-            if (File.Exists(Path.Combine(pasta.FullName, "ProjectPlanner.slnx")))
-                return pasta.FullName;
-        throw new InvalidOperationException("Não achei a raiz do repositório (ProjectPlanner.slnx).");
-    }
 
     // Num plist, cada valor de um <dict> vem logo depois do seu <key>.
     private static XElement Valor(XElement dict, string chave) =>
@@ -56,6 +48,59 @@ public class EmpacotamentoTests
             .And.Contain("WriteRegStr HKCU \"Software\\Classes\\${PROGID}\\DefaultIcon\" \"\" \"$INSTDIR\\ProjetoPplan.ico\"")
             .And.Contain("DeleteRegKey HKCU \"Software\\Classes\\${PROGID}\"");
         File.Exists(Path.Combine(PastaDoApp, "Windows", "ProjetoPplan.ico")).Should().BeTrue();
+    }
+
+    // Bloco 15: nada é publicado sem confirmar a versão. Estes casos param antes de compilar.
+    private static (int Codigo, string Saida) Publicar(params string[] argumentos)
+    {
+        var inicio = new System.Diagnostics.ProcessStartInfo("bash")
+        {
+            WorkingDirectory = Raiz,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true, // sem terminal: o script não pode perguntar
+        };
+        inicio.ArgumentList.Add(Path.Combine("scripts", "publicar.sh"));
+        foreach (var argumento in argumentos)
+            inicio.ArgumentList.Add(argumento);
+        using var processo = System.Diagnostics.Process.Start(inicio)!;
+        processo.StandardInput.Close();
+        var saida = processo.StandardOutput.ReadToEnd() + processo.StandardError.ReadToEnd();
+        processo.WaitForExit();
+        return (processo.ExitCode, saida);
+    }
+
+    [Fact]
+    public void Publicar_ComVersaoDiferenteDaDoProps_ParaSemGerarNada()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // o script é bash (Mac/Linux)
+
+        var (codigo, saida) = Publicar("--versao", "9.9.9", "osx-arm64");
+
+        codigo.Should().Be(1);
+        saida.Should().Contain($"A versão confirmada (9.9.9) não é a do Directory.Build.props ({VersaoDoProduto.Atual}). Nada foi publicado.");
+    }
+
+    [Fact]
+    public void Publicar_SemTerminalESemConfirmar_PedeAVersaoNaLinhaDeComando()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var (codigo, saida) = Publicar("osx-arm64");
+
+        codigo.Should().Be(1);
+        saida.Should().Contain($"Versão no Directory.Build.props: {VersaoDoProduto.Atual}")
+            .And.Contain($"--versao {VersaoDoProduto.Atual} osx-arm64");
+    }
+
+    [Fact]
+    public void Publicacao_DocumentaAConfirmacaoDaVersao()
+    {
+        File.ReadAllText(Path.Combine(Raiz, "PUBLISHING.md"))
+            .Should().Contain("toda publicação confirma a versão antes de gerar os executáveis")
+            .And.Contain("scripts/publicar.sh --versao");
     }
 
     [Fact]

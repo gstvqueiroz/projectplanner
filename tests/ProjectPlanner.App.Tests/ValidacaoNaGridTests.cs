@@ -1,3 +1,4 @@
+using ProjectPlanner.App.Services;
 using System.ComponentModel;
 using ProjectPlanner.App.ViewModels;
 
@@ -128,6 +129,6 @@ public class ValidacaoNaGridTests
 
         _vm.GetErrors(nameof(MainWindowViewModel.NomeProjeto)).Cast<string>().Should().Equal("O nome do projeto é obrigatório.");
         _vm.Mensagem.Should().Be("O nome do projeto é obrigatório.");
-        _vm.Titulo.Should().Be("*Projeto sem título — ProjectPlanner", "o nome recusado não entra no título");
+        _vm.Titulo.Should().Be($"*Projeto sem título — ProjectPlanner {VersaoDoProduto.Atual}", "o nome recusado não entra no título");
     }
 }

@@ -114,7 +114,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     public partial DateTime? TerminoProjeto { get; private set; }
 
     /// <summary>"*obra — ProjectPlanner": o arquivo (ou o nome do projeto, se nunca foi salvo), com * quando há alterações.</summary>
-    public string Titulo => $"{(PossuiAlteracoesNaoSalvas ? "*" : "")}{NomeParaExibir} — ProjectPlanner";
+    /// <summary>
+    /// "obra.pplan — ProjectPlanner 0.15.0": o arquivo (ou o nome do projeto, antes de salvar pela primeira
+    /// vez) e a versão do programa, com * na frente quando há alterações não salvas.
+    /// </summary>
+    public string Titulo =>
+        $"{(PossuiAlteracoesNaoSalvas ? "*" : "")}{NomeNoTitulo} — ProjectPlanner {VersaoDoProduto.Atual}";
+
+    private string NomeNoTitulo => CaminhoArquivo is null ? _cronograma.Nome : Path.GetFileName(CaminhoArquivo);
 
     private string NomeParaExibir =>
         CaminhoArquivo is null ? _cronograma.Nome : Path.GetFileNameWithoutExtension(CaminhoArquivo);

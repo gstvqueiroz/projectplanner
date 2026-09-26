@@ -11,7 +11,7 @@ using ProjectPlanner.Core;
 
 namespace ProjectPlanner.App.Tests;
 
-// Bloco 15: a barra de ferramentas única virou menu (Arquivo, Exibir, Inserir, Tarefa) mais uma barra de
+// Bloco 15: a barra de ferramentas única virou menu (Arquivo, Exibir, Tarefa; Inserir oculto desde o 15.1) mais uma barra de
 // acesso rápido. Estes testes abrem a MainWindow de verdade (headless) e disparam cada item como um clique,
 // para garantir que nenhum comando ficou órfão e que cada um ainda faz o que o botão antigo fazia.
 public class MenuPrincipalTests
@@ -101,10 +101,14 @@ public class MenuPrincipalTests
 
         a.Janela.MenuPrincipal.Items.OfType<MenuItem>().Select(m => m.Header)
             .Should().Equal("Arquivo", "Exibir", "Inserir", "Tarefa");
+        a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
+        a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", Linha, "Colunas");
-        Titulos(a.Item("Inserir")).Should().Equal("Adicionar tarefa", "Adicionar subtarefa", Linha, "Fotos de exemplo (desenvolvimento)");
-        Titulos(a.Item("Tarefa")).Should().Equal("Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma");
+        Titulos(a.Item("Tarefa")).Should().Equal(
+            "Adicionar tarefa", "Adicionar subtarefa", "Adicionar marco", "Adicionar resumo", Linha,
+            "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
+            Linha, "Fotos de exemplo (desenvolvimento)");
     });
 
     [Fact]
@@ -136,19 +140,26 @@ public class MenuPrincipalTests
             .Should().NotIntersectWith(["Seleção", "Caminho crítico", "Fotos"]);
     });
 
+    private static Button Botao(Abertura a, string nome) =>
+        a.Janela.AcessoRapido.Children.OfType<Button>().Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == nome);
+
     [Fact]
-    public Task AcessoRapido_SalvarAdicionarTarefaERecalcular_OsMesmosComandosDoMenu() => Tela.Executar(() =>
+    public Task AcessoRapido_SeisBotoes_OsMesmosComandosDoMenu() => Tela.Executar(() =>
     {
         var a = Abrir();
         var botoes = a.Janela.AcessoRapido.Children.OfType<Button>().ToList();
 
-        botoes.Select(b => (b.Command, ToolTip.GetTip(b))).Should().Equal(
+        botoes.Select(b => (b.Command, Avalonia.Automation.AutomationProperties.GetName(b))).Should().Equal(
             (a.Vm.SalvarProjetoCommand, "Salvar"),
             (a.Vm.AdicionarTarefaCommand, "Adicionar tarefa"),
+            (a.Vm.RemoverTarefaCommand, "Remover tarefa"),
+            (a.Vm.PromoverCommand, "Promover"),
+            (a.Vm.RebaixarCommand, "Rebaixar"),
             (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"));
         botoes.Should().OnlyContain(b => b.Content is Avalonia.Controls.Shapes.Path, "são botões só de ícone");
-        botoes.Select(Avalonia.Automation.AutomationProperties.GetName)
-            .Should().Equal(["Salvar", "Adicionar tarefa", "Recalcular cronograma"], "sem texto, o leitor de tela precisa do nome");
+        botoes.Select(b => ToolTip.GetTip(b) as string).Should().OnlyContain(dica => !string.IsNullOrWhiteSpace(dica));
+        botoes.Select(b => (string)ToolTip.GetTip(b)!).Should().Contain(d => d.StartsWith("Promover") && d.Contains("Alt+Shift+←"))
+            .And.Contain(d => d.StartsWith("Rebaixar") && d.Contains("Alt+Shift+→"));
     });
 
     [Fact]
@@ -156,27 +167,78 @@ public class MenuPrincipalTests
     {
         var a = Abrir();
         a.Ambiente.Dialogos.ArquivoParaSalvar = "/projetos/obra.pplan";
-        var (salvar, adicionar, recalcular) = (a.Janela.AcessoRapido.Children[0], a.Janela.AcessoRapido.Children[1],
-            a.Janela.AcessoRapido.Children[2]);
         var calculos = a.Ambiente.Calculadora.Chamadas;
 
-        a.ClicarComOMouse(adicionar);
-        a.ClicarComOMouse(recalcular);
-        a.ClicarComOMouse(salvar);
+        a.ClicarComOMouse(Botao(a, "Adicionar tarefa"));
+        a.ClicarComOMouse(Botao(a, "Adicionar tarefa"));
+        var (mae, filha) = (a.Vm.Tarefas[0], a.Vm.Tarefas[1]);
+        a.ClicarComOMouse(Botao(a, "Rebaixar"));
+        filha.Tarefa.TarefaPaiId.Should().Be(mae.Tarefa.Id);
+        a.ClicarComOMouse(Botao(a, "Promover"));
+        filha.Tarefa.TarefaPaiId.Should().BeNull();
+        a.ClicarComOMouse(Botao(a, "Remover tarefa"));
+        a.Vm.Tarefas.Should().Equal(mae);
+        a.ClicarComOMouse(Botao(a, "Recalcular cronograma"));
+        a.ClicarComOMouse(Botao(a, "Salvar"));
 
-        a.Vm.Tarefas.Should().ContainSingle();
         a.Ambiente.Calculadora.Chamadas.Should().BeGreaterThan(calculos);
         a.Ambiente.Repositorio.Salvos.Select(s => s.Caminho).Should().Equal("/projetos/obra.pplan");
     });
 
     [Fact]
-    public Task InserirETarefa_PeloMenu_FazemOQueOsBotoesFaziam() => Tela.Executar(() =>
+    public Task AcessoRapido_SemTarefaSelecionada_RemoverPromoverERebaixarDesabilitados() => Tela.Executar(() =>
     {
         var a = Abrir();
 
-        a.Clicar("Inserir", "Adicionar tarefa");
+        new[] { "Remover tarefa", "Promover", "Rebaixar" }.Select(n => Botao(a, n).IsEffectivelyEnabled)
+            .Should().AllBeEquivalentTo(false);
+        new[] { "Salvar", "Adicionar tarefa", "Recalcular cronograma" }.Select(n => Botao(a, n).IsEffectivelyEnabled)
+            .Should().AllBeEquivalentTo(true);
+
+        // Clicar num botão desabilitado não faz nada.
+        a.ClicarComOMouse(Botao(a, "Remover tarefa"));
+        a.Vm.Tarefas.Should().BeEmpty();
+    });
+
+    [Fact]
+    public Task AcessoRapido_TarefaNoNivelMaisAlto_SoPromoverFicaDesabilitado() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var mae = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        var filha = Ambiente.AdicionarTarefa(a.Vm, "Sapatas", 2);
+        Dispatcher.UIThread.RunJobs();
+
+        (Botao(a, "Promover").IsEffectivelyEnabled, Botao(a, "Rebaixar").IsEffectivelyEnabled, Botao(a, "Remover tarefa").IsEffectivelyEnabled)
+            .Should().Be((false, true, true));
+
+        a.ClicarComOMouse(Botao(a, "Rebaixar"));
+
+        filha.Tarefa.TarefaPaiId.Should().Be(mae.Tarefa.Id);
+        Botao(a, "Promover").IsEffectivelyEnabled.Should().BeTrue("agora ela está dentro de um resumo");
+    });
+
+    [Fact]
+    public Task MenuEAcessoRapido_EmDuasLinhas_OMenuAcima() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var menu = a.Janela.MenuPrincipal.TranslatePoint(default, a.Janela)!.Value;
+        var icones = a.Janela.AcessoRapido.TranslatePoint(default, a.Janela)!.Value;
+
+        icones.Y.Should().BeGreaterThanOrEqualTo(menu.Y + a.Janela.MenuPrincipal.Bounds.Height, "a faixa de ícones fica abaixo do menu");
+        a.Janela.Zoom.TranslatePoint(default, a.Janela)!.Value.Y.Should().BeGreaterThanOrEqualTo(menu.Y + a.Janela.MenuPrincipal.Bounds.Height);
+
+        a.Clicar("Arquivo", "Salvar"); // o menu continua abrindo e executando normalmente
+        a.Ambiente.Dialogos.VezesQuePerguntouOndeSalvar.Should().Be(1);
+    });
+
+    [Fact]
+    public Task Tarefa_PeloMenu_FazOQueOsBotoesFaziam() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+
+        a.Clicar("Tarefa", "Adicionar tarefa");
         var mae = a.Vm.Tarefas.Should().ContainSingle().Subject;
-        a.Clicar("Inserir", "Adicionar subtarefa");
+        a.Clicar("Tarefa", "Adicionar subtarefa");
         var filha = a.Vm.Tarefas[1];
         filha.Tarefa.TarefaPaiId.Should().Be(mae.Tarefa.Id);
 
@@ -222,11 +284,11 @@ public class MenuPrincipalTests
     });
 
     [Fact]
-    public Task Inserir_FotosDeExemplo_SoEmDebug() => Tela.Executar(() =>
+    public Task Tarefa_FotosDeExemplo_SoEmDebug() => Tela.Executar(() =>
     {
         var a = Abrir();
-        var item = a.Item("Inserir", "Fotos de exemplo (desenvolvimento)");
-        var linha = a.Item("Inserir").Items.OfType<Separator>().Single();
+        var item = a.Item("Tarefa", "Fotos de exemplo (desenvolvimento)");
+        var linha = a.Item("Tarefa").Items.OfType<Separator>().Last();
 
         (item.IsVisible, linha.IsVisible).Should().Be((a.Vm.ModoDesenvolvimento, a.Vm.ModoDesenvolvimento));
 #if DEBUG
@@ -243,16 +305,16 @@ public class MenuPrincipalTests
 
         bool Habilitado(params string[] caminho) => a.Item(caminho).IsEffectivelyEnabled;
 
-        new[] { Habilitado("Inserir", "Adicionar subtarefa"), Habilitado("Tarefa", "Remover tarefa"),
+        new[] { Habilitado("Tarefa", "Adicionar subtarefa"), Habilitado("Tarefa", "Remover tarefa"),
                 Habilitado("Tarefa", "Promover"), Habilitado("Tarefa", "Rebaixar") }
             .Should().AllBeEquivalentTo(false);
-        new[] { Habilitado("Arquivo", "Novo"), Habilitado("Arquivo", "Salvar"), Habilitado("Inserir", "Adicionar tarefa"),
+        new[] { Habilitado("Arquivo", "Novo"), Habilitado("Arquivo", "Salvar"), Habilitado("Tarefa", "Adicionar tarefa"),
                 Habilitado("Tarefa", "Recalcular cronograma") }
             .Should().AllBeEquivalentTo(true);
 
         Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
 
-        new[] { Habilitado("Inserir", "Adicionar subtarefa"), Habilitado("Tarefa", "Remover tarefa") }
+        new[] { Habilitado("Tarefa", "Adicionar subtarefa"), Habilitado("Tarefa", "Remover tarefa") }
             .Should().AllBeEquivalentTo(true, "com uma tarefa selecionada");
     });
 
@@ -332,6 +394,51 @@ public class MenuPrincipalTests
 
         nome.IsEnabled.Should().BeFalse();
         nome.IsChecked.Should().BeTrue();
+    });
+
+    [Fact]
+    public Task Tarefa_AdicionarMarcoEResumo_PeloMenu() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+
+        a.Clicar("Tarefa", "Adicionar marco");
+        var marco = a.Vm.Tarefas.Last();
+        (marco.Nome, marco.Tarefa.Duracao, marco.Tarefa.EhMarco, a.Vm.TarefaSelecionada).Should().Be(("Novo marco", 0, true, marco));
+
+        a.Clicar("Tarefa", "Adicionar resumo");
+        var (resumo, subtarefa) = (a.Vm.Tarefas[^2], a.Vm.Tarefas[^1]);
+        (resumo.Nome, resumo.EhResumo, subtarefa.Tarefa.TarefaPaiId).Should().Be(("Novo resumo", true, resumo.Tarefa.Id));
+        a.Vm.TarefaSelecionada.Should().Be(subtarefa);
+        a.Vm.Tarefas.Select(t => t.Edt).Should().Equal("1", "2", "3", "3.1");
+        a.Vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
+    });
+
+    [Fact]
+    public Task Rebaixar_DesabilitadoQuandoODominioRecusaria_NoMenuENaFaixa() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var primeira = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        a.Vm.TarefaSelecionada = primeira;
+        Dispatcher.UIThread.RunJobs();
+
+        (a.Item("Tarefa", "Rebaixar").IsEffectivelyEnabled, Botao(a, "Rebaixar").IsEffectivelyEnabled)
+            .Should().Be((false, false), "não há tarefa acima da primeira");
+
+        var segunda = Ambiente.AdicionarTarefa(a.Vm, "Estrutura", 2);
+        Dispatcher.UIThread.RunJobs();
+        (a.Item("Tarefa", "Rebaixar").IsEffectivelyEnabled, Botao(a, "Rebaixar").IsEffectivelyEnabled)
+            .Should().Be((true, true));
+
+        primeira.Duracao = 0; // a de cima virou marco, e marco não tem subtarefas
+        a.Vm.TarefaSelecionada = segunda;
+        Dispatcher.UIThread.RunJobs();
+        (a.Item("Tarefa", "Rebaixar").IsEffectivelyEnabled, Botao(a, "Rebaixar").IsEffectivelyEnabled)
+            .Should().Be((false, false));
+
+        primeira.Duracao = 3;
+        Dispatcher.UIThread.RunJobs();
+        Botao(a, "Rebaixar").IsEffectivelyEnabled.Should().BeTrue("a regra é reavaliada a cada alteração");
     });
 
     [Fact]

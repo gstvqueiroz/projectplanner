@@ -223,6 +223,31 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         AposMudarAEstrutura(selecionar: tarefa);
     }
 
+    /// <summary>Acrescenta um marco (tarefa de duração 0) no fim da lista, como o Adicionar tarefa.</summary>
+    [RelayCommand]
+    private void AdicionarMarco()
+    {
+        var marco = new Tarefa("Novo marco", _cronograma.DataInicio, 0);
+        _cronograma.AdicionarTarefa(marco);
+        AposMudarAEstrutura(selecionar: marco);
+    }
+
+    /// <summary>
+    /// Acrescenta no fim da lista um resumo com uma subtarefa dentro (um resumo sem subtarefas seria só
+    /// uma tarefa), e seleciona a subtarefa, como o MS Project faz sem nada selecionado.
+    /// </summary>
+    [RelayCommand]
+    private void AdicionarResumo()
+    {
+        var resumo = new Tarefa("Novo resumo", _cronograma.DataInicio, 1);
+        var subtarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
+        _cronograma.AdicionarTarefa(resumo);
+        _cronograma.AdicionarTarefa(subtarefa, resumo.Id);
+        SincronizarLinhas();
+        Expandir(LinhaDe(resumo.Id));
+        AposMudarAEstrutura(selecionar: subtarefa);
+    }
+
     /// <summary>Adiciona uma tarefa como última subtarefa da selecionada, que vira resumo (e é expandido).</summary>
     [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
     private void AdicionarSubtarefa()
@@ -239,7 +264,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// Recua a selecionada um nível (Alt+Shift+→): ela vira a última subtarefa da tarefa de cima no
     /// mesmo nível, que vira resumo (e é expandido).
     /// </summary>
-    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
+    [RelayCommand(CanExecute = nameof(PodeRebaixar))]
     private void Rebaixar()
     {
         var linha = TarefaSelecionada!;
@@ -313,6 +338,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     }
 
     private bool PodePromover() => TarefaSelecionada?.Tarefa.TarefaPaiId is not null;
+
+    // A mesma regra do domínio: há tarefa acima no mesmo nível, e ela pode virar resumo (não é marco nem tem vínculos).
+    private bool PodeRebaixar() => TarefaSelecionada is { } linha && _cronograma.PodeRebaixar(linha.Tarefa.Id);
 
     /// <summary>
     /// Num resumo, duração, datas, % e predecessoras vêm das subtarefas: a grid não entra em edição
@@ -522,6 +550,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
         Mensagem = "";
+        // Duração (virar marco) e vínculos mudam se a tarefa de cima pode receber a selecionada.
+        RebaixarCommand.NotifyCanExecuteChanged();
         Recalcular();
     }
 
@@ -583,6 +613,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _edt = _cronograma.NumeracaoEdt();
         AtualizarLinhasVisiveis(avisarOGantt: false);
         PromoverCommand.NotifyCanExecuteChanged();
+        RebaixarCommand.NotifyCanExecuteChanged();
     }
 
     // Esconde as linhas que estão dentro de algum resumo recolhido (em qualquer nível acima).

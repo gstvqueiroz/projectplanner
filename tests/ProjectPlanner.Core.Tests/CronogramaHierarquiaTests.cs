@@ -128,6 +128,49 @@ public class CronogramaHierarquiaTests
     // --- Rebaixar ---
 
     [Fact]
+    public void PodeRebaixar_ComTarefaAcimaNoMesmoNivel_SimENaoMudaNada()
+    {
+        var a = Nova("A");
+        var b = Nova("B");
+
+        _cronograma.PodeRebaixar(b.Id).Should().BeTrue();
+        Estrutura().Should().Equal("A", "B");
+        a.EhResumo.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PodeRebaixar_PrimeiraTarefaOuPrimeiraDoResumo_Nao()
+    {
+        var a = Nova("A");
+        var filha = Nova("Filha", a);
+
+        _cronograma.PodeRebaixar(a.Id).Should().BeFalse("não há tarefa acima");
+        _cronograma.PodeRebaixar(filha.Id).Should().BeFalse("a de cima é o próprio resumo, de outro nível");
+    }
+
+    [Fact]
+    public void PodeRebaixar_TarefaDeCimaEMarcoOuTemVinculos_Nao_ComoORebaixar()
+    {
+        Nova("Marco", duracao: 0);
+        var b = Nova("B");
+        var c = Nova("C");
+        var d = Nova("D");
+        Ligar(c, d);
+
+        _cronograma.PodeRebaixar(b.Id).Should().BeFalse("marcos não têm subtarefas");
+        _cronograma.Invoking(x => x.Rebaixar(b.Id)).Should().Throw<DomainValidationException>();
+        _cronograma.PodeRebaixar(d.Id).Should().BeFalse("C tem vínculos e não pode virar resumo");
+        _cronograma.Invoking(x => x.Rebaixar(d.Id)).Should().Throw<DomainValidationException>();
+        _cronograma.PodeRebaixar(c.Id).Should().BeTrue("B pode virar resumo");
+    }
+
+    [Fact]
+    public void PodeRebaixar_TarefaQueNaoEstaNoCronograma_Nao()
+    {
+        _cronograma.PodeRebaixar(Guid.NewGuid()).Should().BeFalse();
+    }
+
+    [Fact]
     public void Rebaixar_ViraAUltimaSubtarefaDaTarefaDeCimaNoMesmoNivel()
     {
         var a = Nova("A");

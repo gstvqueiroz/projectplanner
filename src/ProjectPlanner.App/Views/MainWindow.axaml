@@ -25,18 +25,88 @@
             <Setter Property="StrokeJoin" Value="Round" />
             <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
         </Style>
+        <!-- Ação indisponível (CanExecute falso): ícone esmaecido, sem a caixa cinza que o tema põe nos botões. -->
+        <Style Selector="Button.acessoRapido:disabled Path">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
+        <Style Selector="Button.acessoRapido:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="StackPanel#AcessoRapido > Border.divisor">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Margin" Value="4,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        </Style>
     </Window.Styles>
 
     <DockPanel>
-        <!-- Menu principal (Arquivo, Exibir, Inserir, Tarefa), barra de acesso rápido e zoom, numa linha só
-             (Bloco 15). Cada item dispara o mesmo comando ou liga a mesma propriedade do ViewModel que o
-             botão da antiga barra de ferramentas; o submenu Exibir > Colunas é montado no MainWindow.axaml.cs,
-             uma caixa por coluna. Promover e Rebaixar só mostram o atalho: quem trata Alt+Shift+← e → é a
-             própria janela (AtalhosDaEstrutura). -->
-        <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1"
+        <!-- Linha 1: o menu principal (Arquivo, Exibir, Tarefa; Inserir oculto por ora), como num aplicativo desktop clássico.
+             Cada item dispara o mesmo comando ou liga a mesma propriedade do ViewModel que o botão da antiga
+             barra de ferramentas; o submenu Exibir > Colunas é montado no MainWindow.axaml.cs, uma caixa por
+             coluna. Promover e Rebaixar só mostram o atalho: quem trata Alt+Shift+← e → é a própria janela
+             (AtalhosDaEstrutura). -->
+        <Border DockPanel.Dock="Top" Padding="4,0" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-            <DockPanel Margin="4,2">
-                <!-- Zoom do Gantt, à direita: o mesmo slider de antes. -->
+            <Menu x:Name="MenuPrincipal">
+                <MenuItem Header="Arquivo">
+                    <MenuItem Header="Novo" Command="{Binding NovoProjetoCommand}" />
+                    <MenuItem Header="Abrir…" Command="{Binding AbrirProjetoCommand}" />
+                    <Separator />
+                    <MenuItem Header="Salvar" Command="{Binding SalvarProjetoCommand}" />
+                    <MenuItem Header="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
+                </MenuItem>
+                <!-- Opções de exibição: valem só durante a sessão (não vão para o .pplan). O ✓ mostra se estão ligadas. -->
+                <MenuItem Header="Exibir">
+                    <MenuItem Header="Seleção" ToggleType="CheckBox" IsChecked="{Binding MostrarSelecao, Mode=TwoWay}"
+                              ToolTip.Tip="Destacar a tarefa selecionada na grid e no Gantt" />
+                    <MenuItem Header="Caminho crítico" ToggleType="CheckBox"
+                              IsChecked="{Binding Gantt.MostrarCaminhoCritico, Mode=TwoWay}"
+                              ToolTip.Tip="Pintar de vermelho as tarefas e vínculos críticos no Gantt" />
+                    <MenuItem Header="Fotos" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFotos, Mode=TwoWay}"
+                              ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
+                    <Separator />
+                    <!-- Mostrar/ocultar colunas e restaurar o layout padrão. Ordem e largura mudam arrastando os
+                         cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
+                    <MenuItem x:Name="MenuColunas" Header="Colunas" />
+                </MenuItem>
+                <!-- Inserir: vazio e oculto por ora (Bloco 15.1). Volta quando chegar a primeira funcionalidade dele
+                     (ex.: data limite, anexos, comentários, link, coluna personalizada). -->
+                <MenuItem Header="Inserir" IsVisible="False" />
+                <!-- Tudo o que cria, remove ou reorganiza tarefas, num lugar só. -->
+                <MenuItem Header="Tarefa">
+                    <MenuItem Header="Adicionar tarefa" Command="{Binding AdicionarTarefaCommand}" />
+                    <MenuItem Header="Adicionar subtarefa" Command="{Binding AdicionarSubtarefaCommand}"
+                              ToolTip.Tip="Adicionar uma subtarefa dentro da tarefa selecionada" />
+                    <MenuItem Header="Adicionar marco" Command="{Binding AdicionarMarcoCommand}"
+                              ToolTip.Tip="Adicionar um marco (tarefa de duração 0) no fim da lista" />
+                    <MenuItem Header="Adicionar resumo" Command="{Binding AdicionarResumoCommand}"
+                              ToolTip.Tip="Adicionar no fim da lista um resumo com uma subtarefa dentro" />
+                    <Separator />
+                    <MenuItem Header="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
+                    <Separator />
+                    <MenuItem Header="Promover" Command="{Binding PromoverCommand}" InputGesture="Alt+Shift+Left"
+                              ToolTip.Tip="Tira a tarefa do resumo, um nível acima" />
+                    <MenuItem Header="Rebaixar" Command="{Binding RebaixarCommand}" InputGesture="Alt+Shift+Right"
+                              ToolTip.Tip="Coloca a tarefa dentro da tarefa de cima, um nível abaixo" />
+                    <Separator />
+                    <MenuItem Header="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
+                    <!-- TEMPORÁRIO (Bloco 14): só existe no build Debug, para testar a galeria sem imagens reais. -->
+                    <Separator IsVisible="{Binding ModoDesenvolvimento}" />
+                    <MenuItem Header="Fotos de exemplo (desenvolvimento)" Command="{Binding AdicionarFotosDeExemploCommand}"
+                              IsVisible="{Binding ModoDesenvolvimento}"
+                              ToolTip.Tip="Desenvolvimento: acrescenta 3 fotos fictícias à tarefa selecionada" />
+                </MenuItem>
+            </Menu>
+        </Border>
+
+        <!-- Linha 2, logo abaixo: a barra de acesso rápido (os comandos do dia a dia, a um clique) e o zoom do
+             Gantt à direita. Os botões são só ícones; o nome vai na dica e no AutomationProperties.Name (que é o
+             que os leitores de tela anunciam). Sem a ação disponível (CanExecute), o botão fica esmaecido. -->
+        <Border DockPanel.Dock="Top" Padding="4,2" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" Margin="8,0"
                             VerticalAlignment="Center">
                     <TextBlock Text="Zoom:" VerticalAlignment="Center" ToolTip.Tip="Zoom do Gantt" />
@@ -47,66 +117,36 @@
                     <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center" MinWidth="62" />
                 </StackPanel>
 
-                <Menu x:Name="MenuPrincipal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <MenuItem Header="Arquivo">
-                        <MenuItem Header="Novo" Command="{Binding NovoProjetoCommand}" />
-                        <MenuItem Header="Abrir…" Command="{Binding AbrirProjetoCommand}" />
-                        <Separator />
-                        <MenuItem Header="Salvar" Command="{Binding SalvarProjetoCommand}" />
-                        <MenuItem Header="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
-                    </MenuItem>
-                    <!-- Opções de exibição: valem só durante a sessão (não vão para o .pplan). O ✓ mostra se estão ligadas. -->
-                    <MenuItem Header="Exibir">
-                        <MenuItem Header="Seleção" ToggleType="CheckBox" IsChecked="{Binding MostrarSelecao, Mode=TwoWay}"
-                                  ToolTip.Tip="Destacar a tarefa selecionada na grid e no Gantt" />
-                        <MenuItem Header="Caminho crítico" ToggleType="CheckBox"
-                                  IsChecked="{Binding Gantt.MostrarCaminhoCritico, Mode=TwoWay}"
-                                  ToolTip.Tip="Pintar de vermelho as tarefas e vínculos críticos no Gantt" />
-                        <MenuItem Header="Fotos" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFotos, Mode=TwoWay}"
-                                  ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
-                        <Separator />
-                        <!-- Mostrar/ocultar colunas e restaurar o layout padrão. Ordem e largura mudam arrastando os
-                             cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
-                        <MenuItem x:Name="MenuColunas" Header="Colunas" />
-                    </MenuItem>
-                    <MenuItem Header="Inserir">
-                        <MenuItem Header="Adicionar tarefa" Command="{Binding AdicionarTarefaCommand}" />
-                        <MenuItem Header="Adicionar subtarefa" Command="{Binding AdicionarSubtarefaCommand}"
-                                  ToolTip.Tip="Adicionar uma subtarefa dentro da tarefa selecionada" />
-                        <!-- TEMPORÁRIO (Bloco 14): só existe no build Debug, para testar a galeria sem imagens reais. -->
-                        <Separator IsVisible="{Binding ModoDesenvolvimento}" />
-                        <MenuItem Header="Fotos de exemplo (desenvolvimento)" Command="{Binding AdicionarFotosDeExemploCommand}"
-                                  IsVisible="{Binding ModoDesenvolvimento}"
-                                  ToolTip.Tip="Desenvolvimento: acrescenta 3 fotos fictícias à tarefa selecionada" />
-                    </MenuItem>
-                    <MenuItem Header="Tarefa">
-                        <MenuItem Header="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
-                        <Separator />
-                        <MenuItem Header="Promover" Command="{Binding PromoverCommand}" InputGesture="Alt+Shift+Left"
-                                  ToolTip.Tip="Tira a tarefa do resumo, um nível acima" />
-                        <MenuItem Header="Rebaixar" Command="{Binding RebaixarCommand}" InputGesture="Alt+Shift+Right"
-                                  ToolTip.Tip="Coloca a tarefa dentro da tarefa de cima, um nível abaixo" />
-                        <Separator />
-                        <MenuItem Header="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
-                    </MenuItem>
-                </Menu>
-
-                <Border Width="1" Height="20" Margin="6,0" VerticalAlignment="Center"
-                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
-
-                <!-- Barra de acesso rápido: os comandos do dia a dia, a um clique. São só ícones; o nome vai na
-                     dica e no AutomationProperties.Name (que é o que os leitores de tela anunciam). -->
                 <StackPanel x:Name="AcessoRapido" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                     <Button Classes="acessoRapido" Command="{Binding SalvarProjetoCommand}" ToolTip.Tip="Salvar"
                             AutomationProperties.Name="Salvar">
                         <!-- Disquete -->
                         <Path Data="M2.5,1.5 H11 L14.5,5 V14.5 H1.5 V2.5 Z M4.5,1.5 V5.5 H10.5 V1.5 M4.5,14.5 V9.5 H11.5 V14.5" />
                     </Button>
+                    <Border Classes="divisor" />
                     <Button Classes="acessoRapido" Command="{Binding AdicionarTarefaCommand}" ToolTip.Tip="Adicionar tarefa"
                             AutomationProperties.Name="Adicionar tarefa">
                         <!-- Barra de tarefa com um + -->
                         <Path Data="M1,6.5 H8.5 V9.5 H1 Z M12.5,4 V12 M8.5,8 H16" />
                     </Button>
+                    <Button Classes="acessoRapido" Command="{Binding RemoverTarefaCommand}"
+                            ToolTip.Tip="Remover tarefa (a selecionada)" AutomationProperties.Name="Remover tarefa">
+                        <!-- Barra de tarefa com um − -->
+                        <Path Data="M1,6.5 H8.5 V9.5 H1 Z M10,8 H15.5" />
+                    </Button>
+                    <Border Classes="divisor" />
+                    <Button Classes="acessoRapido" Command="{Binding PromoverCommand}"
+                            ToolTip.Tip="Promover: sobe a tarefa um nível (Alt+Shift+←)" AutomationProperties.Name="Promover">
+                        <!-- Seta para a esquerda, com as linhas de um recuo -->
+                        <Path Data="M15,8 H3.5 M7.5,4 L3.5,8 L7.5,12 M1,2 V14" />
+                    </Button>
+                    <Button Classes="acessoRapido" Command="{Binding RebaixarCommand}"
+                            ToolTip.Tip="Rebaixar: desce a tarefa um nível, para dentro da de cima (Alt+Shift+→)"
+                            AutomationProperties.Name="Rebaixar">
+                        <!-- Seta para a direita, com a linha de um recuo -->
+                        <Path Data="M1,2 V14 M4,8 H15 M11,4 L15,8 L11,12" />
+                    </Button>
+                    <Border Classes="divisor" />
                     <Button Classes="acessoRapido" Command="{Binding RecalcularCronogramaCommand}" ToolTip.Tip="Recalcular cronograma"
                             AutomationProperties.Name="Recalcular cronograma">
                         <!-- Setas em círculo -->

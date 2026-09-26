@@ -117,15 +117,43 @@ public class Cronograma
     public void Rebaixar(Guid tarefaId)
     {
         var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        var irma = ResumoAoRebaixar(tarefa);
+
+        tarefa.DefinirPai(irma.Id);
+        irma.DefinirSeEhResumo(true);
+    }
+
+    /// <summary>
+    /// Se <see cref="Rebaixar"/> aceitaria a tarefa agora (há tarefa acima no mesmo nível, e ela pode ter
+    /// subtarefas), sem mudar nada. Falso também para uma tarefa que não está no cronograma.
+    /// </summary>
+    public bool PodeRebaixar(Guid tarefaId)
+    {
+        var tarefa = _tarefas.Find(t => t.Id == tarefaId);
+        if (tarefa is null)
+            return false;
+        try
+        {
+            ResumoAoRebaixar(tarefa);
+            return true;
+        }
+        catch (DomainValidationException)
+        {
+            return false;
+        }
+    }
+
+    // A regra do rebaixar, usada por Rebaixar e PodeRebaixar: a tarefa de cima no mesmo nível, que vai
+    // ser o resumo, ou a exceção com o motivo de não dar.
+    private Tarefa ResumoAoRebaixar(Tarefa tarefa)
+    {
         var indice = _tarefas.IndexOf(tarefa);
         // Em pré-ordem, a irmã de cima é a última tarefa antes desta com o mesmo pai.
         var irma = _tarefas.Take(indice).LastOrDefault(t => t.TarefaPaiId == tarefa.TarefaPaiId)
             ?? throw new DomainValidationException(nameof(Tarefa.TarefaPaiId),
                 $"Não há tarefa acima de \"{tarefa.Nome}\" no mesmo nível para ser o resumo dela.");
         ValidarPodeTerSubtarefas(irma);
-
-        tarefa.DefinirPai(irma.Id);
-        irma.DefinirSeEhResumo(true);
+        return irma;
     }
 
     /// <summary>

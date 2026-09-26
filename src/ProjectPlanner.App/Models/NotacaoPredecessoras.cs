@@ -58,6 +58,9 @@ public static partial class NotacaoPredecessoras
         return itens;
     }
 
+    /// <summary>A sigla do tipo na notação: TI, II, TT ou IT.</summary>
+    public static string Sigla(TipoDependencia tipo) => TipoPorCodigo.First(p => p.Value == tipo).Key;
+
     public static string Formatar(IEnumerable<ItemPredecessora> itens) => string.Join("; ", itens.Select(Formatar));
 
     public static string Formatar(ItemPredecessora item)

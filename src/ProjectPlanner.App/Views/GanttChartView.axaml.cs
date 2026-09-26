@@ -15,10 +15,25 @@ namespace ProjectPlanner.App.Views;
 /// Desenha o <see cref="GanttViewModel.Layout"/>: cabeçalho de tempo, barras (vermelhas as críticas,
 /// azuis as demais, com a parte concluída escurecida), losangos dos marcos (pretos, ou vermelhos se
 /// críticos), barras "chapéu" dos resumos (escuras, sem cor de crítica, como no MS Project), linhas de
-/// folga, setas de dependência e o fundo levemente acinzentado dos fins de semana. A tarefa selecionada ganha um contorno na linha (o mesmo da
-/// grid) e na barra; clicar numa barra seleciona a tarefa. Não
+/// folga, setas de dependência e o fundo levemente acinzentado dos fins de semana. A tarefa selecionada
+/// ganha um contorno na linha (o mesmo da grid) e na barra; clicar numa barra seleciona a tarefa. Não
 /// calcula posição nenhuma; tudo vem pronto da <see cref="CalculadoraLayoutGantt"/>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Arrastar a partir da alça de uma ponta de barra até outra barra cria um vínculo (Bloco 12). O que
+/// está sob o mouse vem da geometria do layout (<see cref="LocalizadorGantt"/>), não das formas
+/// desenhadas; o tipo vem das bordas (<see cref="InferenciaDependencia"/>); a validação e a criação ficam
+/// no <see cref="GanttViewModel"/>. Um clique (apertar e soltar sem andar
+/// <see cref="LimiarDoArraste"/> px) continua só selecionando.
+/// </para>
+/// <para>
+/// Durante o arraste: linha guia tracejada da ponta de origem até o cursor; sobre uma barra, contorno
+/// verde (válido) ou vermelho (recusado, com cursor de proibido), as alças dela com a que vale
+/// preenchida, e um rótulo com o vínculo que será criado ou o motivo da recusa. Soltar fora de qualquer
+/// barra, na própria origem ou teclar Esc cancela.
+/// </para>
+/// </remarks>
 public partial class GanttChartView : UserControl
 {
     // Folga no fim do corpo, para o Gantt conseguir acompanhar a grid até a última linha.
@@ -46,8 +61,29 @@ public partial class GanttChartView : UserControl
     private static readonly IBrush FimDeSemana = new SolidColorBrush(Color.FromArgb(0x18, 0x80, 0x80, 0x80));
     private static readonly IBrush GradeForte = new SolidColorBrush(Color.FromArgb(0x60, 0x80, 0x80, 0x80));
 
+    // Arraste de vínculo: a partir de quanto o mouse andou com o botão apertado deixa de ser clique.
+    private const double LimiarDoArraste = 4;
+
+    private static readonly IBrush Valido = new SolidColorBrush(Color.Parse("#2E7D32"));
+    private static readonly IBrush Neutro = new SolidColorBrush(Color.Parse("#607D8B"));
+    private static readonly IBrush FundoDoRotulo = new SolidColorBrush(Color.FromArgb(0xE6, 0x32, 0x32, 0x32));
+    private static readonly Cursor CursorDeLigar = new(StandardCursorType.Cross);
+    private static readonly Cursor CursorDeSelecionar = new(StandardCursorType.Hand);
+    private static readonly Cursor CursorProibido = new(StandardCursorType.No);
+
     private GanttViewModel? _viewModel;
     private double _deslocamentoVertical;
+    private TopLevel? _janela;
+
+    private enum EstadoDoArraste { Parado, Armado, Arrastando }
+
+    private EstadoDoArraste _arraste;
+    private AlcaGantt? _origem;
+    private IPointer? _ponteiro;
+    private Point _pontoDoClique;
+    private (Guid TarefaId, BordaDaBarra Borda)? _alcaSobOMouse;
+    private (Guid TarefaId, BordaDaBarra Borda)? _destinoPrevisto;
+    private PrevisaoDeLigacao? _previsao;
 
     public GanttChartView()
     {
@@ -56,6 +92,33 @@ public partial class GanttChartView : UserControl
         RolagemCorpo.ScrollChanged += CorpoRolou;
         RolagemCorpo.SizeChanged += (_, e) => _viewModel?.AtualizarAreaVisivel(e.NewSize.Width, e.NewSize.Height);
         RolagemCorpo.AddHandler(PointerWheelChangedEvent, TratarRodaDoMouse, RoutingStrategies.Tunnel);
+        Superficie.PointerPressed += SuperficieApertada;
+        Superficie.PointerMoved += SuperficieMovida;
+        Superficie.PointerReleased += SuperficieSolta;
+        Superficie.PointerCaptureLost += (_, _) =>
+        {
+            if (_arraste != EstadoDoArraste.Parado)
+                EncerrarArraste();
+        };
+        Superficie.PointerExited += (_, _) =>
+        {
+            if (_arraste == EstadoDoArraste.Parado)
+                LimparAlcaSobOMouse();
+        };
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _janela = TopLevel.GetTopLevel(this);
+        _janela?.AddHandler(KeyDownEvent, TeclaApertada, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _janela?.RemoveHandler(KeyDownEvent, TeclaApertada);
+        _janela = null;
+        base.OnDetachedFromVisualTree(e);
     }
 
     /// <summary>
@@ -236,13 +299,7 @@ public partial class GanttChartView : UserControl
         };
         forma.Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : null;
         forma.StrokeThickness = 1.5;
-        forma.Cursor = new Cursor(StandardCursorType.Hand);
         ToolTip.SetTip(forma, barra.Nome);
-        forma.PointerPressed += (_, e) =>
-        {
-            viewModel.ClicarNaBarra(barra.TarefaId);
-            e.Handled = true;
-        };
         if (forma is Rectangle)
             Posicionar(Corpo, forma, barra.X, barra.Y);
         else
@@ -319,6 +376,209 @@ public partial class GanttChartView : UserControl
             Fill = cor,
         });
     }
+
+    // --- Mouse: seleção e arraste de vínculos ---
+
+    private void SuperficieApertada(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel?.Layout is not { } layout || !e.GetCurrentPoint(Superficie).Properties.IsLeftButtonPressed)
+            return;
+
+        var ponto = e.GetPosition(Corpo);
+        var alca = LocalizadorGantt.AlcaEm(layout, ponto.X, ponto.Y);
+        var barra = alca?.Barra ?? LocalizadorGantt.BarraEm(layout, ponto.X, ponto.Y);
+        if (barra is null)
+            return;
+
+        _viewModel.ClicarNaBarra(barra.TarefaId); // seleciona, como no Bloco 9
+        if (alca is not null)
+        {
+            // O ponteiro fica com a superfície: o desenho é refeito com a seleção, e o gesto continua
+            // mesmo que o mouse saia do Gantt.
+            _arraste = EstadoDoArraste.Armado;
+            _origem = alca;
+            _ponteiro = e.Pointer;
+            _pontoDoClique = ponto;
+            e.Pointer.Capture(Superficie);
+        }
+        e.Handled = true;
+    }
+
+    private void SuperficieMovida(object? sender, PointerEventArgs e)
+    {
+        if (_viewModel?.Layout is not { } layout)
+            return;
+
+        var ponto = e.GetPosition(Corpo);
+        switch (_arraste)
+        {
+            case EstadoDoArraste.Parado:
+                MostrarOQueEstaSobOMouse(layout, ponto);
+                break;
+            case EstadoDoArraste.Armado when Distancia(ponto, _pontoDoClique) >= LimiarDoArraste:
+                _arraste = EstadoDoArraste.Arrastando;
+                ToolTip.SetServiceEnabled(Superficie, false);
+                AtualizarArraste(layout, ponto);
+                break;
+            case EstadoDoArraste.Arrastando:
+                AtualizarArraste(layout, ponto);
+                break;
+        }
+    }
+
+    private void SuperficieSolta(object? sender, PointerReleasedEventArgs e)
+    {
+        var (estado, origem) = (_arraste, _origem);
+        EncerrarArraste();
+        if (estado != EstadoDoArraste.Arrastando || origem is null || _viewModel?.Layout is not { } layout)
+            return;
+
+        var ponto = e.GetPosition(Corpo);
+        var destino = LocalizadorGantt.DestinoEm(layout, ponto.X, ponto.Y);
+        _viewModel.SoltarLigacao(origem.Barra.TarefaId, origem.Borda, destino?.Barra.TarefaId,
+            destino?.Borda ?? BordaDaBarra.Inicio);
+    }
+
+    private void TeclaApertada(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || _arraste == EstadoDoArraste.Parado)
+            return;
+        EncerrarArraste();
+        e.Handled = true;
+    }
+
+    // Volta ao estado parado: sem linha guia nem destaque, cursor e dicas normais, ponteiro liberado.
+    private void EncerrarArraste()
+    {
+        var ponteiro = _ponteiro;
+        _arraste = EstadoDoArraste.Parado;
+        _origem = null;
+        _ponteiro = null;
+        _destinoPrevisto = null;
+        _previsao = null;
+        _alcaSobOMouse = null;
+        Interacao.Children.Clear();
+        ToolTip.SetServiceEnabled(Superficie, true);
+        Superficie.Cursor = null;
+        ponteiro?.Capture(null);
+    }
+
+    // Parado: cruz e o círculo da alça sobre uma ponta de barra; mãozinha sobre o resto da barra.
+    private void MostrarOQueEstaSobOMouse(LayoutGantt layout, Point ponto)
+    {
+        var alca = LocalizadorGantt.AlcaEm(layout, ponto.X, ponto.Y);
+        (Guid, BordaDaBarra)? chave = alca is null ? null : (alca.Barra.TarefaId, alca.Borda);
+        if (chave != _alcaSobOMouse)
+        {
+            _alcaSobOMouse = chave;
+            Interacao.Children.Clear();
+            if (alca is not null)
+                DesenharAlca(alca.Ponto, Neutro, preenchida: false);
+        }
+        Superficie.Cursor = alca is not null ? CursorDeLigar
+            : LocalizadorGantt.BarraEm(layout, ponto.X, ponto.Y) is not null ? CursorDeSelecionar
+            : null;
+    }
+
+    private void LimparAlcaSobOMouse()
+    {
+        _alcaSobOMouse = null;
+        Interacao.Children.Clear();
+        Superficie.Cursor = null;
+    }
+
+    private void AtualizarArraste(LayoutGantt layout, Point ponto)
+    {
+        var origem = _origem!;
+        var destino = LocalizadorGantt.DestinoEm(layout, ponto.X, ponto.Y);
+        (Guid, BordaDaBarra)? chave = destino is null ? null : (destino.Barra.TarefaId, destino.Borda);
+        if (chave != _destinoPrevisto)
+        {
+            _destinoPrevisto = chave;
+            _previsao = _viewModel!.PreverLigacao(origem.Barra.TarefaId, origem.Borda, destino?.Barra.TarefaId,
+                destino?.Borda ?? BordaDaBarra.Inicio);
+        }
+
+        var estado = _previsao?.Estado;
+        var cor = estado switch
+        {
+            EstadoDaLigacao.Valida => Valido,
+            EstadoDaLigacao.Invalida => Critica,
+            _ => Neutro,
+        };
+        Interacao.Children.Clear();
+        if (destino is not null && estado is EstadoDaLigacao.Valida or EstadoDaLigacao.Invalida)
+            DesenharDestino(destino, cor);
+        Interacao.Children.Add(new Line
+        {
+            StartPoint = new Point(origem.Ponto.X, origem.Ponto.Y),
+            EndPoint = ponto,
+            Stroke = cor,
+            StrokeThickness = 1.5,
+            StrokeDashArray = [4, 3],
+        });
+        DesenharAlca(origem.Ponto, cor, preenchida: true);
+        if (_previsao is not null)
+            DesenharRotulo(_previsao, ponto);
+        Superficie.Cursor = estado == EstadoDaLigacao.Invalida ? CursorProibido : CursorDeLigar;
+    }
+
+    // Contorno em volta da barra de destino e, se ela aceita vínculos, as duas alças, com a que vale preenchida.
+    private void DesenharDestino(DestinoGantt destino, IBrush cor)
+    {
+        var barra = destino.Barra;
+        Posicionar(Interacao, new Rectangle
+        {
+            Width = barra.Largura + 6,
+            Height = barra.Altura + 6,
+            Stroke = cor,
+            StrokeThickness = 2,
+            RadiusX = 3,
+            RadiusY = 3,
+        }, barra.X - 3, barra.Y - 3);
+        if (barra.Tipo == TipoTarefa.Resumo)
+            return;
+        foreach (var borda in new[] { BordaDaBarra.Inicio, BordaDaBarra.Termino })
+            DesenharAlca(LocalizadorGantt.Ponta(barra, borda), borda == destino.Borda ? cor : Neutro,
+                preenchida: borda == destino.Borda);
+    }
+
+    private void DesenharAlca(PontoGantt ponto, IBrush cor, bool preenchida)
+    {
+        const double diametro = 8;
+        Posicionar(Interacao, new Ellipse
+        {
+            Width = diametro,
+            Height = diametro,
+            Fill = preenchida ? cor : Brushes.White,
+            Stroke = cor,
+            StrokeThickness = 1.5,
+        }, ponto.X - diametro / 2, ponto.Y - diametro / 2);
+    }
+
+    // O rótulo fica um pouco abaixo e à direita do cursor, sem sair da área do Gantt.
+    private void DesenharRotulo(PrevisaoDeLigacao previsao, Point ponto)
+    {
+        var rotulo = new Border
+        {
+            Background = FundoDoRotulo,
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(8, 4),
+            Child = new TextBlock
+            {
+                Text = previsao.Texto,
+                Foreground = Brushes.White,
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 360,
+            },
+        };
+        rotulo.Measure(Size.Infinity);
+        var x = Math.Max(0, Math.Min(ponto.X + 14, Corpo.Width - rotulo.DesiredSize.Width - 4));
+        Posicionar(Interacao, rotulo, x, ponto.Y + 18);
+    }
+
+    private static double Distancia(Point a, Point b) => Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
 
     private static void Posicionar(Canvas canvas, Control controle, double x, double y)
     {

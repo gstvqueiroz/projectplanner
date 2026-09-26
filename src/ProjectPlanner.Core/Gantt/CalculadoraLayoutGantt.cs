@@ -89,7 +89,7 @@ public static class CalculadoraLayoutGantt
 
         return new LayoutGantt(inicioEixo, fimEixo, eixo.FimDoDia(fimEixo),
             Math.Max(barras.Count * opcoes.AlturaLinha, opcoes.AlturaVisivel),
-            barras, setas, Escala(inicioEixo, fimEixo, eixo, opcoes), finsDeSemana);
+            barras, setas, Escala(inicioEixo, fimEixo, eixo, opcoes), finsDeSemana, opcoes.AlturaLinha);
     }
 
     /// <summary>Quantos dias inteiros ou parciais cabem numa largura, nessa escala (pelo menos 1).</summary>

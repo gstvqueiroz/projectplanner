@@ -131,6 +131,34 @@ public class CronogramaPredecessorasTests
         _cronograma.Predecessoras.Should().Equal(new Predecessora(_a.Id, _b.Id));
     }
 
+    // Validar sem adicionar (usado na prévia do arraste de vínculos, Bloco 12)
+
+    [Fact]
+    public void ValidarPredecessora_Valida_NaoAdicionaNada()
+    {
+        _cronograma.ValidarPredecessora(new Predecessora(_a.Id, _b.Id));
+
+        _cronograma.Predecessoras.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidarPredecessora_RecusaComAsMesmasMensagensDeAdicionar_SemMudarNada()
+    {
+        Vincular(_a, _b);
+        var fase = new Tarefa("Fase", Segunda, 1);
+        _cronograma.AdicionarTarefa(fase);
+        _cronograma.AdicionarTarefa(new Tarefa("Sub", Segunda, 1), fase.Id);
+
+        var repetido = () => _cronograma.ValidarPredecessora(new Predecessora(_a.Id, _b.Id, TipoDependencia.SS));
+        var ciclo = () => _cronograma.ValidarPredecessora(new Predecessora(_b.Id, _a.Id));
+        var resumo = () => _cronograma.ValidarPredecessora(new Predecessora(_c.Id, fase.Id));
+
+        repetido.Should().Throw<DomainValidationException>().WithMessage("Já existe um vínculo de \"A\" para \"B\".");
+        ciclo.Should().Throw<CircularDependencyException>().WithMessage("*dependência circular B → A → B.");
+        resumo.Should().Throw<DomainValidationException>().WithMessage("\"Fase\" é um resumo*");
+        _cronograma.Predecessoras.Should().Equal(new Predecessora(_a.Id, _b.Id));
+    }
+
     [Fact]
     public void AdicionarPredecessora_Nula_LancaArgumentNullException()
     {

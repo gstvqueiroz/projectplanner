@@ -77,6 +77,7 @@ public sealed record OpcoesGantt
 /// <param name="Barras">Uma por tarefa visível, na ordem do cronograma (a mesma da grid).</param>
 /// <param name="Setas">Uma por vínculo, na ordem do cronograma.</param>
 /// <param name="FinsDeSemana">Uma coluna por sábado e domingo do eixo, em ordem, para o fundo diferenciado.</param>
+/// <param name="AlturaLinha">Altura de cada linha (a linha N vai de N × AlturaLinha a (N + 1) × AlturaLinha).</param>
 public sealed record LayoutGantt(
     DateTime InicioEixo,
     DateTime FimEixo,
@@ -85,7 +86,8 @@ public sealed record LayoutGantt(
     IReadOnlyList<BarraGantt> Barras,
     IReadOnlyList<SetaGantt> Setas,
     EscalaGantt Escala,
-    IReadOnlyList<ColunaDia> FinsDeSemana);
+    IReadOnlyList<ColunaDia> FinsDeSemana,
+    double AlturaLinha);
 
 /// <summary>A faixa vertical de um dia no eixo.</summary>
 public sealed record ColunaDia(DateTime Dia, double X, double Largura);

@@ -1,8 +1,32 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using ProjectPlanner.App.Models;
 using ProjectPlanner.Core;
 using ProjectPlanner.Core.Gantt;
 
 namespace ProjectPlanner.App.ViewModels;
+
+/// <summary>Quem cria os vínculos pedidos por arraste no Gantt: a janela principal, dona do cronograma.</summary>
+public interface ILigacoesNoGantt
+{
+    /// <summary>Por que o vínculo não pode ser criado, ou nulo se pode. Não muda nada.</summary>
+    string? MotivoParaNaoLigar(Guid predecessoraId, Guid sucessoraId, TipoDependencia tipo);
+
+    /// <summary>Cria o vínculo, recalcula e avisa na barra de status (também quando recusa).</summary>
+    /// <returns>Se criou o vínculo.</returns>
+    bool Ligar(Guid predecessoraId, Guid sucessoraId, TipoDependencia tipo);
+}
+
+/// <summary>Como o destino sob o mouse aparece durante o arraste de um vínculo.</summary>
+public enum EstadoDaLigacao
+{
+    /// <summary>A própria tarefa de origem: soltar ali só cancela.</summary>
+    Neutra,
+    Valida,
+    Invalida,
+}
+
+/// <summary>O que acontece se o arraste for solto no destino atual: o estado e o texto do rótulo junto ao cursor.</summary>
+public sealed record PrevisaoDeLigacao(EstadoDaLigacao Estado, string Texto);
 
 /// <summary>
 /// O Gantt ao lado da grid: guarda o último cronograma calculado e o layout dele na escala atual.
@@ -54,6 +78,9 @@ public sealed partial class GanttViewModel : ViewModelBase
     /// <summary>O usuário clicou na barra de uma tarefa; a janela principal a seleciona.</summary>
     public event Action<Guid>? BarraClicada;
 
+    /// <summary>Quem cria os vínculos arrastados de uma barra para outra; sem ele, o arraste não cria nada.</summary>
+    public ILigacoesNoGantt? Ligacoes { get; set; }
+
     /// <summary>O que desenhar; nulo quando não há cronograma calculado.</summary>
     [ObservableProperty]
     public partial LayoutGantt? Layout { get; private set; }
@@ -67,6 +94,40 @@ public sealed partial class GanttViewModel : ViewModelBase
     public bool EstaDestacada(BarraGantt barra) => TarefaDestacada == barra.TarefaId;
 
     public void ClicarNaBarra(Guid tarefaId) => BarraClicada?.Invoke(tarefaId);
+
+    /// <summary>
+    /// A prévia do arraste de vínculo, enquanto o mouse passa sobre as barras: o que aconteceria ao
+    /// soltar no destino, com o tipo inferido das bordas (ver <see cref="InferenciaDependencia"/>). Nulo
+    /// fora de qualquer barra. Não muda nada.
+    /// </summary>
+    public PrevisaoDeLigacao? PreverLigacao(Guid origemId, BordaDaBarra bordaDeOrigem, Guid? destinoId,
+        BordaDaBarra bordaDeDestino)
+    {
+        if (destinoId is not { } destino)
+            return null;
+        if (destino == origemId)
+            return new PrevisaoDeLigacao(EstadoDaLigacao.Neutra, "Solte sobre outra tarefa");
+
+        var tipo = InferenciaDependencia.Tipo(bordaDeOrigem, bordaDeDestino);
+        return Ligacoes?.MotivoParaNaoLigar(origemId, destino, tipo) is { } motivo
+            ? new PrevisaoDeLigacao(EstadoDaLigacao.Invalida, motivo)
+            : new PrevisaoDeLigacao(EstadoDaLigacao.Valida,
+                $"{NomeDaBorda(bordaDeOrigem)} de \"{NomeDa(origemId)}\" → {NomeDaBorda(bordaDeDestino)} de " +
+                $"\"{NomeDa(destino)}\" ({NotacaoPredecessoras.Sigla(tipo)})");
+    }
+
+    /// <summary>
+    /// Solta o arraste: cria o vínculo da origem para o destino, com o tipo inferido das bordas. Soltar
+    /// fora de qualquer barra ou na própria tarefa de origem cancela, sem mensagem.
+    /// </summary>
+    /// <returns>Se criou o vínculo.</returns>
+    public bool SoltarLigacao(Guid origemId, BordaDaBarra bordaDeOrigem, Guid? destinoId, BordaDaBarra bordaDeDestino) =>
+        destinoId is { } destino && destino != origemId && Ligacoes is not null
+        && Ligacoes.Ligar(origemId, destino, InferenciaDependencia.Tipo(bordaDeOrigem, bordaDeDestino));
+
+    private static string NomeDaBorda(BordaDaBarra borda) => borda == BordaDaBarra.Inicio ? "Início" : "Término";
+
+    private string NomeDa(Guid tarefaId) => _cronograma?.Tarefas.FirstOrDefault(t => t.Id == tarefaId)?.Nome ?? "";
 
     /// <summary>
     /// Passa a mostrar um cronograma recém-calculado, sem as tarefas <paramref name="ocultas"/> (as de

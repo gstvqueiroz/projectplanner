@@ -241,6 +241,20 @@ public class Cronograma
     /// </exception>
     public void AdicionarPredecessora(Predecessora predecessora)
     {
+        ValidarPredecessora(predecessora);
+        _predecessoras.Add(predecessora);
+    }
+
+    /// <summary>
+    /// Verifica se o vínculo pode ser adicionado, com as mesmas regras e mensagens de
+    /// <see cref="AdicionarPredecessora"/>, sem mudar nada (por exemplo, para avisar durante um arraste).
+    /// </summary>
+    /// <exception cref="CircularDependencyException">O vínculo fecharia um ciclo.</exception>
+    /// <exception cref="DomainValidationException">
+    /// Alguma das tarefas não pertence ao cronograma, é um resumo, ou já existe vínculo entre elas.
+    /// </exception>
+    public void ValidarPredecessora(Predecessora predecessora)
+    {
         ArgumentNullException.ThrowIfNull(predecessora);
         var origem = ObterTarefa(predecessora.TarefaOrigemId, nameof(Predecessora.TarefaOrigemId));
         var destino = ObterTarefa(predecessora.TarefaDestinoId, nameof(Predecessora.TarefaDestinoId));
@@ -263,8 +277,6 @@ public class Cronograma
                 $"\"{origem.Nome}\" não pode ser predecessora de \"{destino.Nome}\": " +
                 $"isso criaria a dependência circular {nomes}.");
         }
-
-        _predecessoras.Add(predecessora);
     }
 
     public void RemoverPredecessora(Guid tarefaOrigemId, Guid tarefaDestinoId)

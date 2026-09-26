@@ -15,7 +15,13 @@
         <!-- Corpo: a rolagem vertical é comandada pela grid; a roda do mouse é repassada a ela. -->
         <ScrollViewer x:Name="RolagemCorpo" Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
-            <Canvas x:Name="Corpo" ClipToBounds="True" HorizontalAlignment="Left" VerticalAlignment="Top" />
+            <!-- A superfície recebe o mouse (seleção e arraste de vínculos). Por baixo, o desenho (Corpo),
+                 refeito a cada mudança; por cima, a camada da interação (alças, linha guia, destino,
+                 rótulo), que o redesenho não apaga. -->
+            <Panel x:Name="Superficie" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Canvas x:Name="Corpo" ClipToBounds="True" />
+                <Canvas x:Name="Interacao" ClipToBounds="True" IsHitTestVisible="False" />
+            </Panel>
         </ScrollViewer>
     </Grid>
 </UserControl>

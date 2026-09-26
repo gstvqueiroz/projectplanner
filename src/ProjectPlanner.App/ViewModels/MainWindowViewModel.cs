@@ -20,7 +20,7 @@ namespace ProjectPlanner.App.ViewModels;
 /// Gantt esconde as mesmas, para que as duas listas continuem lado a lado.
 /// </para>
 /// </remarks>
-public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronograma
+public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronograma, ILigacoesNoGantt
 {
     private const string NomePadrao = "Projeto sem título";
 
@@ -43,6 +43,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _relogio = relogio;
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += tarefaId => TarefaSelecionada = LinhasVisiveis.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
+        Gantt.Ligacoes = this;
         // Um controle só para o caminho crítico: o do Gantt também liga e desliga o fundo das linhas na grid.
         Gantt.PropertyChanged += (_, e) =>
         {
@@ -351,6 +352,46 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     string IEdicaoCronograma.TextoPredecessoras(Tarefa tarefa) =>
         NotacaoPredecessoras.Formatar(_cronograma.PredecessorasDe(tarefa.Id)
             .Select(p => new ItemPredecessora(NumeroDa(p.TarefaOrigemId), p.Tipo, p.Lag)));
+
+    string? ILigacoesNoGantt.MotivoParaNaoLigar(Guid predecessoraId, Guid sucessoraId, TipoDependencia tipo) =>
+        MotivoParaNaoLigar(predecessoraId, sucessoraId, tipo);
+
+    bool ILigacoesNoGantt.Ligar(Guid predecessoraId, Guid sucessoraId, TipoDependencia tipo)
+    {
+        if (MotivoParaNaoLigar(predecessoraId, sucessoraId, tipo) is { } motivo)
+        {
+            Mensagem = motivo;
+            return false;
+        }
+
+        _cronograma.AdicionarPredecessora(new Predecessora(predecessoraId, sucessoraId, tipo));
+        MarcarAlteracao();
+        if (Mensagem.Length == 0)
+            Mensagem = $"Vínculo criado: {NomeDa(predecessoraId)} → {NomeDa(sucessoraId)} ({NotacaoPredecessoras.Sigla(tipo)}).";
+        return true;
+    }
+
+    // As regras do cronograma (as mesmas da coluna Predecessoras), com uma mensagem mais útil quando
+    // o par já está ligado: o vínculo existente não muda, e o tipo se troca na coluna Predecessoras.
+    private string? MotivoParaNaoLigar(Guid predecessoraId, Guid sucessoraId, TipoDependencia tipo)
+    {
+        try
+        {
+            var vinculo = new Predecessora(predecessoraId, sucessoraId, tipo);
+            if (_cronograma.Predecessoras.FirstOrDefault(p =>
+                    p.TarefaOrigemId == predecessoraId && p.TarefaDestinoId == sucessoraId) is { } existente)
+                return $"Já existe um vínculo de \"{NomeDa(predecessoraId)}\" para \"{NomeDa(sucessoraId)}\" " +
+                       $"({NotacaoPredecessoras.Sigla(existente.Tipo)}). Para mudar o tipo, edite a coluna Predecessoras.";
+            _cronograma.ValidarPredecessora(vinculo);
+            return null;
+        }
+        catch (DomainValidationException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private string NomeDa(Guid tarefaId) => _cronograma.Tarefas.First(t => t.Id == tarefaId).Nome;
 
     string IEdicaoCronograma.EdtDe(Tarefa tarefa) =>
         _edt.TryGetValue(tarefa.Id, out var codigo) ? codigo : _cronograma.EdtDe(tarefa.Id);

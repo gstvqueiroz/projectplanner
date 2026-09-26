@@ -55,6 +55,8 @@ public partial class GanttChartView : UserControl
     private static readonly IBrush ContornoDaBarra = new SolidColorBrush(Color.Parse("#263238"));
     private static readonly IBrush Marco = new SolidColorBrush(Color.Parse("#212121"));
     private static readonly IBrush Resumo = new SolidColorBrush(Color.Parse("#37474F"));
+    // Ícone de fotos: cinza-azulado de baixo contraste, para não competir com as barras.
+    private static readonly IBrush IconeDeFotos = new SolidColorBrush(Color.Parse("#90A4AE"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
     // Fins de semana: cinza a ~9% de opacidade (#80808018), ≈ #F4F4F4 sobre branco. Translúcido para
     // funcionar também no tema escuro.
@@ -151,7 +153,7 @@ public partial class GanttChartView : UserControl
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(GanttViewModel.Layout) or nameof(GanttViewModel.MostrarCaminhoCritico)
-            or nameof(GanttViewModel.TarefaDestacada))
+            or nameof(GanttViewModel.TarefaDestacada) or nameof(GanttViewModel.MostrarFotos))
             Desenhar();
     }
 
@@ -314,13 +316,32 @@ public partial class GanttChartView : UserControl
                 IsHitTestVisible = false,
             }, barra.X, barra.CentroY - barra.Altura / 6);
 
-        // O nome vem logo depois da barra, além do trecho por onde as setas saem do fim dela.
+        // O nome vem logo depois da barra, além do trecho por onde as setas saem do fim dela; com fotos,
+        // a câmera fica nesse lugar e o nome anda para depois dela.
+        var xDoNome = barra.Direita + DistanciaDoRotulo;
+        if (viewModel.MostraIconeDeFotos(barra))
+        {
+            DesenharIconeDeFotos(barra);
+            xDoNome += LocalizadorGantt.LadoDoIconeDeFotos + 4;
+        }
         Posicionar(Corpo, new TextBlock
         {
             Text = barra.Nome,
             FontSize = 11,
             IsHitTestVisible = false,
-        }, barra.Direita + DistanciaDoRotulo, barra.CentroY - 8);
+        }, xDoNome, barra.CentroY - 8);
+    }
+
+    // Uma câmera pequena: corpo arredondado, visor em cima e a lente no meio.
+    private void DesenharIconeDeFotos(BarraGantt barra)
+    {
+        var (x, y, lado) = LocalizadorGantt.IconeDeFotos(barra);
+        var camera = new Canvas { Width = lado, Height = lado };
+        camera.Children.Add(new Rectangle { Width = 4, Height = 2, Fill = IconeDeFotos, [Canvas.LeftProperty] = 4, [Canvas.TopProperty] = 1.5 });
+        camera.Children.Add(new Rectangle { Width = lado, Height = 8, RadiusX = 1.5, RadiusY = 1.5, Fill = IconeDeFotos, [Canvas.TopProperty] = 3 });
+        camera.Children.Add(new Ellipse { Width = 5, Height = 5, Fill = Brushes.White, [Canvas.LeftProperty] = 3.5, [Canvas.TopProperty] = 4.5 });
+        ToolTip.SetTip(camera, barra.QuantidadeDeFotos == 1 ? "1 foto" : $"{barra.QuantidadeDeFotos} fotos");
+        Posicionar(Corpo, camera, x, y);
     }
 
     // O marco: um losango da altura da barra, centrado no instante dele.
@@ -385,6 +406,13 @@ public partial class GanttChartView : UserControl
             return;
 
         var ponto = e.GetPosition(Corpo);
+        if (IconeDeFotosEm(layout, ponto) is { } comFotos)
+        {
+            // O ícone fica além das alças (ver LocalizadorGantt.IconeDeFotos): o clique só abre a galeria.
+            _viewModel.AbrirFotos(comFotos.TarefaId);
+            e.Handled = true;
+            return;
+        }
         var alca = LocalizadorGantt.AlcaEm(layout, ponto.X, ponto.Y);
         var barra = alca?.Barra ?? LocalizadorGantt.BarraEm(layout, ponto.X, ponto.Y);
         if (barra is null)
@@ -476,7 +504,8 @@ public partial class GanttChartView : UserControl
                 DesenharAlca(alca.Ponto, Neutro, preenchida: false);
         }
         Superficie.Cursor = alca is not null ? CursorDeLigar
-            : LocalizadorGantt.BarraEm(layout, ponto.X, ponto.Y) is not null ? CursorDeSelecionar
+            : LocalizadorGantt.BarraEm(layout, ponto.X, ponto.Y) is not null || IconeDeFotosEm(layout, ponto) is not null
+                ? CursorDeSelecionar
             : null;
     }
 
@@ -577,6 +606,10 @@ public partial class GanttChartView : UserControl
         var x = Math.Max(0, Math.Min(ponto.X + 14, Corpo.Width - rotulo.DesiredSize.Width - 4));
         Posicionar(Interacao, rotulo, x, ponto.Y + 18);
     }
+
+    // Só conta se o ícone está sendo mostrado (opção "Fotos" ligada).
+    private BarraGantt? IconeDeFotosEm(LayoutGantt layout, Point ponto) =>
+        _viewModel?.MostrarFotos == true ? LocalizadorGantt.IconeDeFotosEm(layout, ponto.X, ponto.Y) : null;
 
     private static double Distancia(Point a, Point b) => Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
 

@@ -42,3 +42,16 @@ internal sealed class PredecessoraRegistro
     public TipoDependencia Tipo { get; set; }
     public int Lag { get; set; }
 }
+
+internal sealed class FotoRegistro
+{
+    public Guid Id { get; set; }
+    public Guid TarefaId { get; set; }
+    public int Ordem { get; set; }
+    public DateTime DataRegistro { get; set; }
+
+    /// <summary>Provisório: por enquanto só identificadores fictícios (ver <see cref="FotoTarefa"/>).</summary>
+    public required string CaminhoArquivo { get; set; }
+
+    public string? Descricao { get; set; }
+}

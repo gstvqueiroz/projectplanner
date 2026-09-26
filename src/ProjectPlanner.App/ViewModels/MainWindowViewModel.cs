@@ -44,6 +44,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += tarefaId => TarefaSelecionada = LinhasVisiveis.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
         Gantt.Ligacoes = this;
+        Gantt.FotosPedidas += tarefaId => _ = MostrarFotosAsync(tarefaId);
         // Um controle só para o caminho crítico: o do Gantt também liga e desliga o fundo das linhas na grid.
         Gantt.PropertyChanged += (_, e) =>
         {
@@ -78,6 +79,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(AdicionarSubtarefaCommand))]
     [NotifyCanExecuteChangedFor(nameof(RebaixarCommand))]
     [NotifyCanExecuteChangedFor(nameof(PromoverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AdicionarFotosDeExemploCommand))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
 
     /// <summary>
@@ -273,6 +275,35 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     }
 
     private bool HaTarefaSelecionada() => TarefaSelecionada is not null;
+
+    /// <summary>Abre a galeria de fotos da tarefa (pelo ícone de câmera no Gantt).</summary>
+    public Task MostrarFotosAsync(Guid tarefaId) =>
+        _dialogos.MostrarFotosAsync(new GaleriaFotosViewModel(_cronograma.Tarefas.First(t => t.Id == tarefaId)));
+
+    /// <summary>
+    /// Se o botão "Fotos de exemplo" aparece: só no build Debug (dotnet run), nunca nos executáveis publicados.
+    /// </summary>
+#if DEBUG
+    public bool ModoDesenvolvimento => true;
+#else
+    public bool ModoDesenvolvimento => false;
+#endif
+
+    /// <summary>
+    /// TEMPORÁRIO (Bloco 14), só para desenvolvimento: acrescenta 3 fotos fictícias à tarefa selecionada,
+    /// para ver o ícone e a galeria funcionando enquanto não há envio de imagens de verdade. O botão só
+    /// existe no build Debug (<see cref="ModoDesenvolvimento"/>); sai quando o relatório fotográfico real chegar.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
+    private void AdicionarFotosDeExemplo()
+    {
+        var tarefa = TarefaSelecionada!.Tarefa;
+        var inicio = tarefa.DataInicio;
+        var numero = tarefa.Fotos.Count;
+        foreach (var (dias, descricao) in new[] { (0, "Início dos serviços"), (2, "Andamento"), (5, "Situação ao fim da etapa") })
+            tarefa.AdicionarFoto(new FotoTarefa(tarefa.Id, inicio.AddDays(dias), $"exemplo://foto-{++numero}", descricao));
+        MarcarAlteracao();
+    }
 
     private bool PodePromover() => TarefaSelecionada?.Tarefa.TarefaPaiId is not null;
 

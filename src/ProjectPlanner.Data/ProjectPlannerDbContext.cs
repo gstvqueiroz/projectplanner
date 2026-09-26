@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore.Design;
 namespace ProjectPlanner.Data;
 
 /// <summary>
-/// Schema de um arquivo de projeto. As exclusões em cascata (Projetos → Tarefas → Predecessoras, e
-/// resumo → subtarefas) ficam no próprio banco, então valem também para quem mexer no arquivo por fora.
+/// Schema de um arquivo de projeto. As exclusões em cascata (Projetos → Tarefas → Predecessoras e
+/// FotosTarefa, e resumo → subtarefas) ficam no próprio banco, então valem também para quem mexer no arquivo por fora.
 /// </summary>
 internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbContext> options)
     : DbContext(options)
@@ -13,6 +13,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<ProjetoRegistro> Projetos => Set<ProjetoRegistro>();
     public DbSet<TarefaRegistro> Tarefas => Set<TarefaRegistro>();
     public DbSet<PredecessoraRegistro> Predecessoras => Set<PredecessoraRegistro>();
+    public DbSet<FotoRegistro> Fotos => Set<FotoRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,16 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
                 .HasForeignKey(p => p.TarefaDestinoId).OnDelete(DeleteBehavior.Cascade);
             vinculo.HasIndex(p => new { p.TarefaOrigemId, p.TarefaDestinoId }).IsUnique();
             vinculo.HasIndex(p => p.TarefaDestinoId);
+        });
+
+        modelBuilder.Entity<FotoRegistro>(foto =>
+        {
+            foto.ToTable("FotosTarefa", t =>
+                t.HasCheckConstraint("CK_FotosTarefa_CaminhoArquivo", "length(trim(CaminhoArquivo)) > 0"));
+            foto.HasKey(f => f.Id);
+            foto.HasOne<TarefaRegistro>().WithMany()
+                .HasForeignKey(f => f.TarefaId).OnDelete(DeleteBehavior.Cascade);
+            foto.HasIndex(f => f.TarefaId);
         });
     }
 

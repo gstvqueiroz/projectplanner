@@ -14,7 +14,7 @@
         <Border DockPanel.Dock="Top" Padding="8" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <!-- WrapPanel: em janelas estreitas os controles da direita passam para uma segunda linha. -->
-            <WrapPanel ItemSpacing="4" LineSpacing="6">
+            <WrapPanel ItemSpacing="3" LineSpacing="6">
                 <Button Content="Novo" Command="{Binding NovoProjetoCommand}" />
                 <Button Content="Abrir…" Command="{Binding AbrirProjetoCommand}" />
                 <Button Content="Salvar" Command="{Binding SalvarProjetoCommand}" />
@@ -56,7 +56,7 @@
                 </Button>
                 <Border Width="1" Height="24" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
                 <TextBlock Text="Zoom:" VerticalAlignment="Center" ToolTip.Tip="Zoom do Gantt" />
-                <Slider Width="100" VerticalAlignment="Center"
+                <Slider Width="60" VerticalAlignment="Center"
                         Minimum="{x:Static vm:GanttViewModel.EscalaMinima}"
                         Maximum="{x:Static vm:GanttViewModel.EscalaMaxima}"
                         Value="{Binding Gantt.PixelsPorDia}" />
@@ -68,6 +68,12 @@
                           ToolTip.Tip="Destacar a tarefa selecionada na grid e no Gantt" />
                 <CheckBox Content="Caminho crítico" IsChecked="{Binding Gantt.MostrarCaminhoCritico}" VerticalAlignment="Center"
                           ToolTip.Tip="Pintar de vermelho as tarefas e vínculos críticos no Gantt" />
+                <CheckBox Content="Fotos" IsChecked="{Binding Gantt.MostrarFotos}" VerticalAlignment="Center"
+                          ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
+                <!-- TEMPORÁRIO (Bloco 14): só existe no build Debug, para testar a galeria sem imagens reais. -->
+                <Button Content="Fotos de exemplo" Command="{Binding AdicionarFotosDeExemploCommand}"
+                        IsVisible="{Binding ModoDesenvolvimento}"
+                        ToolTip.Tip="Desenvolvimento: acrescenta 3 fotos fictícias à tarefa selecionada" />
             </WrapPanel>
         </Border>
 

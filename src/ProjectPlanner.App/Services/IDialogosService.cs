@@ -14,6 +14,9 @@ public interface IDialogosService
     /// <summary>Pede confirmação antes de uma ação que não dá para desfazer.</summary>
     /// <returns>Se o usuário confirmou (fechar o diálogo vale como não).</returns>
     Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao);
+
+    /// <summary>Mostra a galeria de fotos de uma tarefa e espera ser fechada.</summary>
+    Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria);
 }
 
 public enum RespostaAlteracoesPendentes

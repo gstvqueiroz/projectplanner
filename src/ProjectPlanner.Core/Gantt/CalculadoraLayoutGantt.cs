@@ -150,17 +150,19 @@ public static class CalculadoraLayoutGantt
                     ? eixo.XDoMarco(tarefa.TerminoMaisTarde!.Value, tarefa.MarcoTardeNoFimDoDia)
                     : null;
                 return new BarraGantt(tarefa.Id, tarefa.Nome, linha, extensao.Inicio - meiaLargura, y,
-                    2 * meiaLargura, opcoes.AlturaBarra, 0, fimDaFolga, tarefa.EhCritica, TipoTarefa.Marco);
+                    2 * meiaLargura, opcoes.AlturaBarra, 0, fimDaFolga, tarefa.EhCritica, TipoTarefa.Marco, tarefa.Fotos.Count);
             }
             case TipoTarefa.Resumo:
                 return new BarraGantt(tarefa.Id, tarefa.Nome, linha, extensao.Inicio, y,
-                    extensao.Fim - extensao.Inicio, opcoes.AlturaBarra, 0, null, tarefa.EhCritica, TipoTarefa.Resumo);
+                    extensao.Fim - extensao.Inicio, opcoes.AlturaBarra, 0, null, tarefa.EhCritica, TipoTarefa.Resumo,
+                    tarefa.Fotos.Count);
             default:
             {
                 var largura = extensao.Fim - extensao.Inicio;
                 var fimDaFolga = tarefa.Folga > 0 ? eixo.FimDoDia(tarefa.TerminoMaisTarde!.Value) : (double?)null;
                 return new BarraGantt(tarefa.Id, tarefa.Nome, linha, extensao.Inicio, y, largura, opcoes.AlturaBarra,
-                    largura * tarefa.PercentualConcluido / 100, fimDaFolga, tarefa.EhCritica, TipoTarefa.Normal);
+                    largura * tarefa.PercentualConcluido / 100, fimDaFolga, tarefa.EhCritica, TipoTarefa.Normal,
+                    tarefa.Fotos.Count);
             }
         }
     }

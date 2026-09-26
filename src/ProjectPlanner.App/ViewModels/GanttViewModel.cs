@@ -78,11 +78,31 @@ public sealed partial class GanttViewModel : ViewModelBase
     /// <summary>O usuário clicou na barra de uma tarefa; a janela principal a seleciona.</summary>
     public event Action<Guid>? BarraClicada;
 
+    /// <summary>
+    /// Opção de exibição (só da sessão): mostra o ícone de câmera ao lado das barras das tarefas que têm
+    /// fotos. Desligada, o ícone some e não dá para abrir a galeria pelo Gantt.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TarefasComIconeDeFotos))]
+    public partial bool MostrarFotos { get; set; } = true;
+
+    /// <summary>As tarefas visíveis que exibem o ícone de fotos agora: as que têm fotos, se a opção estiver ligada.</summary>
+    public IReadOnlyList<Guid> TarefasComIconeDeFotos =>
+        Layout?.Barras.Where(MostraIconeDeFotos).Select(b => b.TarefaId).ToList() ?? [];
+
+    public bool MostraIconeDeFotos(BarraGantt barra) => MostrarFotos && barra.QuantidadeDeFotos > 0;
+
+    /// <summary>O usuário clicou no ícone de fotos de uma tarefa; a janela principal abre a galeria.</summary>
+    public event Action<Guid>? FotosPedidas;
+
+    public void AbrirFotos(Guid tarefaId) => FotosPedidas?.Invoke(tarefaId);
+
     /// <summary>Quem cria os vínculos arrastados de uma barra para outra; sem ele, o arraste não cria nada.</summary>
     public ILigacoesNoGantt? Ligacoes { get; set; }
 
     /// <summary>O que desenhar; nulo quando não há cronograma calculado.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TarefasComIconeDeFotos))]
     public partial LayoutGantt? Layout { get; private set; }
 
     /// <summary>Se a barra vai na cor de crítica: crítica no cálculo e com o destaque ligado.</summary>

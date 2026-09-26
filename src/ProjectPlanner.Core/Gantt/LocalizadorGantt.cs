@@ -79,6 +79,34 @@ public static class LocalizadorGantt
         return new DestinoGantt(barra, borda, Ponta(barra, borda));
     }
 
+    /// <summary>Distância do ícone de fotos ao fim da barra: além da alça (4 px) e do trecho das setas (8 px).</summary>
+    public const double AfastamentoDoIconeDeFotos = 12;
+
+    /// <summary>Lado do quadrado do ícone de fotos.</summary>
+    public const double LadoDoIconeDeFotos = 12;
+
+    /// <summary>
+    /// O quadrado do ícone de fotos (câmera) de uma barra: logo depois do fim dela, antes do nome, na
+    /// altura do centro. Não encosta nas alças nem nas setas, que vão até <see cref="AlcaParaFora"/> e 8 px
+    /// além da barra.
+    /// </summary>
+    public static (double X, double Y, double Lado) IconeDeFotos(BarraGantt barra) =>
+        (barra.Direita + AfastamentoDoIconeDeFotos, barra.CentroY - LadoDoIconeDeFotos / 2, LadoDoIconeDeFotos);
+
+    /// <summary>A barra cujo ícone de fotos está sob o ponto (só barras com fotos têm ícone), com 2 px de folga.</summary>
+    public static BarraGantt? IconeDeFotosEm(LayoutGantt layout, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        const double folga = 2;
+        return layout.Barras.FirstOrDefault(b =>
+        {
+            if (b.QuantidadeDeFotos == 0)
+                return false;
+            var (ix, iy, lado) = IconeDeFotos(b);
+            return x >= ix - folga && x <= ix + lado + folga && y >= iy - folga && y <= iy + lado + folga;
+        });
+    }
+
     /// <summary>A ponta da barra: o início à esquerda, o término à direita, na altura do centro.</summary>
     public static PontoGantt Ponta(BarraGantt barra, BordaDaBarra borda) =>
         new(borda == BordaDaBarra.Inicio ? barra.X : barra.Direita, barra.CentroY);

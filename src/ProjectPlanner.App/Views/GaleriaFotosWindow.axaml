@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.GaleriaFotosWindow"
+        x:DataType="vm:GaleriaFotosViewModel"
+        Title="{Binding Titulo}"
+        Width="640" Height="460" MinWidth="360" MinHeight="260"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Resumo}" Margin="0,0,0,12" Opacity="0.8" />
+        <Button DockPanel.Dock="Bottom" Content="Fechar" HorizontalAlignment="Right" Margin="0,12,0,0"
+                Click="Fechar" IsCancel="True" IsDefault="True" />
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Fotos}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FotoNaGaleria">
+                        <StackPanel Width="180" Margin="0,0,12,12" Spacing="4">
+                            <!-- PONTO DE EXTENSÃO: miniatura provisória. Não há imagens ainda (ver FotoTarefa);
+                                 quando houver, esta Border vira um Image carregado de Foto.CaminhoArquivo. -->
+                            <Border Height="120" CornerRadius="4" Background="#CFD8DC" ToolTip.Tip="Imagem ainda não disponível">
+                                <Grid>
+                                    <Viewbox Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.55">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Stroke="#455A64" StrokeThickness="1.6"
+                                                  Data="M3,5 H21 V19 H3 Z M3,16 L9,10 L14,15 L17,12 L21,16" />
+                                            <Ellipse Canvas.Left="14" Canvas.Top="7" Width="3.5" Height="3.5" Fill="#455A64" />
+                                        </Canvas>
+                                    </Viewbox>
+                                    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6"
+                                            Background="#99000000" CornerRadius="3" Padding="6,2">
+                                        <TextBlock Text="{Binding Data}" Foreground="White" FontSize="11" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <TextBlock Text="{Binding Data}" FontWeight="SemiBold" FontSize="12" />
+                            <TextBlock Text="{Binding Descricao}" TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

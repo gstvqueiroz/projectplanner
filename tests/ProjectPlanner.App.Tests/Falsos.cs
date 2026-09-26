@@ -41,7 +41,7 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
     {
         var (id, nome, inicio) = (cronograma.Id, cronograma.Nome, cronograma.DataInicio);
         var tarefas = cronograma.Tarefas
-            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo))
+            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo, t.Fotos))
             .ToList();
         var vinculos = cronograma.Predecessoras.ToList();
         _arquivos[caminhoArquivo] = () =>
@@ -53,6 +53,8 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
                 var tarefa = new Tarefa(t.Id, t.Nome, t.DataInicio, t.EhResumo ? Math.Max(t.Duracao, 1) : t.Duracao);
                 tarefa.AtualizarPercentualConcluido(t.PercentualConcluido);
                 tarefa.AlterarNotas(t.Notas);
+                foreach (var foto in t.Fotos)
+                    tarefa.AdicionarFoto(foto);
                 reconstruido.AdicionarTarefa(tarefa, t.TarefaPaiId);
             }
             foreach (var vinculo in vinculos)
@@ -103,6 +105,15 @@ public sealed class DialogosFalsos : IDialogosService
     {
         Confirmacoes.Add(mensagem);
         return Task.FromResult(Confirmar);
+    }
+
+    /// <summary>As galerias de fotos abertas, em ordem.</summary>
+    public List<GaleriaFotosViewModel> Galerias { get; } = [];
+
+    public Task MostrarFotosAsync(GaleriaFotosViewModel galeria)
+    {
+        Galerias.Add(galeria);
+        return Task.CompletedTask;
     }
 }
 

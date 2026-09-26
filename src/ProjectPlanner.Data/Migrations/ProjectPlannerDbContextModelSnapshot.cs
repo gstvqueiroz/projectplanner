@@ -17,6 +17,38 @@ namespace ProjectPlanner.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("ProjectPlanner.Data.FotoRegistro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CaminhoArquivo")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataRegistro")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Descricao")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("TarefaId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TarefaId");
+
+                    b.ToTable("FotosTarefa", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FotosTarefa_CaminhoArquivo", "length(trim(CaminhoArquivo)) > 0");
+                        });
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.PredecessoraRegistro", b =>
                 {
                     b.Property<int>("Id")
@@ -131,6 +163,15 @@ namespace ProjectPlanner.Data.Migrations
 
                             t.HasCheckConstraint("CK_Tarefas_Tipo", "Tipo BETWEEN 0 AND 2");
                         });
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.FotoRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
+                        .WithMany()
+                        .HasForeignKey("TarefaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProjectPlanner.Data.PredecessoraRegistro", b =>

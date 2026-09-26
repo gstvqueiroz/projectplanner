@@ -114,6 +114,16 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             TarefaPaiId = t.TarefaPaiId,
         }));
 
+        contexto.Fotos.AddRange(cronograma.Tarefas.SelectMany(t => t.Fotos).Select((f, ordem) => new FotoRegistro
+        {
+            Id = f.Id,
+            TarefaId = f.TarefaId,
+            Ordem = ordem,
+            DataRegistro = f.DataRegistro,
+            CaminhoArquivo = f.CaminhoArquivo,
+            Descricao = f.Descricao,
+        }));
+
         contexto.Predecessoras.AddRange(cronograma.Predecessoras.Select((p, ordem) => new PredecessoraRegistro
         {
             Ordem = ordem,
@@ -165,6 +175,11 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             tarefa.AlterarNotas(registro.Notas);
             cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);
         }
+
+        var tarefas = cronograma.Tarefas.ToDictionary(t => t.Id);
+        foreach (var registro in contexto.Fotos.AsNoTracking().OrderBy(f => f.Ordem))
+            tarefas[registro.TarefaId].AdicionarFoto(new FotoTarefa(
+                registro.Id, registro.TarefaId, registro.DataRegistro, registro.CaminhoArquivo, registro.Descricao));
 
         foreach (var registro in contexto.Predecessoras.AsNoTracking().OrderBy(p => p.Ordem))
             cronograma.AdicionarPredecessora(new Predecessora(

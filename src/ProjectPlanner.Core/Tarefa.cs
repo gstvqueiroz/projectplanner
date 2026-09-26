@@ -33,6 +33,8 @@ namespace ProjectPlanner.Core;
 /// </remarks>
 public class Tarefa
 {
+    private readonly List<FotoTarefa> _fotos = [];
+
     public Tarefa(string nome, DateTime dataInicio, int duracao)
         : this(Guid.NewGuid(), nome, dataInicio, duracao)
     {
@@ -115,6 +117,30 @@ public class Tarefa
 
     /// <summary>O mesmo que <see cref="MarcoNoFimDoDia"/>, para <see cref="InicioMaisTarde"/>.</summary>
     public bool MarcoTardeNoFimDoDia { get; private set; }
+
+    /// <summary>
+    /// Registros fotográficos da tarefa, do mais antigo ao mais recente (empates na ordem em que
+    /// foram adicionados). Ficam na própria tarefa porque cada foto pertence a uma tarefa só.
+    /// </summary>
+    public IReadOnlyList<FotoTarefa> Fotos => _fotos.OrderBy(f => f.DataRegistro).ToList();
+
+    /// <exception cref="DomainValidationException">A foto é de outra tarefa ou já foi adicionada.</exception>
+    public void AdicionarFoto(FotoTarefa foto)
+    {
+        ArgumentNullException.ThrowIfNull(foto);
+        if (foto.TarefaId != Id)
+            throw new DomainValidationException(nameof(Fotos), $"A foto é de outra tarefa, não de \"{Nome}\".");
+        if (_fotos.Exists(f => f.Id == foto.Id))
+            throw new DomainValidationException(nameof(Fotos), $"A foto já pertence a \"{Nome}\".");
+        _fotos.Add(foto);
+    }
+
+    /// <exception cref="DomainValidationException">A foto não é desta tarefa.</exception>
+    public void RemoverFoto(Guid fotoId)
+    {
+        if (_fotos.RemoveAll(f => f.Id == fotoId) == 0)
+            throw new DomainValidationException(nameof(Fotos), $"A foto {fotoId} não pertence a \"{Nome}\".");
+    }
 
     public void Renomear(string nome) => Nome = ValidarNome(nome);
 

@@ -2,7 +2,7 @@
   <!-- Metadados comuns a todos os projetos. A cada nova versão distribuível, mude <Version> aqui
        (ver PUBLISHING.md); ela vai para o .exe do Windows e para o Info.plist do .app. -->
   <PropertyGroup>
-    <Version>0.7.0</Version>
+    <Version>0.13.0</Version>
     <Product>ProjectPlanner</Product>
     <Authors>gustavodossantosqueiroz</Authors>
     <Company>gustavodossantosqueiroz</Company>

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
@@ -20,11 +21,19 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var servicos = Servicos.Configurar();
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = servicos.GetRequiredService<MainWindowViewModel>(),
-            };
+            var janelaPrincipal = servicos.GetRequiredService<MainWindowViewModel>();
+            desktop.MainWindow = new MainWindow { DataContext = janelaPrincipal };
             desktop.Exit += (_, _) => servicos.Dispose();
+
+            // Duplo clique num .pplan: no Windows (e na linha de comando) o arquivo chega nos argumentos;
+            // no macOS, o Finder o entrega pelo evento de ativação, na abertura e com o programa já aberto.
+            _ = janelaPrincipal.AbrirPedidoDoSistemaAsync(desktop.Args ?? []);
+            if (this.TryGetFeature<IActivatableLifetime>() is { } ativacao)
+                ativacao.Activated += (_, e) =>
+                {
+                    if (e is FileActivatedEventArgs arquivos)
+                        _ = janelaPrincipal.AbrirPedidoDoSistemaAsync(arquivos.Files.Select(f => f.TryGetLocalPath()));
+                };
         }
 
         base.OnFrameworkInitializationCompleted();

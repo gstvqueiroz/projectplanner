@@ -157,9 +157,36 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         if (!await PodeDescartarAlteracoesAsync())
             return;
         var caminho = await _dialogos.EscolherArquivoParaAbrirAsync();
-        if (caminho is null)
+        if (caminho is not null)
+            AbrirArquivo(caminho);
+    }
+
+    /// <summary>
+    /// Abre um projeto pedido pelo sistema: duplo clique ou "Abrir com" num arquivo .pplan, argumentos da
+    /// linha de comando, ou arquivos entregues pelo Finder no macOS (também com o programa já aberto).
+    /// Vale o primeiro projeto (ver <see cref="ArquivosPedidos"/>), com a mesma pergunta sobre alterações
+    /// pendentes e as mesmas mensagens de erro do "Abrir…"; os outros não são abertos (um projeto por
+    /// janela), e a barra de status avisa. Sem nenhum projeto nos argumentos, não faz nada.
+    /// </summary>
+    public async Task AbrirPedidoDoSistemaAsync(IEnumerable<string?> arquivos)
+    {
+        var pedido = ArquivosPedidos.Interpretar(arquivos);
+        if (pedido.Caminho is null || !await PodeDescartarAlteracoesAsync())
             return;
 
+        AbrirArquivo(pedido.Caminho);
+        if (pedido.NaoAbertos > 0)
+        {
+            var quais = pedido.NaoAbertos == 1
+                ? "1 outro arquivo não foi aberto"
+                : $"{pedido.NaoAbertos} outros arquivos não foram abertos";
+            // O aviso vem antes, para não ser cortado pela barra de status depois de um caminho longo.
+            Mensagem = $"O ProjectPlanner abre um projeto por janela: {quais}. {Mensagem}";
+        }
+    }
+
+    private void AbrirArquivo(string caminho)
+    {
         try
         {
             Carregar(_repositorio.Abrir(caminho), caminho);

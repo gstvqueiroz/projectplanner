@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Modelo do Info.plist do ProjectPlanner.app; o scripts/publicar.sh troca __VERSAO__ pela versão do Directory.Build.props. -->
+<!-- Modelo do Info.plist do ProjectPlanner.app; o scripts/publicar.sh troca __VERSAO__ pela versão do Directory.Build.props.
+     CFBundleDocumentTypes e UTExportedTypeDeclarations registram os arquivos .pplan: o tipo é deste app (que é o
+     dono e o editor dele), com o ícone ProjetoPplan.icns; o Finder abre um .pplan no ProjectPlanner com duplo clique. -->
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key><string>ProjectPlanner</string>
@@ -14,5 +16,29 @@
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>© 2026 gustavodossantosqueiroz</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key><string>Projeto do ProjectPlanner</string>
+      <key>CFBundleTypeRole</key><string>Editor</string>
+      <key>LSHandlerRank</key><string>Owner</string>
+      <key>CFBundleTypeIconFile</key><string>ProjetoPplan</string>
+      <key>LSItemContentTypes</key>
+      <array><string>com.gustavodossantosqueiroz.projectplanner.projeto</string></array>
+    </dict>
+  </array>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key><string>com.gustavodossantosqueiroz.projectplanner.projeto</string>
+      <key>UTTypeDescription</key><string>Projeto do ProjectPlanner</string>
+      <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+      <key>UTTypeIconFile</key><string>ProjetoPplan</string>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>pplan</string></array>
+      </dict>
+    </dict>
+  </array>
 </dict>
 </plist>

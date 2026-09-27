@@ -108,6 +108,10 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     [RelayCommand]
     private void AlternarExpansao() => Expandido = !Expandido;
 
+    /// <summary>A linha está sendo arrastada na grid (Bloco 18): aparece meio transparente. Só da tela.</summary>
+    [ObservableProperty]
+    public partial bool SendoArrastada { get; set; }
+
     /// <summary>Quantas fotos a tarefa tem (a câmera da coluna Nome só aparece com pelo menos uma).</summary>
     public int QuantidadeDeFotos => Tarefa.Fotos.Count;
 

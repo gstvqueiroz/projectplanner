@@ -273,6 +273,8 @@
                             Value="{Binding DestacarComoCritica, Converter={x:Static v:Conversores.FundoDaTarefaCritica}}" />
                     <Setter Property="FontWeight"
                             Value="{Binding EhResumo, Converter={x:Static v:Conversores.NegritoSeVerdadeiro}}" />
+                    <Setter Property="Opacity"
+                            Value="{Binding SendoArrastada, Converter={x:Static v:Conversores.MeiaOpacidadeSeVerdadeiro}}" />
                 </Style>
             </DataGrid.Styles>
 
@@ -326,6 +328,8 @@
         </DataGrid>
         <!-- Linhas vazias abaixo das tarefas, até o fim da área visível: só desenho, sem receber o mouse. -->
         <v:LinhasVaziasDaGrade x:Name="LinhasVazias" Grid.Column="0" IsHitTestVisible="False" />
+        <!-- Guia do arraste de tarefas (Bloco 18): onde a tarefa arrastada pela coluna Nº vai cair. -->
+        <v:GuiaDeReordenacao x:Name="GuiaDeArraste" Grid.Column="0" IsHitTestVisible="False" />
 
         <GridSplitter x:Name="Divisor" Grid.Column="1" ResizeDirection="Columns" Background="Transparent" />
 

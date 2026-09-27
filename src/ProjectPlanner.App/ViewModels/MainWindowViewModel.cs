@@ -364,6 +364,66 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     void IEdicaoCronograma.GerenciarFotos(TarefaViewModel linha) => _ = MostrarFotosAsync(linha.Tarefa.Id);
 
+    /// <summary>A mensagem quando uma tarefa é solta fora das irmãs dela (Bloco 18).</summary>
+    public const string MensagemReordenacaoInvalida = "Só dá para mover entre tarefas do mesmo nível (mesmo resumo).";
+
+    /// <summary>
+    /// Onde a tarefa arrastada cairia ao ser solta sobre a linha visível <paramref name="linhaVisivel"/> (nula
+    /// fora das linhas: cabeçalho, linhas vazias): antes dela na metade de cima, depois dela e das subtarefas na
+    /// metade de baixo. Nulo quando não vale: a linha não é irmã da arrastada (outro nível ou resumo) ou é a
+    /// própria. O arraste só reordena irmãs; mudar de pai continua sendo com Promover e Rebaixar.
+    /// </summary>
+    public DestinoDeReordenacao? DestinoAoSoltar(TarefaViewModel arrastada, int? linhaVisivel, bool metadeDeBaixo)
+    {
+        ArgumentNullException.ThrowIfNull(arrastada);
+        if (linhaVisivel is not { } indice || indice < 0 || indice >= LinhasVisiveis.Count)
+            return null;
+        var alvo = LinhasVisiveis[indice];
+        var pai = arrastada.Tarefa.TarefaPaiId;
+        if (alvo == arrastada || alvo.Tarefa.TarefaPaiId != pai)
+            return null;
+
+        var outrasIrmas = _cronograma.Tarefas.Where(t => t.TarefaPaiId == pai && t != arrastada.Tarefa).ToList();
+        var posicao = outrasIrmas.IndexOf(alvo.Tarefa) + (metadeDeBaixo ? 1 : 0);
+        var guia = indice;
+        if (metadeDeBaixo)
+        {
+            var subtarefas = _cronograma.DescendentesDe(alvo.Tarefa.Id).Select(t => t.Id).ToHashSet();
+            guia++;
+            while (guia < LinhasVisiveis.Count && subtarefas.Contains(LinhasVisiveis[guia].Tarefa.Id))
+                guia++;
+        }
+        return new DestinoDeReordenacao(posicao, guia);
+    }
+
+    /// <summary>
+    /// Solta a tarefa arrastada na grid (ver <see cref="DestinoAoSoltar"/>). Num destino válido, move a tarefa
+    /// (com as subtarefas) entre as irmãs, renumera a grid e a EDT e redesenha o Gantt na nova ordem, sem
+    /// recalcular o cronograma: a ordem não muda datas nem caminho crítico. Num destino inválido, não muda
+    /// nada e avisa na barra de status.
+    /// </summary>
+    /// <returns>Se a ordem mudou.</returns>
+    public bool SoltarTarefa(TarefaViewModel arrastada, int? linhaVisivel, bool metadeDeBaixo)
+    {
+        if (DestinoAoSoltar(arrastada, linhaVisivel, metadeDeBaixo) is not { } destino)
+        {
+            Mensagem = MensagemReordenacaoInvalida;
+            return false;
+        }
+        if (!_cronograma.MoverEntreIrmas(arrastada.Tarefa.Id, destino.PosicaoEntreIrmas))
+            return false;
+
+        SincronizarLinhas();
+        foreach (var linha in Tarefas)
+            linha.AtualizarTela(); // EDT e predecessoras/sucessoras (que usam o Nº das linhas)
+        TarefaSelecionada = arrastada;
+        Gantt.RedesenharNaNovaOrdem();
+        PossuiAlteracoesNaoSalvas = true;
+        OnPropertyChanged(nameof(Titulo));
+        Mensagem = $"\"{arrastada.Nome}\" agora é a {arrastada.Edt}.";
+        return true;
+    }
+
     private bool PodePromover() => TarefaSelecionada?.Tarefa.TarefaPaiId is not null;
 
     // A mesma regra do domínio: há tarefa acima no mesmo nível, e ela pode virar resumo (não é marco nem tem vínculos).

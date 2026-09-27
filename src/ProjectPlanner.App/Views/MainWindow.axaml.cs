@@ -36,6 +36,7 @@ public partial class MainWindow : Window
         // Tamanho da janela, colunas (largura, ordem, visíveis) e tarefas mudam o layout da grid.
         Grade.LayoutUpdated += (_, _) => AtualizarLinhasVazias();
         Grade.AddHandler(ContextRequestedEvent, PedirMenuDaGrade, RoutingStrategies.Tunnel);
+        LigarArrasteDaGrade();
         _larguraParou.Tick += (_, _) =>
         {
             _larguraParou.Stop();

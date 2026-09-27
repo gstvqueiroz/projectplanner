@@ -198,6 +198,12 @@ public sealed partial class GanttViewModel : ViewModelBase
         RefazerLayout();
     }
 
+    /// <summary>
+    /// As tarefas mudaram de ordem sem mudar de valores (arraste na grid, Bloco 18): refaz o desenho com o
+    /// mesmo resultado do cálculo, só com as linhas na nova ordem.
+    /// </summary>
+    public void RedesenharNaNovaOrdem() => RefazerLayout();
+
     /// <summary>O cálculo falhou: não há o que desenhar.</summary>
     public void Limpar()
     {

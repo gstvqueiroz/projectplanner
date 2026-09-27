@@ -26,6 +26,9 @@ public static class Conversores
         new FuncValueConverter<int, Thickness>(nivel =>
             new Thickness(nivel * ColunaNomeDaTarefa.RecuoPorNivel + ColunaNomeDaTarefa.LarguraDoSimbolo, 0, 0, 0));
 
+    /// <summary>A linha sendo arrastada na grid (Bloco 18) fica meio transparente.</summary>
+    public static readonly IValueConverter MeiaOpacidadeSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 0.5 : 1);
+
     public static readonly IValueConverter OpacoSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 1 : 0);
 
     /// <summary>Linhas de resumo em negrito, como no MS Project.</summary>

@@ -124,6 +124,31 @@ public class Cronograma
     }
 
     /// <summary>
+    /// Muda a posição da tarefa entre as irmãs (as tarefas com o mesmo pai), levando junto as subtarefas
+    /// dela; o pai não muda (Bloco 18). <paramref name="posicao"/> é o lugar que ela passa a ocupar entre
+    /// as irmãs, contando a partir de 0. Só a ordem muda: datas, vínculos e caminho crítico não dependem
+    /// dela (a EDT, sim, é a da nova ordem).
+    /// </summary>
+    /// <returns>Se a ordem mudou (falso quando a tarefa já está nessa posição).</returns>
+    /// <exception cref="DomainValidationException">A tarefa não pertence ao cronograma.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A posição não existe entre as irmãs.</exception>
+    public bool MoverEntreIrmas(Guid tarefaId, int posicao)
+    {
+        var tarefa = ObterTarefa(tarefaId, nameof(Tarefas));
+        var irmas = _tarefas.Where(t => t.TarefaPaiId == tarefa.TarefaPaiId).ToList();
+        ArgumentOutOfRangeException.ThrowIfNegative(posicao);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(posicao, irmas.Count);
+        if (irmas.IndexOf(tarefa) == posicao)
+            return false;
+
+        var subarvore = RetirarSubarvore(tarefa);
+        var restantes = irmas.Where(t => t != tarefa).ToList();
+        var onde = posicao < restantes.Count ? _tarefas.IndexOf(restantes[posicao]) : FimDaSubarvore(restantes[^1]);
+        _tarefas.InsertRange(onde, subarvore);
+        return true;
+    }
+
+    /// <summary>
     /// Se <see cref="Rebaixar"/> aceitaria a tarefa agora (há tarefa acima no mesmo nível, e ela pode ter
     /// subtarefas), sem mudar nada. Falso também para uma tarefa que não está no cronograma.
     /// </summary>

@@ -34,6 +34,9 @@ public interface IEdicaoCronograma
     /// <summary>O usuário recolheu ou expandiu o resumo desta linha.</summary>
     void ExpansaoMudou(TarefaViewModel linha);
 
+    /// <summary>O usuário clicou na câmera desta linha: abre a galeria de fotos da tarefa.</summary>
+    void GerenciarFotos(TarefaViewModel linha);
+
     /// <summary>Uma alteração foi aplicada: marca o projeto como alterado e recalcula.</summary>
     void TarefaAlterada();
 
@@ -104,6 +107,26 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
 
     [RelayCommand]
     private void AlternarExpansao() => Expandido = !Expandido;
+
+    /// <summary>Quantas fotos a tarefa tem (a câmera da coluna Nome só aparece com pelo menos uma).</summary>
+    public int QuantidadeDeFotos => Tarefa.Fotos.Count;
+
+    public bool TemFotos => QuantidadeDeFotos > 0;
+
+    /// <summary>"1 foto", "3 fotos": a dica da câmera.</summary>
+    public string DicaDasFotos => QuantidadeDeFotos == 1 ? "1 foto — abrir a galeria" : $"{QuantidadeDeFotos} fotos — abrir a galeria";
+
+    /// <summary>A câmera da coluna Nome: abre a galeria desta tarefa.</summary>
+    [RelayCommand]
+    private void GerenciarFotos() => _edicao.GerenciarFotos(this);
+
+    /// <summary>As fotos da tarefa mudaram: atualiza a câmera da coluna Nome.</summary>
+    public void FotosMudaram()
+    {
+        OnPropertyChanged(nameof(QuantidadeDeFotos));
+        OnPropertyChanged(nameof(TemFotos));
+        OnPropertyChanged(nameof(DicaDasFotos));
+    }
 
     public string Nome
     {

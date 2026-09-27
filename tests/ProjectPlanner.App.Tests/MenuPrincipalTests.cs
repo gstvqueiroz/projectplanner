@@ -109,7 +109,7 @@ public partial class MenuPrincipalTests
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Adicionar subtarefa", "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
-            Linha, "Fotos de exemplo (desenvolvimento)");
+            Linha, "Gerenciar fotos…");
     });
 
     [Fact]
@@ -288,18 +288,22 @@ public partial class MenuPrincipalTests
     });
 
     [Fact]
-    public Task Tarefa_FotosDeExemplo_SoEmDebug() => Tela.Executar(() =>
+    public Task Tarefa_GerenciarFotos_DesabilitadoSemSelecao_ComADicaDoMotivo() => Tela.Executar(() =>
     {
         var a = Abrir();
-        var item = a.Item("Tarefa", "Fotos de exemplo (desenvolvimento)");
-        var linha = a.Item("Tarefa").Items.OfType<Separator>().Last();
+        var item = a.Item("Tarefa", "Gerenciar fotos…");
 
-        (item.IsVisible, linha.IsVisible).Should().Be((a.Vm.ModoDesenvolvimento, a.Vm.ModoDesenvolvimento));
-#if DEBUG
+        (item.IsEffectivelyEnabled, ToolTip.GetTip(item), ToolTip.GetShowOnDisabled(item))
+            .Should().Be((false, "Selecione uma tarefa para gerenciar suas fotos", true));
+
         var tarefa = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        item = a.Item("Tarefa", "Gerenciar fotos…");
+        item.IsEffectivelyEnabled.Should().BeTrue();
         a.Clicar(item);
-        tarefa.Tarefa.Fotos.Should().HaveCount(3);
-#endif
+
+        var galeria = a.Ambiente.Dialogos.Galerias.Should().ContainSingle().Subject;
+        (galeria.Titulo, galeria.Vazia, galeria.Resumo).Should().Be(("Fotos — Fundação", true, "Nenhuma foto adicionada ainda."));
+        tarefa.Tarefa.Fotos.Should().BeEmpty();
     });
 
     [Fact]

@@ -79,7 +79,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(AdicionarSubtarefaCommand))]
     [NotifyCanExecuteChangedFor(nameof(RebaixarCommand))]
     [NotifyCanExecuteChangedFor(nameof(PromoverCommand))]
-    [NotifyCanExecuteChangedFor(nameof(AdicionarFotosDeExemploCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GerenciarFotosCommand))]
+    [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
 
     /// <summary>
@@ -331,34 +332,37 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     private bool HaTarefaSelecionada() => TarefaSelecionada is not null;
 
-    /// <summary>Abre a galeria de fotos da tarefa (pelo ícone de câmera no Gantt).</summary>
-    public Task MostrarFotosAsync(Guid tarefaId) =>
-        _dialogos.MostrarFotosAsync(new GaleriaFotosViewModel(_cronograma.Tarefas.First(t => t.Id == tarefaId)));
-
     /// <summary>
-    /// Se o botão "Fotos de exemplo" aparece: só no build Debug (dotnet run), nunca nos executáveis publicados.
+    /// Abre a galeria de fotos da tarefa, tenha ela fotos ou não (ícone de câmera no Gantt e na grid, menu
+    /// Tarefa e menus de contexto). Uma foto adicionada na galeria entra na tarefa e marca o projeto como
+    /// alterado; a câmera da grid e do Gantt aparece na hora.
     /// </summary>
-#if DEBUG
-    public bool ModoDesenvolvimento => true;
-#else
-    public bool ModoDesenvolvimento => false;
-#endif
-
-    /// <summary>
-    /// TEMPORÁRIO (Bloco 14), só para desenvolvimento: acrescenta 3 fotos fictícias à tarefa selecionada,
-    /// para ver o ícone e a galeria funcionando enquanto não há envio de imagens de verdade. O botão só
-    /// existe no build Debug (<see cref="ModoDesenvolvimento"/>); sai quando o relatório fotográfico real chegar.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
-    private void AdicionarFotosDeExemplo()
+    public Task MostrarFotosAsync(Guid tarefaId)
     {
-        var tarefa = TarefaSelecionada!.Tarefa;
-        var inicio = tarefa.DataInicio;
-        var numero = tarefa.Fotos.Count;
-        foreach (var (dias, descricao) in new[] { (0, "Início dos serviços"), (2, "Andamento"), (5, "Situação ao fim da etapa") })
-            tarefa.AdicionarFoto(new FotoTarefa(tarefa.Id, inicio.AddDays(dias), $"exemplo://foto-{++numero}", descricao));
-        MarcarAlteracao();
+        var tarefa = _cronograma.Tarefas.First(t => t.Id == tarefaId);
+        return _dialogos.MostrarFotosAsync(new GaleriaFotosViewModel(tarefa, foto =>
+        {
+            tarefa.AdicionarFoto(foto);
+            Tarefas.FirstOrDefault(l => l.Tarefa.Id == tarefaId)?.FotosMudaram();
+            MarcarAlteracao();
+        }, () => _relogio.GetLocalNow().DateTime));
     }
+
+    /// <summary>
+    /// Tarefa > Gerenciar fotos… e os menus de contexto da grid e do Gantt: a galeria da tarefa da linha
+    /// (<paramref name="linha"/>) ou, sem ela, da selecionada.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(PodeGerenciarFotos))]
+    private Task GerenciarFotos(TarefaViewModel? linha) => MostrarFotosAsync((linha ?? TarefaSelecionada)!.Tarefa.Id);
+
+    private bool PodeGerenciarFotos(TarefaViewModel? linha) => (linha ?? TarefaSelecionada) is not null;
+
+    /// <summary>A dica do item Gerenciar fotos… (desabilitado sem tarefa selecionada, com o motivo).</summary>
+    public string DicaGerenciarFotos => TarefaSelecionada is null
+        ? "Selecione uma tarefa para gerenciar suas fotos"
+        : "Ver as fotos da tarefa selecionada e adicionar novas";
+
+    void IEdicaoCronograma.GerenciarFotos(TarefaViewModel linha) => _ = MostrarFotosAsync(linha.Tarefa.Id);
 
     private bool PodePromover() => TarefaSelecionada?.Tarefa.TarefaPaiId is not null;
 

@@ -18,10 +18,13 @@ public class FotosNoGanttTests
         _b = Ambiente.AdicionarTarefa(_vm, "B", 2);
     }
 
+    // Pelo caminho do usuário (Bloco 17): abre a galeria da tarefa e clica em Adicionar foto três vezes.
     private void FotosDeExemploEm(TarefaViewModel linha)
     {
-        _vm.TarefaSelecionada = linha;
-        _vm.AdicionarFotosDeExemploCommand.Execute(null);
+        _vm.GerenciarFotosCommand.Execute(linha);
+        var galeria = _ambiente.Dialogos.Galerias.Last();
+        for (var i = 0; i < 3; i++)
+            galeria.AdicionarFotoCommand.Execute(null);
     }
 
     [Fact]
@@ -86,43 +89,14 @@ public class FotosNoGanttTests
     }
 
     [Fact]
-    public void GaleriaDeTarefaSemFotos_DizQueNaoHaFotos()
-    {
-        var galeria = new GaleriaFotosViewModel(_a.Tarefa);
-
-        (galeria.Fotos.Count, galeria.Resumo).Should().Be((0, "Esta tarefa ainda não tem fotos."));
-    }
-
-    [Fact]
-    public void FotosDeExemplo_TemporarioDeDesenvolvimento_AcrescentaTresEMarcaAlteracao()
-    {
-        FotosDeExemploEm(_a);
-        FotosDeExemploEm(_a);
-
-        _a.Tarefa.Fotos.Should().HaveCount(6);
-        _a.Tarefa.Fotos.Select(f => f.CaminhoArquivo).Should().OnlyContain(c => c.StartsWith("exemplo://"));
-        _vm.PossuiAlteracoesNaoSalvas.Should().BeTrue();
-#if DEBUG
-        _vm.ModoDesenvolvimento.Should().BeTrue();
-#endif
-    }
-
-    [Fact]
-    public void FotosDeExemplo_SemTarefaSelecionada_Desabilitado()
-    {
-        _vm.TarefaSelecionada = null;
-
-        _vm.AdicionarFotosDeExemploCommand.CanExecute(null).Should().BeFalse();
-    }
-
-    [Fact]
     public void FotosSobrevivemASalvarEReabrir()
     {
         var repositorio = new RepositorioEmMemoria();
         var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
         var linha = Ambiente.AdicionarTarefa(vm, "Fundação", 3);
-        vm.TarefaSelecionada = linha;
-        vm.AdicionarFotosDeExemploCommand.Execute(null);
+        vm.GerenciarFotosCommand.Execute(linha);
+        for (var i = 0; i < 3; i++)
+            _ambiente.Dialogos.Galerias.Last().AdicionarFotoCommand.Execute(null);
         _ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
         vm.SalvarProjetoCommand.Execute(null);
 

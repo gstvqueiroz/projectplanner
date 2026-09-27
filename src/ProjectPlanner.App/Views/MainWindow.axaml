@@ -128,11 +128,10 @@
                               ToolTip.Tip="Coloca a tarefa dentro da tarefa de cima, um nível abaixo" />
                     <Separator />
                     <MenuItem Header="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
-                    <!-- TEMPORÁRIO (Bloco 14): só existe no build Debug, para testar a galeria sem imagens reais. -->
-                    <Separator IsVisible="{Binding ModoDesenvolvimento}" />
-                    <MenuItem Header="Fotos de exemplo (desenvolvimento)" Command="{Binding AdicionarFotosDeExemploCommand}"
-                              IsVisible="{Binding ModoDesenvolvimento}"
-                              ToolTip.Tip="Desenvolvimento: acrescenta 3 fotos fictícias à tarefa selecionada" />
+                    <Separator />
+                    <!-- Sempre visível (Bloco 17): abre a galeria mesmo sem fotos, para adicionar a primeira. -->
+                    <MenuItem Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}"
+                              ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
                 </MenuItem>
             </Menu>
         </Border>
@@ -242,6 +241,12 @@
                   Classes.semSelecao="{Binding !MostrarSelecao}"
                   BorderThickness="1"
                   BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <!-- Menu de contexto (Bloco 17): o clique direito numa linha a seleciona (ver PedirMenuDaGrade). -->
+            <DataGrid.ContextMenu>
+                <ContextMenu x:Name="MenuDaGrade">
+                    <MenuItem Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
             <DataGrid.Styles>
                 <Style Selector="DataGridCell">
                     <Setter Property="FontSize" Value="13" />

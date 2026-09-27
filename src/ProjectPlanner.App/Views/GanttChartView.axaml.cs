@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -95,6 +96,17 @@ public partial class GanttChartView : UserControl
         RolagemCorpo.SizeChanged += (_, e) => _viewModel?.AtualizarAreaVisivel(e.NewSize.Width, e.NewSize.Height);
         RolagemCorpo.AddHandler(PointerWheelChangedEvent, TratarRodaDoMouse, RoutingStrategies.Tunnel);
         Superficie.PointerPressed += SuperficieApertada;
+        Superficie.AddHandler(PointerMovedEvent, (_, e) => _mouseSobreOCorpo = e.GetPosition(Corpo), RoutingStrategies.Tunnel);
+        Superficie.AddHandler(PointerPressedEvent, (_, e) => _mouseSobreOCorpo = e.GetPosition(Corpo), RoutingStrategies.Tunnel);
+        // Menu de contexto (Bloco 17): só sobre uma barra (ou o ícone de fotos), que fica selecionada.
+        _itemGerenciarFotos.Click += (_, _) =>
+        {
+            if (_tarefaDoMenu is { } id)
+                _viewModel?.AbrirFotos(id);
+        };
+        Superficie.ContextMenu = new ContextMenu { Items = { _itemGerenciarFotos } };
+
+        Superficie.AddHandler(ContextRequestedEvent, PedirMenuDeContexto, RoutingStrategies.Tunnel);
         Superficie.PointerMoved += SuperficieMovida;
         Superficie.PointerReleased += SuperficieSolta;
         Superficie.PointerCaptureLost += (_, _) =>
@@ -102,6 +114,7 @@ public partial class GanttChartView : UserControl
             if (_arraste != EstadoDoArraste.Parado)
                 EncerrarArraste();
         };
+        Superficie.PointerExited += (_, _) => _mouseSobreOCorpo = null;
         Superficie.PointerExited += (_, _) =>
         {
             if (_arraste == EstadoDoArraste.Parado)
@@ -401,6 +414,33 @@ public partial class GanttChartView : UserControl
     }
 
     // --- Mouse: seleção e arraste de vínculos ---
+
+    private readonly MenuItem _itemGerenciarFotos = new() { Header = "Gerenciar fotos…" };
+    private Guid? _tarefaDoMenu;
+    private Point? _mouseSobreOCorpo;
+
+    // Clique direito: sobre uma barra, seleciona a tarefa e deixa o menu abrir para ela; fora das barras
+    // (ou pelo teclado, sem posição), não há menu.
+    private void PedirMenuDeContexto(object? sender, ContextRequestedEventArgs e)
+    {
+        _tarefaDoMenu = null;
+        // Um pedido sem posição (vindo do teclado ou da plataforma) usa a última posição do mouse sobre o
+        // Gantt; se o mouse não está sobre ele, não há menu.
+        var ponto = e.TryGetPosition(Corpo, out var posicao) ? posicao : _mouseSobreOCorpo;
+        if (_viewModel?.Layout is { } layout && _arraste == EstadoDoArraste.Parado && ponto is { } p
+            && (IconeDeFotosEm(layout, p) ?? LocalizadorGantt.BarraEm(layout, p.X, p.Y)) is { } barra)
+        {
+            _tarefaDoMenu = barra.TarefaId;
+            // O menu é aberto aqui, ancorado na superfície (que não é redesenhada), e não pelo Avalonia, que o
+            // ancoraria na forma clicada: a seleção redesenha o Gantt, a forma sai da tela e o menu ficava
+            // aberto mas invisível.
+            var menu = Superficie.ContextMenu!;
+            menu.Placement = PlacementMode.Pointer;
+            menu.Open(Superficie);
+            _viewModel.ClicarNaBarra(barra.TarefaId);
+        }
+        e.Handled = true;
+    }
 
     private void SuperficieApertada(object? sender, PointerPressedEventArgs e)
     {

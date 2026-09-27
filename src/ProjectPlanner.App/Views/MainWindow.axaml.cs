@@ -35,6 +35,7 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, AtalhosDaEstrutura, RoutingStrategies.Tunnel);
         // Tamanho da janela, colunas (largura, ordem, visíveis) e tarefas mudam o layout da grid.
         Grade.LayoutUpdated += (_, _) => AtualizarLinhasVazias();
+        Grade.AddHandler(ContextRequestedEvent, PedirMenuDaGrade, RoutingStrategies.Tunnel);
         _larguraParou.Tick += (_, _) =>
         {
             _larguraParou.Stop();
@@ -59,6 +60,19 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainWindowViewModel.ModoVisualizacao))
             AplicarModoVisualizacao();
+    }
+
+    // Clique direito numa linha da grid: seleciona a linha e deixa o menu de contexto abrir para ela. Fora
+    // das linhas (cabeçalho, linhas vazias) não há menu.
+    private void PedirMenuDaGrade(object? sender, ContextRequestedEventArgs e)
+    {
+        var linha = (e.Source as Visual)?.GetSelfAndVisualAncestors().OfType<DataGridRow>().FirstOrDefault();
+        if (linha?.DataContext is TarefaViewModel tarefa && _viewModel is not null)
+        {
+            _viewModel.TarefaSelecionada = tarefa;
+            return;
+        }
+        e.Handled = true;
     }
 
     // Modos de visualização: só as larguras e a visibilidade das colunas de Paineis mudam; a grid e o Gantt

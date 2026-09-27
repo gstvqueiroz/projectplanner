@@ -56,12 +56,52 @@ public sealed class ColunaNomeDaTarefa : DataGridTextColumn
         var celula = new DockPanel();
         DockPanel.SetDock(expandir, Dock.Left);
         DockPanel.SetDock(losango, Dock.Left);
+        var fotos = IndicadorDeFotos();
+        DockPanel.SetDock(fotos, Dock.Right);
         celula.Children.Add(expandir);
         celula.Children.Add(losango);
+        celula.Children.Add(fotos);
         celula.Children.Add(nome);
         celula.Bind(Layoutable.MarginProperty,
             new Binding(nameof(TarefaViewModel.Nivel)) { Converter = Conversores.RecuoDoNivel });
         return celula;
+    }
+
+    /// <summary>A cor da câmera, a mesma do ícone de fotos do Gantt.</summary>
+    public static readonly IBrush CorDaCamera = new SolidColorBrush(Color.Parse("#90A4AE"));
+
+    // Bloco 17: câmera com o número de fotos no fim do nome, só nas tarefas com fotos. Clicar abre a galeria.
+    private static Button IndicadorDeFotos()
+    {
+        var camera = new Avalonia.Controls.Shapes.Path
+        {
+            // Corpo com o visor em cima e a lente vazada.
+            Data = Geometry.Parse("M1,4 H4 L5,2.5 H9 L10,4 H13 V11.5 H1 Z M7,5.5 A2.2,2.2 0 1 0 7,9.9 A2.2,2.2 0 1 0 7,5.5 Z"),
+            Fill = CorDaCamera,
+            Width = 14,
+            Height = 13,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var quantidade = new TextBlock { FontSize = 11, Foreground = CorDaCamera, VerticalAlignment = VerticalAlignment.Center };
+        quantidade.Bind(TextBlock.TextProperty, new Binding(nameof(TarefaViewModel.QuantidadeDeFotos)));
+
+        var botao = new Button
+        {
+            Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { camera, quantidade } },
+            Padding = new Thickness(4, 0),
+            Margin = new Thickness(4, 0, 0, 0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Focusable = false,
+            Cursor = new Cursor(StandardCursorType.Hand),
+        };
+        botao.Classes.Add("indicadorDeFotos");
+        Avalonia.Automation.AutomationProperties.SetName(botao, "Fotos da tarefa");
+        botao.Bind(ToolTip.TipProperty, new Binding(nameof(TarefaViewModel.DicaDasFotos)));
+        botao.Bind(Visual.IsVisibleProperty, new Binding(nameof(TarefaViewModel.TemFotos)));
+        botao.Bind(Button.CommandProperty, new Binding(nameof(TarefaViewModel.GerenciarFotosCommand)));
+        return botao;
     }
 
     protected override Control GenerateEditingElementDirect(DataGridCell cell, object dataItem)

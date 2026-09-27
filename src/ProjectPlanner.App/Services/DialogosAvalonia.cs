@@ -19,6 +19,11 @@ public sealed class DialogosAvalonia : IDialogosService
         Patterns = [$"*.{Extensao}"],
     };
 
+    private static readonly FilePickerFileType Documentos = new("Documentos")
+    {
+        Patterns = ["*.pdf", "*.doc", "*.docx", "*.xls", "*.xlsx", "*.txt", "*.md", "*.csv", "*.png", "*.jpg", "*.jpeg"],
+    };
+
     private static Window JanelaPrincipal =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow
         ?? throw new InvalidOperationException("A janela principal ainda não foi criada.");
@@ -32,6 +37,17 @@ public sealed class DialogosAvalonia : IDialogosService
             FileTypeFilter = [ArquivoDeProjeto],
         });
         return arquivos.Count > 0 ? arquivos[0].TryGetLocalPath() : null;
+    }
+
+    public async Task<IReadOnlyList<string>> EscolherDocumentosAsync()
+    {
+        var arquivos = await JanelaPrincipal.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Anexar documentos",
+            AllowMultiple = true,
+            FileTypeFilter = [Documentos, FilePickerFileTypes.All],
+        });
+        return arquivos.Select(a => a.TryGetLocalPath()).OfType<string>().ToList();
     }
 
     public async Task<string?> EscolherArquivoParaSalvarAsync(string nomeSugerido)

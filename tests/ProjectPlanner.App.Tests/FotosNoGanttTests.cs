@@ -92,7 +92,8 @@ public class FotosNoGanttTests
     public void FotosSobrevivemASalvarEReabrir()
     {
         var repositorio = new RepositorioEmMemoria();
-        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
+        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
+            _ambiente.Assistente, _ambiente.PreferenciasInterface);
         var linha = Ambiente.AdicionarTarefa(vm, "Fundação", 3);
         vm.GerenciarFotosCommand.Execute(linha);
         for (var i = 0; i < 3; i++)
@@ -100,7 +101,8 @@ public class FotosNoGanttTests
         _ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
         vm.SalvarProjetoCommand.Execute(null);
 
-        var reaberta = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
+        var reaberta = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
+            _ambiente.Assistente, _ambiente.PreferenciasInterface);
         _ambiente.Dialogos.ArquivoParaAbrir = "/obra.pplan";
         reaberta.AbrirProjetoCommand.Execute(null);
 

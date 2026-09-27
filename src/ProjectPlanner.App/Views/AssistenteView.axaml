@@ -1,0 +1,157 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ProjectPlanner.App.ViewModels"
+             xmlns:ia="using:ProjectPlanner.IA"
+             x:Class="ProjectPlanner.App.Views.AssistenteView"
+             x:DataType="vm:AssistenteViewModel">
+
+    <!-- Painel do assistente de IA (Bloco 19): cabeçalho, aviso de "não configurado", conversa, anexos pendentes
+         e a linha de entrada. Sem integração real: quem responde é o AssistenteIAIndisponivel. -->
+    <UserControl.Styles>
+        <Style Selector="Border.balao">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="0,4" />
+            <Setter Property="MaxWidth" Value="280" />
+        </Style>
+        <Style Selector="Border.anexo">
+            <Setter Property="Background" Value="#14000000" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="Margin" Value="0,2,4,0" />
+        </Style>
+        <Style Selector="Button.plano">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+        <DockPanel>
+            <!-- Cabeçalho -->
+            <Border DockPanel.Dock="Top" Padding="10,6" BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <DockPanel>
+                    <Button x:Name="FecharPainel" DockPanel.Dock="Right" Classes="plano" Content="×" FontSize="16"
+                            Command="{Binding FecharCommand}" ToolTip.Tip="Ocultar o painel do assistente"
+                            AutomationProperties.Name="Ocultar o assistente" />
+                    <Button DockPanel.Dock="Right" Classes="plano" Content="Limpar conversa" FontSize="12"
+                            Command="{Binding LimparConversaCommand}" IsVisible="{Binding !ConversaVazia}" />
+                    <TextBlock Text="Assistente" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            <!-- Sem chave de API: respostas simuladas. -->
+            <Border x:Name="AvisoNaoConfigurado" DockPanel.Dock="Top" Background="#FFF4E5" Padding="10,6"
+                    IsVisible="{Binding !EstaConfigurado}">
+                <TextBlock Text="Integração com IA não configurada — respostas simuladas." FontSize="12"
+                           TextWrapping="Wrap" Foreground="#8A5300" />
+            </Border>
+
+            <!-- Entrada: anexar, texto (Enter envia, Shift+Enter quebra a linha) e Enviar/Cancelar. -->
+            <DockPanel DockPanel.Dock="Bottom" Margin="8">
+                <Button x:Name="Anexar" DockPanel.Dock="Left" Classes="plano" VerticalAlignment="Bottom" Margin="0,0,4,4"
+                        Command="{Binding AnexarCommand}" ToolTip.Tip="Anexar documentos (plantas, contratos, memoriais)"
+                        AutomationProperties.Name="Anexar documentos">
+                    <!-- Clipe de papel -->
+                    <Path Width="16" Height="16" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.4"
+                          StrokeLineCap="Round"
+                          Data="M11,4.5 L5.5,10 A1.8,1.8 0 0 0 8,12.5 L13,7.5 A3,3 0 0 0 8.8,3.3 L3.5,8.6 A4.2,4.2 0 0 0 9.4,14.5 L14,10" />
+                </Button>
+                <Panel DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="4,0,0,0">
+                    <Button x:Name="Enviar" Content="Enviar" Classes="accent" Command="{Binding EnviarCommand}"
+                            IsVisible="{Binding !Aguardando}" />
+                    <Button x:Name="Cancelar" Content="Cancelar" Command="{Binding CancelarCommand}"
+                            IsVisible="{Binding Aguardando}" />
+                </Panel>
+                <TextBox x:Name="Entrada" Text="{Binding TextoDigitado}" PlaceholderText="Escreva uma mensagem…"
+                         AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="120" MinHeight="32" />
+            </DockPanel>
+
+            <!-- Anexos pendentes (vão com a próxima mensagem) e aviso de anexo que falhou. -->
+            <StackPanel DockPanel.Dock="Bottom" Margin="8,0" Spacing="2">
+                <TextBlock Text="{Binding AvisoDeAnexo}" IsVisible="{Binding AvisoDeAnexo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Foreground="#C62828" FontSize="11" TextWrapping="Wrap" />
+                <ItemsControl x:Name="Pendentes" ItemsSource="{Binding AnexosPendentes}" IsVisible="{Binding TemAnexosPendentes}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="ia:AnexoIA">
+                            <Border Classes="anexo">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="📎" FontSize="11" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Nome}" FontSize="12" MaxWidth="170" TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" ToolTip.Tip="{Binding CaminhoLocal}" />
+                                    <TextBlock Text="{Binding TamanhoLegivel}" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+                                    <Button Classes="plano" Content="×" Padding="2,0" FontSize="13"
+                                            Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).RemoverAnexoCommand}"
+                                            CommandParameter="{Binding}" ToolTip.Tip="Tirar este anexo"
+                                            AutomationProperties.Name="Tirar o anexo" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="Digitando" Text="Assistente digitando…" FontStyle="Italic" FontSize="12" Opacity="0.7"
+                           IsVisible="{Binding Aguardando}" Margin="2,0" />
+            </StackPanel>
+
+            <!-- Conversa -->
+            <Panel>
+                <TextBlock x:Name="BoasVindas" IsVisible="{Binding ConversaVazia}" TextWrapping="Wrap" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Opacity="0.6"
+                           Text="Pergunte sobre o cronograma ou anexe documentos (plantas, contratos, memoriais)." />
+                <ScrollViewer x:Name="Rolagem" Padding="10,6">
+                    <ItemsControl x:Name="Historico" ItemsSource="{Binding Mensagens}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:MensagemNaTela">
+                                <Border Classes="balao"
+                                        Classes.doUsuario="{Binding DoUsuario}"
+                                        Classes.doAssistente="{Binding !DoUsuario}"
+                                        Classes.erro="{Binding EhErro}">
+                                    <StackPanel Spacing="3">
+                                        <SelectableTextBlock Text="{Binding Texto}" TextWrapping="Wrap" FontSize="13"
+                                                             IsVisible="{Binding TemTexto}" />
+                                        <ItemsControl ItemsSource="{Binding Anexos}" IsVisible="{Binding TemAnexos}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="ia:AnexoIA">
+                                                    <Border Classes="anexo">
+                                                        <TextBlock FontSize="11" Text="{Binding Nome, StringFormat='📎 {0}'}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="{Binding Hora}" FontSize="10" Opacity="0.55" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.Styles>
+                            <!-- Usuário à direita, em azul; assistente à esquerda, em cinza; avisos (erro, cancelamento) em vermelho claro. -->
+                            <Style Selector="Border.balao.doUsuario">
+                                <Setter Property="Background" Value="#DCEBFA" />
+                                <Setter Property="HorizontalAlignment" Value="Right" />
+                            </Style>
+                            <Style Selector="Border.balao.doAssistente">
+                                <Setter Property="Background" Value="#F0F0F0" />
+                                <Setter Property="HorizontalAlignment" Value="Left" />
+                            </Style>
+                            <Style Selector="Border.balao.erro">
+                                <Setter Property="Background" Value="#FDECEA" />
+                            </Style>
+                        </ItemsControl.Styles>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Panel>
+        </DockPanel>
+    </Border>
+</UserControl>

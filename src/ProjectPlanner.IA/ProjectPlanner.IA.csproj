@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Camada do assistente de IA (Bloco 19). Sem dependências: o SDK/HttpClient da integração real, quando
+       vier, entra só aqui, longe do domínio (Core) e da interface (App). Ver docs/ASSISTENTE-IA.md. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ProjectPlanner.IA.Tests" />
+  </ItemGroup>
+
+</Project>

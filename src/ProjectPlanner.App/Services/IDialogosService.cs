@@ -15,6 +15,10 @@ public interface IDialogosService
     /// <returns>Se o usuário confirmou (fechar o diálogo vale como não).</returns>
     Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao);
 
+    /// <summary>Escolhe documentos para anexar no painel do assistente (Bloco 19).</summary>
+    /// <returns>Os caminhos escolhidos (vazio se o usuário cancelar).</returns>
+    Task<IReadOnlyList<string>> EscolherDocumentosAsync();
+
     /// <summary>Mostra a galeria de fotos de uma tarefa e espera ser fechada.</summary>
     Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria);
 }

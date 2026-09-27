@@ -106,6 +106,10 @@
                     <!-- Mostrar/ocultar colunas e restaurar o layout padrão. Ordem e largura mudam arrastando os
                          cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
                     <MenuItem x:Name="MenuColunas" Header="Colunas" />
+                    <Separator />
+                    <!-- Painel do assistente de IA (Bloco 19); fica salvo entre as sessões. -->
+                    <MenuItem Header="Assistente (IA)" ToggleType="CheckBox" IsChecked="{Binding Assistente.Visivel, Mode=TwoWay}"
+                              ToolTip.Tip="Mostrar ou ocultar o painel do assistente, à direita" />
                 </MenuItem>
                 <!-- Inserir: vazio e oculto por ora (Bloco 15.1). Volta quando chegar a primeira funcionalidade dele
                      (ex.: data limite, anexos, comentários, link, coluna personalizada). -->
@@ -197,6 +201,13 @@
                         <!-- Barras em escada -->
                         <Path Data="M1.5,3.5 H7 M5,8 H11 M9.5,12.5 H14.5" StrokeThickness="2.4" />
                     </Button>
+                    <Border Classes="divisor" />
+                    <Button Classes="acessoRapido" Classes.ativo="{Binding Assistente.Visivel}"
+                            Command="{Binding Assistente.AlternarVisibilidadeCommand}"
+                            ToolTip.Tip="Assistente (IA): mostrar ou ocultar o painel" AutomationProperties.Name="Assistente">
+                        <!-- Balão de conversa -->
+                        <Path Data="M2,3.5 A1.5,1.5 0 0 1 3.5,2 H12.5 A1.5,1.5 0 0 1 14,3.5 V9.5 A1.5,1.5 0 0 1 12.5,11 H7 L4,14 V11 H3.5 A1.5,1.5 0 0 1 2,9.5 Z M5,5.5 H11 M5,8 H9" />
+                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -222,7 +233,7 @@
              rolagem vertical do Gantt (ver MainWindow.axaml.cs). -->
         <!-- Os modos de visualização (MainWindowViewModel.ModoVisualizacao) mudam só as larguras e a visibilidade
              destas colunas (ver AplicarModoVisualizacao no MainWindow.axaml.cs). -->
-        <Grid x:Name="Paineis" ColumnDefinitions="620,6,*" Margin="8,0,8,8">
+        <Grid x:Name="Paineis" ColumnDefinitions="620,6,*,0,0" Margin="8,0,8,8">
         <!-- Grid de tarefas. Nº, Predecessoras editáveis na notação "2; 3II+2" (ver NotacaoPredecessoras). -->
         <DataGrid x:Name="Grade"
                   Grid.Column="0"
@@ -356,6 +367,11 @@
                 </StackPanel>
             </Border>
         </Panel>
+
+        <!-- Painel do assistente de IA (Bloco 19), à direita, em qualquer modo de visualização. As colunas 3 e 4
+             só ganham largura quando ele está visível (ver AplicarPainelDoAssistente). -->
+        <GridSplitter x:Name="DivisorDoAssistente" Grid.Column="3" ResizeDirection="Columns" Background="Transparent" />
+        <v:AssistenteView x:Name="PainelAssistente" Grid.Column="4" DataContext="{Binding Assistente}" />
         </Grid>
     </DockPanel>
 </Window>

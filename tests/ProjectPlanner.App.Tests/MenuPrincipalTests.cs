@@ -105,7 +105,7 @@ public partial class MenuPrincipalTests
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", Linha,
-            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas");
+            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Assistente (IA)");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Adicionar subtarefa", "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
@@ -145,7 +145,7 @@ public partial class MenuPrincipalTests
         a.Janela.AcessoRapido.Children.OfType<Button>().Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == nome);
 
     [Fact]
-    public Task AcessoRapido_SeisBotoes_OsMesmosComandosDoMenu() => Tela.Executar(() =>
+    public Task AcessoRapido_Botoes_OsMesmosComandosDoMenu() => Tela.Executar(() =>
     {
         var a = Abrir();
         var botoes = a.Janela.AcessoRapido.Children.OfType<Button>().ToList();
@@ -159,7 +159,8 @@ public partial class MenuPrincipalTests
             (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Dividido"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Somente Tabela"),
-            (a.Vm.DefinirModoVisualizacaoCommand, "Somente Gantt"));
+            (a.Vm.DefinirModoVisualizacaoCommand, "Somente Gantt"),
+            (a.Vm.Assistente.AlternarVisibilidadeCommand, "Assistente"));
         botoes.Should().OnlyContain(b => b.Content is Avalonia.Controls.Shapes.Path, "são botões só de ícone");
         botoes.Select(b => ToolTip.GetTip(b) as string).Should().OnlyContain(dica => !string.IsNullOrWhiteSpace(dica));
         botoes.Select(b => (string)ToolTip.GetTip(b)!).Should().Contain(d => d.StartsWith("Promover") && d.Contains("Alt+Shift+←"))

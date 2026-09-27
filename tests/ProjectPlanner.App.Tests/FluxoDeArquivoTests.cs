@@ -12,7 +12,8 @@ public class FluxoDeArquivoTests
     private readonly RepositorioEmMemoria _repositorio = new();
 
     private MainWindowViewModel NovaJanela() =>
-        new(_repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
+        new(_repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
+            _ambiente.Assistente, _ambiente.PreferenciasInterface);
 
     // Tudo o que a tela mostra do projeto: cabeçalho, cada linha da grid (editáveis e calculadas) e o Gantt.
     private static object Retrato(MainWindowViewModel vm) => new
@@ -174,7 +175,8 @@ public class FluxoDeArquivoTests
     public async Task ErroAoSalvar_ViraMensagemAmigavelSemLancarEMantemAsAlteracoes(Exception erro, string mensagem)
     {
         var repositorio = new RepositorioFalso { ErroAoSalvar = erro };
-        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
+        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
+            _ambiente.Assistente, _ambiente.PreferenciasInterface);
         Ambiente.AdicionarTarefa(vm, "A", 2);
         _ambiente.Dialogos.ArquivoParaSalvar = Obra;
 
@@ -190,7 +192,8 @@ public class FluxoDeArquivoTests
     public async Task ArquivoCorrompidoAoAbrir_ViraMensagemEMantemOProjetoAtual()
     {
         var repositorio = new RepositorioFalso { AoAbrir = _ => throw new SqliteException("file is not a database", 26) };
-        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
+        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
+            _ambiente.Assistente, _ambiente.PreferenciasInterface);
         _ambiente.Dialogos.ArquivoParaAbrir = Obra;
 
         var abrir = () => vm.AbrirProjetoCommand.ExecuteAsync(null);

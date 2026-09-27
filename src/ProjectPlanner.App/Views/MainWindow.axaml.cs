@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? _viewModel;
     private ModoVisualizacao _modoAplicado = ModoVisualizacao.Dividido;
     private GridLength _larguraDaTabela = new(620);
+    private GridLength _larguraDoAssistente = new(340);
 
     // Arrastar a borda de um cabeçalho muda a largura muitas vezes por segundo: grava só quando para.
     private readonly DispatcherTimer _larguraParou = new() { Interval = TimeSpan.FromMilliseconds(400) };
@@ -47,14 +48,41 @@ public partial class MainWindow : Window
     protected override void OnDataContextChanged(EventArgs e)
     {
         if (_viewModel is not null)
+        {
             _viewModel.PropertyChanged -= ViewModelMudou;
+            _viewModel.Assistente.PropertyChanged -= AssistenteMudou;
+        }
         base.OnDataContextChanged(e);
         _viewModel = DataContext as MainWindowViewModel;
         if (_viewModel is null)
             return;
         MontarMenuDeColunas(_viewModel.Colunas);
         _viewModel.PropertyChanged += ViewModelMudou;
+        _viewModel.Assistente.PropertyChanged += AssistenteMudou;
         AplicarModoVisualizacao();
+        AplicarPainelDoAssistente();
+    }
+
+    private void AssistenteMudou(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AssistenteViewModel.Visivel))
+            AplicarPainelDoAssistente();
+    }
+
+    // Painel do assistente: colunas 3 (divisor) e 4 (painel) de Paineis. A largura que o usuário deu arrastando o
+    // divisor é guardada ao ocultar e devolvida ao mostrar (só na sessão).
+    private void AplicarPainelDoAssistente()
+    {
+        if (_viewModel is null)
+            return;
+        var colunas = Paineis.ColumnDefinitions;
+        if (colunas[4].Width.IsAbsolute && colunas[4].Width.Value > 0)
+            _larguraDoAssistente = colunas[4].Width;
+        var visivel = _viewModel.Assistente.Visivel;
+        colunas[3].Width = new GridLength(visivel ? 6 : 0);
+        colunas[4].Width = visivel ? _larguraDoAssistente : new GridLength(0);
+        colunas[4].MinWidth = visivel ? 260 : 0;
+        PainelAssistente.IsVisible = DivisorDoAssistente.IsVisible = visivel;
     }
 
     private void ViewModelMudou(object? sender, PropertyChangedEventArgs e)

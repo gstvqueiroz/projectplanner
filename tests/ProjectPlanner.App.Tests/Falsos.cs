@@ -2,6 +2,7 @@ using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.Core;
+using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.Tests;
 
@@ -107,6 +108,11 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.FromResult(Confirmar);
     }
 
+    /// <summary>O que o diálogo de anexar documentos "escolhe" (Bloco 19).</summary>
+    public List<string> DocumentosParaAnexar { get; } = [];
+
+    public Task<IReadOnlyList<string>> EscolherDocumentosAsync() => Task.FromResult<IReadOnlyList<string>>(DocumentosParaAnexar.ToList());
+
     /// <summary>As galerias de fotos abertas, em ordem.</summary>
     public List<GaleriaFotosViewModel> Galerias { get; } = [];
 
@@ -165,7 +171,12 @@ public sealed class Ambiente
 
     public PreferenciasEmMemoria Preferencias { get; } = new();
 
-    public MainWindowViewModel CriarViewModel() => new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias);
+    public AssistenteFalso Assistente { get; } = new();
+
+    public PreferenciasInterfaceEmMemoria PreferenciasInterface { get; } = new();
+
+    public MainWindowViewModel CriarViewModel() =>
+        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -189,5 +200,59 @@ public sealed class Ambiente
                 numero--;
         }
         return data;
+    }
+}
+
+/// <summary>
+/// Assistente de IA dos testes (Bloco 19): guarda os pedidos e responde na hora, com um erro, ou só quando o teste
+/// mandar (<see cref="Segurar"/>), para ver o estado "aguardando".
+/// </summary>
+public sealed class AssistenteFalso : IAssistenteIA
+{
+    private TaskCompletionSource<RespostaIA>? _segurada;
+
+    public List<PedidoIA> Pedidos { get; } = [];
+    public bool EstaConfigurado { get; set; }
+    public Func<PedidoIA, string> Responder { get; set; } = p => $"Resposta a: {p.Mensagem}";
+    public Exception? Erro { get; set; }
+
+    /// <summary>A próxima resposta só sai com <see cref="Soltar"/> (ou com o cancelamento).</summary>
+    public void Segurar() => _segurada = new TaskCompletionSource<RespostaIA>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public void Soltar() => _segurada?.TrySetResult(new RespostaIA(Responder(Pedidos[^1])));
+
+    public async Task<RespostaIA> EnviarAsync(PedidoIA pedido, CancellationToken cancelamento)
+    {
+        Pedidos.Add(pedido);
+        if (Erro is not null)
+            throw Erro;
+        if (_segurada is { } segurada)
+        {
+            using var registro = cancelamento.Register(() => segurada.TrySetCanceled(cancelamento));
+            try
+            {
+                return await segurada.Task;
+            }
+            finally
+            {
+                _segurada = null;
+            }
+        }
+        return new RespostaIA(Responder(pedido));
+    }
+}
+
+public sealed class PreferenciasInterfaceEmMemoria : IPreferenciasInterface
+{
+    public PreferenciasInterface? Salvo { get; set; }
+
+    public int Gravacoes { get; private set; }
+
+    public PreferenciasInterface? Carregar() => Salvo;
+
+    public void Salvar(PreferenciasInterface preferencias)
+    {
+        Salvo = preferencias;
+        Gravacoes++;
     }
 }

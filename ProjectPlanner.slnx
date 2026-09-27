@@ -3,10 +3,12 @@
     <Project Path="src/ProjectPlanner.App/ProjectPlanner.App.csproj" />
     <Project Path="src/ProjectPlanner.Core/ProjectPlanner.Core.csproj" />
     <Project Path="src/ProjectPlanner.Data/ProjectPlanner.Data.csproj" />
+    <Project Path="src/ProjectPlanner.IA/ProjectPlanner.IA.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ProjectPlanner.App.Tests/ProjectPlanner.App.Tests.csproj" />
     <Project Path="tests/ProjectPlanner.Core.Tests/ProjectPlanner.Core.Tests.csproj" />
     <Project Path="tests/ProjectPlanner.Data.Tests/ProjectPlanner.Data.Tests.csproj" />
+    <Project Path="tests/ProjectPlanner.IA.Tests/ProjectPlanner.IA.Tests.csproj" />
   </Folder>
 </Solution>

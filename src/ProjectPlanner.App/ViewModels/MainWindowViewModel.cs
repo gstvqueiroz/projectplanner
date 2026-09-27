@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.Core;
+using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
 
@@ -34,9 +35,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private bool _mudandoEstrutura;
 
     public MainWindowViewModel(IProjetoRepository repositorio, ICalculadoraCronograma calculadora,
-        IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas)
+        IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas,
+        IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface)
     {
         Colunas = new ColunasViewModel(preferenciasColunas);
+        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface);
         _repositorio = repositorio;
         _calculadora = calculadora;
         _dialogos = dialogos;
@@ -54,6 +57,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         };
         Carregar(_cronograma, caminho: null);
     }
+
+    /// <summary>O painel lateral do assistente de IA (Bloco 19).</summary>
+    public AssistenteViewModel Assistente { get; }
 
     /// <summary>Todas as linhas, na ordem do cronograma: cada resumo seguido das suas subtarefas.</summary>
     public ObservableCollection<TarefaViewModel> Tarefas { get; } = [];
@@ -667,6 +673,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private void Carregar(Cronograma cronograma, string? caminho)
     {
         _cronograma = cronograma;
+        Assistente.RecomecarParaOutroProjeto();
         Tarefas.Clear();
         SincronizarLinhas();
 

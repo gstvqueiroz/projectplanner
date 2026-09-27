@@ -120,7 +120,8 @@ public class NovasColunasTests
     public void Notas_PersistemAoSalvarEReabrirPeloRepositorio()
     {
         var repositorio = new RepositorioEmMemoria();
-        MainWindowViewModel Janela() => new(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias);
+        MainWindowViewModel Janela() => new(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
+                _ambiente.Assistente, _ambiente.PreferenciasInterface);
         var vm = Janela();
         Ambiente.AdicionarTarefa(vm, "A", 3).Notas = "Linha 1\nLinha 2";
         Ambiente.AdicionarTarefa(vm, "B", 2);

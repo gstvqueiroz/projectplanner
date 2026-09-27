@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Models;
 using ProjectPlanner.Core;
 using ProjectPlanner.Core.Gantt;
@@ -39,6 +40,9 @@ public sealed partial class GanttViewModel : ViewModelBase
     public const double EscalaMaxima = 60;
     public const double EscalaInicial = OpcoesGantt.EscalaPadrao;
 
+    /// <summary>Quanto os botões − e + do zoom mudam a escala, em px/dia.</summary>
+    public const double PassoDoZoom = 5;
+
     /// <summary>Altura de cada linha; a grid usa a mesma, para que a linha N e a barra N fiquem lado a lado.</summary>
     public const double AlturaLinha = 30;
 
@@ -59,7 +63,27 @@ public sealed partial class GanttViewModel : ViewModelBase
 
     /// <summary>Zoom: largura de um dia, entre <see cref="EscalaMinima"/> e <see cref="EscalaMaxima"/>.</summary>
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AumentarZoomCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiminuirZoomCommand))]
     public partial double PixelsPorDia { get; set; } = EscalaInicial;
+
+    /// <summary>Botão + do zoom: <see cref="PassoDoZoom"/> px/dia a mais, até <see cref="EscalaMaxima"/>.</summary>
+    [RelayCommand(CanExecute = nameof(PodeAumentarZoom))]
+    private void AumentarZoom() => PixelsPorDia = Math.Min(EscalaMaxima, PixelsPorDia + PassoDoZoom);
+
+    /// <summary>Botão − do zoom: <see cref="PassoDoZoom"/> px/dia a menos, até <see cref="EscalaMinima"/>.</summary>
+    [RelayCommand(CanExecute = nameof(PodeDiminuirZoom))]
+    private void DiminuirZoom() => PixelsPorDia = Math.Max(EscalaMinima, PixelsPorDia - PassoDoZoom);
+
+    private bool PodeAumentarZoom() => PixelsPorDia < EscalaMaxima;
+    private bool PodeDiminuirZoom() => PixelsPorDia > EscalaMinima;
+
+    /// <summary>
+    /// Opção de exibição (só da sessão, desligada por padrão desde o Bloco 16): a linha cinza da folga
+    /// total, logo abaixo da barra, até onde a tarefa pode atrasar sem atrasar o projeto.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool MostrarFolga { get; set; }
 
     /// <summary>
     /// Opção de exibição (só da sessão): falso pinta as tarefas e setas críticas na cor comum. Não

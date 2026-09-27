@@ -153,7 +153,8 @@ public partial class GanttChartView : UserControl
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(GanttViewModel.Layout) or nameof(GanttViewModel.MostrarCaminhoCritico)
-            or nameof(GanttViewModel.TarefaDestacada) or nameof(GanttViewModel.MostrarFotos))
+            or nameof(GanttViewModel.TarefaDestacada) or nameof(GanttViewModel.MostrarFotos)
+            or nameof(GanttViewModel.MostrarFolga))
             Desenhar();
     }
 
@@ -275,9 +276,10 @@ public partial class GanttChartView : UserControl
 
     private void DesenharBarra(BarraGantt barra, GanttViewModel viewModel)
     {
-        // A folga corre logo abaixo da barra (como no MS Project), para não cruzar o nome da tarefa.
+        // A folga (só com Exibir > Folga ligado) corre logo abaixo da barra, como no MS Project, para não
+        // cruzar o nome da tarefa.
         var yFolga = barra.Y + barra.Altura + 2;
-        if (barra.FimDaFolga is { } fimDaFolga && fimDaFolga > barra.Direita)
+        if (viewModel.MostrarFolga && barra.FimDaFolga is { } fimDaFolga && fimDaFolga > barra.Direita)
             Corpo.Children.Add(new Line
             {
                 StartPoint = new Point(barra.Direita, yFolga),

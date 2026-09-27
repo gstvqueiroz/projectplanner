@@ -1,9 +1,11 @@
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ProjectPlanner.App.ViewModels;
@@ -16,6 +18,9 @@ public partial class MainWindow : Window
     private ScrollBar? _rolagemDaGrade;
     private ColunasViewModel? _colunas;
     private bool _aplicandoColunas;
+    private MainWindowViewModel? _viewModel;
+    private ModoVisualizacao _modoAplicado = ModoVisualizacao.Dividido;
+    private GridLength _larguraDaTabela = new(620);
 
     // Arrastar a borda de um cabeçalho muda a largura muitas vezes por segundo: grava só quando para.
     private readonly DispatcherTimer _larguraParou = new() { Interval = TimeSpan.FromMilliseconds(400) };
@@ -28,6 +33,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         AddHandler(KeyDownEvent, AtalhosDaEstrutura, RoutingStrategies.Tunnel);
+        // Tamanho da janela, colunas (largura, ordem, visíveis) e tarefas mudam o layout da grid.
+        Grade.LayoutUpdated += (_, _) => AtualizarLinhasVazias();
         _larguraParou.Tick += (_, _) =>
         {
             _larguraParou.Stop();
@@ -37,9 +44,66 @@ public partial class MainWindow : Window
 
     protected override void OnDataContextChanged(EventArgs e)
     {
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged -= ViewModelMudou;
         base.OnDataContextChanged(e);
-        if (DataContext is MainWindowViewModel vm)
-            MontarMenuDeColunas(vm.Colunas);
+        _viewModel = DataContext as MainWindowViewModel;
+        if (_viewModel is null)
+            return;
+        MontarMenuDeColunas(_viewModel.Colunas);
+        _viewModel.PropertyChanged += ViewModelMudou;
+        AplicarModoVisualizacao();
+    }
+
+    private void ViewModelMudou(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.ModoVisualizacao))
+            AplicarModoVisualizacao();
+    }
+
+    // Modos de visualização: só as larguras e a visibilidade das colunas de Paineis mudam; a grid e o Gantt
+    // continuam os mesmos, com os dados que já têm. A largura da grid no modo Dividido (que o usuário pode
+    // ter mudado arrastando o divisor) é guardada ao sair dele e devolvida ao voltar. No Somente Gantt a
+    // grid fica com largura zero, mas não some: é ela que comanda a rolagem vertical do Gantt.
+    private void AplicarModoVisualizacao()
+    {
+        if (_viewModel is null)
+            return;
+        var colunas = Paineis.ColumnDefinitions;
+        if (_modoAplicado == ModoVisualizacao.Dividido && colunas[0].Width.IsAbsolute && colunas[0].Width.Value > 0)
+            _larguraDaTabela = colunas[0].Width;
+
+        var modo = _viewModel.ModoVisualizacao;
+        (colunas[0].Width, colunas[1].Width, colunas[2].Width) = modo switch
+        {
+            ModoVisualizacao.SomenteTabela => (GridLength.Star, new GridLength(0), new GridLength(0)),
+            ModoVisualizacao.SomenteGantt => (new GridLength(0), new GridLength(0), GridLength.Star),
+            _ => (_larguraDaTabela, new GridLength(6), GridLength.Star),
+        };
+        Divisor.IsVisible = modo == ModoVisualizacao.Dividido;
+        PainelGantt.IsVisible = _viewModel.MostrarGantt;
+        Grade.IsHitTestVisible = LinhasVazias.IsVisible = _viewModel.MostrarTabela;
+        Grade.Opacity = _viewModel.MostrarTabela ? 1 : 0;
+        _modoAplicado = modo;
+    }
+
+    // Recalcula as linhas vazias da grid a partir do que o DataGrid mostra de fato: a área das linhas (sem
+    // cabeçalho nem barra de rolagem), quantas linhas há e onde terminam as colunas visíveis (pelos cabeçalhos,
+    // que já refletem ordem, largura e rolagem horizontal).
+    private void AtualizarLinhasVazias()
+    {
+        var linhas = Grade.GetVisualDescendants().OfType<DataGridRowsPresenter>().FirstOrDefault();
+        if (linhas is null || _viewModel is null || linhas.TranslatePoint(default, LinhasVazias) is not { } origem)
+            return;
+        var area = new Rect(origem, linhas.Bounds.Size);
+        var bordas = Grade.GetVisualDescendants().OfType<DataGridColumnHeader>()
+            .Where(h => h.IsVisible && h.Bounds.Width > 0 && h.DataContext is not null && h.TranslatePoint(default, LinhasVazias) is not null)
+            .Select(h => h.TranslatePoint(new Point(h.Bounds.Width, 0), LinhasVazias)!.Value.X)
+            .Where(x => x > area.Left && x <= area.Right)
+            .OrderBy(x => x)
+            .ToList();
+        var cor = Grade.VerticalGridLinesBrush ?? Grade.HorizontalGridLinesBrush ?? Brushes.LightGray;
+        LinhasVazias.Atualizar(area, _viewModel.LinhasVisiveis.Count, GanttViewModel.AlturaLinha, bordas, cor);
     }
 
     // Exibir > Colunas: uma caixa por coluna (a do Nome fica marcada e desabilitada, porque não pode

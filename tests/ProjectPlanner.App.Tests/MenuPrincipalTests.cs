@@ -14,7 +14,7 @@ namespace ProjectPlanner.App.Tests;
 // Bloco 15: a barra de ferramentas única virou menu (Arquivo, Exibir, Tarefa; Inserir oculto desde o 15.1) mais uma barra de
 // acesso rápido. Estes testes abrem a MainWindow de verdade (headless) e disparam cada item como um clique,
 // para garantir que nenhum comando ficou órfão e que cada um ainda faz o que o botão antigo fazia.
-public class MenuPrincipalTests
+public partial class MenuPrincipalTests
 {
     private const string Linha = "—";
 
@@ -104,7 +104,8 @@ public class MenuPrincipalTests
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…");
-        Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", Linha, "Colunas");
+        Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", Linha,
+            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Adicionar subtarefa", "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
@@ -155,7 +156,10 @@ public class MenuPrincipalTests
             (a.Vm.RemoverTarefaCommand, "Remover tarefa"),
             (a.Vm.PromoverCommand, "Promover"),
             (a.Vm.RebaixarCommand, "Rebaixar"),
-            (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"));
+            (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"),
+            (a.Vm.DefinirModoVisualizacaoCommand, "Dividido"),
+            (a.Vm.DefinirModoVisualizacaoCommand, "Somente Tabela"),
+            (a.Vm.DefinirModoVisualizacaoCommand, "Somente Gantt"));
         botoes.Should().OnlyContain(b => b.Content is Avalonia.Controls.Shapes.Path, "são botões só de ícone");
         botoes.Select(b => ToolTip.GetTip(b) as string).Should().OnlyContain(dica => !string.IsNullOrWhiteSpace(dica));
         botoes.Select(b => (string)ToolTip.GetTip(b)!).Should().Contain(d => d.StartsWith("Promover") && d.Contains("Alt+Shift+←"))

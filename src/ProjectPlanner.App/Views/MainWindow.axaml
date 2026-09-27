@@ -32,6 +32,26 @@
         <Style Selector="Button.acessoRapido:disabled /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
         </Style>
+        <!-- Modo de visualização atual, na faixa: botão marcado. -->
+        <Style Selector="Button.acessoRapido.ativo /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#D6E4F0" />
+        </Style>
+        <!-- Botões − e + do zoom flutuante: redondos, sem fundo até o mouse passar. -->
+        <Style Selector="Button.zoom">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.zoom:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
         <Style Selector="StackPanel#AcessoRapido > Border.divisor">
             <Setter Property="Width" Value="1" />
             <Setter Property="Height" Value="18" />
@@ -66,6 +86,22 @@
                               ToolTip.Tip="Pintar de vermelho as tarefas e vínculos críticos no Gantt" />
                     <MenuItem Header="Fotos" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFotos, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
+                    <MenuItem Header="Folga" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFolga, Mode=TwoWay}"
+                              ToolTip.Tip="Mostrar a linha cinza da folga total, abaixo da barra de cada tarefa" />
+                    <Separator />
+                    <!-- Modos de visualização (Bloco 16): quais painéis aparecem. Só da sessão. -->
+                    <MenuItem Header="Dividido" ToggleType="Radio" GroupName="ModoVisualizacao"
+                              IsChecked="{Binding EhDividido, Mode=OneWay}"
+                              Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Dividido}"
+                              ToolTip.Tip="Tabela e Gantt lado a lado" />
+                    <MenuItem Header="Somente Tabela" ToggleType="Radio" GroupName="ModoVisualizacao"
+                              IsChecked="{Binding EhSomenteTabela, Mode=OneWay}"
+                              Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteTabela}"
+                              ToolTip.Tip="Só a grid de tarefas, na largura toda" />
+                    <MenuItem Header="Somente Gantt" ToggleType="Radio" GroupName="ModoVisualizacao"
+                              IsChecked="{Binding EhSomenteGantt, Mode=OneWay}"
+                              Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteGantt}"
+                              ToolTip.Tip="Só o Gantt, na largura toda" />
                     <Separator />
                     <!-- Mostrar/ocultar colunas e restaurar o layout padrão. Ordem e largura mudam arrastando os
                          cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
@@ -101,22 +137,12 @@
             </Menu>
         </Border>
 
-        <!-- Linha 2, logo abaixo: a barra de acesso rápido (os comandos do dia a dia, a um clique) e o zoom do
-             Gantt à direita. Os botões são só ícones; o nome vai na dica e no AutomationProperties.Name (que é o
+        <!-- Linha 2, logo abaixo: a barra de acesso rápido (os comandos do dia a dia, a um clique). O zoom do
+             Gantt fica no canto do próprio Gantt (Bloco 16). Os botões são só ícones; o nome vai na dica e no AutomationProperties.Name (que é o
              que os leitores de tela anunciam). Sem a ação disponível (CanExecute), o botão fica esmaecido. -->
         <Border DockPanel.Dock="Top" Padding="4,2" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" Margin="8,0"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="Zoom:" VerticalAlignment="Center" ToolTip.Tip="Zoom do Gantt" />
-                    <Slider x:Name="Zoom" Width="100" VerticalAlignment="Center"
-                            Minimum="{x:Static vm:GanttViewModel.EscalaMinima}"
-                            Maximum="{x:Static vm:GanttViewModel.EscalaMaxima}"
-                            Value="{Binding Gantt.PixelsPorDia}" />
-                    <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center" MinWidth="62" />
-                </StackPanel>
-
                 <StackPanel x:Name="AcessoRapido" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                     <Button Classes="acessoRapido" Command="{Binding SalvarProjetoCommand}" ToolTip.Tip="Salvar"
                             AutomationProperties.Name="Salvar">
@@ -152,6 +178,26 @@
                         <!-- Setas em círculo -->
                         <Path Data="M13.5,8 A5.5,5.5 0 1 1 11.9,4.1 M12.2,1.2 L12,4.3 L8.9,4.2" />
                     </Button>
+                    <Border Classes="divisor" />
+                    <!-- Modos de visualização: o do modo atual fica marcado (classe ativo). -->
+                    <Button Classes="acessoRapido" Classes.ativo="{Binding EhDividido}"
+                            Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Dividido}"
+                            ToolTip.Tip="Dividido: tabela e Gantt lado a lado" AutomationProperties.Name="Dividido">
+                        <!-- Retângulo dividido ao meio -->
+                        <Path Data="M1.5,2.5 H14.5 V13.5 H1.5 Z M7,2.5 V13.5" />
+                    </Button>
+                    <Button Classes="acessoRapido" Classes.ativo="{Binding EhSomenteTabela}"
+                            Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteTabela}"
+                            ToolTip.Tip="Somente Tabela: a grid de tarefas na largura toda" AutomationProperties.Name="Somente Tabela">
+                        <!-- Tabela -->
+                        <Path Data="M1.5,2.5 H14.5 V13.5 H1.5 Z M1.5,6 H14.5 M1.5,9.75 H14.5 M5.5,2.5 V13.5" />
+                    </Button>
+                    <Button Classes="acessoRapido" Classes.ativo="{Binding EhSomenteGantt}"
+                            Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteGantt}"
+                            ToolTip.Tip="Somente Gantt: o Gantt na largura toda" AutomationProperties.Name="Somente Gantt">
+                        <!-- Barras em escada -->
+                        <Path Data="M1.5,3.5 H7 M5,8 H11 M9.5,12.5 H14.5" StrokeThickness="2.4" />
+                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -175,7 +221,9 @@
         <!-- Grid à esquerda e Gantt à direita, com divisor arrastável. As linhas e o cabeçalho dos dois
              têm a mesma altura (GanttViewModel.AlturaLinha e AlturaCabecalho), e a grid comanda a
              rolagem vertical do Gantt (ver MainWindow.axaml.cs). -->
-        <Grid ColumnDefinitions="620,6,*" Margin="8,0,8,8">
+        <!-- Os modos de visualização (MainWindowViewModel.ModoVisualizacao) mudam só as larguras e a visibilidade
+             destas colunas (ver AplicarModoVisualizacao no MainWindow.axaml.cs). -->
+        <Grid x:Name="Paineis" ColumnDefinitions="620,6,*" Margin="8,0,8,8">
         <!-- Grid de tarefas. Nº, Predecessoras editáveis na notação "2; 3II+2" (ver NotacaoPredecessoras). -->
         <DataGrid x:Name="Grade"
                   Grid.Column="0"
@@ -271,12 +319,34 @@
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Notas" Header="Notas" Binding="{Binding Notas}" Width="200" />
             </DataGrid.Columns>
         </DataGrid>
+        <!-- Linhas vazias abaixo das tarefas, até o fim da área visível: só desenho, sem receber o mouse. -->
+        <v:LinhasVaziasDaGrade x:Name="LinhasVazias" Grid.Column="0" IsHitTestVisible="False" />
 
-        <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Transparent" />
+        <GridSplitter x:Name="Divisor" Grid.Column="1" ResizeDirection="Columns" Background="Transparent" />
 
-        <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-            <v:GanttChartView x:Name="Gantt" DataContext="{Binding Gantt}" />
-        </Border>
+        <Panel x:Name="PainelGantt" Grid.Column="2">
+            <Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <v:GanttChartView x:Name="Gantt" DataContext="{Binding Gantt}" />
+            </Border>
+            <!-- Zoom flutuante no canto inferior direito do Gantt, acima da barra de rolagem horizontal, com fundo
+                 semitransparente para ficar legível sobre as barras. − e + mudam 5 px/dia; o slider, livremente. -->
+            <Border x:Name="ControleDeZoom" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,20"
+                    Background="#E6FFFFFF" BorderBrush="#33000000" BorderThickness="1" CornerRadius="16"
+                    Padding="4,0" BoxShadow="0 1 4 0 #26000000">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button Classes="zoom" Content="−" Command="{Binding Gantt.DiminuirZoomCommand}"
+                            ToolTip.Tip="Diminuir o zoom (5 px/dia)" AutomationProperties.Name="Diminuir zoom" />
+                    <Slider x:Name="Zoom" Width="90" VerticalAlignment="Center"
+                            Minimum="{x:Static vm:GanttViewModel.EscalaMinima}"
+                            Maximum="{x:Static vm:GanttViewModel.EscalaMaxima}"
+                            Value="{Binding Gantt.PixelsPorDia}" ToolTip.Tip="Zoom do Gantt" />
+                    <Button Classes="zoom" Content="+" Command="{Binding Gantt.AumentarZoomCommand}"
+                            ToolTip.Tip="Aumentar o zoom (5 px/dia)" AutomationProperties.Name="Aumentar zoom" />
+                    <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center"
+                               MinWidth="58" Margin="4,0,6,0" FontSize="12" />
+                </StackPanel>
+            </Border>
+        </Panel>
         </Grid>
     </DockPanel>
 </Window>

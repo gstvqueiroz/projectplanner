@@ -115,6 +115,29 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     /// <summary>"*obra — ProjectPlanner": o arquivo (ou o nome do projeto, se nunca foi salvo), com * quando há alterações.</summary>
     /// <summary>
+    /// Quais painéis aparecem: grid e Gantt lado a lado, só a grid ou só o Gantt. Só da sessão (o programa
+    /// sempre abre em <see cref="ModoVisualizacao.Dividido"/>, como as outras opções de Exibir). A janela só
+    /// muda a largura e a visibilidade dos painéis, que continuam com os dados de antes.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MostrarTabela), nameof(MostrarGantt), nameof(EhDividido), nameof(EhSomenteTabela), nameof(EhSomenteGantt))]
+    public partial ModoVisualizacao ModoVisualizacao { get; set; } = ModoVisualizacao.Dividido;
+
+    /// <summary>A grid de tarefas aparece (Dividido ou Somente Tabela).</summary>
+    public bool MostrarTabela => ModoVisualizacao != ModoVisualizacao.SomenteGantt;
+
+    /// <summary>O Gantt aparece (Dividido ou Somente Gantt).</summary>
+    public bool MostrarGantt => ModoVisualizacao != ModoVisualizacao.SomenteTabela;
+
+    public bool EhDividido => ModoVisualizacao == ModoVisualizacao.Dividido;
+    public bool EhSomenteTabela => ModoVisualizacao == ModoVisualizacao.SomenteTabela;
+    public bool EhSomenteGantt => ModoVisualizacao == ModoVisualizacao.SomenteGantt;
+
+    /// <summary>Troca o modo de visualização (itens de Exibir e botões da faixa de acesso rápido).</summary>
+    [RelayCommand]
+    private void DefinirModoVisualizacao(ModoVisualizacao modo) => ModoVisualizacao = modo;
+
+    /// <summary>
     /// "obra.pplan — ProjectPlanner 0.15.0": o arquivo (ou o nome do projeto, antes de salvar pela primeira
     /// vez) e a versão do programa, com * na frente quando há alterações não salvas.
     /// </summary>

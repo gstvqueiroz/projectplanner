@@ -78,6 +78,10 @@ public sealed record OpcoesGantt
 /// <param name="Setas">Uma por vínculo, na ordem do cronograma.</param>
 /// <param name="FinsDeSemana">Uma coluna por sábado e domingo do eixo, em ordem, para o fundo diferenciado.</param>
 /// <param name="AlturaLinha">Altura de cada linha (a linha N vai de N × AlturaLinha a (N + 1) × AlturaLinha).</param>
+/// <param name="PistasVazias">
+/// Pistas sem tarefa abaixo da última, até o fim da altura visível (Bloco 20): só grade, sem barra nem clique.
+/// A quantidade vem de <see cref="PreenchimentoDaGrade.LinhasVazias"/>, a mesma conta das linhas vazias da grid.
+/// </param>
 public sealed record LayoutGantt(
     DateTime InicioEixo,
     DateTime FimEixo,
@@ -87,7 +91,14 @@ public sealed record LayoutGantt(
     IReadOnlyList<SetaGantt> Setas,
     EscalaGantt Escala,
     IReadOnlyList<ColunaDia> FinsDeSemana,
-    double AlturaLinha);
+    double AlturaLinha,
+    int PistasVazias = 0)
+{
+    /// <summary>
+    /// Pistas desenhadas (as das tarefas e as vazias abaixo delas, Bloco 20): cada uma ganha a divisória de baixo.
+    /// </summary>
+    public int Pistas => Barras.Count + PistasVazias;
+}
 
 /// <summary>A faixa vertical de um dia no eixo.</summary>
 public sealed record ColunaDia(DateTime Dia, double X, double Largura);

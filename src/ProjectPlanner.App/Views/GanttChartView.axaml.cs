@@ -266,7 +266,8 @@ public partial class GanttChartView : UserControl
                 Stroke = Grade,
                 StrokeThickness = 1,
             });
-        for (var i = 1; i <= layout.Barras.Count; i++)
+        // Divisória de baixo de cada pista, também das vazias até o fim da área visível (Bloco 20), como a grid.
+        for (var i = 1; i <= layout.Pistas; i++)
             Corpo.Children.Add(new Line
             {
                 StartPoint = new Point(0, i * GanttViewModel.AlturaLinha),

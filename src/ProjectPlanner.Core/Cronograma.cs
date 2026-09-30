@@ -124,6 +124,28 @@ public class Cronograma
     }
 
     /// <summary>
+    /// Acrescenta a tarefa como irmã das tarefas de <paramref name="paiId"/> (nulo = primeiro nível), na posição
+    /// <paramref name="posicao"/> entre elas, contando a partir de 0: 0 é antes da primeira e a quantidade de
+    /// irmãs é depois da última (Bloco 21). As irmãs dessa posição em diante andam uma posição, com as subtarefas;
+    /// a ordem é a da lista (a coluna Ordem do arquivo sai dela), e a EDT acompanha.
+    /// </summary>
+    /// <exception cref="DomainValidationException">
+    /// A posição não existe entre as irmãs, ou a tarefa não pode entrar ali (as mesmas regras de
+    /// <see cref="AdicionarTarefa(Tarefa, Guid?)"/>).
+    /// </exception>
+    public void InserirTarefaNaPosicao(Tarefa tarefa, Guid? paiId, int posicao)
+    {
+        ArgumentNullException.ThrowIfNull(tarefa);
+        var irmas = _tarefas.Count(t => t.TarefaPaiId == paiId);
+        if (posicao < 0 || posicao > irmas)
+            throw new DomainValidationException(nameof(Tarefas),
+                $"A posição {posicao} não existe: o grupo tem {irmas} tarefa(s), então vai de 0 a {irmas}.");
+
+        AdicionarTarefa(tarefa, paiId);
+        MoverEntreIrmas(tarefa.Id, posicao);
+    }
+
+    /// <summary>
     /// Muda a posição da tarefa entre as irmãs (as tarefas com o mesmo pai), levando junto as subtarefas
     /// dela; o pai não muda (Bloco 18). <paramref name="posicao"/> é o lugar que ela passa a ocupar entre
     /// as irmãs, contando a partir de 0. Só a ordem muda: datas, vínculos e caminho crítico não dependem

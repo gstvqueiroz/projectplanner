@@ -117,6 +117,11 @@
                 <!-- Tudo o que cria, remove ou reorganiza tarefas, num lugar só. -->
                 <MenuItem Header="Tarefa">
                     <MenuItem Header="Adicionar tarefa" Command="{Binding AdicionarTarefaCommand}" />
+                    <!-- Bloco 21: tarefa nova junto da selecionada, entre as irmãs dela. -->
+                    <MenuItem Header="Inserir tarefa acima" Command="{Binding InserirTarefaAcimaCommand}"
+                              ToolTip.Tip="Uma tarefa nova logo antes da selecionada, no mesmo nível" />
+                    <MenuItem Header="Inserir tarefa abaixo" Command="{Binding InserirTarefaAbaixoCommand}"
+                              ToolTip.Tip="Uma tarefa nova logo depois da selecionada (e das subtarefas dela), no mesmo nível" />
                     <MenuItem Header="Adicionar subtarefa" Command="{Binding AdicionarSubtarefaCommand}"
                               ToolTip.Tip="Adicionar uma subtarefa dentro da tarefa selecionada" />
                     <MenuItem Header="Adicionar marco" Command="{Binding AdicionarMarcoCommand}"
@@ -255,6 +260,10 @@
             <!-- Menu de contexto (Bloco 17): o clique direito numa linha a seleciona (ver PedirMenuDaGrade). -->
             <DataGrid.ContextMenu>
                 <ContextMenu x:Name="MenuDaGrade">
+                    <!-- O clique direito seleciona a linha antes; nas linhas vazias não há menu (PedirMenuDaGrade). -->
+                    <MenuItem Header="Inserir tarefa acima" Command="{Binding InserirTarefaAcimaCommand}" />
+                    <MenuItem Header="Inserir tarefa abaixo" Command="{Binding InserirTarefaAbaixoCommand}" />
+                    <Separator />
                     <MenuItem Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}" />
                 </ContextMenu>
             </DataGrid.ContextMenu>

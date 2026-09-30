@@ -107,7 +107,8 @@ public partial class MenuPrincipalTests
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", Linha,
             "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Assistente (IA)");
         Titulos(a.Item("Tarefa")).Should().Equal(
-            "Adicionar tarefa", "Adicionar subtarefa", "Adicionar marco", "Adicionar resumo", Linha,
+            "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
+            "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Gerenciar fotos…");
     });

@@ -86,6 +86,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(RebaixarCommand))]
     [NotifyCanExecuteChangedFor(nameof(PromoverCommand))]
     [NotifyCanExecuteChangedFor(nameof(GerenciarFotosCommand))]
+    [NotifyCanExecuteChangedFor(nameof(InserirTarefaAcimaCommand))]
+    [NotifyCanExecuteChangedFor(nameof(InserirTarefaAbaixoCommand))]
     [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
 
@@ -251,6 +253,33 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         var tarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
         _cronograma.AdicionarTarefa(tarefa);
         AposMudarAEstrutura(selecionar: tarefa);
+    }
+
+    /// <summary>
+    /// Tarefa > Inserir tarefa acima e o menu de contexto da grid (Bloco 21): uma tarefa nova logo antes da
+    /// tarefa da linha (ou da selecionada), entre as irmãs dela.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(PodeInserirJuntoDe))]
+    private void InserirTarefaAcima(TarefaViewModel? linha) => InserirJuntoDe(linha ?? TarefaSelecionada!, depois: false);
+
+    /// <summary>
+    /// Inserir tarefa abaixo: logo depois da tarefa da linha (ou da selecionada) e das subtarefas dela, no mesmo
+    /// nível (abaixo de um resumo, depois do resumo inteiro; subtarefa nova é com Adicionar subtarefa).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(PodeInserirJuntoDe))]
+    private void InserirTarefaAbaixo(TarefaViewModel? linha) => InserirJuntoDe(linha ?? TarefaSelecionada!, depois: true);
+
+    private bool PodeInserirJuntoDe(TarefaViewModel? linha) => (linha ?? TarefaSelecionada) is not null;
+
+    // A tarefa nova é como a do Adicionar tarefa; só a posição muda. O cronograma é recalculado depois, como
+    // em qualquer tarefa nova (ela entra no CPM).
+    private void InserirJuntoDe(TarefaViewModel referencia, bool depois)
+    {
+        var pai = referencia.Tarefa.TarefaPaiId;
+        var posicao = _cronograma.Tarefas.Where(t => t.TarefaPaiId == pai).ToList().IndexOf(referencia.Tarefa) + (depois ? 1 : 0);
+        var tarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
+        if (MudarEstrutura(() => _cronograma.InserirTarefaNaPosicao(tarefa, pai, posicao)))
+            AposMudarAEstrutura(selecionar: tarefa);
     }
 
     /// <summary>Acrescenta um marco (tarefa de duração 0) no fim da lista, como o Adicionar tarefa.</summary>

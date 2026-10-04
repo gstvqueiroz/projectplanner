@@ -1,3 +1,4 @@
+using ProjectPlanner.App.Services;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -187,7 +188,8 @@ public partial class MenuPrincipalTests
 
         fotos.IsEffectivelyEnabled.Should().BeTrue();
         (a.Janela.ContadorDeFotos.IsVisible, ((TextBlock)a.Janela.ContadorDeFotos.Child!).Text).Should().Be((true, "2"));
-        ToolTip.GetTip(fotos).Should().Be("Fotos de \"Fundação\": 2 fotos — abrir a galeria");
+        ToolTip.GetTip(fotos).Should().Be(
+            $"Fotos de \"Fundação\": 2 fotos — abrir a galeria ({AtalhosDeTeclado.Texto(AcaoComAtalho.FotosDaTarefa, AtalhosDeTeclado.EhMac)})");
         var galerias = a.Ambiente.Dialogos.Galerias.Count;
         a.ClicarComOMouse(fotos);
         a.Ambiente.Dialogos.Galerias.Should().HaveCount(galerias + 1);

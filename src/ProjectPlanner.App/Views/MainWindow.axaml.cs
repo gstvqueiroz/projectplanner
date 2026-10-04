@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
 
 namespace ProjectPlanner.App.Views;
@@ -34,6 +35,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         AddHandler(KeyDownEvent, AtalhosDaEstrutura, RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, AtalhosDoTeclado, RoutingStrategies.Tunnel);
+        MostrarAtalhos(AtalhosDeTeclado.EhMac);
         // Tamanho da janela, colunas (largura, ordem, visíveis) e tarefas mudam o layout da grid.
         Grade.LayoutUpdated += (_, _) => AtualizarLinhasVazias();
         Grade.AddHandler(ContextRequestedEvent, PedirMenuDaGrade, RoutingStrategies.Tunnel);
@@ -304,6 +307,63 @@ public partial class MainWindow : Window
             e.Cancel = true;
             vm.AvisarValorCalculadoNoResumo();
         }
+    }
+
+    // Bloco 25 (P1): os atalhos aparecem nos menus (o texto do gesto) e nas dicas dos botões da barra.
+    private void MostrarAtalhos(bool mac)
+    {
+        foreach (var (item, acao) in new (MenuItem, AcaoComAtalho)[]
+                 {
+                     (ItemNovo, AcaoComAtalho.Novo), (ItemAbrir, AcaoComAtalho.Abrir), (ItemSalvar, AcaoComAtalho.Salvar),
+                     (ItemSalvarComo, AcaoComAtalho.SalvarComo), (ItemRecalcular, AcaoComAtalho.Recalcular),
+                     (ItemFotos, AcaoComAtalho.FotosDaTarefa), (ItemDividido, AcaoComAtalho.Dividido),
+                     (ItemSomenteTabela, AcaoComAtalho.SomenteTabela), (ItemSomenteGantt, AcaoComAtalho.SomenteGantt),
+                     (ItemAssistente, AcaoComAtalho.Assistente),
+                 })
+            item.InputGesture = AtalhosDeTeclado.Gesto(acao, mac);
+
+        foreach (var (nome, acao) in new (string, AcaoComAtalho)[]
+                 {
+                     ("Salvar", AcaoComAtalho.Salvar), ("Recalcular cronograma", AcaoComAtalho.Recalcular),
+                     ("Dividido", AcaoComAtalho.Dividido), ("Somente Tabela", AcaoComAtalho.SomenteTabela),
+                     ("Somente Gantt", AcaoComAtalho.SomenteGantt), ("Assistente", AcaoComAtalho.Assistente),
+                 })
+        {
+            var botao = AcessoRapido.Children.OfType<Button>()
+                .Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == nome);
+            ToolTip.SetTip(botao, AtalhosDeTeclado.Dica((string)ToolTip.GetTip(botao)!, acao, mac));
+        }
+        BotaoFotos.Bind(ToolTip.TipProperty, new Binding(nameof(MainWindowViewModel.DicaFotosDaSelecionada))
+        {
+            StringFormat = "{0} (" + AtalhosDeTeclado.Texto(AcaoComAtalho.FotosDaTarefa, mac).Replace("{", "{{").Replace("}", "}}") + ")",
+        });
+    }
+
+    // Bloco 25 (P1): os atalhos de teclado valem na janela toda, inclusive editando uma célula, que é confirmada antes
+    // (salvar com a célula ainda aberta deixaria de fora o que acabou de ser digitado).
+    private void AtalhosDoTeclado(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm
+            || AtalhosDeTeclado.Achar(e.Key, e.KeyModifiers, AtalhosDeTeclado.EhMac) is not { } acao)
+            return;
+        e.Handled = true;
+        Grade.CommitEdit();
+        var (comando, parametro) = acao switch
+        {
+            AcaoComAtalho.Novo => (vm.NovoProjetoCommand, null),
+            AcaoComAtalho.Abrir => (vm.AbrirProjetoCommand, null),
+            AcaoComAtalho.Salvar => (vm.SalvarProjetoCommand, null),
+            AcaoComAtalho.SalvarComo => (vm.SalvarComoProjetoCommand, null),
+            AcaoComAtalho.Recalcular => (vm.RecalcularCronogramaCommand, null),
+            AcaoComAtalho.FotosDaTarefa => (vm.GerenciarFotosCommand, null),
+            AcaoComAtalho.Dividido => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.Dividido),
+            AcaoComAtalho.SomenteTabela => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteTabela),
+            AcaoComAtalho.SomenteGantt => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteGantt),
+            AcaoComAtalho.Assistente => ((System.Windows.Input.ICommand)vm.Assistente.AlternarVisibilidadeCommand, (object?)null),
+            _ => ((System.Windows.Input.ICommand?)null, (object?)null),
+        };
+        if (comando?.CanExecute(parametro) == true)
+            comando.Execute(parametro);
     }
 
     // Alt+Shift+→ e Alt+Shift+← (Option no Mac) rebaixam e promovem a tarefa selecionada, como no MS

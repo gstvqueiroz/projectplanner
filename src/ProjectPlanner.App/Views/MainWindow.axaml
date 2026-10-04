@@ -71,11 +71,11 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <Menu x:Name="MenuPrincipal">
                 <MenuItem Header="Arquivo">
-                    <MenuItem Header="Novo" Command="{Binding NovoProjetoCommand}" />
-                    <MenuItem Header="Abrir…" Command="{Binding AbrirProjetoCommand}" />
+                    <MenuItem x:Name="ItemNovo" Header="Novo" Command="{Binding NovoProjetoCommand}" />
+                    <MenuItem x:Name="ItemAbrir" Header="Abrir…" Command="{Binding AbrirProjetoCommand}" />
                     <Separator />
-                    <MenuItem Header="Salvar" Command="{Binding SalvarProjetoCommand}" />
-                    <MenuItem Header="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
+                    <MenuItem x:Name="ItemSalvar" Header="Salvar" Command="{Binding SalvarProjetoCommand}" />
+                    <MenuItem x:Name="ItemSalvarComo" Header="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
                 </MenuItem>
                 <!-- Opções de exibição: valem só durante a sessão (não vão para o .pplan). O ✓ mostra se estão ligadas. -->
                 <MenuItem Header="Exibir">
@@ -90,15 +90,15 @@
                               ToolTip.Tip="Mostrar a linha cinza da folga total, abaixo da barra de cada tarefa" />
                     <Separator />
                     <!-- Modos de visualização (Bloco 16): quais painéis aparecem. Só da sessão. -->
-                    <MenuItem Header="Dividido" ToggleType="Radio" GroupName="ModoVisualizacao"
+                    <MenuItem x:Name="ItemDividido" Header="Dividido" ToggleType="Radio" GroupName="ModoVisualizacao"
                               IsChecked="{Binding EhDividido, Mode=OneWay}"
                               Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Dividido}"
                               ToolTip.Tip="Tabela e Gantt lado a lado" />
-                    <MenuItem Header="Somente Tabela" ToggleType="Radio" GroupName="ModoVisualizacao"
+                    <MenuItem x:Name="ItemSomenteTabela" Header="Somente Tabela" ToggleType="Radio" GroupName="ModoVisualizacao"
                               IsChecked="{Binding EhSomenteTabela, Mode=OneWay}"
                               Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteTabela}"
                               ToolTip.Tip="Só a grid de tarefas, na largura toda" />
-                    <MenuItem Header="Somente Gantt" ToggleType="Radio" GroupName="ModoVisualizacao"
+                    <MenuItem x:Name="ItemSomenteGantt" Header="Somente Gantt" ToggleType="Radio" GroupName="ModoVisualizacao"
                               IsChecked="{Binding EhSomenteGantt, Mode=OneWay}"
                               Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteGantt}"
                               ToolTip.Tip="Só o Gantt, na largura toda" />
@@ -108,7 +108,7 @@
                     <MenuItem x:Name="MenuColunas" Header="Colunas" />
                     <Separator />
                     <!-- Painel do assistente de IA (Bloco 19); fica salvo entre as sessões. -->
-                    <MenuItem Header="Assistente (IA)" ToggleType="CheckBox" IsChecked="{Binding Assistente.Visivel, Mode=TwoWay}"
+                    <MenuItem x:Name="ItemAssistente" Header="Assistente (IA)" ToggleType="CheckBox" IsChecked="{Binding Assistente.Visivel, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar ou ocultar o painel do assistente, à direita" />
                 </MenuItem>
                 <!-- Inserir: vazio e oculto por ora (Bloco 15.1). Volta quando chegar a primeira funcionalidade dele
@@ -136,10 +136,10 @@
                     <MenuItem Header="Rebaixar" Command="{Binding RebaixarCommand}" InputGesture="Alt+Shift+Right"
                               ToolTip.Tip="Coloca a tarefa dentro da tarefa de cima, um nível abaixo" />
                     <Separator />
-                    <MenuItem Header="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
+                    <MenuItem x:Name="ItemRecalcular" Header="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
                     <Separator />
                     <!-- Sempre visível (Bloco 17): abre a galeria mesmo sem fotos, para adicionar a primeira. -->
-                    <MenuItem Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}"
+                    <MenuItem x:Name="ItemFotos" Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}"
                               ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
                 </MenuItem>
                 <!-- Bloco 25 -->
@@ -193,8 +193,7 @@
                     <Border Classes="divisor" />
                     <!-- Bloco 25 (F1): a galeria da tarefa selecionada, com quantas fotos ela tem; desabilitado sem seleção. -->
                     <Button x:Name="BotaoFotos" Classes="acessoRapido" Command="{Binding GerenciarFotosCommand}"
-                            ToolTip.Tip="{Binding DicaFotosDaSelecionada}" ToolTip.ShowOnDisabled="True"
-                            AutomationProperties.Name="Fotos da tarefa">
+                            ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Fotos da tarefa">
                         <!-- Câmera. O número de fotos vai por cima, num adorno (ver MainWindow.axaml.cs, ContadorDeFotos). -->
                         <Path Data="M1.5,5 A1,1 0 0 1 2.5,4 H5 L6.2,2.3 H9.8 L11,4 H13.5 A1,1 0 0 1 14.5,5 V12.5 A1,1 0 0 1 13.5,13.5 H2.5 A1,1 0 0 1 1.5,12.5 Z M8,6.2 A2.6,2.6 0 1 0 8,11.4 A2.6,2.6 0 1 0 8,6.2" />
                     </Button>

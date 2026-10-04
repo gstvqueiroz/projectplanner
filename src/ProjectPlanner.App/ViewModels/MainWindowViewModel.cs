@@ -168,7 +168,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     /// <summary>Texto da barra de status: o último aviso ou erro.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MensagemNaBarra))]
     public partial string Mensagem { get; private set; } = "";
+
+    // O arquivo citado na última mensagem de abrir ou salvar (Bloco 25, B6).
+    private string? _caminhoNaMensagem;
+
+    /// <summary>
+    /// A mensagem como a barra de status mostra (Bloco 25, B6): o nome do arquivo no lugar do caminho completo, que
+    /// cortava o resto da mensagem. O caminho completo continua em <see cref="Mensagem"/> (a dica da barra).
+    /// </summary>
+    public string MensagemNaBarra => _caminhoNaMensagem is { Length: > 0 } caminho && Mensagem.Contains(caminho, StringComparison.Ordinal)
+        ? Mensagem.Replace(caminho, Path.GetFileName(caminho), StringComparison.Ordinal)
+        : Mensagem;
 
     /// <summary>Fim do projeto no último cálculo.</summary>
     [ObservableProperty]
@@ -284,6 +296,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         {
             var aberto = _repositorio.Abrir(caminho);
             Carregar(aberto, caminho);
+            _caminhoNaMensagem = caminho;
             Mensagem = $"Projeto aberto: {caminho}";
             if (aberto.FotosDescartadasAoAbrir > 0)
                 Mensagem += aberto.FotosDescartadasAoAbrir == 1
@@ -615,6 +628,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _fotos.Salvou(caminho);
         CaminhoArquivo = caminho;
         PossuiAlteracoesNaoSalvas = false;
+        _caminhoNaMensagem = caminho;
         Mensagem = $"Projeto salvo em {caminho}";
         return true;
     }

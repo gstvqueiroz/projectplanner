@@ -11,6 +11,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   1/2/3 modos de visualização, J assistente, e F9 recalcular. Aparecem nos menus e nas dicas da barra.
 - Barra de status mais completa: à direita, o tamanho do projeto (tarefas, resumos, marcos), o período em dias úteis,
   a tarefa selecionada com as datas do cronograma e a versão.
+- Correção: a barra de status mostra o nome do arquivo em vez do caminho completo, que cortava o resto da mensagem
+  (o caminho completo aparece ao passar o mouse).
 
 ## 0.24.0
 

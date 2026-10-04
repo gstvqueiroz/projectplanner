@@ -258,7 +258,8 @@
                                IsVisible="{Binding TextoPeriodoNaBarra, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <TextBlock x:Name="StatusVersao" Text="{Binding TextoVersaoNaBarra}" />
                 </StackPanel>
-                <TextBlock Text="{Binding Mensagem}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusMensagem" Text="{Binding MensagemNaBarra}" ToolTip.Tip="{Binding Mensagem}"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
             </DockPanel>
         </Border>
 

@@ -62,3 +62,51 @@ public class BarraDeStatusTests
         _vm.TextoSelecionadaNaBarra.Should().Be("1 Fundação: 28/09/2026 → 02/10/2026");
     }
 }
+
+// Bloco 25 (B6): a barra mostra o nome do arquivo, não o caminho inteiro (que fica na dica).
+public class MensagemNaBarraTests
+{
+    private readonly Ambiente _ambiente = new();
+    private readonly MainWindowViewModel _vm;
+
+    public MensagemNaBarraTests() => _vm = _ambiente.CriarViewModel();
+
+    [Fact]
+    public void Abrir_NomeDoArquivoNaBarra_CaminhoNaMensagem()
+    {
+        _ambiente.Repositorio.AoAbrir = _ => new ProjectPlanner.Core.Cronograma("Obra", Ambiente.Segunda);
+        _ambiente.Dialogos.ArquivoParaAbrir = "/Users/eu/Obras em andamento/Residência Silva/obra.pplan";
+
+        _vm.AbrirProjetoCommand.Execute(null);
+
+        _vm.Mensagem.Should().Be("Projeto aberto: /Users/eu/Obras em andamento/Residência Silva/obra.pplan");
+        _vm.MensagemNaBarra.Should().Be("Projeto aberto: obra.pplan");
+    }
+
+    [Fact]
+    public void Salvar_EOAvisoQueVemDepoisDoCaminho_Aparece()
+    {
+        _ambiente.Repositorio.AoAbrir = _ =>
+        {
+            var cronograma = new ProjectPlanner.Core.Cronograma("Obra", Ambiente.Segunda);
+            cronograma.RegistrarFotosDescartadas(2);
+            return cronograma;
+        };
+        _ambiente.Dialogos.ArquivoParaAbrir = "/muito/longo/caminho/de/pastas/antigo.pplan";
+        _vm.AbrirProjetoCommand.Execute(null);
+        _vm.MensagemNaBarra.Should().Be("Projeto aberto: antigo.pplan 2 registros de exemplo de fotos (sem imagem) foram descartados; eles somem do arquivo ao salvar.");
+
+        _ambiente.Dialogos.ArquivoParaSalvar = "/outra/pasta/novo.pplan";
+        _vm.SalvarComoProjetoCommand.Execute(null);
+        (_vm.Mensagem, _vm.MensagemNaBarra).Should().Be(("Projeto salvo em /outra/pasta/novo.pplan", "Projeto salvo em novo.pplan"));
+    }
+
+    [Fact]
+    public void MensagemSemCaminho_FicaComoEsta()
+    {
+        Ambiente.AdicionarTarefa(_vm, "Fundação", 3);
+        _vm.RecalcularCronogramaCommand.Execute(null);
+
+        _vm.MensagemNaBarra.Should().Be(_vm.Mensagem).And.Be("Cronograma recalculado.");
+    }
+}

@@ -188,6 +188,19 @@ public partial class MenuPrincipalTests
         (a.Janela.Bounds.Width - direita).Should().BeInRange(0, 12, "fica encostada à direita");
     });
 
+    // Bloco 25 (B6)
+    [Fact]
+    public Task BarraDeStatus_NomeDoArquivo_ECaminhoNaDica() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        a.Ambiente.Dialogos.ArquivoParaSalvar = "/Users/eu/Obras/Residência Silva/obra.pplan";
+        a.Vm.SalvarProjetoCommand.Execute(null);
+        Pintar(a);
+
+        var mensagem = a.Janela.FindControl<TextBlock>("StatusMensagem")!;
+        (mensagem.Text, ToolTip.GetTip(mensagem)).Should().Be(("Projeto salvo em obra.pplan", "Projeto salvo em /Users/eu/Obras/Residência Silva/obra.pplan"));
+    });
+
     // Bloco 25 (F1)
     [Fact]
     public Task AcessoRapido_BotaoDeFotos_ContadorEClique() => Tela.Executar(() =>

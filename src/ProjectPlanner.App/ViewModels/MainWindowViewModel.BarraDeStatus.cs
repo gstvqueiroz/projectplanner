@@ -81,6 +81,9 @@ public sealed partial class MainWindowViewModel
             linhas.Add($"{tarefa.PercentualConcluido}% concluído");
         if (tarefa.Folga is { } folga && !tarefa.EhResumo)
             linhas.Add("Folga: " + (folga == 1 ? "1 dia" : $"{folga} dias") + (tarefa.EhCritica ? " (crítica)" : ""));
+        if (AndamentoDe(tarefaId) is { } andamento)
+            linhas.Add($"Situação: {andamento.Texto}" + (andamento.Situacao == SituacaoDaTarefa.Atrasada && !tarefa.EhMarco
+                ? $" (previsto {andamento.PercentualPrevisto}% hoje)" : ""));
         if (!string.IsNullOrWhiteSpace(linha.Predecessoras))
             linhas.Add($"Predecessoras: {linha.Predecessoras}");
         if (tarefa.Fotos.Count > 0)

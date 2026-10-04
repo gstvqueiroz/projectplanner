@@ -25,6 +25,9 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   Ajuda > Abrir a pasta de registros de erros), e os da interface viram um aviso, com o programa aberto para salvar.
 - Cópias de segurança: a cada salvamento, a versão anterior do .pplan é guardada (as 5 mais recentes de cada projeto,
   em Arquivo > Abrir a pasta de cópias de segurança); para recuperar, basta abrir uma delas.
+- Situação de cada tarefa na data de hoje (não iniciada, em dia, atrasada, concluída), pelo % previsto × informado:
+  coluna Situação na grid (antes de Notas; dá para ocultar em Exibir > Colunas), contorno laranja nas barras atrasadas
+  e a situação na dica da barra.
 
 ## 0.24.0
 

@@ -18,10 +18,11 @@ public class DicaDasBarrasTests : TesteDeFotos
             "01/10/2026 → 07/10/2026 · 5 dias",
             "40% concluído",
             "Folga: 0 dias (crítica)",
+            "Situação: Em dia",
             "Predecessoras: 1",
             "2 fotos");
         Vm.DicaDaTarefaNoGantt(a.Tarefa.Id).Split('\n').Should().Equal(
-            "1 Escavação", "28/09/2026 → 30/09/2026 · 3 dias", "0% concluído", "Folga: 0 dias (crítica)");
+            "1 Escavação", "28/09/2026 → 30/09/2026 · 3 dias", "0% concluído", "Folga: 0 dias (crítica)", "Situação: Não iniciada");
     }
 
     [Fact]
@@ -38,10 +39,11 @@ public class DicaDasBarrasTests : TesteDeFotos
         (curta.Nome, curta.Duracao) = ("Curta", 2);
         var entrega = Ambiente.AdicionarTarefa(Vm, "Entrega", 0, "2");
 
-        Vm.DicaDaTarefaNoGantt(fase.Tarefa.Id).Split('\n').Should().Equal("1 Fase", "28/09/2026 → 02/10/2026 · 5 dias (resumo)", "0% concluído");
+        Vm.DicaDaTarefaNoGantt(fase.Tarefa.Id).Split('\n').Should().Equal(
+            "1 Fase", "28/09/2026 → 02/10/2026 · 5 dias (resumo)", "0% concluído", "Situação: Não iniciada");
         Vm.DicaDaTarefaNoGantt(curta.Tarefa.Id).Should().Contain("Folga: 3 dias").And.NotContain("crítica");
         Vm.DicaDaTarefaNoGantt(entrega.Tarefa.Id).Split('\n').Should().Equal(
-            "2 Entrega", "Marco em 02/10/2026", "Folga: 0 dias (crítica)", "Predecessoras: 2");
+            "2 Entrega", "Marco em 02/10/2026", "Folga: 0 dias (crítica)", "Situação: Não iniciada", "Predecessoras: 2");
     }
 
     [Fact]

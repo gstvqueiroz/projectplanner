@@ -51,7 +51,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
     /// <summary>
     /// O layout padrão, na ordem padrão: as colunas do Bloco 5, com as larguras de lá, e as do Bloco 10
     /// (EDT ao lado do Nº, Sucessoras ao lado das Predecessoras e Notas no fim), todas visíveis. O Nome
-    /// ficou mais largo no Bloco 11, para caber o recuo das subtarefas.
+    /// ficou mais largo no Bloco 11, para caber o recuo das subtarefas. A Situação (Bloco 25) entra antes das Notas.
     /// </summary>
     public static readonly IReadOnlyList<(string Id, string Titulo, double Largura)> Padrao =
     [
@@ -70,6 +70,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
         ("TerminoMaisTarde", "Término tarde", 104),
         ("Folga", "Folga (dias)", 85),
         ("Critica", "Crítica", 90),
+        ("Situacao", "Situação", 110),
         ("Notas", "Notas", 200),
     ];
 

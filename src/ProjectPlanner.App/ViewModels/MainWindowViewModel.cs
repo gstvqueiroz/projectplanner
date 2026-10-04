@@ -707,6 +707,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         };
     }
 
+    // A situação de cada tarefa no último cálculo (Bloco 25, C2).
+    private IReadOnlyDictionary<Guid, AndamentoDaTarefa> _andamento = new Dictionary<Guid, AndamentoDaTarefa>();
+
+    AndamentoDaTarefa? IEdicaoCronograma.AndamentoDe(Tarefa tarefa) => _andamento.GetValueOrDefault(tarefa.Id);
+
+    /// <summary>A situação da tarefa na data de hoje, do último cálculo (Bloco 25, C2).</summary>
+    public AndamentoDaTarefa? AndamentoDe(Guid tarefaId) => _andamento.GetValueOrDefault(tarefaId);
+
     string IEdicaoCronograma.TextoPredecessoras(Tarefa tarefa) =>
         NotacaoPredecessoras.Formatar(_cronograma.PredecessorasDe(tarefa.Id)
             .Select(p => new ItemPredecessora(NumeroDa(p.TarefaOrigemId), p.Tipo, p.Lag)));
@@ -830,6 +838,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             var resultado = _calculadora.Calcular(_cronograma);
             TerminoProjeto = resultado.DataTermino;
             Gantt.Hoje = _relogio.GetLocalNow().Date;
+            _andamento = AcompanhamentoDoCronograma.Calcular(_cronograma, Gantt.Hoje.Value);
+            Gantt.TarefasAtrasadas = _andamento.Where(a => a.Value.Situacao == SituacaoDaTarefa.Atrasada).Select(a => a.Key).ToHashSet();
             Gantt.Atualizar(_cronograma, resultado, _ocultas);
         }
         catch (DomainValidationException ex)

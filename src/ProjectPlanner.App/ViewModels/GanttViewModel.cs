@@ -96,6 +96,9 @@ public sealed partial class GanttViewModel : ViewModelBase
     /// <summary>O dia de hoje para a linha "Hoje", repassado pela janela principal a cada recálculo.</summary>
     public DateTime? Hoje { get; set; }
 
+    /// <summary>As tarefas atrasadas na data de hoje (Bloco 25, C2): as barras delas ganham contorno laranja.</summary>
+    public IReadOnlySet<Guid> TarefasAtrasadas { get; set; } = new HashSet<Guid>();
+
     /// <summary>
     /// Opção de exibição (só da sessão): falso pinta as tarefas e setas críticas na cor comum. Não
     /// muda o cálculo; <see cref="BarraGantt.EhCritica"/> continua como o CPM calculou.

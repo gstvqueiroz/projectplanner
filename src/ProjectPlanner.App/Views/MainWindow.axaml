@@ -391,6 +391,22 @@
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Folga" Header="Folga&#x0a;(dias)" Width="85" Binding="{Binding Folga}" IsReadOnly="True" />
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Critica" Header="Crítica" Width="90"
                                     Binding="{Binding EhCritica, Converter={x:Static v:Conversores.SimOuVazio}}" IsReadOnly="True" />
+                <!-- Bloco 25 (C2): a situação na data de hoje; as atrasadas em vermelho. -->
+                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Situacao" Header="Situação" Width="110" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:TarefaViewModel">
+                            <TextBlock Text="{Binding Situacao}" VerticalAlignment="Center" Margin="12,0"
+                                       Classes.atrasada="{Binding EstaAtrasada}">
+                                <TextBlock.Styles>
+                                    <Style Selector="TextBlock.atrasada">
+                                        <Setter Property="Foreground" Value="#C62828" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                    </Style>
+                                </TextBlock.Styles>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Notas" Header="Notas" Binding="{Binding Notas}" Width="200" />
             </DataGrid.Columns>
         </DataGrid>

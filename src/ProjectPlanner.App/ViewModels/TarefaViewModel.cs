@@ -45,6 +45,9 @@ public interface IEdicaoCronograma
 
     /// <summary>O usuário desistiu de uma edição recusada (Esc ou voltou ao valor em vigor): some com a mensagem.</summary>
     void EdicaoCancelada();
+
+    /// <summary>A situação da tarefa na data de hoje (Bloco 25, C2); nula sem cálculo.</summary>
+    AndamentoDaTarefa? AndamentoDe(Tarefa tarefa) => null;
 }
 
 /// <summary>
@@ -64,6 +67,7 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         nameof(Predecessoras), nameof(InicioMaisCedo), nameof(TerminoMaisCedo), nameof(InicioMaisTarde),
         nameof(TerminoMaisTarde), nameof(Folga), nameof(EhCritica), nameof(Sucessoras), nameof(Notas),
         nameof(DestacarComoCritica), nameof(Edt), nameof(Nivel), nameof(EhResumo), nameof(EhMarco),
+        nameof(Situacao), nameof(EstaAtrasada),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -191,6 +195,11 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     public DateTime? InicioMaisTarde => Tarefa.InicioMaisTarde;
     public DateTime? TerminoMaisTarde => Tarefa.TerminoMaisTarde;
     public int? Folga => Tarefa.Folga;
+
+    /// <summary>A coluna Situação (Bloco 25, C2): "Não iniciada", "Em dia", "Atrasada" ou "Concluída", na data de hoje.</summary>
+    public string Situacao => _edicao.AndamentoDe(Tarefa)?.Texto ?? "";
+
+    public bool EstaAtrasada => _edicao.AndamentoDe(Tarefa)?.Situacao == SituacaoDaTarefa.Atrasada;
     public bool EhCritica => Tarefa.EhCritica;
 
     /// <summary>Se a linha aparece com o fundo de crítica: crítica no cálculo e com o destaque ligado.</summary>

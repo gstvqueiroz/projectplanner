@@ -234,6 +234,7 @@ public partial class GanttChartView : UserControl
 
     // Bloco 25 (C1): a linha tracejada do dia de hoje, por cima das barras, e o rótulo no cabeçalho.
     private static readonly IBrush LinhaDeHoje = new SolidColorBrush(Color.Parse("#E65100"));
+    private static readonly IBrush ContornoDeAtrasada = new SolidColorBrush(Color.Parse("#EF6C00"));
 
     private void DesenharHoje(double x)
     {
@@ -364,8 +365,10 @@ public partial class GanttChartView : UserControl
                 RadiusY = 2,
             },
         };
-        forma.Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : null;
-        forma.StrokeThickness = 1.5;
+        // Selecionada: contorno escuro; atrasada (Bloco 25, C2): contorno laranja.
+        var atrasada = viewModel.TarefasAtrasadas.Contains(barra.TarefaId);
+        forma.Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : atrasada ? ContornoDeAtrasada : null;
+        forma.StrokeThickness = atrasada && !viewModel.EstaDestacada(barra) ? 2 : 1.5;
         // A dica rica (Bloco 25, V4) é montada só quando vai abrir: montar a de todas as barras a cada desenho pesaria.
         ToolTip.SetTip(forma, barra.Nome);
         forma.Tag = barra.TarefaId;

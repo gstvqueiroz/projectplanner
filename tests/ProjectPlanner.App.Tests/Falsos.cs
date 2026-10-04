@@ -172,6 +172,17 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Action<ConfiguracaoAssistenteViewModel>? AoConfigurar { get; set; }
 
+    /// <summary>O que o usuário "digita" quando o programa pede um texto (Bloco 25); nulo é cancelar.</summary>
+    public string? TextoDigitado { get; set; }
+
+    public List<(string Titulo, string Pergunta, string? ValorInicial)> TextosPedidos { get; } = [];
+
+    public Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null)
+    {
+        TextosPedidos.Add((titulo, pergunta, valorInicial));
+        return Task.FromResult(TextoDigitado);
+    }
+
     /// <summary>As telas Sobre abertas (Bloco 25).</summary>
     public List<SobreViewModel> Sobres { get; } = [];
 

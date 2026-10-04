@@ -32,6 +32,10 @@ public interface IDialogosService
     /// <summary>Mostra as configurações do assistente (chave e modelo, Bloco 23) e espera ser fechada.</summary>
     Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao);
 
+    /// <summary>Pede um texto curto (Bloco 25: o Nº da tarefa em Ir para a tarefa).</summary>
+    /// <returns>O texto digitado, ou nulo se o usuário cancelar.</returns>
+    Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null);
+
     /// <summary>Mostra Ajuda > Sobre o ProjectPlanner (Bloco 25) e espera ser fechada.</summary>
     Task MostrarSobreAsync(ViewModels.SobreViewModel sobre);
 }

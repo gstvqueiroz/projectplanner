@@ -14,6 +14,9 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 - Correção: a barra de status mostra o nome do arquivo em vez do caminho completo, que cortava o resto da mensagem
   (o caminho completo aparece ao passar o mouse).
 - Linha "Hoje" no Gantt (tracejada, com rótulo no cabeçalho); liga e desliga em Exibir > Linha Hoje.
+- Tarefa > Ir para a tarefa… (⌘/Ctrl+G), pelo Nº ou pela EDT, abrindo os resumos recolhidos, e Tarefa > Rolar até a
+  tarefa, que traz a selecionada para a vista na grid e no Gantt.
+- No controle de zoom do Gantt: Ajustar ao projeto (o projeto inteiro na largura) e Ir para hoje.
 
 ## 0.24.0
 

@@ -111,6 +111,7 @@ public partial class MenuPrincipalTests
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
             "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
+            Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…");
         Titulos(a.Item("Ajuda")).Should().Equal("Sobre o ProjectPlanner…");
     });

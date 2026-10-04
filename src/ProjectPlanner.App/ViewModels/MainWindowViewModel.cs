@@ -124,6 +124,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(GerenciarFotosCommand))]
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAcimaCommand))]
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAbaixoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RolarAteTarefaCommand))]
     [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
     [NotifyPropertyChangedFor(nameof(FotosDaSelecionada))]
     [NotifyPropertyChangedFor(nameof(DicaFotosDaSelecionada))]
@@ -312,6 +313,50 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     [RelayCommand]
     private Task SalvarProjeto() => SalvarAsync();
+
+    /// <summary>Pedido para a grid rolar até a linha (Bloco 25, P3): a janela faz a rolagem.</summary>
+    public event Action<TarefaViewModel>? LinhaParaMostrar;
+
+    /// <summary>
+    /// Tarefa > Ir para a tarefa… (Bloco 25, P3): pergunta o Nº ou a EDT, seleciona a tarefa (abrindo os resumos recolhidos
+    /// acima dela) e rola a grid e o Gantt até ela.
+    /// </summary>
+    [RelayCommand]
+    private async Task IrParaTarefa()
+    {
+        if (Tarefas.Count == 0)
+        {
+            Mensagem = "O projeto ainda não tem tarefas.";
+            return;
+        }
+        var texto = (await _dialogos.PedirTextoAsync("Ir para a tarefa", $"Nº (de 1 a {Tarefas.Count}) ou EDT da tarefa:",
+            TarefaSelecionada?.Numero.ToString(System.Globalization.CultureInfo.InvariantCulture)))?.Trim();
+        if (string.IsNullOrEmpty(texto))
+            return;
+        var linha = int.TryParse(texto, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var numero)
+            ? Tarefas.FirstOrDefault(t => t.Numero == numero)
+            : Tarefas.FirstOrDefault(t => t.Edt == texto);
+        if (linha is null)
+        {
+            Mensagem = $"Não existe a tarefa \"{texto}\". Use o Nº (de 1 a {Tarefas.Count}) ou a EDT, como 1.2.";
+            return;
+        }
+        MostrarTarefa(linha);
+    }
+
+    /// <summary>Tarefa > Rolar até a tarefa (Bloco 25, P3): traz a selecionada para a vista na grid e no Gantt.</summary>
+    [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
+    private void RolarAteTarefa() => MostrarTarefa(TarefaSelecionada!);
+
+    // Abre os resumos recolhidos acima da linha, seleciona e pede as rolagens.
+    private void MostrarTarefa(TarefaViewModel linha)
+    {
+        for (var pai = linha.Tarefa.TarefaPaiId; pai is { } id; pai = LinhaDe(id).Tarefa.TarefaPaiId)
+            LinhaDe(id).Expandido = true;
+        TarefaSelecionada = linha;
+        LinhaParaMostrar?.Invoke(linha);
+        Gantt.MostrarTarefa(linha.Tarefa.Id);
+    }
 
     /// <summary>Ajuda > Sobre o ProjectPlanner (Bloco 25).</summary>
     [RelayCommand]

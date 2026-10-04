@@ -101,4 +101,7 @@ public sealed class DialogosAvalonia : IDialogosService
         new ConfiguracaoAssistenteWindow(configuracao).ShowDialog(JanelaPrincipal);
 
     public Task MostrarSobreAsync(ViewModels.SobreViewModel sobre) => new SobreWindow(sobre).ShowDialog(JanelaPrincipal);
+
+    public Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null) =>
+        new EntradaDeTextoWindow(titulo, pergunta, valorInicial).ShowDialog<string?>(JanelaAtiva);
 }

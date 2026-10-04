@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
@@ -95,6 +96,52 @@ public partial class MenuPrincipalTests
         Apertar(a, Key.S, Comando, PhysicalKey.S);
 
         a.Ambiente.Repositorio.Salvos.Single().Cronograma.Tarefas.Single().Nome.Should().Be("Fundação profunda");
+    });
+
+    // Bloco 25 (P3, P8)
+    [Fact]
+    public Task Atalhos_IrParaTarefa_SelecionaERolaAGrid() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        for (var i = 1; i <= 60; i++)
+            Ambiente.AdicionarTarefa(a.Vm, $"Tarefa {i}", 2);
+        a.Vm.TarefaSelecionada = a.Vm.Tarefas[0];
+        Pintar(a);
+        a.Ambiente.Dialogos.TextoDigitado = "55";
+
+        Apertar(a, Key.G, Comando, PhysicalKey.G);
+
+        a.Vm.TarefaSelecionada!.Numero.Should().Be(55);
+        a.Janela.Grade.GetVisualDescendants().OfType<DataGridRow>().Should().Contain(r => r.DataContext == a.Vm.TarefaSelecionada,
+            "a linha 55 foi trazida para a vista");
+        a.Item("Tarefa", "Ir para a tarefa…").InputGesture.Should().Be(AtalhosDeTeclado.Gesto(AcaoComAtalho.IrParaTarefa, AtalhosDeTeclado.EhMac));
+        a.Janela.MenuPrincipal.Close();
+    });
+
+    [Fact]
+    public Task Zoom_AjustarAoProjeto_EIrParaHoje() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        Ambiente.AdicionarTarefa(a.Vm, "Fundação", 80);
+        Pintar(a);
+        Button Botao(string nome) => a.Janela.ControleDeZoom.GetLogicalDescendants().OfType<Button>()
+            .Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == nome);
+        var rolagem = a.Janela.Gantt.FindControl<ScrollViewer>("RolagemCorpo")!;
+
+        a.ClicarComOMouse(Botao("Ajustar ao projeto"));
+        Pintar(a);
+        a.Vm.Gantt.PixelsPorDia.Should().BeLessThan(GanttViewModel.EscalaInicial, "80 dias úteis não cabiam a 30 px/dia");
+        a.Vm.Gantt.Layout!.Barras[0].Direita.Should().BeLessThanOrEqualTo(rolagem.Bounds.Width);
+        rolagem.Offset.X.Should().Be(0);
+
+        a.Vm.Gantt.PixelsPorDia = GanttViewModel.EscalaMaxima;
+        a.Vm.InicioProjeto = new DateTime(2026, 8, 3); // hoje (28/09) fica bem à direita do começo
+        Pintar(a);
+        a.ClicarComOMouse(Botao("Ir para hoje"));
+        Pintar(a);
+        rolagem.Offset.X.Should().BeGreaterThan(0);
+        var xDeHoje = (Ambiente.Segunda - a.Vm.Gantt.Layout!.InicioEixo).Days * a.Vm.Gantt.PixelsPorDia;
+        (xDeHoje - rolagem.Offset.X).Should().BeInRange(0, rolagem.Bounds.Width, "hoje ficou à vista");
     });
 
     [Fact]

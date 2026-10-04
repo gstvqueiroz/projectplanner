@@ -153,14 +153,27 @@ public partial class GanttChartView : UserControl
     {
         base.OnDataContextChanged(e);
         if (_viewModel is not null)
+        {
             _viewModel.PropertyChanged -= LayoutMudou;
+            _viewModel.RolagemPedida -= RolarAte;
+        }
         _viewModel = DataContext as GanttViewModel;
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += LayoutMudou;
+            _viewModel.RolagemPedida += RolarAte;
             _viewModel.AtualizarAreaVisivel(RolagemCorpo.Bounds.Width, RolagemCorpo.Bounds.Height);
         }
         Desenhar();
+    }
+
+    // Bloco 25 (P3, P8): leva o X pedido a um terço da largura visível (ou ao começo, para o X 0).
+    private void RolarAte(double x)
+    {
+        RolagemCorpo.UpdateLayout(); // um zoom novo (ajustar ao projeto) acabou de mudar a largura do corpo
+        var alvo = Math.Max(0, x - RolagemCorpo.Bounds.Width / 3);
+        RolagemCorpo.Offset = new Vector(alvo, RolagemCorpo.Offset.Y);
+        RolagemCabecalho.Offset = new Vector(RolagemCorpo.Offset.X, 0);
     }
 
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)

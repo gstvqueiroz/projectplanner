@@ -141,6 +141,11 @@
                     <Separator />
                     <MenuItem x:Name="ItemRecalcular" Header="Recalcular cronograma" Command="{Binding RecalcularCronogramaCommand}" />
                     <Separator />
+                    <!-- Bloco 25 (P3) -->
+                    <MenuItem x:Name="ItemIrParaTarefa" Header="Ir para a tarefa…" Command="{Binding IrParaTarefaCommand}" />
+                    <MenuItem Header="Rolar até a tarefa" Command="{Binding RolarAteTarefaCommand}"
+                              ToolTip.Tip="Trazer a tarefa selecionada para a vista na grid e no Gantt" />
+                    <Separator />
                     <!-- Sempre visível (Bloco 17): abre a galeria mesmo sem fotos, para adicionar a primeira. -->
                     <MenuItem x:Name="ItemFotos" Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}"
                               ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
@@ -406,6 +411,11 @@
                             ToolTip.Tip="Aumentar o zoom (5 px/dia)" AutomationProperties.Name="Aumentar zoom" />
                     <TextBlock Text="{Binding Gantt.PixelsPorDia, StringFormat={}{0:0} px/dia}" VerticalAlignment="Center"
                                MinWidth="58" Margin="4,0,6,0" FontSize="12" />
+                    <!-- Bloco 25 (P8) -->
+                    <Button Classes="zoom" Content="⤢" FontSize="14" Command="{Binding Gantt.AjustarAoProjetoCommand}"
+                            ToolTip.Tip="Ajustar ao projeto: o projeto inteiro na largura do Gantt" AutomationProperties.Name="Ajustar ao projeto" />
+                    <Button Classes="zoom" Content="◉" FontSize="12" Command="{Binding Gantt.IrParaHojeCommand}" Margin="0,0,4,0"
+                            ToolTip.Tip="Ir para hoje" AutomationProperties.Name="Ir para hoje" />
                 </StackPanel>
             </Border>
         </Panel>

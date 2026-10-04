@@ -52,6 +52,7 @@ public partial class MainWindow : Window
     {
         if (_viewModel is not null)
         {
+            _viewModel.LinhaParaMostrar -= RolarAteALinha;
             _viewModel.PropertyChanged -= ViewModelMudou;
             _viewModel.Assistente.PropertyChanged -= AssistenteMudou;
         }
@@ -61,11 +62,15 @@ public partial class MainWindow : Window
             return;
         MontarMenuDeColunas(_viewModel.Colunas);
         MostrarContadorDeFotos(_viewModel);
+        _viewModel.LinhaParaMostrar += RolarAteALinha;
         _viewModel.PropertyChanged += ViewModelMudou;
         _viewModel.Assistente.PropertyChanged += AssistenteMudou;
         AplicarModoVisualizacao();
         AplicarPainelDoAssistente();
     }
+
+    // Bloco 25 (P3): a grid rola até a linha pedida (Ir para a tarefa, Rolar até a tarefa).
+    private void RolarAteALinha(TarefaViewModel linha) => Grade.ScrollIntoView(linha, null);
 
     /// <summary>O número no canto do botão de fotos (Bloco 25, F1): quantas fotos tem a tarefa selecionada.</summary>
     internal Border? ContadorDeFotos { get; private set; }
@@ -318,7 +323,7 @@ public partial class MainWindow : Window
                      (ItemSalvarComo, AcaoComAtalho.SalvarComo), (ItemRecalcular, AcaoComAtalho.Recalcular),
                      (ItemFotos, AcaoComAtalho.FotosDaTarefa), (ItemDividido, AcaoComAtalho.Dividido),
                      (ItemSomenteTabela, AcaoComAtalho.SomenteTabela), (ItemSomenteGantt, AcaoComAtalho.SomenteGantt),
-                     (ItemAssistente, AcaoComAtalho.Assistente),
+                     (ItemAssistente, AcaoComAtalho.Assistente), (ItemIrParaTarefa, AcaoComAtalho.IrParaTarefa),
                  })
             item.InputGesture = AtalhosDeTeclado.Gesto(acao, mac);
 
@@ -360,6 +365,7 @@ public partial class MainWindow : Window
             AcaoComAtalho.SomenteTabela => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteTabela),
             AcaoComAtalho.SomenteGantt => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteGantt),
             AcaoComAtalho.Assistente => ((System.Windows.Input.ICommand)vm.Assistente.AlternarVisibilidadeCommand, (object?)null),
+            AcaoComAtalho.IrParaTarefa => (vm.IrParaTarefaCommand, null),
             _ => ((System.Windows.Input.ICommand?)null, (object?)null),
         };
         if (comando?.CanExecute(parametro) == true)

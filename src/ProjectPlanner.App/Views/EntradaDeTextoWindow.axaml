@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ProjectPlanner.App.Views.EntradaDeTextoWindow"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 25: pede um texto curto (Ir para a tarefa). Enter confirma, Esc cancela. -->
+    <StackPanel Margin="20" Spacing="12" MinWidth="320">
+        <TextBlock x:Name="Pergunta" TextWrapping="Wrap" />
+        <TextBox x:Name="Resposta" />
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Cancelar" Click="Cancelar" IsCancel="True" />
+            <Button x:Name="Confirmar" Content="OK" Classes="accent" Click="Confirmado" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

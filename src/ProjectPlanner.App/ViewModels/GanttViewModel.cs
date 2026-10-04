@@ -113,6 +113,45 @@ public sealed partial class GanttViewModel : ViewModelBase
     /// <summary>O usuário clicou na barra de uma tarefa; a janela principal a seleciona.</summary>
     public event Action<Guid>? BarraClicada;
 
+    /// <summary>Pedido de rolagem horizontal até o X dado (Bloco 25: ir para a tarefa, ir para hoje, ajustar).</summary>
+    public event Action<double>? RolagemPedida;
+
+    /// <summary>Rola o Gantt até a barra da tarefa; falso se ela não está desenhada (oculta ou sem cálculo).</summary>
+    public bool MostrarTarefa(Guid tarefaId)
+    {
+        if (Layout?.Barras.FirstOrDefault(b => b.TarefaId == tarefaId) is not { } barra)
+            return false;
+        RolagemPedida?.Invoke(barra.X);
+        return true;
+    }
+
+    /// <summary>Dias a mais depois do fim do projeto ao ajustar o zoom, para a última barra não encostar na borda.</summary>
+    public const int FolgaAoAjustar = 2;
+
+    /// <summary>Botão do zoom (Bloco 25, P8): a escala em que o projeto inteiro cabe na largura visível.</summary>
+    [RelayCommand(CanExecute = nameof(PodeAjustarAoProjeto))]
+    private void AjustarAoProjeto()
+    {
+        var dias = (_resultado!.DataTermino.Date - _cronograma!.DataInicio.Date).Days + 1
+                   + CalculadoraLayoutGantt.DiasAntesDoInicio + FolgaAoAjustar;
+        PixelsPorDia = Math.Clamp(Math.Floor(_larguraVisivel / dias * 10) / 10, EscalaMinima, EscalaMaxima);
+        RolagemPedida?.Invoke(0);
+    }
+
+    private bool PodeAjustarAoProjeto() => _cronograma is { Tarefas.Count: > 0 } && _resultado is not null && _larguraVisivel > 0;
+
+    /// <summary>Botão do zoom (Bloco 25, P8): rola o Gantt até o dia de hoje (com a linha ligada ou não).</summary>
+    [RelayCommand(CanExecute = nameof(PodeIrParaHoje))]
+    private void IrParaHoje() => RolagemPedida?.Invoke((Hoje!.Value.Date - Layout!.InicioEixo).Days * PixelsPorDia);
+
+    private bool PodeIrParaHoje() => Hoje is { } hoje && Layout is { } layout && hoje.Date >= layout.InicioEixo && hoje.Date <= layout.FimEixo;
+
+    partial void OnLayoutChanged(LayoutGantt? value)
+    {
+        AjustarAoProjetoCommand.NotifyCanExecuteChanged();
+        IrParaHojeCommand.NotifyCanExecuteChanged();
+    }
+
     /// <summary>
     /// Opção de exibição (só da sessão): mostra o ícone de câmera ao lado das barras das tarefas que têm
     /// fotos. Desligada, o ícone some e não dá para abrir a galeria pelo Gantt.

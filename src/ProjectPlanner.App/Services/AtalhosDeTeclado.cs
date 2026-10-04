@@ -15,6 +15,7 @@ public enum AcaoComAtalho
     SomenteTabela,
     SomenteGantt,
     Assistente,
+    IrParaTarefa,
 }
 
 /// <param name="Comando">Com a tecla de comando da plataforma: ⌘ no Mac, Ctrl no Windows.</param>
@@ -40,6 +41,7 @@ public static class AtalhosDeTeclado
         new(AcaoComAtalho.SomenteTabela, Key.D2),
         new(AcaoComAtalho.SomenteGantt, Key.D3),
         new(AcaoComAtalho.Assistente, Key.J),
+        new(AcaoComAtalho.IrParaTarefa, Key.G),
     ];
 
     public static Atalho De(AcaoComAtalho acao) => Todos.Single(a => a.Acao == acao);

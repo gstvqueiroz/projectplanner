@@ -64,6 +64,9 @@ public sealed record OpcoesGantt
 
     /// <summary>Cultura dos rótulos do cabeçalho (nomes de meses, formato de datas).</summary>
     public CultureInfo Cultura { get; init; } = CultureInfo.CurrentCulture;
+
+    /// <summary>O dia de hoje, para a linha "Hoje" (Bloco 25, C1); nulo não desenha a linha.</summary>
+    public DateTime? Hoje { get; init; }
 }
 
 /// <summary>
@@ -82,6 +85,10 @@ public sealed record OpcoesGantt
 /// Pistas sem tarefa abaixo da última, até o fim da altura visível (Bloco 20): só grade, sem barra nem clique.
 /// A quantidade vem de <see cref="PreenchimentoDaGrade.LinhasVazias"/>, a mesma conta das linhas vazias da grid.
 /// </param>
+/// <param name="XDeHoje">
+/// Onde passa a linha "Hoje" (Bloco 25): o meio da coluna do dia de <see cref="OpcoesGantt.Hoje"/>; nulo sem ele ou
+/// se hoje está fora do eixo.
+/// </param>
 public sealed record LayoutGantt(
     DateTime InicioEixo,
     DateTime FimEixo,
@@ -92,7 +99,8 @@ public sealed record LayoutGantt(
     EscalaGantt Escala,
     IReadOnlyList<ColunaDia> FinsDeSemana,
     double AlturaLinha,
-    int PistasVazias = 0)
+    int PistasVazias = 0,
+    double? XDeHoje = null)
 {
     /// <summary>
     /// Pistas desenhadas (as das tarefas e as vazias abaixo delas, Bloco 20): cada uma ganha a divisória de baixo.

@@ -88,6 +88,9 @@
                               ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
                     <MenuItem Header="Folga" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFolga, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar a linha cinza da folga total, abaixo da barra de cada tarefa" />
+                    <!-- Bloco 25 (C1) -->
+                    <MenuItem Header="Linha Hoje" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarHoje, Mode=TwoWay}"
+                              ToolTip.Tip="A linha tracejada do dia de hoje no Gantt" />
                     <Separator />
                     <!-- Modos de visualização (Bloco 16): quais painéis aparecem. Só da sessão. -->
                     <MenuItem x:Name="ItemDividido" Header="Dividido" ToggleType="Radio" GroupName="ModoVisualizacao"

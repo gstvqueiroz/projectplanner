@@ -773,6 +773,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         {
             var resultado = _calculadora.Calcular(_cronograma);
             TerminoProjeto = resultado.DataTermino;
+            Gantt.Hoje = _relogio.GetLocalNow().Date;
             Gantt.Atualizar(_cronograma, resultado, _ocultas);
         }
         catch (DomainValidationException ex)

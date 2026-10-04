@@ -86,6 +86,17 @@ public sealed partial class GanttViewModel : ViewModelBase
     public partial bool MostrarFolga { get; set; }
 
     /// <summary>
+    /// Opção de exibição (só da sessão, ligada por padrão; Bloco 25, C1): a linha tracejada no dia de <see cref="Hoje"/>.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool MostrarHoje { get; set; } = true;
+
+    partial void OnMostrarHojeChanged(bool value) => RefazerLayout();
+
+    /// <summary>O dia de hoje para a linha "Hoje", repassado pela janela principal a cada recálculo.</summary>
+    public DateTime? Hoje { get; set; }
+
+    /// <summary>
     /// Opção de exibição (só da sessão): falso pinta as tarefas e setas críticas na cor comum. Não
     /// muda o cálculo; <see cref="BarraGantt.EhCritica"/> continua como o CPM calculou.
     /// </summary>
@@ -246,5 +257,6 @@ public sealed partial class GanttViewModel : ViewModelBase
                 LarguraVisivel = _larguraVisivel,
                 AlturaVisivel = _alturaVisivel,
                 TarefasOcultas = _ocultas,
+                Hoje = MostrarHoje ? Hoje : null,
             });
 }

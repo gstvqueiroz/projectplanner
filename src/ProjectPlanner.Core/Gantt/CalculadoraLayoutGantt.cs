@@ -87,10 +87,14 @@ public static class CalculadoraLayoutGantt
             .Select(dia => new ColunaDia(dia, eixo.InicioDoDia(dia), opcoes.PixelsPorDia))
             .ToList();
 
+        var xDeHoje = opcoes.Hoje is { } hoje && hoje.Date >= inicioEixo && hoje.Date <= fimEixo
+            ? eixo.InicioDoDia(hoje.Date) + opcoes.PixelsPorDia / 2
+            : (double?)null;
+
         return new LayoutGantt(inicioEixo, fimEixo, eixo.FimDoDia(fimEixo),
             Math.Max(barras.Count * opcoes.AlturaLinha, opcoes.AlturaVisivel),
             barras, setas, Escala(inicioEixo, fimEixo, eixo, opcoes), finsDeSemana, opcoes.AlturaLinha,
-            PreenchimentoDaGrade.LinhasVazias(barras.Count, opcoes.AlturaVisivel, opcoes.AlturaLinha));
+            PreenchimentoDaGrade.LinhasVazias(barras.Count, opcoes.AlturaVisivel, opcoes.AlturaLinha), xDeHoje);
     }
 
     /// <summary>Quantos dias inteiros ou parciais cabem numa largura, nessa escala (pelo menos 1).</summary>

@@ -215,6 +215,36 @@ public partial class GanttChartView : UserControl
             DesenharBarra(barra, _viewModel);
         foreach (var seta in layout.Setas)
             DesenharSeta(seta, _viewModel);
+        if (layout.XDeHoje is { } xDeHoje)
+            DesenharHoje(xDeHoje);
+    }
+
+    // Bloco 25 (C1): a linha tracejada do dia de hoje, por cima das barras, e o rótulo no cabeçalho.
+    private static readonly IBrush LinhaDeHoje = new SolidColorBrush(Color.Parse("#E65100"));
+
+    private void DesenharHoje(double x)
+    {
+        Corpo.Children.Add(new Line
+        {
+            Name = "LinhaHoje",
+            StartPoint = new Point(x, 0),
+            EndPoint = new Point(x, Corpo.Height),
+            Stroke = LinhaDeHoje,
+            StrokeThickness = 1.5,
+            StrokeDashArray = [4, 3],
+            IsHitTestVisible = false,
+        });
+        var rotulo = new Border
+        {
+            Name = "RotuloHoje",
+            Background = LinhaDeHoje,
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(4, 0),
+            IsHitTestVisible = false,
+            Child = new TextBlock { Text = "Hoje", FontSize = 10, Foreground = Brushes.White },
+        };
+        rotulo.Measure(Size.Infinity);
+        Posicionar(Cabecalho, rotulo, x - rotulo.DesiredSize.Width / 2, GanttViewModel.AlturaCabecalho - rotulo.DesiredSize.Height - 1);
     }
 
     private void DesenharCabecalho(EscalaGantt escala)

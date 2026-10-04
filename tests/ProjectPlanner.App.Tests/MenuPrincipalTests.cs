@@ -105,7 +105,7 @@ public partial class MenuPrincipalTests
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…");
-        Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", Linha,
+        Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha Hoje", Linha,
             "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Assistente (IA)");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
@@ -186,6 +186,28 @@ public partial class MenuPrincipalTests
         var informacoes = a.Janela.FindControl<StackPanel>("InformacoesDaBarra")!;
         var direita = informacoes.TranslatePoint(new Point(informacoes.Bounds.Width, 0), a.Janela)!.Value.X;
         (a.Janela.Bounds.Width - direita).Should().BeInRange(0, 12, "fica encostada à direita");
+    });
+
+    // Bloco 25 (C1)
+    [Fact]
+    public Task Gantt_LinhaHoje_DesenhadaEDesligadaPeloMenu() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        Ambiente.AdicionarTarefa(a.Vm, "Fundação", 5);
+        Pintar(a);
+        var corpo = a.Janela.Gantt.FindControl<Canvas>("Corpo")!;
+        var cabecalho = a.Janela.Gantt.FindControl<Canvas>("Cabecalho")!;
+        Avalonia.Controls.Shapes.Line? Hoje() => corpo.Children.OfType<Avalonia.Controls.Shapes.Line>().SingleOrDefault(l => l.Name == "LinhaHoje");
+
+        var linha = Hoje()!;
+        (linha.StartPoint.X, linha.EndPoint.X, linha.StartPoint.Y).Should().Be((a.Vm.Gantt.Layout!.XDeHoje!.Value, a.Vm.Gantt.Layout.XDeHoje.Value, 0d));
+        cabecalho.Children.OfType<Border>().Should().ContainSingle(b => b.Name == "RotuloHoje");
+
+        a.Clicar("Exibir", "Linha Hoje");
+        Pintar(a);
+
+        (a.Vm.Gantt.MostrarHoje, Hoje()).Should().Be((false, (Avalonia.Controls.Shapes.Line?)null));
+        cabecalho.Children.OfType<Border>().Should().NotContain(b => b.Name == "RotuloHoje");
     });
 
     // Bloco 25 (B6)

@@ -13,6 +13,7 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   a tarefa selecionada com as datas do cronograma e a versão.
 - Correção: a barra de status mostra o nome do arquivo em vez do caminho completo, que cortava o resto da mensagem
   (o caminho completo aparece ao passar o mouse).
+- Linha "Hoje" no Gantt (tracejada, com rótulo no cabeçalho); liga e desliga em Exibir > Linha Hoje.
 
 ## 0.24.0
 

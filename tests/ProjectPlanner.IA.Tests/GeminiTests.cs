@@ -71,9 +71,56 @@ public sealed class GeminiTests : IDisposable
         await Assistente().EnviarAsync(Pedido("Quanto falta?", contexto: Obra()), CancellationToken.None);
 
         var instrucoes = _servidor.UltimoCorpo["systemInstruction"]!["parts"]![0]!["text"]!.GetValue<string>();
-        instrucoes.Should().StartWith(InstrucoesDoAssistente.Base).And.Contain("CRONOGRAMA ABERTO (só leitura):")
+        instrucoes.Should().StartWith(InstrucoesDoAssistente.Base).And.Contain("CRONOGRAMA ABERTO:")
             .And.Contain("Projeto: Obra Teste").And.Contain("1 | 1 | Fundação | tarefa | 5 dias");
         Conteudos(_servidor.UltimoCorpo).Should().Equal(("user", "Quanto falta?"));
+    }
+
+    // Bloco 24: o Gemini é obrigado a responder no formato {mensagem, alteracoes}.
+    [Fact]
+    public async Task Enviar_PedeRespostaEmJson_ComOEsquemaDasAlteracoes()
+    {
+        await Assistente().EnviarAsync(Pedido("Monte o cronograma"), CancellationToken.None);
+
+        var configuracao = _servidor.UltimoCorpo["generationConfig"]!;
+        configuracao["responseMimeType"]!.GetValue<string>().Should().Be("application/json");
+        var esquema = configuracao["responseSchema"]!;
+        esquema["required"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal("mensagem", "alteracoes");
+        var item = esquema["properties"]!["alteracoes"]!["items"]!;
+        item["properties"]!["acao"]!["enum"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal(AcoesNoCronograma.Todas);
+        item["properties"]!["tipo"]!["enum"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal("TI", "II", "TT", "IT");
+        item["properties"]!["duracao"]!["type"]!.GetValue<string>().Should().Be("INTEGER");
+    }
+
+    [Fact]
+    public async Task Resposta_EmJson_TrazAMensagemEAsAlteracoes()
+    {
+        const string json = """
+            {"mensagem": "Montei a fundação.", "alteracoes": [
+              {"acao": "criar", "ref": "n1", "nome": "Fundação"},
+              {"acao": "criar", "ref": "n2", "nome": "Escavar", "duracao": 2, "pai": "n1"},
+              {"acao": "vincular", "de": "n2", "para": "3", "tipo": "II", "defasagem": 1}]}
+            """;
+        _servidor.Responder = (_, _) => Task.FromResult(ManipuladorFalso.Json(200, ManipuladorFalso.Resposta(json)));
+
+        var resposta = await Assistente().EnviarAsync(Pedido("Monte a fundação"), CancellationToken.None);
+
+        resposta.Texto.Should().Be("Montei a fundação.");
+        resposta.Alteracoes.Should().Equal(
+            new AlteracaoDoCronograma("criar", Ref: "n1", Nome: "Fundação"),
+            new AlteracaoDoCronograma("criar", Ref: "n2", Nome: "Escavar", Duracao: 2, Pai: "n1"),
+            new AlteracaoDoCronograma("vincular", De: "n2", Para: "3", Tipo: "II", Defasagem: 1));
+    }
+
+    [Fact]
+    public async Task Resposta_EmJsonCortadaPeloTamanho_NaoAlteraNada()
+    {
+        const string cortado = """{"mensagem": "Montei", "alteracoes": [{"acao": "criar", "ref": "n1", "no""";
+        _servidor.Responder = (_, _) => Task.FromResult(ManipuladorFalso.Json(200, ManipuladorFalso.Resposta(cortado, "MAX_TOKENS")));
+
+        var enviar = () => Assistente().EnviarAsync(Pedido("Monte tudo"), CancellationToken.None);
+
+        await enviar.Should().ThrowAsync<ErroDoAssistenteException>().WithMessage("A resposta do assistente ficou longa demais e veio cortada*");
     }
 
     [Fact]
@@ -412,7 +459,7 @@ public sealed class GeminiTests : IDisposable
         var provedor = new ProvedorGemini(_http);
         using var cliente = ProvedorGemini.CriarHttpClient();
 
-        (provedor.Nome, provedor.ModeloPadrao, cliente.Timeout).Should().Be(("Gemini (Google)", "gemini-2.5-flash", TimeSpan.FromMinutes(2)));
+        (provedor.Nome, provedor.ModeloPadrao, cliente.Timeout).Should().Be(("Gemini (Google)", "gemini-2.5-flash", TimeSpan.FromMinutes(5)));
         provedor.CriarAssistente(Chave, " models/gemini-2.5-pro").Should().BeOfType<AssistenteGemini>()
             .Which.Modelo.Should().Be("gemini-2.5-pro");
         var semHttp = () => new ProvedorGemini(null!);

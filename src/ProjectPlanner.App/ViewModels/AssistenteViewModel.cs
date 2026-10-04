@@ -6,9 +6,39 @@ using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
 
-/// <summary>Uma mensagem da conversa como o painel a mostra.</summary>
-public sealed record MensagemNaTela(MensagemChat Mensagem)
+/// <summary>
+/// O que uma resposta do assistente fez no cronograma (Bloco 24): aplicada (com Desfazer enquanto for a última),
+/// recusada (com o motivo) ou cancelada pelo usuário.
+/// </summary>
+public sealed partial class AlteracoesNaConversa(ResultadoDaAplicacao resultado) : ObservableObject
 {
+    public ResultadoDaAplicacao Resultado { get; } = resultado;
+
+    public bool Aplicadas => Resultado.Situacao == SituacaoDaAplicacao.Aplicada;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Texto))]
+    public partial bool Desfeitas { get; set; }
+
+    [ObservableProperty]
+    public partial bool PodeDesfazer { get; set; }
+
+    public string Texto => Desfeitas
+        ? $"Desfeito: {Resultado.Texto}"
+        : Resultado.Situacao switch
+        {
+            SituacaoDaAplicacao.Aplicada when Resultado.Marca is null => "Nenhuma mudança no cronograma.",
+            SituacaoDaAplicacao.Aplicada => $"Cronograma alterado: {Resultado.Texto}",
+            SituacaoDaAplicacao.Recusada => $"Nada foi alterado. {Resultado.Texto}",
+            _ => Resultado.Texto,
+        };
+}
+
+/// <summary>Uma mensagem da conversa como o painel a mostra.</summary>
+public sealed record MensagemNaTela(MensagemChat Mensagem, AlteracoesNaConversa? Alteracoes = null)
+{
+    public bool TemAlteracoes => Alteracoes is not null;
+
     public bool DoUsuario => Mensagem.Autor == AutorMensagem.Usuario;
     public bool EhErro => Mensagem.EhErro;
     public string Texto => Mensagem.Texto;
@@ -31,18 +61,19 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     private readonly TimeProvider _relogio;
     private readonly IPreferenciasInterface _preferencias;
     private readonly IConfiguracaoAssistente _configuracao;
-    private readonly Func<ContextoDoProjeto?> _contexto;
+    private readonly ICronogramaDoAssistente _cronograma;
     private readonly bool _carregado;
     private CancellationTokenSource? _cancelamento;
     private int _conversa; // muda a cada limpeza: uma resposta atrasada de uma conversa limpa é descartada
 
     public AssistenteViewModel(IAssistenteIA assistente, IDialogosService dialogos, TimeProvider relogio,
-        IPreferenciasInterface preferencias, IConfiguracaoAssistente configuracao, Func<ContextoDoProjeto?> contexto)
+        IPreferenciasInterface preferencias, IConfiguracaoAssistente configuracao, ICronogramaDoAssistente cronograma)
     {
         ArgumentNullException.ThrowIfNull(configuracao);
-        ArgumentNullException.ThrowIfNull(contexto);
+        ArgumentNullException.ThrowIfNull(cronograma);
         (_assistente, _dialogos, _relogio, _preferencias) = (assistente, dialogos, relogio, preferencias);
-        (_configuracao, _contexto) = (configuracao, contexto);
+        (_configuracao, _cronograma) = (configuracao, cronograma);
+        cronograma.DesfazerMudou += AtualizarDesfazer;
         Visivel = preferencias.Carregar()?.MostrarAssistente ?? false; // oculto na primeira vez (D7)
         _carregado = true;
         Mensagens.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ConversaVazia));
@@ -111,8 +142,10 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     private bool PodeEnviar() => !Aguardando && (!string.IsNullOrWhiteSpace(TextoDigitado) || AnexosPendentes.Count > 0);
 
     /// <summary>
-    /// Manda o texto e os anexos pendentes ao assistente, com o histórico da conversa (sem os avisos locais), e
-    /// acrescenta a resposta. Uma falha ou um cancelamento vira um aviso na conversa, sem interromper o painel.
+    /// Manda o texto e os anexos pendentes ao assistente, com o histórico da conversa (sem os avisos locais) e o retrato
+    /// do cronograma, e acrescenta a resposta. As alterações do cronograma que vierem nela são aplicadas (Bloco 24); se
+    /// uma não valer, nada é aplicado e o assistente recebe o erro uma vez para corrigir. Uma falha ou um cancelamento
+    /// vira um aviso na conversa, sem interromper o painel.
     /// </summary>
     [RelayCommand(CanExecute = nameof(PodeEnviar))]
     private async Task Enviar()
@@ -120,7 +153,8 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         var texto = TextoDigitado.Trim();
         var anexos = AnexosPendentes.ToList();
         var historico = Mensagens.Select(m => m.Mensagem).Where(m => !m.EhErro).ToList();
-        Mensagens.Add(new MensagemNaTela(new MensagemChat(AutorMensagem.Usuario, texto, _relogio.GetLocalNow(), anexos)));
+        var doUsuario = new MensagemChat(AutorMensagem.Usuario, texto, _relogio.GetLocalNow(), anexos);
+        Mensagens.Add(new MensagemNaTela(doUsuario));
         TextoDigitado = "";
         AnexosPendentes.Clear();
         AvisoDeAnexo = "";
@@ -129,9 +163,41 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         using var cancelamento = _cancelamento = new CancellationTokenSource();
         Aguardando = true;
         MensagemChat resposta;
+        AlteracoesNaConversa? alteracoes = null;
         try
         {
-            var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico, _contexto()), cancelamento.Token);
+            var retrato = _cronograma.Retrato();
+            var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico, retrato), cancelamento.Token);
+            if (r.Alteracoes.Count > 0 && conversa == _conversa)
+            {
+                var aplicacao = await _cronograma.AplicarAsync(r.Alteracoes, retrato);
+                if (aplicacao.Situacao == SituacaoDaAplicacao.Recusada)
+                {
+                    // Nada mudou no cronograma: o assistente recebe o erro e manda a lista inteira de novo, corrigida.
+                    var tentativa = historico.Append(doUsuario)
+                        .Append(new MensagemChat(AutorMensagem.Assistente, r.Texto, _relogio.GetLocalNow(), [])).ToList();
+                    var novoRetrato = _cronograma.Retrato();
+                    RespostaIA? corrigida;
+                    try
+                    {
+                        corrigida = await _assistente.EnviarAsync(
+                            new PedidoIA(PedidoDeCorrecao(aplicacao.Texto), [], tentativa, novoRetrato), cancelamento.Token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        corrigida = null; // fica a primeira resposta, com o motivo da recusa
+                    }
+                    if (corrigida is { Alteracoes.Count: > 0 } && conversa == _conversa)
+                    {
+                        r = corrigida;
+                        aplicacao = await _cronograma.AplicarAsync(corrigida.Alteracoes, novoRetrato);
+                    }
+                }
+                alteracoes = new AlteracoesNaConversa(aplicacao)
+                {
+                    PodeDesfazer = aplicacao.Marca is { } marca && _cronograma.PodeDesfazer(marca),
+                };
+            }
             resposta = new MensagemChat(AutorMensagem.Assistente, r.Texto, _relogio.GetLocalNow(), []);
         }
         catch (OperationCanceledException)
@@ -148,7 +214,29 @@ public sealed partial class AssistenteViewModel : ViewModelBase
             Aguardando = false;
         }
         if (conversa == _conversa)
-            Mensagens.Add(new MensagemNaTela(resposta));
+            Mensagens.Add(new MensagemNaTela(resposta, resposta.EhErro ? null : alteracoes));
+    }
+
+    /// <summary>O pedido de correção mandado quando as alterações de uma resposta não puderam ser aplicadas.</summary>
+    public static string PedidoDeCorrecao(string motivo) =>
+        $"As alterações da sua resposta anterior não foram aplicadas, e o cronograma não mudou. Motivo: {motivo} " +
+        "Corrija e mande de novo a lista completa de alterações (os Nº continuam os do retrato desta mensagem).";
+
+    /// <summary>Volta o cronograma para como estava antes da resposta (só a última aplicação pode ser desfeita).</summary>
+    [RelayCommand]
+    private async Task Desfazer(AlteracoesNaConversa? alteracoes)
+    {
+        if (alteracoes?.Resultado.Marca is not { } marca)
+            return;
+        if (await _cronograma.DesfazerAsync(marca))
+            alteracoes.Desfeitas = true;
+        AtualizarDesfazer();
+    }
+
+    private void AtualizarDesfazer()
+    {
+        foreach (var alteracoes in Mensagens.Select(m => m.Alteracoes).OfType<AlteracoesNaConversa>())
+            alteracoes.PodeDesfazer = !alteracoes.Desfeitas && alteracoes.Resultado.Marca is { } marca && _cronograma.PodeDesfazer(marca);
     }
 
     [RelayCommand(CanExecute = nameof(Aguardando))]

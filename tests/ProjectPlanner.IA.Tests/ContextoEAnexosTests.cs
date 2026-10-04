@@ -62,9 +62,12 @@ public class ContextoEAnexosTests
     {
         var contexto = new ContextoDoProjeto("Obra", Seg, Seg, Seg, []);
 
-        InstrucoesDoAssistente.Montar(contexto).Should().Be(InstrucoesDoAssistente.Base + "\n\nCRONOGRAMA ABERTO (só leitura):\n" + contexto.ComoTexto());
+        InstrucoesDoAssistente.Montar(contexto).Should().Be(InstrucoesDoAssistente.Base + "\n\nCRONOGRAMA ABERTO:\n" + contexto.ComoTexto());
         InstrucoesDoAssistente.Montar(null).Should().EndWith("Nenhum projeto está aberto no momento.");
-        InstrucoesDoAssistente.Base.Should().Contain("português do Brasil").And.Contain("sem Markdown").And.Contain("não consegue alterá-lo");
+        InstrucoesDoAssistente.Base.Should().Contain("português do Brasil").And.Contain("sem Markdown").And.Contain(InstrucoesDoAssistente.Alteracoes);
+        foreach (var acao in AcoesNoCronograma.Todas)
+            InstrucoesDoAssistente.Alteracoes.Should().Contain($"- {acao}:", "cada ação é explicada ao assistente");
+        InstrucoesDoAssistente.Alteracoes.Should().Contain("resumos não têm vínculos").And.Contain("Nº da linha").And.Contain("todas ou nenhuma");
     }
 
     [Theory]

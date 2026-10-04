@@ -175,7 +175,7 @@ public sealed class AssistenteGeminiTests : IDisposable
     public void Construtor_SemConfiguracaoOuRetrato_Recusado()
     {
         var semConfiguracao = () => new AssistenteViewModel(_ambiente.Assistente, _ambiente.Dialogos, _ambiente.Relogio,
-            _ambiente.PreferenciasInterface, null!, () => null);
+            _ambiente.PreferenciasInterface, null!, _vm);
         var semRetrato = () => new AssistenteViewModel(_ambiente.Assistente, _ambiente.Dialogos, _ambiente.Relogio,
             _ambiente.PreferenciasInterface, _ambiente.ConfiguracaoAssistente, null!);
 

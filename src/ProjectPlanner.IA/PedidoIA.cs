@@ -19,10 +19,12 @@ public sealed record PedidoIA(
     IReadOnlyList<MensagemChat> Historico,
     ContextoDoProjeto? Contexto = null);
 
-/// <summary>A resposta do assistente.</summary>
-/// <remarks>
-/// PONTO DE EXTENSÃO (bloco futuro): um campo <c>Propostas</c> com alterações tipadas do cronograma (adicionar
-/// tarefa, mudar duração, criar vínculo...), que o painel mostra para o usuário aceitar ou recusar e aplica pelos
-/// comandos do domínio, com as validações de sempre. Hoje o assistente só lê o cronograma.
-/// </remarks>
-public sealed record RespostaIA(string Texto);
+/// <summary>A resposta do assistente: o texto para o usuário e, desde o Bloco 24, as alterações do cronograma.</summary>
+public sealed record RespostaIA(string Texto)
+{
+    /// <summary>
+    /// As alterações que o assistente pediu, na ordem (vazia numa resposta que só conversa). O App aplica todas ou
+    /// nenhuma, com as regras do domínio, e guarda o cronograma de antes para o Desfazer.
+    /// </summary>
+    public IReadOnlyList<AlteracaoDoCronograma> Alteracoes { get; init; } = [];
+}

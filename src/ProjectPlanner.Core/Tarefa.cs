@@ -247,6 +247,28 @@ public class Tarefa
 
     internal void DefinirPai(Guid? tarefaPaiId) => TarefaPaiId = tarefaPaiId;
 
+    /// <summary>Uma tarefa igual a esta, com o mesmo Id e as mesmas fotos (para <see cref="Cronograma.Copiar"/>).</summary>
+    internal Tarefa Copiar()
+    {
+        var copia = new Tarefa(Id, Nome, DataInicio, Duracao)
+        {
+            EhResumo = EhResumo,
+            TarefaPaiId = TarefaPaiId,
+            DataTermino = DataTermino,
+            PercentualConcluido = PercentualConcluido,
+            Notas = Notas,
+            InicioMaisCedo = InicioMaisCedo,
+            TerminoMaisCedo = TerminoMaisCedo,
+            InicioMaisTarde = InicioMaisTarde,
+            TerminoMaisTarde = TerminoMaisTarde,
+            Folga = Folga,
+            MarcoNoFimDoDia = MarcoNoFimDoDia,
+            MarcoTardeNoFimDoDia = MarcoTardeNoFimDoDia,
+        };
+        copia._fotos.AddRange(_fotos);
+        return copia;
+    }
+
     internal void DefinirSeEhResumo(bool ehResumo) => EhResumo = ehResumo;
 
     private void RecusarSeResumo(string propriedade, string oQueECalculado)

@@ -281,12 +281,18 @@ public sealed class AssistenteFalso : IAssistenteIA
     public List<PedidoIA> Pedidos { get; } = [];
     public bool EstaConfigurado { get; set; }
     public Func<PedidoIA, string> Responder { get; set; } = p => $"Resposta a: {p.Mensagem}";
+
+    /// <summary>A resposta inteira, com alterações do cronograma (Bloco 24); sem ela, só o texto de <see cref="Responder"/>.</summary>
+    public Func<PedidoIA, RespostaIA>? ResponderComAlteracoes { get; set; }
+
     public Exception? Erro { get; set; }
+
+    private RespostaIA Resposta(PedidoIA pedido) => ResponderComAlteracoes?.Invoke(pedido) ?? new RespostaIA(Responder(pedido));
 
     /// <summary>A próxima resposta só sai com <see cref="Soltar"/> (ou com o cancelamento).</summary>
     public void Segurar() => _segurada = new TaskCompletionSource<RespostaIA>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public void Soltar() => _segurada?.TrySetResult(new RespostaIA(Responder(Pedidos[^1])));
+    public void Soltar() => _segurada?.TrySetResult(Resposta(Pedidos[^1]));
 
     public async Task<RespostaIA> EnviarAsync(PedidoIA pedido, CancellationToken cancelamento)
     {
@@ -305,7 +311,7 @@ public sealed class AssistenteFalso : IAssistenteIA
                 _segurada = null;
             }
         }
-        return new RespostaIA(Responder(pedido));
+        return Resposta(pedido);
     }
 }
 

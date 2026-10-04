@@ -381,6 +381,24 @@ public class Cronograma
 
     internal void RegistrarFotosDescartadas(int quantidade) => FotosDescartadasAoAbrir = quantidade;
 
+    /// <summary>
+    /// Um cronograma igual a este, com os mesmos Ids, a mesma estrutura e ordem, os mesmos vínculos e as mesmas fotos,
+    /// mas independente: mudar a cópia não muda o original (Bloco 24: as alterações do assistente são feitas numa
+    /// cópia, e o original fica guardado para o Desfazer).
+    /// </summary>
+    public Cronograma Copiar()
+    {
+        var copia = new Cronograma(Id, Nome, DataInicio)
+        {
+            DataCriacao = DataCriacao,
+            DataUltimaModificacao = DataUltimaModificacao,
+            FotosDescartadasAoAbrir = FotosDescartadasAoAbrir,
+        };
+        copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));
+        copia._predecessoras.AddRange(_predecessoras); // vínculos são registros imutáveis
+        return copia;
+    }
+
     internal void DefinirDatasDoArquivo(DateTime criacao, DateTime ultimaModificacao)
     {
         DataCriacao = criacao;

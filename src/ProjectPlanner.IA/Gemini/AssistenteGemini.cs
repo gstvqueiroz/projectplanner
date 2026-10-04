@@ -6,7 +6,8 @@ namespace ProjectPlanner.IA.Gemini;
 
 /// <summary>
 /// O assistente falando com o Gemini (Bloco 23): manda as instruções com o retrato do cronograma, a conversa (o Gemini
-/// não guarda nada entre as chamadas) e os anexos, e devolve o texto da resposta.
+/// não guarda nada entre as chamadas) e os anexos, e devolve a mensagem e as alterações do cronograma (Bloco 24), que o
+/// Gemini é obrigado a mandar no formato de <see cref="FormatoDaResposta"/>.
 /// </summary>
 /// <remarks>
 /// Os anexos de toda a conversa vão a cada envio, para o assistente continuar enxergando os documentos nas perguntas
@@ -37,7 +38,56 @@ public sealed class AssistenteGemini : IAssistenteIA
         using var mensagem = ChamadaGemini.Pedido(HttpMethod.Post, $"models/{Modelo}:generateContent", _chave);
         mensagem.Content = new StringContent(corpo.ToJsonString(), Encoding.UTF8, "application/json");
         using var resposta = await ChamadaGemini.ExecutarAsync(_http, mensagem, _chave, Modelo, cancelamento);
-        return new RespostaIA(LerResposta(resposta.RootElement));
+        var (texto, fim) = LerResposta(resposta.RootElement);
+        return FormatoDaResposta.Interpretar(texto, cortada: fim == "MAX_TOKENS");
+    }
+
+    // ---- O formato da resposta (Bloco 24): o Gemini é obrigado a devolver {mensagem, alteracoes} ----
+
+    internal static JsonObject EsquemaDaResposta()
+    {
+        static JsonObject Tipo(string tipo, params string[] valores)
+        {
+            var campo = new JsonObject { ["type"] = tipo };
+            if (valores.Length > 0)
+                campo["enum"] = new JsonArray([.. valores.Select(v => (JsonNode)v)]);
+            return campo;
+        }
+
+        string[] campos = ["acao", "ref", "tarefa", "nome", "duracao", "pai", "de", "para", "tipo", "defasagem", "percentual", "notas", "inicio"];
+        var alteracao = new JsonObject
+        {
+            ["type"] = "OBJECT",
+            ["properties"] = new JsonObject
+            {
+                ["acao"] = Tipo("STRING", [.. AcoesNoCronograma.Todas]),
+                ["ref"] = Tipo("STRING"),
+                ["tarefa"] = Tipo("STRING"),
+                ["nome"] = Tipo("STRING"),
+                ["duracao"] = Tipo("INTEGER"),
+                ["pai"] = Tipo("STRING"),
+                ["de"] = Tipo("STRING"),
+                ["para"] = Tipo("STRING"),
+                ["tipo"] = Tipo("STRING", "TI", "II", "TT", "IT"),
+                ["defasagem"] = Tipo("INTEGER"),
+                ["percentual"] = Tipo("INTEGER"),
+                ["notas"] = Tipo("STRING"),
+                ["inicio"] = Tipo("STRING"),
+            },
+            ["required"] = new JsonArray("acao"),
+            ["propertyOrdering"] = new JsonArray([.. campos.Select(c => (JsonNode)c)]),
+        };
+        return new JsonObject
+        {
+            ["type"] = "OBJECT",
+            ["properties"] = new JsonObject
+            {
+                ["mensagem"] = Tipo("STRING"),
+                ["alteracoes"] = new JsonObject { ["type"] = "ARRAY", ["items"] = alteracao },
+            },
+            ["required"] = new JsonArray("mensagem", "alteracoes"),
+            ["propertyOrdering"] = new JsonArray("mensagem", "alteracoes"),
+        };
     }
 
     // ---- O pedido ----
@@ -97,6 +147,11 @@ public sealed class AssistenteGemini : IAssistenteIA
                 ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucoesDoAssistente.Montar(pedido.Contexto) }),
             },
             ["contents"] = conteudos,
+            ["generationConfig"] = new JsonObject
+            {
+                ["responseMimeType"] = "application/json",
+                ["responseSchema"] = EsquemaDaResposta(),
+            },
         };
     }
 
@@ -146,7 +201,7 @@ public sealed class AssistenteGemini : IAssistenteIA
     private static readonly HashSet<string> Bloqueios = ["SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY"];
 
     // {"candidates": [{"content": {"parts": [{"text": "..."}]}, "finishReason": "STOP"}], "promptFeedback": {...}}
-    internal static string LerResposta(JsonElement raiz)
+    internal static (string Texto, string? Fim) LerResposta(JsonElement raiz)
     {
         if (raiz.ValueKind != JsonValueKind.Object)
             throw new ErroDoAssistenteException("O Gemini mandou uma resposta que não deu para entender. Tente de novo.");
@@ -174,6 +229,6 @@ public sealed class AssistenteGemini : IAssistenteIA
             throw new ErroDoAssistenteException(fim is not null && Bloqueios.Contains(fim)
                 ? $"O Gemini não respondeu por um bloqueio de segurança ({fim})."
                 : "O Gemini devolveu uma resposta vazia" + (fim is null ? "." : $" ({fim})."));
-        return fim == "MAX_TOKENS" ? resposta + "\n\n(Resposta cortada: ficou longa demais.)" : resposta;
+        return (resposta, fim);
     }
 }

@@ -115,7 +115,7 @@
             <Panel>
                 <TextBlock x:Name="BoasVindas" IsVisible="{Binding ConversaVazia}" TextWrapping="Wrap" TextAlignment="Center"
                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Opacity="0.6"
-                           Text="Pergunte sobre o cronograma ou anexe documentos (plantas, contratos, memoriais)." />
+                           Text="Peça um cronograma (por exemplo, &#x201C;monte o cronograma de uma casa térrea de 100 m²&#x201D;), peça ajustes, pergunte sobre o cronograma atual ou anexe documentos (plantas, memoriais, contratos)." />
                 <ScrollViewer x:Name="Rolagem" Padding="10,6">
                     <ItemsControl x:Name="Historico" ItemsSource="{Binding Mensagens}">
                         <ItemsControl.ItemTemplate>
@@ -141,6 +141,19 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        <!-- Bloco 24: o que a resposta fez no cronograma, com Desfazer na última aplicação. -->
+                                        <Border Classes="alteracoes" Classes.aplicadas="{Binding Alteracoes.Aplicadas, FallbackValue=False}"
+                                                IsVisible="{Binding TemAlteracoes}" CornerRadius="6" Padding="8,5" Margin="0,3,0,0">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{Binding Alteracoes.Texto, FallbackValue=''}" TextWrapping="Wrap" FontSize="12" />
+                                                <Button Content="Desfazer" FontSize="12" Padding="8,2" HorizontalAlignment="Left"
+                                                        IsVisible="{Binding Alteracoes.PodeDesfazer, FallbackValue=False}"
+                                                        Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).DesfazerCommand}"
+                                                        CommandParameter="{Binding Alteracoes}"
+                                                        ToolTip.Tip="Voltar o cronograma para como estava antes desta resposta"
+                                                        AutomationProperties.Name="Desfazer as alterações do assistente" />
+                                            </StackPanel>
+                                        </Border>
                                         <TextBlock Text="{Binding Hora}" FontSize="10" Opacity="0.55" HorizontalAlignment="Right" />
                                     </StackPanel>
                                 </Border>
@@ -148,6 +161,12 @@
                         </ItemsControl.ItemTemplate>
                         <ItemsControl.Styles>
                             <!-- Usuário à direita, em azul; assistente à esquerda, em cinza; avisos (erro, cancelamento) em vermelho claro. -->
+                            <Style Selector="Border.alteracoes">
+                                <Setter Property="Background" Value="#FFF4E5" />
+                            </Style>
+                            <Style Selector="Border.alteracoes.aplicadas">
+                                <Setter Property="Background" Value="#E6F4EA" />
+                            </Style>
                             <Style Selector="Border.balao.doUsuario">
                                 <Setter Property="Background" Value="#DCEBFA" />
                                 <Setter Property="HorizontalAlignment" Value="Right" />

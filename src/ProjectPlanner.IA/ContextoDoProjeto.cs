@@ -16,6 +16,7 @@ public enum TipoNoContexto
 /// <param name="Nivel">0 no primeiro nível; 1 dentro de um resumo, e assim por diante.</param>
 /// <param name="Predecessoras">Como na grid: "2", "3II+2", "2; 4TT-1" (vazio sem predecessoras).</param>
 /// <param name="FolgaDias">Folga total em dias úteis; nula antes do cálculo.</param>
+/// <param name="Id">A tarefa no cronograma (não vai no texto): é por ele que o App acha a tarefa do Nº que o assistente citar.</param>
 public sealed record TarefaNoContexto(
     int Numero,
     string Edt,
@@ -30,7 +31,8 @@ public sealed record TarefaNoContexto(
     int? FolgaDias,
     bool Critica,
     string? Notas,
-    int Fotos);
+    int Fotos,
+    Guid Id = default);
 
 /// <summary>
 /// Retrato só de leitura do cronograma aberto (Bloco 23), montado pelo App a cada envio. O assistente nunca recebe o

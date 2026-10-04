@@ -43,8 +43,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         _fotos = new FotosDoProjeto(repositorio, processadorDeImagens, relogio);
         Colunas = new ColunasViewModel(preferenciasColunas);
-        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface, configuracaoAssistente,
-            RetratoParaOAssistente);
+        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface, configuracaoAssistente, this);
         _repositorio = repositorio;
         _calculadora = calculadora;
         _dialogos = dialogos;
@@ -91,7 +90,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             linha.Tarefa.Folga,
             linha.Tarefa.EhCritica,
             linha.Tarefa.Notas,
-            linha.Tarefa.Fotos.Count)).ToList();
+            linha.Tarefa.Fotos.Count,
+            linha.Tarefa.Id)).ToList();
         var inicio = DateOnly.FromDateTime(_cronograma.DataInicio);
         var termino = TerminoProjeto is { } fim ? DateOnly.FromDateTime(fim) : tarefas.Select(t => t.Termino).DefaultIfEmpty(inicio).Max();
         return new ContextoDoProjeto(_cronograma.Nome, inicio, termino, DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), tarefas);
@@ -720,6 +720,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     private void MarcarAlteracao()
     {
+        _versao++;
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
         Mensagem = "";
@@ -754,6 +755,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         _cronograma = cronograma;
         _fotos.Recomecar(caminho);
+        EsquecerAplicacaoDoAssistente();
         Assistente.RecomecarParaOutroProjeto();
         Tarefas.Clear();
         SincronizarLinhas();

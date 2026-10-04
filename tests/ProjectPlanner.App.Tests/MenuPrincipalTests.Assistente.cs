@@ -4,6 +4,8 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using ProjectPlanner.IA;
 using ProjectPlanner.App.Views;
 
 namespace ProjectPlanner.App.Tests;
@@ -166,5 +168,33 @@ public partial class MenuPrincipalTests
         janela.FindControl<TextBlock>("Mensagem")!.Text.Should().Be("Chave salva no cofre do sistema.");
         (janela.FindControl<Button>("Remover")!.IsVisible, janela.FindControl<Button>("Remover")!.IsEffectivelyEnabled).Should().Be((true, true));
         janela.Close();
+    });
+
+    // ---- Bloco 24: alterações do cronograma pelo chat ----
+
+    [Fact]
+    public Task Assistente_RespostaComAlteracoes_MostraOQueMudou_EDesfazerVolta() => Tela.Executar(() =>
+    {
+        var a = Abrir(ambiente => ambiente.Assistente.ResponderComAlteracoes = _ => new RespostaIA("Criei a fundação.")
+        {
+            Alteracoes = [new AlteracaoDoCronograma(AcoesNoCronograma.Criar, Ref: "n1", Nome: "Fundação", Duracao: 3)],
+        });
+        a.Vm.Assistente.Visivel = true;
+        a.Vm.Assistente.TextoDigitado = "Crie a fundação";
+        Pintar(a);
+
+        a.ClicarComOMouse(Painel(a).FindControl<Button>("Enviar")!);
+        Pintar(a);
+
+        a.Vm.Tarefas.Select(t => t.Nome).Should().Equal("Fundação");
+        Painel(a).GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).Should().Contain("Cronograma alterado: 1 tarefa criada");
+        var desfazer = Painel(a).GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Desfazer") && b.IsEffectivelyVisible);
+
+        a.ClicarComOMouse(desfazer);
+        Pintar(a);
+
+        a.Vm.Tarefas.Should().BeEmpty();
+        desfazer.IsVisible.Should().BeFalse("só dá para desfazer uma vez");
+        Painel(a).GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).Should().Contain("Desfeito: 1 tarefa criada");
     });
 }

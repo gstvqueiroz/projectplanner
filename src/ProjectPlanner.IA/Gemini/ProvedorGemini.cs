@@ -10,8 +10,8 @@ public sealed partial class ProvedorGemini : IProvedorIA
 {
     public const string ModeloRecomendado = "gemini-2.5-flash";
 
-    /// <summary>Quanto esperar por uma resposta (com PDFs, o Gemini pode demorar).</summary>
-    public static readonly TimeSpan TempoLimite = TimeSpan.FromMinutes(2);
+    /// <summary>Quanto esperar por uma resposta (montar uma obra inteira ou ler PDFs pode levar alguns minutos).</summary>
+    public static readonly TimeSpan TempoLimite = TimeSpan.FromMinutes(5);
 
     internal static readonly Uri Endereco = new("https://generativelanguage.googleapis.com/v1beta/");
 

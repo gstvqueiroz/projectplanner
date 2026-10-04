@@ -48,10 +48,33 @@ internal sealed class FotoRegistro
     public Guid Id { get; set; }
     public Guid TarefaId { get; set; }
     public int Ordem { get; set; }
-    public DateTime DataRegistro { get; set; }
-
-    /// <summary>Provisório: por enquanto só identificadores fictícios (ver <see cref="FotoTarefa"/>).</summary>
-    public required string CaminhoArquivo { get; set; }
-
+    public DateTime DataFoto { get; set; }
+    public DateTime DataCadastro { get; set; }
+    public string? Titulo { get; set; }
     public string? Descricao { get; set; }
+    public string? Autor { get; set; }
+    public string? Local { get; set; }
+    public int? PercentualConcluidoNaData { get; set; }
+    public required string NomeArquivoOriginal { get; set; }
+    public int Largura { get; set; }
+    public int Altura { get; set; }
+    public long TamanhoBytes { get; set; }
+    public required string HashOriginal { get; set; }
+
+    /// <summary>As tags em JSON (["antes","problema"]); nulo sem tags.</summary>
+    public string? Tags { get; set; }
+}
+
+/// <summary>A imagem (versão reduzida, JPEG) de uma foto, separada dos metadados para listar fotos sem lê-la.</summary>
+internal sealed class FotoImagemRegistro
+{
+    public Guid FotoId { get; set; }
+    public required byte[] Dados { get; set; }
+}
+
+/// <summary>A miniatura (JPEG) de uma foto, lida pela galeria sob demanda.</summary>
+internal sealed class FotoMiniaturaRegistro
+{
+    public Guid FotoId { get; set; }
+    public required byte[] Dados { get; set; }
 }

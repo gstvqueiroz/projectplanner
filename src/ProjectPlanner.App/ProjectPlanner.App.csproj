@@ -43,5 +43,6 @@
     <ProjectReference Include="..\ProjectPlanner.Core\ProjectPlanner.Core.csproj" />
     <ProjectReference Include="..\ProjectPlanner.Data\ProjectPlanner.Data.csproj" />
     <ProjectReference Include="..\ProjectPlanner.IA\ProjectPlanner.IA.csproj" />
+    <ProjectReference Include="..\ProjectPlanner.Imagens\ProjectPlanner.Imagens.csproj" />
   </ItemGroup>
 </Project>

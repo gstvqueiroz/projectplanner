@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Fotos;
 using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
@@ -29,6 +30,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private readonly ICalculadoraCronograma _calculadora;
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
+    private readonly FotosDoProjeto _fotos;
     private Cronograma _cronograma;
     private IReadOnlyDictionary<Guid, string> _edt = new Dictionary<Guid, string>();
     private IReadOnlySet<Guid> _ocultas = new HashSet<Guid>();
@@ -36,8 +38,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     public MainWindowViewModel(IProjetoRepository repositorio, ICalculadoraCronograma calculadora,
         IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas,
-        IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface)
+        IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens)
     {
+        _fotos = new FotosDoProjeto(repositorio, processadorDeImagens, relogio);
         Colunas = new ColunasViewModel(preferenciasColunas);
         Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface);
         _repositorio = repositorio;
@@ -57,6 +60,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         };
         Carregar(_cronograma, caminho: null);
     }
+
+    /// <summary>As imagens das fotos do projeto aberto (lidas sob demanda; as novas ficam na memória até salvar).</summary>
+    public FotosDoProjeto Fotos => _fotos;
 
     /// <summary>O painel lateral do assistente de IA (Bloco 19).</summary>
     public AssistenteViewModel Assistente { get; }
@@ -230,8 +236,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         try
         {
-            Carregar(_repositorio.Abrir(caminho), caminho);
+            var aberto = _repositorio.Abrir(caminho);
+            Carregar(aberto, caminho);
             Mensagem = $"Projeto aberto: {caminho}";
+            if (aberto.FotosDescartadasAoAbrir > 0)
+                Mensagem += aberto.FotosDescartadasAoAbrir == 1
+                    ? " 1 registro de exemplo de foto (sem imagem) foi descartado; ele some do arquivo ao salvar."
+                    : $" {aberto.FotosDescartadasAoAbrir} registros de exemplo de fotos (sem imagem) foram descartados; eles somem do arquivo ao salvar.";
         }
         catch (Exception ex)
         {
@@ -350,13 +361,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private async Task RemoverTarefa()
     {
         var linha = TarefaSelecionada!;
+        var descendentes = _cronograma.DescendentesDe(linha.Tarefa.Id);
+        var fotos = linha.Tarefa.Fotos.Count + descendentes.Sum(t => t.Fotos.Count);
+        // Bloco 22: as fotos vão junto com a tarefa (e com as subtarefas de um resumo); avisa quantas.
+        var aviso = fotos switch
+        {
+            0 => "",
+            1 => linha.EhResumo ? " A foto delas também será excluída." : " A foto dela também será excluída.",
+            _ => linha.EhResumo ? $" As {fotos} fotos delas também serão excluídas." : $" As {fotos} fotos dela também serão excluídas.",
+        };
         if (linha.EhResumo)
         {
-            var subtarefas = _cronograma.DescendentesDe(linha.Tarefa.Id).Count;
-            var quais = subtarefas == 1 ? "a subtarefa dele" : $"as {subtarefas} subtarefas dele";
-            if (!await _dialogos.ConfirmarAsync("Remover resumo", $"Remover o resumo \"{linha.Nome}\" e {quais}?", "Remover"))
+            var quais = descendentes.Count == 1 ? "a subtarefa dele" : $"as {descendentes.Count} subtarefas dele";
+            if (!await _dialogos.ConfirmarAsync("Remover resumo", $"Remover o resumo \"{linha.Nome}\" e {quais}?{aviso}", "Remover"))
                 return;
         }
+        else if (fotos > 0 && !await _dialogos.ConfirmarAsync("Remover tarefa", $"Remover a tarefa \"{linha.Nome}\"?{aviso}", "Remover"))
+            return;
 
         var posicao = LinhasVisiveis.IndexOf(linha);
         _cronograma.RemoverTarefa(linha.Tarefa.Id);
@@ -374,13 +395,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// </summary>
     public Task MostrarFotosAsync(Guid tarefaId)
     {
-        var tarefa = _cronograma.Tarefas.First(t => t.Id == tarefaId);
-        return _dialogos.MostrarFotosAsync(new GaleriaFotosViewModel(tarefa, foto =>
+        var linha = Tarefas.First(t => t.Tarefa.Id == tarefaId);
+        return _dialogos.MostrarFotosAsync(new GaleriaFotosViewModel(linha, _fotos, _dialogos, _relogio, () =>
         {
-            tarefa.AdicionarFoto(foto);
-            Tarefas.FirstOrDefault(l => l.Tarefa.Id == tarefaId)?.FotosMudaram();
+            linha.FotosMudaram();
             MarcarAlteracao();
-        }, () => _relogio.GetLocalNow().DateTime));
+        }));
     }
 
     /// <summary>
@@ -531,7 +551,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
         try
         {
-            _repositorio.Salvar(_cronograma, caminho);
+            _repositorio.Salvar(_cronograma, caminho, _fotos.ParaSalvar());
         }
         catch (Exception ex)
         {
@@ -540,6 +560,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             return false;
         }
 
+        _fotos.Salvou(caminho);
         CaminhoArquivo = caminho;
         PossuiAlteracoesNaoSalvas = false;
         Mensagem = $"Projeto salvo em {caminho}";
@@ -702,6 +723,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private void Carregar(Cronograma cronograma, string? caminho)
     {
         _cronograma = cronograma;
+        _fotos.Recomecar(caminho);
         Assistente.RecomecarParaOutroProjeto();
         Tarefas.Clear();
         SincronizarLinhas();

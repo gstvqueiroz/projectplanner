@@ -24,6 +24,16 @@ public sealed class DialogosAvalonia : IDialogosService
         Patterns = ["*.pdf", "*.doc", "*.docx", "*.xls", "*.xlsx", "*.txt", "*.md", "*.csv", "*.png", "*.jpg", "*.jpeg"],
     };
 
+    private static readonly FilePickerFileType Fotos = new("Fotos (JPG, PNG, WebP)")
+    {
+        Patterns = ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.JPG", "*.JPEG", "*.PNG", "*.WEBP"],
+    };
+
+    // Dono dos diálogos: a janela ativa (a galeria, quando ela está aberta), para eles aparecerem por cima dela.
+    private static Window JanelaAtiva =>
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Windows.LastOrDefault(w => w.IsActive)
+        ?? JanelaPrincipal;
+
     private static Window JanelaPrincipal =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow
         ?? throw new InvalidOperationException("A janela principal ainda não foi criada.");
@@ -50,6 +60,20 @@ public sealed class DialogosAvalonia : IDialogosService
         return arquivos.Select(a => a.TryGetLocalPath()).OfType<string>().ToList();
     }
 
+    public async Task<IReadOnlyList<string>> EscolherFotosAsync()
+    {
+        var arquivos = await JanelaAtiva.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Adicionar fotos",
+            AllowMultiple = true,
+            FileTypeFilter = [Fotos, FilePickerFileTypes.All],
+        });
+        return arquivos.Select(a => a.TryGetLocalPath()).OfType<string>().ToList();
+    }
+
+    public Task MostrarFotoAmpliadaAsync(ViewModels.VisualizadorDeFotosViewModel visualizador) =>
+        new VisualizadorFotosWindow(visualizador).ShowDialog(JanelaAtiva);
+
     public async Task<string?> EscolherArquivoParaSalvarAsync(string nomeSugerido)
     {
         var arquivo = await JanelaPrincipal.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -67,7 +91,7 @@ public sealed class DialogosAvalonia : IDialogosService
         new AlteracoesPendentesWindow(nomeProjeto).ShowDialog<RespostaAlteracoesPendentes>(JanelaPrincipal);
 
     public Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao) =>
-        new ConfirmacaoWindow(titulo, mensagem, textoDoBotao).ShowDialog<bool>(JanelaPrincipal);
+        new ConfirmacaoWindow(titulo, mensagem, textoDoBotao).ShowDialog<bool>(JanelaAtiva);
 
     public Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria) =>
         new GaleriaFotosWindow(galeria).ShowDialog(JanelaPrincipal);

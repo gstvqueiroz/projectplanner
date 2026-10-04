@@ -1,7 +1,10 @@
 using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.App.ViewModels;
+using System.Security.Cryptography;
+using System.Text;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Fotos;
 using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.Tests;
@@ -14,11 +17,17 @@ public sealed class RepositorioFalso : IProjetoRepository
     public Func<string, Cronograma> AoAbrir { get; set; } = caminho => throw new FileNotFoundException("Não existe.", caminho);
     public Exception? ErroAoSalvar { get; set; }
 
-    public void Salvar(Cronograma cronograma, string caminhoArquivo)
+    /// <summary>As imagens passadas em cada salvamento (Bloco 22).</summary>
+    public List<ImagensParaSalvar> ImagensSalvas { get; } = [];
+
+    public void Salvar(Cronograma cronograma, string caminhoArquivo) => Salvar(cronograma, caminhoArquivo, ImagensParaSalvar.Nenhuma);
+
+    public void Salvar(Cronograma cronograma, string caminhoArquivo, ImagensParaSalvar imagens)
     {
         if (ErroAoSalvar is not null)
             throw ErroAoSalvar;
         Salvos.Add((cronograma, caminhoArquivo));
+        ImagensSalvas.Add(imagens);
     }
 
     public Cronograma Abrir(string caminhoArquivo)
@@ -26,6 +35,10 @@ public sealed class RepositorioFalso : IProjetoRepository
         Abertos.Add(caminhoArquivo);
         return AoAbrir(caminhoArquivo);
     }
+
+    public IReadOnlyDictionary<Guid, byte[]> LerMiniaturas(string caminhoArquivo, IReadOnlyCollection<Guid> fotos) => new Dictionary<Guid, byte[]>();
+
+    public byte[]? LerImagem(string caminhoArquivo, Guid foto) => null;
 }
 
 /// <summary>
@@ -35,14 +48,32 @@ public sealed class RepositorioFalso : IProjetoRepository
 public sealed class RepositorioEmMemoria : IProjetoRepository
 {
     private readonly Dictionary<string, Func<Cronograma>> _arquivos = [];
+    private readonly Dictionary<string, Dictionary<Guid, ConteudoDeFoto>> _imagens = [];
 
     public IReadOnlyCollection<string> Arquivos => _arquivos.Keys;
 
-    public void Salvar(Cronograma cronograma, string caminhoArquivo)
+    /// <summary>As imagens guardadas em cada "arquivo".</summary>
+    public IReadOnlyDictionary<Guid, ConteudoDeFoto> ImagensDe(string caminho) => _imagens.GetValueOrDefault(caminho) ?? [];
+
+    public void Salvar(Cronograma cronograma, string caminhoArquivo) => Salvar(cronograma, caminhoArquivo, ImagensParaSalvar.Nenhuma);
+
+    // Como o SQLite: as imagens novas vêm da memória; as demais, copiadas do arquivo de origem; nenhuma foto sem imagem.
+    public void Salvar(Cronograma cronograma, string caminhoArquivo, ImagensParaSalvar imagens)
     {
+        var origem = imagens.ArquivoDeOrigem is { } o ? _imagens.GetValueOrDefault(o) : null;
+        var guardadas = new Dictionary<Guid, ConteudoDeFoto>();
+        foreach (var foto in cronograma.Tarefas.SelectMany(t => t.Fotos))
+        {
+            if (imagens.Novas.TryGetValue(foto.Id, out var nova) || origem?.TryGetValue(foto.Id, out nova) == true)
+                guardadas[foto.Id] = nova!;
+            else
+                throw new IOException($"A foto {foto.Imagem.NomeArquivoOriginal} ficaria sem imagem. Nada foi salvo.");
+        }
+        _imagens[caminhoArquivo] = guardadas;
+
         var (id, nome, inicio) = (cronograma.Id, cronograma.Nome, cronograma.DataInicio);
         var tarefas = cronograma.Tarefas
-            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo, t.Fotos))
+            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo, Fotos: t.FotosNaOrdemDeCadastro.ToList()))
             .ToList();
         var vinculos = cronograma.Predecessoras.ToList();
         _arquivos[caminhoArquivo] = () =>
@@ -68,6 +99,11 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
         _arquivos.TryGetValue(caminhoArquivo, out var abrir)
             ? abrir()
             : throw new FileNotFoundException("Não existe.", caminhoArquivo);
+
+    public IReadOnlyDictionary<Guid, byte[]> LerMiniaturas(string caminhoArquivo, IReadOnlyCollection<Guid> fotos) =>
+        ImagensDe(caminhoArquivo).Where(i => fotos.Contains(i.Key)).ToDictionary(i => i.Key, i => i.Value.Miniatura);
+
+    public byte[]? LerImagem(string caminhoArquivo, Guid foto) => ImagensDe(caminhoArquivo).GetValueOrDefault(foto)?.Imagem;
 }
 
 /// <summary>Diálogos com respostas programadas.</summary>
@@ -112,6 +148,20 @@ public sealed class DialogosFalsos : IDialogosService
     public List<string> DocumentosParaAnexar { get; } = [];
 
     public Task<IReadOnlyList<string>> EscolherDocumentosAsync() => Task.FromResult<IReadOnlyList<string>>(DocumentosParaAnexar.ToList());
+
+    /// <summary>O que o diálogo de adicionar fotos "escolhe" (Bloco 22).</summary>
+    public List<string> FotosParaAdicionar { get; } = [];
+
+    public Task<IReadOnlyList<string>> EscolherFotosAsync() => Task.FromResult<IReadOnlyList<string>>(FotosParaAdicionar.ToList());
+
+    /// <summary>Os visualizadores ampliados abertos, em ordem.</summary>
+    public List<VisualizadorDeFotosViewModel> Visualizadores { get; } = [];
+
+    public Task MostrarFotoAmpliadaAsync(VisualizadorDeFotosViewModel visualizador)
+    {
+        Visualizadores.Add(visualizador);
+        return Task.CompletedTask;
+    }
 
     /// <summary>As galerias de fotos abertas, em ordem.</summary>
     public List<GaleriaFotosViewModel> Galerias { get; } = [];
@@ -175,8 +225,10 @@ public sealed class Ambiente
 
     public PreferenciasInterfaceEmMemoria PreferenciasInterface { get; } = new();
 
+    public ProcessadorFalso Processador { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
-        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface);
+        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -255,4 +307,41 @@ public sealed class PreferenciasInterfaceEmMemoria : IPreferenciasInterface
         Salvo = preferencias;
         Gravacoes++;
     }
+}
+
+/// <summary>
+/// Processador de imagens dos testes do App (Bloco 22): não lê arquivo nenhum. A "imagem" de um caminho é o texto
+/// "nome|largura|altura"; o hash vem do nome (mesmo nome = mesma imagem). Nomes com "corrompida" são recusados,
+/// e HEIC e formatos não aceitos seguem as regras de verdade.
+/// </summary>
+public sealed class ProcessadorFalso : IProcessadorDeImagens
+{
+    /// <summary>Data da foto por nome de arquivo; sem entrada, 29/09/2026 10:00.</summary>
+    public Dictionary<string, DateTime> Datas { get; } = [];
+
+    public int Importacoes { get; private set; }
+
+    public ImagemImportada Importar(string caminhoArquivo)
+    {
+        Importacoes++;
+        var nome = Path.GetFileName(caminhoArquivo);
+        RegrasDeFoto.ValidarArquivo(nome, 1000);
+        if (nome.Contains("corrompida", StringComparison.OrdinalIgnoreCase))
+            throw new ImagemRecusadaException($"{nome}: o arquivo não é uma imagem válida (está corrompido ou não é uma foto).");
+        var data = Datas.GetValueOrDefault(nome, new DateTime(2026, 9, 29, 10, 0, 0));
+        return new ImagemImportada(Conteudo(nome, 1600, 1200), nome,
+            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(nome))), data, OrigemDaData.ExifOriginal);
+    }
+
+    public ConteudoDeFoto Girar(byte[] imagem, bool sentidoHorario)
+    {
+        var partes = Encoding.UTF8.GetString(imagem).Split('|');
+        return Conteudo(partes[0] + (sentidoHorario ? "↻" : "↺"), int.Parse(partes[2]), int.Parse(partes[1]));
+    }
+
+    public static ConteudoDeFoto Conteudo(string nome, int largura, int altura) =>
+        new(Encoding.UTF8.GetBytes($"{nome}|{largura}|{altura}"), Encoding.UTF8.GetBytes($"mini:{nome}"), largura, altura);
+
+    /// <summary>O nome que a imagem guardada descreve (para os testes conferirem a imagem certa).</summary>
+    public static string Descrever(byte[]? bytes) => bytes is null ? "(nenhuma)" : Encoding.UTF8.GetString(bytes);
 }

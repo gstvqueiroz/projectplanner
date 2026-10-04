@@ -46,7 +46,7 @@ public sealed class AssistenteTests : IDisposable
     public void Enviar_ComOAssistenteIndisponivelDeVerdade_MostraARespostaPadrao()
     {
         var vm = new MainWindowViewModel(_ambiente.Repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio,
-            _ambiente.Preferencias, new AssistenteIAIndisponivel(TimeSpan.Zero), _ambiente.PreferenciasInterface);
+            _ambiente.Preferencias, new AssistenteIAIndisponivel(TimeSpan.Zero), _ambiente.PreferenciasInterface, _ambiente.Processador);
         vm.Assistente.TextoDigitado = "Olá";
 
         vm.Assistente.EnviarCommand.Execute(null);

@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ProjectPlanner.App.Views;
@@ -33,7 +35,7 @@ public partial class MenuPrincipalTests
         CameraDaLinha(a, 1)!.IsVisible.Should().BeFalse();
 
         a.Vm.GerenciarFotosCommand.Execute(comFotos);
-        a.Ambiente.Dialogos.Galerias.Last().AdicionarFotoCommand.Execute(null);
+        Esperar(a.Ambiente.Dialogos.Galerias.Last().AdicionarArquivosAsync(["/fotos/a.jpg"]));
         Pintar(a);
 
         CameraDaLinha(a, 0)!.IsVisible.Should().BeFalse();
@@ -44,7 +46,7 @@ public partial class MenuPrincipalTests
 
         a.Vm.TarefaSelecionada = semFotos;
         a.ClicarComOMouse(camera);
-        a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — Estrutura");
+        a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — 2 Estrutura");
     });
 
     [Fact]
@@ -67,7 +69,7 @@ public partial class MenuPrincipalTests
             .Should().Equal("Inserir tarefa acima", "Inserir tarefa abaixo", "Gerenciar fotos…");
         var item = a.Janela.MenuDaGrade.Items.OfType<MenuItem>().Last();
         item.Command!.Execute(item.CommandParameter);
-        a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — Estrutura");
+        a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — 2 Estrutura");
         var acima = a.Janela.MenuDaGrade.Items.OfType<MenuItem>().First();
         acima.Command!.Execute(acima.CommandParameter); // Bloco 21: tarefa nova acima da linha clicada
         a.Vm.Tarefas.Select(t => t.Nome).Should().Equal("Fundação", "Nova tarefa", "Estrutura");
@@ -109,7 +111,7 @@ public partial class MenuPrincipalTests
         var item = menu.Items.OfType<MenuItem>().Single();
         item.Header.Should().Be("Gerenciar fotos…");
         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-        a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — Estrutura");
+        a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — 2 Estrutura");
         menu.Close();
         Pintar(a);
 
@@ -151,30 +153,182 @@ public partial class MenuPrincipalTests
 
     private const double GanttViewModelAltura = ViewModels.GanttViewModel.AlturaLinha;
 
+    /// <summary>Roda a fila da tela até a operação assíncrona terminar (a importação lê os arquivos fora dela).</summary>
+    private static void Esperar(Task tarefa)
+    {
+        var limite = DateTime.UtcNow.AddSeconds(10);
+        while (!tarefa.IsCompleted && DateTime.UtcNow < limite)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(1);
+        }
+        tarefa.GetAwaiter().GetResult();
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    private static (GaleriaFotosWindow Janela, ViewModels.GaleriaFotosViewModel Galeria) AbrirGaleria(Abertura a, ViewModels.TarefaViewModel linha)
+    {
+        a.Vm.GerenciarFotosCommand.Execute(linha);
+        var galeria = a.Ambiente.Dialogos.Galerias.Last();
+        var janela = new GaleriaFotosWindow(galeria);
+        janela.Show();
+        Dispatcher.UIThread.RunJobs();
+        return (janela, galeria);
+    }
+
+    private static List<Border> Miniaturas(GaleriaFotosWindow janela) =>
+        janela.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("miniatura")).ToList();
+
+    private static void ClicarEm(GaleriaFotosWindow janela, Control alvo, RawInputModifiers modificadores = RawInputModifiers.None)
+    {
+        var ponto = alvo.TranslatePoint(new Point(alvo.Bounds.Width / 2, alvo.Bounds.Height / 2), janela)!.Value;
+        janela.MouseDown(ponto, MouseButton.Left, modificadores);
+        janela.MouseUp(ponto, MouseButton.Left, modificadores);
+        Dispatcher.UIThread.RunJobs();
+    }
+
     [Fact]
-    public Task Galeria_Vazia_MostraAMensagemEOBotaoAdicionar_ComOAviso() => Tela.Executar(() =>
+    public Task Galeria_Vazia_MostraAMensagem_EAdicionarPeloDialogoMostraAsMiniaturas() => Tela.Executar(() =>
     {
         var a = Abrir();
         var tarefa = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
-        a.Vm.GerenciarFotosCommand.Execute(tarefa);
-        var janela = new GaleriaFotosWindow { DataContext = a.Ambiente.Dialogos.Galerias.Last() };
-        janela.Show();
+        var (janela, galeria) = AbrirGaleria(a, tarefa);
+
+        var adicionar = janela.FindControl<Button>("Adicionar")!;
+        var vazia = janela.FindControl<TextBlock>("MensagemVazia")!;
+        (adicionar.IsEffectivelyVisible, adicionar.IsEffectivelyEnabled, adicionar.Content).Should().Be((true, true, "Adicionar fotos…"));
+        (vazia.IsVisible, vazia.Text).Should().Be((true, "Nenhuma foto nesta tarefa. Clique em Adicionar fotos (ou arraste fotos para cá)."));
+        janela.FindControl<TextBlock>("InfoDaTarefa")!.Text.Should().StartWith("EDT 1 · Fundação · Início 28/09/2026");
+        janela.FindControl<Control>("Detalhes")!.IsVisible.Should().BeFalse("sem foto escolhida, sem detalhes");
+
+        a.Ambiente.Dialogos.FotosParaAdicionar.AddRange(["/fotos/a.jpg", "/fotos/b.jpg", "/fotos/c.heic"]);
+        ClicarEm(janela, adicionar);
+        Esperar(Task.Run(() => SpinWait.SpinUntil(() => !galeria.Ocupado && galeria.Contador == "2 fotos", 5000)));
+
+        tarefa.Tarefa.Fotos.Should().HaveCount(2);
+        vazia.IsVisible.Should().BeFalse();
+        Miniaturas(janela).Should().HaveCount(2);
+        janela.FindControl<TextBlock>("Contador")!.Text.Should().Be("2 fotos");
+        janela.FindControl<TextBlock>("Aviso")!.Text.Should().StartWith("2 fotos adicionadas. Recusada: c.heic: fotos HEIC ainda não são aceitas.");
+        janela.FindControl<TextBox>("EdicaoTitulo")!.IsEffectivelyVisible.Should().BeTrue("a última adicionada fica escolhida");
+        janela.Close();
+    });
+
+    [Fact]
+    public Task Galeria_CliqueSeleciona_CmdCliqueAcrescenta_DeleteExcluiAsSelecionadas() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var tarefa = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        var (janela, galeria) = AbrirGaleria(a, tarefa);
+        Esperar(galeria.AdicionarArquivosAsync(["/fotos/a.jpg", "/fotos/b.jpg", "/fotos/c.jpg"]));
+        var miniaturas = Miniaturas(janela);
+
+        ClicarEm(janela, miniaturas[0]);
+        ClicarEm(janela, miniaturas[2], RawInputModifiers.Meta);
+
+        galeria.QuantidadeSelecionada.Should().Be(2);
+        Miniaturas(janela).Select(m => m.Classes.Contains("selecionada")).Should().Equal(true, false, true);
+        galeria.FotoAtual!.Foto.Imagem.NomeArquivoOriginal.Should().Be("c.jpg");
+
+        ClicarEm(janela, miniaturas[1]);
+        galeria.QuantidadeSelecionada.Should().Be(1, "sem Cmd, o clique deixa só ela");
+
+        janela.KeyPress(Key.A, RawInputModifiers.Meta, PhysicalKey.A, "a");
+        Dispatcher.UIThread.RunJobs();
+        galeria.QuantidadeSelecionada.Should().Be(3);
+
+        janela.KeyPress(Key.Delete, RawInputModifiers.None, PhysicalKey.Delete, null);
         Dispatcher.UIThread.RunJobs();
 
-        var adicionar = janela.FindControl<Button>("AdicionarFoto")!;
-        var vazia = janela.FindControl<TextBlock>("MensagemVazia")!;
-        (adicionar.IsEffectivelyVisible, adicionar.IsEffectivelyEnabled, adicionar.Content).Should().Be((true, true, "Adicionar foto"));
-        (vazia.IsVisible, vazia.Text).Should().Be((true, "Nenhuma foto adicionada ainda."));
-        janela.FindControl<TextBlock>("Aviso")!.Text.Should().Contain("ainda será implementado");
+        a.Ambiente.Dialogos.Confirmacoes.Last().Should().Be("Excluir as 3 fotos selecionadas? Não dá para desfazer.");
+        tarefa.Tarefa.Fotos.Should().BeEmpty();
+        janela.FindControl<TextBlock>("MensagemVazia")!.IsVisible.Should().BeTrue();
+        janela.Close();
+    });
 
-        var ponto = adicionar.TranslatePoint(new Point(adicionar.Bounds.Width / 2, adicionar.Bounds.Height / 2), janela)!.Value;
+    [Fact]
+    public Task Galeria_SoltarArquivos_AdicionaAsFotos_EOutrosDadosSaoIgnorados() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var tarefa = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        var (janela, galeria) = AbrirGaleria(a, tarefa);
+        var meio = new Point(janela.Bounds.Width / 2, janela.Bounds.Height / 2);
+
+        var texto = new DataTransfer();
+        texto.Add(DataTransferItem.CreateText("não é arquivo"));
+        janela.DragDrop(meio, RawDragEventType.DragEnter, texto, DragDropEffects.Copy);
+        janela.DragDrop(meio, RawDragEventType.Drop, texto, DragDropEffects.Copy);
+        Dispatcher.UIThread.RunJobs();
+        tarefa.Tarefa.Fotos.Should().BeEmpty();
+
+        var arquivos = new DataTransfer();
+        arquivos.Add(DataTransferItem.CreateFile(ArquivoArrastado("/fotos/a.jpg")));
+        arquivos.Add(DataTransferItem.CreateFile(ArquivoArrastado("/fotos/b.webp")));
+        janela.DragDrop(meio, RawDragEventType.DragEnter, arquivos, DragDropEffects.Copy);
+        janela.DragDrop(meio, RawDragEventType.Drop, arquivos, DragDropEffects.Copy);
+        Esperar(Task.Run(() => SpinWait.SpinUntil(() => !galeria.Ocupado && tarefa.Tarefa.Fotos.Count == 2, 5000)));
+
+        tarefa.Tarefa.Fotos.Select(f => f.Imagem.NomeArquivoOriginal).Should().BeEquivalentTo(["a.jpg", "b.webp"]);
+        Miniaturas(janela).Should().HaveCount(2);
+        janela.Close();
+    });
+
+    [Fact]
+    public Task Galeria_DuploCliqueNaMiniatura_AbreOVisualizador_SetasNavegam_EscFecha() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var tarefa = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        var (janela, galeria) = AbrirGaleria(a, tarefa);
+        Esperar(galeria.AdicionarArquivosAsync(["/fotos/a.jpg", "/fotos/b.jpg", "/fotos/c.jpg"]));
+        var segunda = Miniaturas(janela)[1];
+        var ponto = segunda.TranslatePoint(new Point(segunda.Bounds.Width / 2, segunda.Bounds.Height / 2), janela)!.Value;
+
+        janela.MouseDown(ponto, MouseButton.Left);
+        janela.MouseUp(ponto, MouseButton.Left);
         janela.MouseDown(ponto, MouseButton.Left);
         janela.MouseUp(ponto, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
 
-        tarefa.Tarefa.Fotos.Should().ContainSingle();
-        vazia.IsVisible.Should().BeFalse();
-        adicionar.IsEffectivelyVisible.Should().BeTrue("o botão continua lá para as próximas");
+        var vm = a.Ambiente.Dialogos.Visualizadores.Should().ContainSingle().Subject;
+        var visualizador = new VisualizadorFotosWindow(vm);
+        visualizador.Show();
+        Dispatcher.UIThread.RunJobs();
+        var posicao = visualizador.FindControl<TextBlock>("Posicao")!;
+        (posicao.Text, vm.Atual.Imagem.NomeArquivoOriginal).Should().Be(("2 de 3", "b.jpg"));
+
+        visualizador.KeyPress(Key.Right, RawInputModifiers.None, PhysicalKey.ArrowRight, null);
+        visualizador.KeyPress(Key.Right, RawInputModifiers.None, PhysicalKey.ArrowRight, null);
+        Dispatcher.UIThread.RunJobs();
+        (posicao.Text, visualizador.FindControl<Button>("Proxima")!.IsEffectivelyEnabled).Should().Be(("3 de 3", false));
+
+        visualizador.KeyPress(Key.Left, RawInputModifiers.None, PhysicalKey.ArrowLeft, null);
+        Dispatcher.UIThread.RunJobs();
+        posicao.Text.Should().Be("2 de 3");
+
+        visualizador.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+        Dispatcher.UIThread.RunJobs();
+        visualizador.IsVisible.Should().BeFalse("Esc fecha o visualizador");
         janela.Close();
     });
+
+    // A decodificação de verdade não roda aqui (o desenho sem tela aceita quaisquer bytes); ela é conferida no app publicado.
+    [Fact]
+    public void ConversorDeImagem_SemBytes_ViraNada()
+    {
+        var cultura = System.Globalization.CultureInfo.InvariantCulture;
+
+        Conversores.Imagem.Convert(Array.Empty<byte>(), typeof(object), null, cultura).Should().BeNull();
+        Conversores.Imagem.Convert(null, typeof(object), null, cultura).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Um arquivo arrastado do Finder. O IStorageFile do Avalonia não pode ser implementado fora dele, então usa o
+    /// arquivo de disco do próprio Avalonia (o mesmo que a área de transferência entrega); só o caminho importa.
+    /// </summary>
+    private static IStorageFile ArquivoArrastado(string caminho)
+    {
+        var tipo = typeof(IStorageFile).Assembly.GetTypes().Single(t => t.Name == "BclStorageFile");
+        return (IStorageFile)Activator.CreateInstance(tipo, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic, null, [new FileInfo(caminho)], null)!;
+    }
 }

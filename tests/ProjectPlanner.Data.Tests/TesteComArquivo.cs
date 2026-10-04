@@ -24,9 +24,9 @@ public abstract class TesteComArquivo : IDisposable
 
     protected SqliteProjetoRepository Repositorio { get; }
 
-    protected long Contar(string tabela)
+    protected long Contar(string tabela, string? caminho = null)
     {
-        using var conexao = Conectar();
+        using var conexao = Conectar(caminho);
         using var comando = conexao.CreateCommand();
         comando.CommandText = $"SELECT COUNT(*) FROM {tabela}";
         return (long)comando.ExecuteScalar()!;
@@ -56,9 +56,9 @@ public abstract class TesteComArquivo : IDisposable
     }
 
     // Chaves estrangeiras ligadas, como o EF faz em toda conexão.
-    private SqliteConnection Conectar()
+    private SqliteConnection Conectar(string? caminho = null)
     {
-        var conexao = new SqliteConnection($"Data Source={Caminho};Foreign Keys=True;Pooling=False");
+        var conexao = new SqliteConnection($"Data Source={caminho ?? Caminho};Foreign Keys=True;Pooling=False");
         conexao.Open();
         return conexao;
     }

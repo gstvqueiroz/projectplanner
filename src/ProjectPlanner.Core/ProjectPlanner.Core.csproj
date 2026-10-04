@@ -9,6 +9,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="ProjectPlanner.Core.Tests" />
     <InternalsVisibleTo Include="ProjectPlanner.Data" />
+    <InternalsVisibleTo Include="ProjectPlanner.App.Tests" />
   </ItemGroup>
 
 </Project>

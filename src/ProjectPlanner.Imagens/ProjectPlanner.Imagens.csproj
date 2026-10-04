@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Processamento das fotos (Bloco 22): SkiaSharp (MIT, a mesma versão que o Avalonia já usa e publica) para
+       decodificar, orientar, reduzir e gerar JPEG; MetadataExtractor (Apache-2.0, só código gerenciado) para a data
+       EXIF. Fica fora do Core para o domínio não depender de biblioteca de imagem. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProjectPlanner.Core\ProjectPlanner.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ProjectPlanner.Imagens.Tests" />
+  </ItemGroup>
+
+</Project>

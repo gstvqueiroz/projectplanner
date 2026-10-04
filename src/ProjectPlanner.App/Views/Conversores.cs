@@ -29,6 +29,21 @@ public static class Conversores
     /// <summary>A linha sendo arrastada na grid (Bloco 18) fica meio transparente.</summary>
     public static readonly IValueConverter MeiaOpacidadeSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 0.5 : 1);
 
+    /// <summary>Bytes de uma imagem (JPEG das fotos) para o controle Image; bytes inválidos viram nada.</summary>
+    public static readonly IValueConverter Imagem = new FuncValueConverter<byte[]?, Avalonia.Media.Imaging.Bitmap?>(bytes =>
+    {
+        if (bytes is not { Length: > 0 })
+            return null;
+        try
+        {
+            return new Avalonia.Media.Imaging.Bitmap(new MemoryStream(bytes));
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    });
+
     public static readonly IValueConverter OpacoSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 1 : 0);
 
     /// <summary>Linhas de resumo em negrito, como no MS Project.</summary>

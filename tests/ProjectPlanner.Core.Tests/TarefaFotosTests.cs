@@ -7,8 +7,8 @@ public class TarefaFotosTests
 {
     private readonly Tarefa _tarefa = new("Fundação", Segunda, 3);
 
-    private FotoTarefa Foto(DateTime data, string? descricao = null) =>
-        new(_tarefa.Id, data, $"exemplo://{Guid.NewGuid():N}", descricao);
+    private FotoTarefa Foto(DateTime data, string? descricao = null, string? arquivo = null) =>
+        FotosDeTeste.Nova(_tarefa.Id, data, descricao, arquivo: arquivo);
 
     [Fact]
     public void TarefaNova_NaoTemFotos()
@@ -26,12 +26,13 @@ public class TarefaFotosTests
         _tarefa.AdicionarFoto(segunda2);
 
         _tarefa.Fotos.Should().Equal(segunda1, segunda2, terca);
+        _tarefa.FotosNaOrdemDeCadastro.Should().Equal(terca, segunda1, segunda2);
     }
 
     [Fact]
     public void FotoDeOutraTarefa_Recusada()
     {
-        var outra = new FotoTarefa(Guid.NewGuid(), Segunda, "exemplo://x");
+        var outra = FotosDeTeste.Nova(Guid.NewGuid(), Segunda);
 
         var adicionar = () => _tarefa.AdicionarFoto(outra);
 
@@ -52,6 +53,19 @@ public class TarefaFotosTests
     }
 
     [Fact]
+    public void MesmaImagem_ComOutroId_Recusada_EmOutraTarefaPode()
+    {
+        _tarefa.AdicionarFoto(Foto(Segunda, arquivo: "obra.jpg"));
+
+        var repetida = () => _tarefa.AdicionarFoto(Foto(Terca, arquivo: "obra.jpg"));
+        var outraTarefa = new Tarefa("Estrutura", Segunda, 2);
+
+        repetida.Should().Throw<DomainValidationException>().WithMessage("obra.jpg: esta imagem já é uma foto de \"Fundação\".");
+        _tarefa.TemFotoDaMesmaImagem(FotosDeTeste.Hash("obra.jpg")).Should().BeTrue();
+        outraTarefa.Invoking(t => t.AdicionarFoto(FotosDeTeste.Nova(t.Id, Segunda, arquivo: "obra.jpg"))).Should().NotThrow();
+    }
+
+    [Fact]
     public void RemoverFoto_TiraSoAquela_EFotoInexistenteERecusada()
     {
         var (a, b) = (Foto(Segunda), Foto(Terca));
@@ -65,24 +79,19 @@ public class TarefaFotosTests
         removerDeNovo.Should().Throw<DomainValidationException>();
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void FotoSemCaminho_Recusada(string caminho)
-    {
-        var criar = () => new FotoTarefa(_tarefa.Id, Segunda, caminho);
-
-        criar.Should().Throw<DomainValidationException>().Which.Propriedade.Should().Be(nameof(FotoTarefa.CaminhoArquivo));
-    }
-
     [Fact]
-    public void FotoSemTarefa_Recusada_EDescricaoVaziaViraNula()
+    public void SubstituirFoto_MantemOLugar_EFotoDeFora_Recusada()
     {
-        var semTarefa = () => new FotoTarefa(Guid.Empty, Segunda, "exemplo://x");
+        var (a, b) = (Foto(Segunda, "a"), Foto(Terca, "b"));
+        _tarefa.AdicionarFoto(a);
+        _tarefa.AdicionarFoto(b);
+        var editada = a.ComMetadados(new MetadadosFoto(Quarta, descricao: "a editada"));
 
-        semTarefa.Should().Throw<DomainValidationException>();
-        new FotoTarefa(_tarefa.Id, Segunda, " exemplo://x ", "  ").Should()
-            .Match<FotoTarefa>(f => f.Descricao == null && f.CaminhoArquivo == "exemplo://x");
+        _tarefa.SubstituirFoto(editada);
+
+        _tarefa.FotosNaOrdemDeCadastro.Should().Equal(editada, b);
+        _tarefa.Foto(a.Id)!.Descricao.Should().Be("a editada");
+        _tarefa.Invoking(t => t.SubstituirFoto(Foto(Segunda))).Should().Throw<DomainValidationException>();
     }
 
     [Fact]
@@ -93,8 +102,8 @@ public class TarefaFotosTests
         var semFotos = new Tarefa("Sem fotos", Segunda, 3);
         projeto.AdicionarTarefa(comFotos);
         projeto.AdicionarTarefa(semFotos);
-        comFotos.AdicionarFoto(new FotoTarefa(comFotos.Id, Segunda, "exemplo://1"));
-        comFotos.AdicionarFoto(new FotoTarefa(comFotos.Id, Terca, "exemplo://2"));
+        comFotos.AdicionarFoto(FotosDeTeste.Nova(comFotos.Id, Segunda));
+        comFotos.AdicionarFoto(FotosDeTeste.Nova(comFotos.Id, Terca));
 
         var layout = CalculadoraLayoutGantt.Calcular(projeto, CalculadoraCronograma.Calcular(projeto), new OpcoesGantt(20));
 

@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Fotos;
 
 namespace ProjectPlanner.Data;
 
@@ -33,9 +35,12 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
 
     private readonly TimeProvider _relogio = relogio ?? TimeProvider.System;
 
-    public void Salvar(Cronograma cronograma, string caminhoArquivo)
+    public void Salvar(Cronograma cronograma, string caminhoArquivo) => Salvar(cronograma, caminhoArquivo, ImagensParaSalvar.Nenhuma);
+
+    public void Salvar(Cronograma cronograma, string caminhoArquivo, ImagensParaSalvar imagens)
     {
         ArgumentNullException.ThrowIfNull(cronograma);
+        ArgumentNullException.ThrowIfNull(imagens);
         ArgumentException.ThrowIfNullOrWhiteSpace(caminhoArquivo);
 
         var destino = Path.GetFullPath(caminhoArquivo);
@@ -51,8 +56,10 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             using (var contexto = ProjectPlannerDbContext.Criar(temporario, criarSeNaoExistir: true))
             {
                 contexto.Database.Migrate();
-                Gravar(contexto, cronograma, criacao, agora);
+                Gravar(contexto, cronograma, criacao, agora, imagens.Novas);
                 contexto.SaveChanges();
+                CopiarImagensDaOrigem(contexto, imagens.ArquivoDeOrigem);
+                VerificarQueTodasAsFotosTemImagem(contexto, imagens.ArquivoDeOrigem);
             }
             File.Move(temporario, destino, overwrite: true);
         }
@@ -88,7 +95,86 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
         }
     }
 
-    private static void Gravar(ProjectPlannerDbContext contexto, Cronograma cronograma, DateTime criacao, DateTime agora)
+    public IReadOnlyDictionary<Guid, byte[]> LerMiniaturas(string caminhoArquivo, IReadOnlyCollection<Guid> fotos)
+    {
+        ArgumentNullException.ThrowIfNull(fotos);
+        if (fotos.Count == 0)
+            return new Dictionary<Guid, byte[]>();
+        using var contexto = ContextoDeLeitura(caminhoArquivo);
+        var ids = fotos.ToList();
+        return contexto.Miniaturas.AsNoTracking().Where(m => ids.Contains(m.FotoId)).ToDictionary(m => m.FotoId, m => m.Dados);
+    }
+
+    public byte[]? LerImagem(string caminhoArquivo, Guid foto)
+    {
+        using var contexto = ContextoDeLeitura(caminhoArquivo);
+        return contexto.Imagens.AsNoTracking().Where(i => i.FotoId == foto).Select(i => i.Dados).FirstOrDefault();
+    }
+
+    private static ProjectPlannerDbContext ContextoDeLeitura(string caminhoArquivo)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(caminhoArquivo);
+        if (!File.Exists(caminhoArquivo))
+            throw new FileNotFoundException($"O arquivo de projeto \"{caminhoArquivo}\" não existe.", caminhoArquivo);
+        return ProjectPlannerDbContext.Criar(caminhoArquivo, criarSeNaoExistir: false);
+    }
+
+    // As imagens que não vieram da memória (fotos que já estavam no projeto) são copiadas do arquivo de origem
+    // direto no SQLite, sem passar pelo .NET: anexa a origem, copia as das fotos que ficaram e solta.
+    private static void CopiarImagensDaOrigem(ProjectPlannerDbContext contexto, string? origem)
+    {
+        if (origem is null || !File.Exists(origem) || !contexto.Fotos.Any())
+            return;
+        var banco = contexto.Database;
+        banco.OpenConnection();
+        try
+        {
+            banco.ExecuteSqlRaw("ATTACH DATABASE {0} AS origem", Path.GetFullPath(origem));
+            try
+            {
+                banco.ExecuteSqlRaw("""
+                    INSERT INTO main.FotosImagens (FotoId, Dados)
+                    SELECT o.FotoId, o.Dados FROM origem.FotosImagens o
+                    WHERE o.FotoId IN (SELECT Id FROM main.FotosTarefa)
+                      AND o.FotoId NOT IN (SELECT FotoId FROM main.FotosImagens)
+                    """);
+                banco.ExecuteSqlRaw("""
+                    INSERT INTO main.FotosMiniaturas (FotoId, Dados)
+                    SELECT o.FotoId, o.Dados FROM origem.FotosMiniaturas o
+                    WHERE o.FotoId IN (SELECT Id FROM main.FotosTarefa)
+                      AND o.FotoId NOT IN (SELECT FotoId FROM main.FotosMiniaturas)
+                    """);
+            }
+            catch (SqliteException ex)
+            {
+                throw new IOException($"Não foi possível copiar as imagens das fotos de \"{origem}\": {ex.Message}", ex);
+            }
+            finally
+            {
+                banco.ExecuteSqlRaw("DETACH DATABASE origem");
+            }
+        }
+        finally
+        {
+            banco.CloseConnection();
+        }
+    }
+
+    // Nenhuma foto pode ficar sem imagem: se o arquivo de origem sumiu ou mudou, nada é salvo (o temporário é
+    // apagado e o destino fica como estava).
+    private static void VerificarQueTodasAsFotosTemImagem(ProjectPlannerDbContext contexto, string? origem)
+    {
+        var semImagem = contexto.Fotos.Count(f => !contexto.Imagens.Any(i => i.FotoId == f.Id)
+                                                  || !contexto.Miniaturas.Any(m => m.FotoId == f.Id));
+        if (semImagem > 0)
+            throw new IOException($"{semImagem} foto(s) ficariam sem imagem: o arquivo de onde elas vêm " +
+                                  $"(\"{origem ?? "nenhum"}\") não foi encontrado ou mudou. Nada foi salvo.");
+    }
+
+    private static readonly JsonSerializerOptions OpcoesDasTags = new();
+
+    private static void Gravar(ProjectPlannerDbContext contexto, Cronograma cronograma, DateTime criacao, DateTime agora,
+        IReadOnlyDictionary<Guid, ConteudoDeFoto> novas)
     {
         contexto.Projetos.Add(new ProjetoRegistro
         {
@@ -114,15 +200,32 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             TarefaPaiId = t.TarefaPaiId,
         }));
 
-        contexto.Fotos.AddRange(cronograma.Tarefas.SelectMany(t => t.Fotos).Select((f, ordem) => new FotoRegistro
+        var fotos = cronograma.Tarefas.SelectMany(t => t.FotosNaOrdemDeCadastro).ToList();
+        contexto.Fotos.AddRange(fotos.Select((f, ordem) => new FotoRegistro
         {
             Id = f.Id,
             TarefaId = f.TarefaId,
             Ordem = ordem,
-            DataRegistro = f.DataRegistro,
-            CaminhoArquivo = f.CaminhoArquivo,
+            DataFoto = f.DataFoto,
+            DataCadastro = f.DataCadastro,
+            Titulo = f.Titulo,
             Descricao = f.Descricao,
+            Autor = f.Autor,
+            Local = f.Local,
+            PercentualConcluidoNaData = f.PercentualConcluidoNaData,
+            NomeArquivoOriginal = f.Imagem.NomeArquivoOriginal,
+            Largura = f.Imagem.Largura,
+            Altura = f.Imagem.Altura,
+            TamanhoBytes = f.Imagem.TamanhoBytes,
+            HashOriginal = f.Imagem.HashOriginal,
+            Tags = f.Tags.Count == 0 ? null : JsonSerializer.Serialize(f.Tags, OpcoesDasTags),
         }));
+        foreach (var foto in fotos)
+            if (novas.TryGetValue(foto.Id, out var conteudo))
+            {
+                contexto.Imagens.Add(new FotoImagemRegistro { FotoId = foto.Id, Dados = conteudo.Imagem });
+                contexto.Miniaturas.Add(new FotoMiniaturaRegistro { FotoId = foto.Id, Dados = conteudo.Miniatura });
+            }
 
         contexto.Predecessoras.AddRange(cronograma.Predecessoras.Select((p, ordem) => new PredecessoraRegistro
         {
@@ -176,10 +279,27 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
             cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);
         }
 
+        // Só os ids das imagens, sem os BLOBs. Registros sem imagem são as "fotos de exemplo" das versões 0.14 a
+        // 0.21: ficam de fora e somem do arquivo no próximo salvamento (Bloco 22, D6).
         var tarefas = cronograma.Tarefas.ToDictionary(t => t.Id);
+        var comImagem = contexto.Imagens.AsNoTracking().Select(i => i.FotoId).ToHashSet();
+        var descartadas = 0;
         foreach (var registro in contexto.Fotos.AsNoTracking().OrderBy(f => f.Ordem))
-            tarefas[registro.TarefaId].AdicionarFoto(new FotoTarefa(
-                registro.Id, registro.TarefaId, registro.DataRegistro, registro.CaminhoArquivo, registro.Descricao));
+        {
+            if (!comImagem.Contains(registro.Id))
+            {
+                descartadas++;
+                continue;
+            }
+            tarefas[registro.TarefaId].AdicionarFoto(new FotoTarefa(registro.Id, registro.TarefaId,
+                new DadosDaImagem(registro.NomeArquivoOriginal, registro.Largura, registro.Altura, registro.TamanhoBytes,
+                    registro.HashOriginal),
+                new MetadadosFoto(registro.DataFoto, registro.Titulo, registro.Descricao, registro.Autor, registro.Local,
+                    registro.PercentualConcluidoNaData,
+                    registro.Tags is null ? null : JsonSerializer.Deserialize<List<string>>(registro.Tags, OpcoesDasTags)),
+                registro.DataCadastro));
+        }
+        cronograma.RegistrarFotosDescartadas(descartadas);
 
         foreach (var registro in contexto.Predecessoras.AsNoTracking().OrderBy(p => p.Ordem))
             cronograma.AdicionarPredecessora(new Predecessora(

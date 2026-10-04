@@ -17,26 +17,85 @@ namespace ProjectPlanner.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("ProjectPlanner.Data.FotoImagemRegistro", b =>
+                {
+                    b.Property<Guid>("FotoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("Dados")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("FotoId");
+
+                    b.ToTable("FotosImagens", (string)null);
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.FotoMiniaturaRegistro", b =>
+                {
+                    b.Property<Guid>("FotoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("Dados")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("FotoId");
+
+                    b.ToTable("FotosMiniaturas", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.FotoRegistro", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CaminhoArquivo")
-                        .IsRequired()
+                    b.Property<int>("Altura")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Autor")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("DataRegistro")
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DataFoto")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Descricao")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("HashOriginal")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Largura")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Local")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NomeArquivoOriginal")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Ordem")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("PercentualConcluidoNaData")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("TamanhoBytes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("TarefaId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Titulo")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -45,7 +104,7 @@ namespace ProjectPlanner.Data.Migrations
 
                     b.ToTable("FotosTarefa", null, t =>
                         {
-                            t.HasCheckConstraint("CK_FotosTarefa_CaminhoArquivo", "length(trim(CaminhoArquivo)) > 0");
+                            t.HasCheckConstraint("CK_FotosTarefa_Percentual", "PercentualConcluidoNaData IS NULL OR PercentualConcluidoNaData BETWEEN 0 AND 100");
                         });
                 });
 
@@ -163,6 +222,24 @@ namespace ProjectPlanner.Data.Migrations
 
                             t.HasCheckConstraint("CK_Tarefas_Tipo", "Tipo BETWEEN 0 AND 2");
                         });
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.FotoImagemRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.FotoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.FotoImagemRegistro", "FotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.FotoMiniaturaRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.FotoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.FotoMiniaturaRegistro", "FotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProjectPlanner.Data.FotoRegistro", b =>

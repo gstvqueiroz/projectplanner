@@ -397,7 +397,7 @@ public class HierarquiaNaGridTests
         var repositorio = new RepositorioEmMemoria();
         MainWindowViewModel Janela() =>
             new(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
-                _ambiente.Assistente, _ambiente.PreferenciasInterface);
+                _ambiente.Assistente, _ambiente.PreferenciasInterface, _ambiente.Processador);
         var r = MontarReferencia();
         _ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
         repositorio.Salvar(r.Vm.Cronograma, "/obra.pplan");

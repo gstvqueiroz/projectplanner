@@ -1,61 +1,177 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
         x:Class="ProjectPlanner.App.Views.GaleriaFotosWindow"
         x:DataType="vm:GaleriaFotosViewModel"
         Title="{Binding Titulo}"
-        Width="640" Height="460" MinWidth="360" MinHeight="260"
+        Width="1180" Height="760" MinWidth="860" MinHeight="520"
         WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16">
-        <!-- Sem fotos, a mensagem vai no meio da galeria (MensagemVazia), não aqui. -->
-        <TextBlock DockPanel.Dock="Top" Text="{Binding Resumo}" Margin="0,0,0,4" Opacity="0.8" IsVisible="{Binding !Vazia}" />
-        <!-- PROVISÓRIO: some quando o envio de imagens reais existir. -->
-        <TextBlock x:Name="Aviso" DockPanel.Dock="Top" Text="{x:Static vm:GaleriaFotosViewModel.AvisoProvisorio}"
-                   FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,12" />
-        <!-- Adicionar foto fica sempre à vista, também com a galeria vazia (Bloco 17). -->
-        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-            <Button x:Name="AdicionarFoto" DockPanel.Dock="Left" Content="Adicionar foto" Command="{Binding AdicionarFotoCommand}"
-                    Classes="accent" ToolTip.Tip="Adicionar uma foto a esta tarefa (por enquanto, um registro de exemplo)" />
-            <Button Content="Fechar" HorizontalAlignment="Right" Click="Fechar" IsCancel="True" />
+    <!-- Fotos de uma tarefa (Bloco 22): cabeçalho com a tarefa, ações, filtros, miniaturas por dia e, à direita,
+         os detalhes da foto selecionada para editar. Dá para soltar fotos do Finder/Explorer em qualquer lugar. -->
+    <Window.Styles>
+        <Style Selector="Border.miniatura">
+            <Setter Property="Width" Value="176" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Background" Value="#F4F6F8" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.miniatura.selecionada">
+            <Setter Property="BorderBrush" Value="#6A8CAF" />
+            <Setter Property="Background" Value="#E3ECF5" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="Margin" Value="0,6,0,2" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="14">
+        <!-- Tarefa -->
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10">
+            <TextBlock Text="{Binding Titulo}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock x:Name="InfoDaTarefa" Text="{Binding InfoDaTarefa}" Opacity="0.7" />
+        </StackPanel>
+
+        <!-- Ações -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button x:Name="Adicionar" Classes="accent" Content="Adicionar fotos…" Command="{Binding AdicionarFotosCommand}" />
+                <Button x:Name="Excluir" Content="Excluir" Command="{Binding ExcluirCommand}"
+                        ToolTip.Tip="Excluir as fotos selecionadas (Delete)" />
+                <Button Content="↺ Girar" Command="{Binding GirarEsquerdaCommand}" ToolTip.Tip="Girar 90° para a esquerda" />
+                <Button Content="Girar ↻" Command="{Binding GirarDireitaCommand}" ToolTip.Tip="Girar 90° para a direita" />
+                <Button Content="Ampliar" Command="{Binding AmpliarCommand}" CommandParameter="{x:Null}"
+                        ToolTip.Tip="Ver a foto ampliada (ou dê dois cliques nela)" />
+                <Button Content="Selecionar todas" Command="{Binding SelecionarTodasCommand}" />
+            </StackPanel>
+            <TextBlock x:Name="Contador" Text="{Binding Contador}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                       FontWeight="SemiBold" />
         </DockPanel>
-        <Panel>
-        <TextBlock x:Name="MensagemVazia" Text="{x:Static vm:GaleriaFotosViewModel.SemFotos}" IsVisible="{Binding Vazia}"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" FontSize="14" />
-        <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Fotos}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:FotoNaGaleria">
-                        <StackPanel Width="180" Margin="0,0,12,12" Spacing="4">
-                            <!-- PONTO DE EXTENSÃO: miniatura provisória. Não há imagens ainda (ver FotoTarefa);
-                                 quando houver, esta Border vira um Image carregado de Foto.CaminhoArquivo. -->
-                            <Border Height="120" CornerRadius="4" Background="#CFD8DC" ToolTip.Tip="Imagem ainda não disponível">
-                                <Grid>
-                                    <Viewbox Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.55">
-                                        <Canvas Width="24" Height="24">
-                                            <Path Stroke="#455A64" StrokeThickness="1.6"
-                                                  Data="M3,5 H21 V19 H3 Z M3,16 L9,10 L14,15 L17,12 L21,16" />
-                                            <Ellipse Canvas.Left="14" Canvas.Top="7" Width="3.5" Height="3.5" Fill="#455A64" />
-                                        </Canvas>
-                                    </Viewbox>
-                                    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6"
-                                            Background="#99000000" CornerRadius="3" Padding="6,2">
-                                        <TextBlock Text="{Binding Data}" Foreground="White" FontSize="11" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                            <TextBlock Text="{Binding Data}" FontWeight="SemiBold" FontSize="12" />
-                            <TextBlock Text="{Binding Descricao}" TextWrapping="Wrap" FontSize="12" />
+
+        <!-- Filtros -->
+        <Border DockPanel.Dock="Top" Background="#F4F6F8" CornerRadius="6" Padding="8" Margin="0,0,0,8">
+            <WrapPanel ItemSpacing="8" LineSpacing="6">
+                <ComboBox ItemsSource="{Binding Atalhos}" SelectedItem="{Binding AtalhoEscolhido}" MinWidth="150" />
+                <TextBlock Text="Dia" VerticalAlignment="Center" />
+                <CalendarDatePicker SelectedDate="{Binding DiaFiltro}" PlaceholderText="qualquer" Width="130" />
+                <TextBlock Text="De" VerticalAlignment="Center" />
+                <CalendarDatePicker SelectedDate="{Binding DeFiltro}" PlaceholderText="início" Width="130" />
+                <TextBlock Text="Até" VerticalAlignment="Center" />
+                <CalendarDatePicker SelectedDate="{Binding AteFiltro}" PlaceholderText="fim" Width="130" />
+                <TextBox x:Name="Busca" Text="{Binding TextoFiltro}" PlaceholderText="Buscar em título, legenda, local, autor" Width="250" />
+                <ComboBox ItemsSource="{Binding TagsDisponiveis}" SelectedItem="{Binding TagEscolhida}" MinWidth="140" />
+                <CheckBox Content="Mais recentes primeiro" IsChecked="{Binding MaisRecentesPrimeiro}" />
+                <Button Content="Limpar filtros" Command="{Binding LimparFiltrosCommand}" />
+            </WrapPanel>
+        </Border>
+
+        <!-- Rodapé: avisos e Fechar -->
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button Content="Fechar" DockPanel.Dock="Right" Click="Fechar" IsCancel="True" />
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="Aviso" Text="{Binding Aviso}" TextWrapping="Wrap" FontSize="12" />
+                <TextBlock Text="{Binding ErroDeFiltro}" Foreground="#C62828" FontSize="12"
+                           IsVisible="{Binding ErroDeFiltro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Detalhes e edição da foto selecionada -->
+        <Border DockPanel.Dock="Right" Width="320" Margin="12,0,0,0" BorderThickness="1,0,0,0" Padding="12,0,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <Panel>
+                <TextBlock Text="Selecione uma foto para ver e editar as informações dela." TextWrapping="Wrap" Opacity="0.6"
+                           IsVisible="{Binding FotoAtual, Converter={x:Static ObjectConverters.IsNull}}" />
+                <ScrollViewer x:Name="Detalhes" IsVisible="{Binding FotoAtual, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="2">
+                        <Border Background="#ECEFF1" CornerRadius="4" Height="200">
+                            <Image Source="{Binding ImagemAtual, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" />
+                        </Border>
+                        <TextBlock Text="{Binding DetalheDoArquivo}" FontSize="11" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding DetalheDoCadastro}" FontSize="11" Opacity="0.7" />
+
+                        <TextBlock Classes="rotulo" Text="Data e hora da foto" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <CalendarDatePicker x:Name="EdicaoData" SelectedDate="{Binding EdicaoData}" Width="140" />
+                            <TimePicker SelectedTime="{Binding EdicaoHora}" ClockIdentifier="24HourClock" MinWidth="120" />
                         </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                        <TextBlock Classes="rotulo" Text="Título" />
+                        <TextBox x:Name="EdicaoTitulo" Text="{Binding EdicaoTitulo}" MaxLength="120" />
+                        <TextBlock Classes="rotulo" Text="Legenda" />
+                        <TextBox Text="{Binding EdicaoDescricao}" AcceptsReturn="True" TextWrapping="Wrap" Height="70" MaxLength="2000" />
+                        <TextBlock Classes="rotulo" Text="Autor / responsável" />
+                        <TextBox Text="{Binding EdicaoAutor}" MaxLength="120" />
+                        <TextBlock Classes="rotulo" Text="Local / trecho da obra" />
+                        <TextBox Text="{Binding EdicaoLocal}" MaxLength="200" />
+                        <TextBlock Classes="rotulo" Text="% concluído da tarefa na data" />
+                        <NumericUpDown Value="{Binding EdicaoPercentual}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+                        <TextBlock Classes="rotulo" Text="Tags (separadas por vírgula)" />
+                        <TextBox Text="{Binding EdicaoTags}" PlaceholderText="antes, durante, depois, problema" />
+                        <TextBlock Text="{Binding ErroDeEdicao}" Foreground="#C62828" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"
+                                   IsVisible="{Binding ErroDeEdicao, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,10,0,0">
+                            <Button x:Name="Aplicar" Classes="accent" Content="Aplicar alterações" Command="{Binding AplicarEdicaoCommand}" />
+                            <Button Content="Descartar" Command="{Binding DescartarEdicaoCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Panel>
+        </Border>
+
+        <!-- Miniaturas agrupadas por dia -->
+        <Panel>
+            <TextBlock x:Name="MensagemVazia" Text="{x:Static vm:GaleriaFotosViewModel.SemFotos}" IsVisible="{Binding Vazia}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                       Opacity="0.6" FontSize="15" MaxWidth="420" />
+            <TextBlock Text="{x:Static vm:GaleriaFotosViewModel.SemResultado}" IsVisible="{Binding NadaComOsFiltros}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" FontSize="15" />
+            <ScrollViewer>
+                <ItemsControl x:Name="Grupos" ItemsSource="{Binding Grupos}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GrupoNaGaleria">
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="{Binding Cabecalho}" FontWeight="SemiBold" Margin="0,4,0,8" />
+                                <ItemsControl ItemsSource="{Binding Fotos}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:FotoNaGaleria">
+                                            <Border Classes="miniatura" Classes.selecionada="{Binding Selecionada}"
+                                                    PointerPressed="MiniaturaApertada" DoubleTapped="MiniaturaDuploClique"
+                                                    ToolTip.Tip="{Binding Foto.Imagem.NomeArquivoOriginal}">
+                                                <StackPanel Spacing="4">
+                                                    <Border Height="124" Background="#CFD8DC" CornerRadius="4" ClipToBounds="True">
+                                                        <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Stretch="UniformToFill" />
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Rotulo}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Hora}" FontSize="11" Opacity="0.6" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Importando -->
+            <Border Background="#CCFFFFFF" IsVisible="{Binding Ocupado}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <ProgressBar IsIndeterminate="True" Width="220" />
+                    <TextBlock Text="{Binding Progresso}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
         </Panel>
     </DockPanel>
 </Window>

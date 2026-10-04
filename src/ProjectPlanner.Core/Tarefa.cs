@@ -119,12 +119,22 @@ public class Tarefa
     public bool MarcoTardeNoFimDoDia { get; private set; }
 
     /// <summary>
-    /// Registros fotográficos da tarefa, do mais antigo ao mais recente (empates na ordem em que
-    /// foram adicionados). Ficam na própria tarefa porque cada foto pertence a uma tarefa só.
+    /// As fotos da tarefa, da mais antiga para a mais recente pela data da foto (empates na ordem em que foram
+    /// adicionadas). Ficam na própria tarefa porque cada foto pertence a uma tarefa só.
     /// </summary>
-    public IReadOnlyList<FotoTarefa> Fotos => _fotos.OrderBy(f => f.DataRegistro).ToList();
+    public IReadOnlyList<FotoTarefa> Fotos => _fotos.OrderBy(f => f.DataFoto).ToList();
 
-    /// <exception cref="DomainValidationException">A foto é de outra tarefa ou já foi adicionada.</exception>
+    /// <summary>As fotos na ordem em que foram adicionadas (a coluna Ordem do arquivo).</summary>
+    public IReadOnlyList<FotoTarefa> FotosNaOrdemDeCadastro => _fotos.AsReadOnly();
+
+    /// <summary>A foto com este id, ou nula.</summary>
+    public FotoTarefa? Foto(Guid fotoId) => _fotos.Find(f => f.Id == fotoId);
+
+    /// <summary>Se a mesma imagem (mesmo arquivo original) já é uma foto desta tarefa.</summary>
+    public bool TemFotoDaMesmaImagem(string hashOriginal) =>
+        _fotos.Exists(f => string.Equals(f.Imagem.HashOriginal, hashOriginal, StringComparison.OrdinalIgnoreCase));
+
+    /// <exception cref="DomainValidationException">A foto é de outra tarefa, já foi adicionada ou é a mesma imagem de outra.</exception>
     public void AdicionarFoto(FotoTarefa foto)
     {
         ArgumentNullException.ThrowIfNull(foto);
@@ -132,7 +142,21 @@ public class Tarefa
             throw new DomainValidationException(nameof(Fotos), $"A foto é de outra tarefa, não de \"{Nome}\".");
         if (_fotos.Exists(f => f.Id == foto.Id))
             throw new DomainValidationException(nameof(Fotos), $"A foto já pertence a \"{Nome}\".");
+        if (TemFotoDaMesmaImagem(foto.Imagem.HashOriginal))
+            throw new DomainValidationException(nameof(Fotos),
+                $"{foto.Imagem.NomeArquivoOriginal}: esta imagem já é uma foto de \"{Nome}\".");
         _fotos.Add(foto);
+    }
+
+    /// <summary>Troca uma foto pela versão alterada (informações editadas ou imagem girada), no mesmo lugar.</summary>
+    /// <exception cref="DomainValidationException">A foto não é desta tarefa.</exception>
+    public void SubstituirFoto(FotoTarefa foto)
+    {
+        ArgumentNullException.ThrowIfNull(foto);
+        var indice = _fotos.FindIndex(f => f.Id == foto.Id);
+        if (indice < 0 || foto.TarefaId != Id)
+            throw new DomainValidationException(nameof(Fotos), $"A foto {foto.Id} não pertence a \"{Nome}\".");
+        _fotos[indice] = foto;
     }
 
     /// <exception cref="DomainValidationException">A foto não é desta tarefa.</exception>

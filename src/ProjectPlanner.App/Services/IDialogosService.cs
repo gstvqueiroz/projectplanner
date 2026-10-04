@@ -19,6 +19,13 @@ public interface IDialogosService
     /// <returns>Os caminhos escolhidos (vazio se o usuário cancelar).</returns>
     Task<IReadOnlyList<string>> EscolherDocumentosAsync();
 
+    /// <summary>Escolhe fotos para adicionar a uma tarefa (Bloco 22), várias de uma vez.</summary>
+    /// <returns>Os caminhos escolhidos (vazio se o usuário cancelar).</returns>
+    Task<IReadOnlyList<string>> EscolherFotosAsync();
+
+    /// <summary>Mostra uma foto ampliada, com anterior/próxima, e espera ser fechado.</summary>
+    Task MostrarFotoAmpliadaAsync(ViewModels.VisualizadorDeFotosViewModel visualizador);
+
     /// <summary>Mostra a galeria de fotos de uma tarefa e espera ser fechada.</summary>
     Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria);
 }

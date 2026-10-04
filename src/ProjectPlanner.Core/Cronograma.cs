@@ -373,6 +373,14 @@ public class Cronograma
     }
 
     /// <summary>Usado pela persistência ao salvar e ao abrir um arquivo.</summary>
+    /// <summary>
+    /// Registros de foto sem imagem (os de exemplo das versões 0.14 a 0.21) que foram descartados ao abrir o
+    /// arquivo; somem dele no próximo salvamento (Bloco 22, D6).
+    /// </summary>
+    public int FotosDescartadasAoAbrir { get; private set; }
+
+    internal void RegistrarFotosDescartadas(int quantidade) => FotosDescartadasAoAbrir = quantidade;
+
     internal void DefinirDatasDoArquivo(DateTime criacao, DateTime ultimaModificacao)
     {
         DataCriacao = criacao;

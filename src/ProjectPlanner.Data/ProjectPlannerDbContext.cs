@@ -14,6 +14,8 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<TarefaRegistro> Tarefas => Set<TarefaRegistro>();
     public DbSet<PredecessoraRegistro> Predecessoras => Set<PredecessoraRegistro>();
     public DbSet<FotoRegistro> Fotos => Set<FotoRegistro>();
+    public DbSet<FotoImagemRegistro> Imagens => Set<FotoImagemRegistro>();
+    public DbSet<FotoMiniaturaRegistro> Miniaturas => Set<FotoMiniaturaRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,11 +64,28 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
         modelBuilder.Entity<FotoRegistro>(foto =>
         {
             foto.ToTable("FotosTarefa", t =>
-                t.HasCheckConstraint("CK_FotosTarefa_CaminhoArquivo", "length(trim(CaminhoArquivo)) > 0"));
+                t.HasCheckConstraint("CK_FotosTarefa_Percentual",
+                    "PercentualConcluidoNaData IS NULL OR PercentualConcluidoNaData BETWEEN 0 AND 100"));
             foto.HasKey(f => f.Id);
             foto.HasOne<TarefaRegistro>().WithMany()
                 .HasForeignKey(f => f.TarefaId).OnDelete(DeleteBehavior.Cascade);
             foto.HasIndex(f => f.TarefaId);
+        });
+
+        // Imagens e miniaturas em tabelas próprias (Bloco 22): abrir o projeto e listar fotos não leem os BLOBs.
+        modelBuilder.Entity<FotoImagemRegistro>(imagem =>
+        {
+            imagem.ToTable("FotosImagens");
+            imagem.HasKey(i => i.FotoId);
+            imagem.HasOne<FotoRegistro>().WithOne()
+                .HasForeignKey<FotoImagemRegistro>(i => i.FotoId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<FotoMiniaturaRegistro>(miniatura =>
+        {
+            miniatura.ToTable("FotosMiniaturas");
+            miniatura.HasKey(m => m.FotoId);
+            miniatura.HasOne<FotoRegistro>().WithOne()
+                .HasForeignKey<FotoMiniaturaRegistro>(m => m.FotoId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 

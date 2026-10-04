@@ -304,7 +304,7 @@ public partial class MenuPrincipalTests
         a.Clicar(item);
 
         var galeria = a.Ambiente.Dialogos.Galerias.Should().ContainSingle().Subject;
-        (galeria.Titulo, galeria.Vazia, galeria.Resumo).Should().Be(("Fotos — Fundação", true, "Nenhuma foto adicionada ainda."));
+        (galeria.Titulo, galeria.Vazia, galeria.Contador).Should().Be(("Fotos — 1 Fundação", true, "0 fotos"));
         tarefa.Tarefa.Fotos.Should().BeEmpty();
     });
 

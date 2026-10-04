@@ -1,112 +1,94 @@
-using System.ComponentModel;
 using ProjectPlanner.App.ViewModels;
-using ProjectPlanner.Core;
 
 namespace ProjectPlanner.App.Tests;
 
-// Base do relatório fotográfico (Bloco 14): o ícone de câmera no Gantt e a galeria de uma tarefa.
-public class FotosNoGanttTests
+// O ícone de câmera no Gantt (Bloco 14), agora com fotos de verdade (Bloco 22).
+public class FotosNoGanttTests : TesteDeFotos
 {
-    private readonly Ambiente _ambiente = new();
-    private readonly MainWindowViewModel _vm;
     private readonly TarefaViewModel _a, _b;
 
     public FotosNoGanttTests()
     {
-        _vm = _ambiente.CriarViewModel();
-        _a = Ambiente.AdicionarTarefa(_vm, "A", 3);
-        _b = Ambiente.AdicionarTarefa(_vm, "B", 2);
-    }
-
-    // Pelo caminho do usuário (Bloco 17): abre a galeria da tarefa e clica em Adicionar foto três vezes.
-    private void FotosDeExemploEm(TarefaViewModel linha)
-    {
-        _vm.GerenciarFotosCommand.Execute(linha);
-        var galeria = _ambiente.Dialogos.Galerias.Last();
-        for (var i = 0; i < 3; i++)
-            galeria.AdicionarFotoCommand.Execute(null);
+        _a = Ambiente.AdicionarTarefa(Vm, "A", 3);
+        _b = Ambiente.AdicionarTarefa(Vm, "B", 2);
     }
 
     [Fact]
     public void SemFotos_NenhumaTarefaMostraOIcone()
     {
-        _vm.Gantt.TarefasComIconeDeFotos.Should().BeEmpty();
+        Vm.Gantt.TarefasComIconeDeFotos.Should().BeEmpty();
     }
 
     [Fact]
-    public void SoAsTarefasComFotosMostramOIcone()
+    public async Task SoAsTarefasComFotosMostramOIcone()
     {
-        FotosDeExemploEm(_b);
+        await ComFotos(_b, "1.jpg", "2.jpg", "3.jpg");
 
-        _vm.Gantt.TarefasComIconeDeFotos.Should().Equal(_b.Tarefa.Id);
-        _vm.Gantt.Layout!.Barras.Single(b => b.Nome == "B").QuantidadeDeFotos.Should().Be(3);
+        Vm.Gantt.TarefasComIconeDeFotos.Should().Equal(_b.Tarefa.Id);
+        Vm.Gantt.Layout!.Barras.Single(b => b.Nome == "B").QuantidadeDeFotos.Should().Be(3);
     }
 
     [Fact]
-    public void DesligarAOpcao_EscondeOIconeDeTodas_ReligarMostraDeNovo()
+    public async Task DesligarAOpcao_EscondeOIcone_SemMexerNasFotos()
     {
-        FotosDeExemploEm(_a);
-        FotosDeExemploEm(_b);
-        var avisos = new List<string?>();
-        ((INotifyPropertyChanged)_vm.Gantt).PropertyChanged += (_, e) => avisos.Add(e.PropertyName);
+        await ComFotos(_a, "1.jpg");
+        await ComFotos(_b, "2.jpg");
 
-        _vm.Gantt.MostrarFotos = false;
+        Vm.Gantt.MostrarFotos = false;
+        Vm.Gantt.TarefasComIconeDeFotos.Should().BeEmpty();
+        _a.Tarefa.Fotos.Should().ContainSingle();
 
-        _vm.Gantt.TarefasComIconeDeFotos.Should().BeEmpty();
-        _vm.Gantt.Layout!.Barras.Should().NotContain(b => _vm.Gantt.MostraIconeDeFotos(b));
-        avisos.Should().Contain(nameof(GanttViewModel.TarefasComIconeDeFotos));
-        _a.Tarefa.Fotos.Should().HaveCount(3); // é só exibição: as fotos continuam lá
-
-        _vm.Gantt.MostrarFotos = true;
-
-        _vm.Gantt.TarefasComIconeDeFotos.Should().Equal(_a.Tarefa.Id, _b.Tarefa.Id);
+        Vm.Gantt.MostrarFotos = true;
+        Vm.Gantt.TarefasComIconeDeFotos.Should().Equal(_a.Tarefa.Id, _b.Tarefa.Id);
     }
 
     [Fact]
     public void OpcaoDeFotos_ComecaLigadaENaoMarcaOProjetoComoAlterado()
     {
-        _ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
-        _vm.SalvarProjetoCommand.Execute(null);
+        Ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
+        Vm.SalvarProjetoCommand.Execute(null);
 
-        _vm.Gantt.MostrarFotos.Should().BeTrue();
-        _vm.Gantt.MostrarFotos = false;
+        Vm.Gantt.MostrarFotos.Should().BeTrue();
+        Vm.Gantt.MostrarFotos = false;
 
-        _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
+        Vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
     }
 
     [Fact]
-    public void ClicarNoIcone_AbreAGaleriaDaquelaTarefaEmOrdemDeData()
+    public async Task ClicarNoIcone_AbreAGaleriaDaquelaTarefa_EmOrdemDeData()
     {
-        _b.Tarefa.AdicionarFoto(new FotoTarefa(_b.Tarefa.Id, new DateTime(2026, 10, 5), "exemplo://depois", "Concretagem"));
-        _b.Tarefa.AdicionarFoto(new FotoTarefa(_b.Tarefa.Id, new DateTime(2026, 9, 29), "exemplo://antes"));
+        Ambiente.Processador.Datas["depois.jpg"] = new DateTime(2026, 10, 5, 9, 0, 0);
+        Ambiente.Processador.Datas["antes.jpg"] = new DateTime(2026, 9, 29, 9, 0, 0);
+        await ComFotos(_b, "depois.jpg", "antes.jpg");
 
-        _vm.Gantt.AbrirFotos(_b.Tarefa.Id);
+        Vm.Gantt.AbrirFotos(_b.Tarefa.Id);
 
-        var galeria = _ambiente.Dialogos.Galerias.Should().ContainSingle().Subject;
-        galeria.Titulo.Should().Be("Fotos — B");
-        galeria.Resumo.Should().Be("2 fotos, da mais antiga para a mais recente");
-        galeria.Fotos.Select(f => (f.Data, f.Descricao)).Should().Equal(("29/09/2026", "(sem descrição)"), ("05/10/2026", "Concretagem"));
+        var galeria = Ambiente.Dialogos.Galerias.Last();
+        galeria.Titulo.Should().Be("Fotos — 2 B");
+        galeria.FotosFiltradas.Select(f => f.Imagem.NomeArquivoOriginal).Should().Equal("antes.jpg", "depois.jpg");
     }
 
     [Fact]
-    public void FotosSobrevivemASalvarEReabrir()
+    public async Task FotosSobrevivemASalvarEReabrir_ComAsImagens()
     {
         var repositorio = new RepositorioEmMemoria();
-        var vm = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
-            _ambiente.Assistente, _ambiente.PreferenciasInterface);
+        var vm = new MainWindowViewModel(repositorio, Ambiente.Calculadora, Ambiente.Dialogos, Ambiente.Relogio, Ambiente.Preferencias,
+            Ambiente.Assistente, Ambiente.PreferenciasInterface, Ambiente.Processador);
         var linha = Ambiente.AdicionarTarefa(vm, "Fundação", 3);
         vm.GerenciarFotosCommand.Execute(linha);
-        for (var i = 0; i < 3; i++)
-            _ambiente.Dialogos.Galerias.Last().AdicionarFotoCommand.Execute(null);
-        _ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
-        vm.SalvarProjetoCommand.Execute(null);
+        await Ambiente.Dialogos.Galerias.Last().AdicionarArquivosAsync(["/fotos/a.jpg", "/fotos/b.jpg"]);
+        Ambiente.Dialogos.ArquivoParaSalvar = "/obra.pplan";
+        await vm.SalvarProjetoCommand.ExecuteAsync(null);
 
-        var reaberta = new MainWindowViewModel(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
-            _ambiente.Assistente, _ambiente.PreferenciasInterface);
-        _ambiente.Dialogos.ArquivoParaAbrir = "/obra.pplan";
-        reaberta.AbrirProjetoCommand.Execute(null);
+        var reaberta = new MainWindowViewModel(repositorio, Ambiente.Calculadora, Ambiente.Dialogos, Ambiente.Relogio, Ambiente.Preferencias,
+            Ambiente.Assistente, Ambiente.PreferenciasInterface, Ambiente.Processador);
+        Ambiente.Dialogos.ArquivoParaAbrir = "/obra.pplan";
+        await reaberta.AbrirProjetoCommand.ExecuteAsync(null);
 
         reaberta.Gantt.TarefasComIconeDeFotos.Should().ContainSingle();
-        reaberta.Tarefas[0].Tarefa.Fotos.Should().HaveCount(3);
+        reaberta.GerenciarFotosCommand.Execute(reaberta.Tarefas[0]);
+        var galeria = Ambiente.Dialogos.Galerias.Last();
+        galeria.Grupos.SelectMany(g => g.Fotos).Select(f => ProcessadorFalso.Descrever(f.Miniatura))
+            .Should().BeEquivalentTo(["mini:a.jpg", "mini:b.jpg"], "as miniaturas vêm do arquivo salvo");
     }
 }

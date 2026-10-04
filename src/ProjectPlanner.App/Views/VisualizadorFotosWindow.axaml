@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        x:Class="ProjectPlanner.App.Views.VisualizadorFotosWindow"
+        x:DataType="vm:VisualizadorDeFotosViewModel"
+        Title="{Binding Titulo}"
+        Width="1200" Height="800" MinWidth="700" MinHeight="480"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Foto ampliada (Bloco 22): ← e → navegam, Esc fecha. -->
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Bottom" Margin="12">
+            <Button Content="Fechar" DockPanel.Dock="Right" Click="Fechar" IsCancel="True" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                <Button x:Name="Anterior" Content="◀ Anterior" Command="{Binding AnteriorCommand}" />
+                <TextBlock x:Name="Posicao" Text="{Binding Posicao}" VerticalAlignment="Center" MinWidth="70" TextAlignment="Center" />
+                <Button x:Name="Proxima" Content="Próxima ▶" Command="{Binding ProximaCommand}" />
+            </StackPanel>
+        </DockPanel>
+
+        <Border DockPanel.Dock="Right" Width="300" Padding="14" BorderThickness="1,0,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding Data}" FontWeight="SemiBold" FontSize="15" />
+                <TextBlock Text="{Binding TituloDaFoto}" FontSize="14" TextWrapping="Wrap"
+                           IsVisible="{Binding TituloDaFoto, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Legenda}" TextWrapping="Wrap"
+                           IsVisible="{Binding Legenda, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Autor, StringFormat='Autor: {0}'}" Opacity="0.75"
+                           IsVisible="{Binding Autor, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Local, StringFormat='Local: {0}'}" Opacity="0.75"
+                           IsVisible="{Binding Local, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Percentual}" Opacity="0.75"
+                           IsVisible="{Binding Percentual, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Tags, StringFormat='Tags: {0}'}" Opacity="0.75" TextWrapping="Wrap"
+                           IsVisible="{Binding Tags, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Arquivo}" FontSize="11" Opacity="0.55" TextWrapping="Wrap" Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Panel Background="#202124">
+            <Image x:Name="Imagem" Source="{Binding Imagem, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" Margin="8" />
+            <TextBlock Text="Imagem indisponível (o arquivo do projeto foi movido?)." Foreground="White" Opacity="0.7"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ImagemIndisponivel}" />
+        </Panel>
+    </DockPanel>
+</Window>

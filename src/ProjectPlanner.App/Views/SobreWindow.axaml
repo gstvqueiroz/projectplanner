@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.SobreWindow"
+        x:DataType="vm:SobreViewModel"
+        Title="Sobre o ProjectPlanner"
+        Width="560" SizeToContent="Height" MaxHeight="760"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 25: versão, novidades (do CHANGELOG.md embutido) e componentes de terceiros com as licenças. -->
+    <DockPanel Margin="20">
+        <Button x:Name="FecharJanela" DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,16,0,0"
+                Content="Fechar" Click="Fechar" IsCancel="True" IsDefault="True" />
+        <ScrollViewer>
+            <StackPanel Spacing="14">
+                <StackPanel Spacing="4">
+                    <TextBlock x:Name="Versao" Text="{Binding Titulo}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Descricao}" TextWrapping="Wrap" Opacity="0.75" />
+                </StackPanel>
+
+                <StackPanel Spacing="6" IsVisible="{Binding TemNovidades}">
+                    <TextBlock Text="{Binding Versao, StringFormat='Novidades da {0}'}" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="Novidades" ItemsSource="{Binding Novidades}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding StringFormat='•  {0}'}" TextWrapping="Wrap" Margin="0,2" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Componentes de terceiros" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="Componentes" ItemsSource="{Binding Componentes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ComponenteDeTerceiros">
+                                <TextBlock TextWrapping="Wrap" Margin="0,2" FontSize="12">
+                                    <Run Text="{Binding Nome}" />
+                                    <Run Text=" — " />
+                                    <Run Text="{Binding Licenca}" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

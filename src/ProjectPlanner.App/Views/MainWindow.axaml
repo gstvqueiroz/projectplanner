@@ -142,6 +142,10 @@
                     <MenuItem Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}"
                               ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
                 </MenuItem>
+                <!-- Bloco 25 -->
+                <MenuItem Header="Ajuda">
+                    <MenuItem Header="Sobre o ProjectPlanner…" Command="{Binding SobreCommand}" />
+                </MenuItem>
             </Menu>
         </Border>
 

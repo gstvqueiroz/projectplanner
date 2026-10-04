@@ -172,6 +172,15 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Action<ConfiguracaoAssistenteViewModel>? AoConfigurar { get; set; }
 
+    /// <summary>As telas Sobre abertas (Bloco 25).</summary>
+    public List<SobreViewModel> Sobres { get; } = [];
+
+    public Task MostrarSobreAsync(SobreViewModel sobre)
+    {
+        Sobres.Add(sobre);
+        return Task.CompletedTask;
+    }
+
     public Task MostrarConfiguracaoAssistenteAsync(ConfiguracaoAssistenteViewModel configuracao)
     {
         ConfiguracoesDoAssistente.Add(configuracao);

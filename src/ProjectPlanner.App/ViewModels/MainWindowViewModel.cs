@@ -284,6 +284,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [RelayCommand]
     private Task SalvarProjeto() => SalvarAsync();
 
+    /// <summary>Ajuda > Sobre o ProjectPlanner (Bloco 25).</summary>
+    [RelayCommand]
+    private Task Sobre() => _dialogos.MostrarSobreAsync(new SobreViewModel());
+
     [RelayCommand]
     private Task SalvarComoProjeto() => SalvarAsync(perguntarOndeSalvar: true);
 

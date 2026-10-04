@@ -100,7 +100,7 @@ public partial class MenuPrincipalTests
         var a = Abrir();
 
         a.Janela.MenuPrincipal.Items.OfType<MenuItem>().Select(m => m.Header)
-            .Should().Equal("Arquivo", "Exibir", "Inserir", "Tarefa");
+            .Should().Equal("Arquivo", "Exibir", "Inserir", "Tarefa", "Ajuda");
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…");
@@ -111,6 +111,7 @@ public partial class MenuPrincipalTests
             "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Gerenciar fotos…");
+        Titulos(a.Item("Ajuda")).Should().Equal("Sobre o ProjectPlanner…");
     });
 
     [Fact]

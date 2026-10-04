@@ -31,6 +31,9 @@ public interface IDialogosService
 
     /// <summary>Mostra as configurações do assistente (chave e modelo, Bloco 23) e espera ser fechada.</summary>
     Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao);
+
+    /// <summary>Mostra Ajuda > Sobre o ProjectPlanner (Bloco 25) e espera ser fechada.</summary>
+    Task MostrarSobreAsync(ViewModels.SobreViewModel sobre);
 }
 
 public enum RespostaAlteracoesPendentes

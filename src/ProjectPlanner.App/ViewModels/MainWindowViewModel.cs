@@ -359,6 +359,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         Gantt.MostrarTarefa(linha.Tarefa.Id);
     }
 
+    /// <summary>Arquivo > Abrir a pasta de cópias de segurança (Bloco 25, R2): a do projeto aberto, ou a geral.</summary>
+    [RelayCommand]
+    private Task AbrirBackups() => _dialogos.AbrirPastaAsync(CaminhoArquivo is { } caminho
+        ? new BackupsDeProjetos(BackupsDeProjetos.PastaPadrao(), _relogio).PastaDo(caminho)
+        : BackupsDeProjetos.PastaPadrao());
+
     /// <summary>Ajuda > Abrir a pasta de registros de erros (Bloco 25, R1).</summary>
     [RelayCommand]
     private Task AbrirRegistrosDeErros() => _dialogos.AbrirPastaAsync(RegistroDeErros.PastaPadrao());

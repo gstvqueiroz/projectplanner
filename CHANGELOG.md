@@ -23,6 +23,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   português abre direto.
 - Erros inesperados não fecham mais o programa sem aviso: ficam num registro local (um arquivo por mês, em
   Ajuda > Abrir a pasta de registros de erros), e os da interface viram um aviso, com o programa aberto para salvar.
+- Cópias de segurança: a cada salvamento, a versão anterior do .pplan é guardada (as 5 mais recentes de cada projeto,
+  em Arquivo > Abrir a pasta de cópias de segurança); para recuperar, basta abrir uma delas.
 
 ## 0.24.0
 

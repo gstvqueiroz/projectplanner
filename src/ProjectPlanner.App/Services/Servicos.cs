@@ -15,7 +15,12 @@ public static class Servicos
 {
     public static ServiceProvider Configurar() => new ServiceCollection()
         .AddSingleton(TimeProvider.System)
-        .AddSingleton<IProjetoRepository>(s => new SqliteProjetoRepository(s.GetRequiredService<TimeProvider>()))
+        // Bloco 25 (R2): antes de gravar por cima, a versão anterior vai para as cópias de segurança.
+        .AddSingleton<IProjetoRepository>(s =>
+        {
+            var backups = new BackupsDeProjetos(BackupsDeProjetos.PastaPadrao(), s.GetRequiredService<TimeProvider>());
+            return new SqliteProjetoRepository(s.GetRequiredService<TimeProvider>(), caminho => backups.Guardar(caminho));
+        })
         .AddSingleton<ICalculadoraCronograma, CalculadoraCronogramaServico>()
         .AddSingleton<IDialogosService, DialogosAvalonia>()
         .AddSingleton<IPreferenciasColunas, ArquivoPreferenciasColunas>()

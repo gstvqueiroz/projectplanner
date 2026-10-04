@@ -80,6 +80,9 @@
                     <!-- Bloco 25 (E1) -->
                     <MenuItem Header="Exportar para CSV…" Command="{Binding ExportarCsvCommand}"
                               ToolTip.Tip="A tabela do cronograma numa planilha CSV, que o Excel abre direto" />
+                    <!-- Bloco 25 (R2) -->
+                    <MenuItem Header="Abrir a pasta de cópias de segurança" Command="{Binding AbrirBackupsCommand}"
+                              ToolTip.Tip="As 5 versões anteriores de cada projeto, guardadas a cada salvamento; para recuperar, abra uma delas" />
                 </MenuItem>
                 <!-- Opções de exibição: valem só durante a sessão (não vão para o .pplan). O ✓ mostra se estão ligadas. -->
                 <MenuItem Header="Exibir">

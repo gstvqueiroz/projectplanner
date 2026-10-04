@@ -29,13 +29,29 @@ namespace ProjectPlanner.Data;
 /// recalculados a partir das subtarefas no próximo.
 /// </para>
 /// </remarks>
-public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IProjetoRepository
+/// <param name="antesDeGravarPorCima">
+/// Chamado com o caminho do arquivo logo antes de o novo substituí-lo (só quando ele já existe e o novo ficou pronto):
+/// é onde o programa guarda a cópia de segurança da versão anterior (Bloco 25). Uma falha dele não impede de salvar.
+/// </param>
+public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action<string>? antesDeGravarPorCima = null) : IProjetoRepository
 {
     private const int SqliteNaoEhBanco = 26; // SQLITE_NOTADB
 
     private readonly TimeProvider _relogio = relogio ?? TimeProvider.System;
 
     public void Salvar(Cronograma cronograma, string caminhoArquivo) => Salvar(cronograma, caminhoArquivo, ImagensParaSalvar.Nenhuma);
+
+    private void AvisarAntesDeGravarPorCima(string destino)
+    {
+        try
+        {
+            antesDeGravarPorCima!(destino);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A cópia de segurança nunca impede de salvar.
+        }
+    }
 
     public void Salvar(Cronograma cronograma, string caminhoArquivo, ImagensParaSalvar imagens)
     {
@@ -61,6 +77,8 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null) : IPro
                 CopiarImagensDaOrigem(contexto, imagens.ArquivoDeOrigem);
                 VerificarQueTodasAsFotosTemImagem(contexto, imagens.ArquivoDeOrigem);
             }
+            if (antesDeGravarPorCima is not null && File.Exists(destino))
+                AvisarAntesDeGravarPorCima(destino);
             File.Move(temporario, destino, overwrite: true);
         }
         catch

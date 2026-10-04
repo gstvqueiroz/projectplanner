@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace ProjectPlanner.IA.Tests;
 
-// Bloco 19: a camada do assistente sem integração real (sem rede, sem leitura de arquivos).
+// Blocos 19 e 23: a camada do assistente (o indisponível, a escolha conforme a configuração, os anexos).
 public class AssistenteIATests
 {
     private static readonly PedidoIA Pedido = new("Qual é o caminho crítico?", [], []);
@@ -55,39 +55,86 @@ public class AssistenteIATests
         AssistenteIAIndisponivel.EsperaPadrao.Should().Be(TimeSpan.FromMilliseconds(500));
     }
 
+    // Bloco 23: a rede entrou, mas só no provedor do Gemini; o resto da camada continua sem saber de HTTP.
     [Fact]
-    public void CamadaDeIA_NaoReferenciaNadaDeRede()
+    public void CamadaDeIA_SoOGeminiUsaRede_ENadaDoDominio()
     {
         var assembly = typeof(IAssistenteIA).Assembly;
 
-        assembly.GetReferencedAssemblies().Select(a => a.Name)
-            .Should().NotContain(n => n!.StartsWith("System.Net"), "nenhuma chamada de rede nesta fase");
-        var tiposUsados = assembly.GetTypes()
-            .SelectMany(t => t.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-                .Select(f => f.FieldType))
-            .Select(t => t.FullName ?? "");
-        tiposUsados.Should().NotContain(n => n.StartsWith("System.Net"));
+        var comRede = assembly.GetTypes()
+            .Where(t => t.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                .Any(f => (f.FieldType.FullName ?? "").StartsWith("System.Net")))
+            .Select(t => t.Namespace);
+        comRede.Should().NotBeEmpty().And.OnlyContain(n => n == "ProjectPlanner.IA.Gemini");
+        assembly.GetReferencedAssemblies().Select(a => a.Name).Should().NotContain(n => n!.StartsWith("ProjectPlanner"),
+            "a camada de IA não depende do domínio: recebe o retrato do cronograma pronto");
     }
 
     [Fact]
-    public void Fabrica_SemChave_UsaOIndisponivel()
+    public async Task Fabrica_SemChave_RespondeComoIndisponivel()
     {
-        FabricaAssistenteIA.Criar(new SemChaveDeApi()).Should().BeOfType<AssistenteIAIndisponivel>();
-        new SemChaveDeApi().ChaveApi.Should().BeNull();
+        var provedor = new ProvedorDeTeste();
+        var assistente = new AssistenteConformeConfiguracao(new SemChaveDeApi(), provedor, new AssistenteIAIndisponivel(TimeSpan.Zero));
+
+        var resposta = await assistente.EnviarAsync(Pedido, CancellationToken.None);
+
+        assistente.EstaConfigurado.Should().BeFalse();
+        resposta.Texto.Should().StartWith(AssistenteIAIndisponivel.Resposta);
+        provedor.Criados.Should().BeEmpty();
+        (new SemChaveDeApi().ChaveApi, new SemChaveDeApi().Modelo).Should().Be((null, "gemini-2.5-flash"));
+        FabricaAssistenteIA.Criar(new SemChaveDeApi(), provedor).EstaConfigurado.Should().BeFalse();
     }
 
     [Fact]
-    public void Fabrica_ComChave_AindaSemImplementacaoReal_ContinuaIndisponivel()
+    public async Task Fabrica_ComChave_UsaOProvedor_ETrocaQuandoAChaveOuOModeloMudam()
     {
-        FabricaAssistenteIA.Criar(new ChaveFixa("sk-teste")).EstaConfigurado.Should().BeFalse();
+        var configuracao = new ConfiguracaoFixa("chave-1");
+        var provedor = new ProvedorDeTeste();
+        var assistente = FabricaAssistenteIA.Criar(configuracao, provedor);
+
+        assistente.EstaConfigurado.Should().BeTrue();
+        (await assistente.EnviarAsync(Pedido, CancellationToken.None)).Texto.Should().Be("chave-1/gemini-2.5-flash: Qual é o caminho crítico?");
+        await assistente.EnviarAsync(Pedido, CancellationToken.None);
+        provedor.Criados.Should().ContainSingle("a mesma configuração reaproveita o assistente");
+
+        configuracao.Modelo = "gemini-2.5-pro";
+        (await assistente.EnviarAsync(Pedido, CancellationToken.None)).Texto.Should().StartWith("chave-1/gemini-2.5-pro");
+        configuracao.ChaveApi = "chave-2";
+        (await assistente.EnviarAsync(Pedido, CancellationToken.None)).Texto.Should().StartWith("chave-2/");
+        provedor.Criados.Should().HaveCount(3);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Fabrica_ChaveEmBranco_NaoEstaConfigurado(string? chave)
+    {
+        FabricaAssistenteIA.Criar(new ConfiguracaoFixa(chave), new ProvedorDeTeste()).EstaConfigurado.Should().BeFalse();
     }
 
     [Fact]
-    public void Fabrica_ConfiguracaoNula_Recusada()
+    public async Task Fabrica_ChaveRemovida_VoltaAoIndisponivel()
     {
-        var criar = () => FabricaAssistenteIA.Criar(null!);
+        var configuracao = new ConfiguracaoFixa("chave-1");
+        var assistente = new AssistenteConformeConfiguracao(configuracao, new ProvedorDeTeste(), new AssistenteIAIndisponivel(TimeSpan.Zero));
 
-        criar.Should().Throw<ArgumentNullException>();
+        configuracao.ChaveApi = null;
+
+        assistente.EstaConfigurado.Should().BeFalse();
+        (await assistente.EnviarAsync(Pedido, CancellationToken.None)).Texto.Should().StartWith(AssistenteIAIndisponivel.Resposta);
+    }
+
+    [Fact]
+    public async Task Fabrica_ArgumentosNulos_Recusados()
+    {
+        var semConfiguracao = () => FabricaAssistenteIA.Criar(null!, new ProvedorDeTeste());
+        var semProvedor = () => FabricaAssistenteIA.Criar(new SemChaveDeApi(), null!);
+        var semPedido = () => FabricaAssistenteIA.Criar(new ConfiguracaoFixa("x"), new ProvedorDeTeste()).EnviarAsync(null!, CancellationToken.None);
+
+        semConfiguracao.Should().Throw<ArgumentNullException>();
+        semProvedor.Should().Throw<ArgumentNullException>();
+        await semPedido.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -131,10 +178,5 @@ public class AssistenteIATests
 
         anexar.Should().Throw<FileNotFoundException>();
         semCaminho.Should().Throw<ArgumentException>();
-    }
-
-    private sealed class ChaveFixa(string chave) : IConfiguracaoIA
-    {
-        public string? ChaveApi => chave;
     }
 }

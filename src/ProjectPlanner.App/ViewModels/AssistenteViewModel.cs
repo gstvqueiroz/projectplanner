@@ -20,8 +20,9 @@ public sealed record MensagemNaTela(MensagemChat Mensagem)
 
 /// <summary>
 /// O painel lateral do assistente de IA (Bloco 19): a conversa (só em memória, da sessão), os anexos que vão
-/// com a próxima mensagem, o envio e a espera pela resposta. Só conhece <see cref="IAssistenteIA"/>; hoje
-/// quem responde é <see cref="AssistenteIAIndisponivel"/>, sem nenhuma chamada de rede.
+/// com a próxima mensagem, o envio e a espera pela resposta. Só conhece <see cref="IAssistenteIA"/>: com uma chave
+/// configurada (Bloco 23), quem responde é o Gemini, recebendo também o retrato do cronograma aberto; sem chave, o
+/// <see cref="AssistenteIAIndisponivel"/>.
 /// </summary>
 public sealed partial class AssistenteViewModel : ViewModelBase
 {
@@ -29,14 +30,19 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
     private readonly IPreferenciasInterface _preferencias;
+    private readonly IConfiguracaoAssistente _configuracao;
+    private readonly Func<ContextoDoProjeto?> _contexto;
     private readonly bool _carregado;
     private CancellationTokenSource? _cancelamento;
     private int _conversa; // muda a cada limpeza: uma resposta atrasada de uma conversa limpa é descartada
 
     public AssistenteViewModel(IAssistenteIA assistente, IDialogosService dialogos, TimeProvider relogio,
-        IPreferenciasInterface preferencias)
+        IPreferenciasInterface preferencias, IConfiguracaoAssistente configuracao, Func<ContextoDoProjeto?> contexto)
     {
+        ArgumentNullException.ThrowIfNull(configuracao);
+        ArgumentNullException.ThrowIfNull(contexto);
         (_assistente, _dialogos, _relogio, _preferencias) = (assistente, dialogos, relogio, preferencias);
+        (_configuracao, _contexto) = (configuracao, contexto);
         Visivel = preferencias.Carregar()?.MostrarAssistente ?? false; // oculto na primeira vez (D7)
         _carregado = true;
         Mensagens.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ConversaVazia));
@@ -59,6 +65,18 @@ public sealed partial class AssistenteViewModel : ViewModelBase
 
     /// <summary>Falso enquanto não há chave de API: o painel mostra que as respostas são simuladas.</summary>
     public bool EstaConfigurado => _assistente.EstaConfigurado;
+
+    /// <summary>"Gemini (Google) · gemini-2.5-flash" no cabeçalho, com uma chave configurada.</summary>
+    public string DescricaoDoModelo => EstaConfigurado ? $"{_configuracao.NomeDoProvedor} · {_configuracao.Modelo}" : "";
+
+    /// <summary>Abre as configurações do assistente (chave e modelo); o painel reflete a mudança na hora.</summary>
+    [RelayCommand]
+    private async Task Configurar()
+    {
+        await _dialogos.MostrarConfiguracaoAssistenteAsync(new ConfiguracaoAssistenteViewModel(_configuracao, _dialogos));
+        OnPropertyChanged(nameof(EstaConfigurado));
+        OnPropertyChanged(nameof(DescricaoDoModelo));
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EnviarCommand))]
@@ -113,7 +131,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         MensagemChat resposta;
         try
         {
-            var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico), cancelamento.Token);
+            var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico, _contexto()), cancelamento.Token);
             resposta = new MensagemChat(AutorMensagem.Assistente, r.Texto, _relogio.GetLocalNow(), []);
         }
         catch (OperationCanceledException)
@@ -136,25 +154,36 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(Aguardando))]
     private void Cancelar() => _cancelamento?.Cancel();
 
-    /// <summary>Escolhe documentos e os põe na lista de pendentes (sem abrir o conteúdo; repetidos entram uma vez).</summary>
+    /// <summary>
+    /// Escolhe documentos e os põe na lista de pendentes (sem abrir o conteúdo; repetidos entram uma vez). Formatos que
+    /// o assistente não lê e arquivos grandes demais ficam de fora, com o motivo (Bloco 23).
+    /// </summary>
     [RelayCommand]
     private async Task Anexar()
     {
-        var problemas = new List<string>();
+        var sumidos = new List<string>();
+        var recusados = new List<string>();
         foreach (var caminho in await _dialogos.EscolherDocumentosAsync())
         {
+            AnexoIA anexo;
             try
             {
-                var anexo = AnexoIA.DoArquivo(caminho);
-                if (!AnexosPendentes.Any(a => string.Equals(a.CaminhoLocal, anexo.CaminhoLocal, StringComparison.Ordinal)))
-                    AnexosPendentes.Add(anexo);
+                anexo = AnexoIA.DoArquivo(caminho);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                problemas.Add(Path.GetFileName(caminho));
+                sumidos.Add(Path.GetFileName(caminho));
+                continue;
             }
+            if (AnexosAceitos.Problema(anexo) is { } problema)
+                recusados.Add(problema);
+            else if (!AnexosPendentes.Any(a => string.Equals(a.CaminhoLocal, anexo.CaminhoLocal, StringComparison.Ordinal)))
+                AnexosPendentes.Add(anexo);
         }
-        AvisoDeAnexo = problemas.Count == 0 ? "" : $"Não deu para anexar: {string.Join(", ", problemas)}.";
+        var avisos = recusados.ToList();
+        if (sumidos.Count > 0)
+            avisos.Insert(0, $"Não deu para anexar: {string.Join(", ", sumidos)}.");
+        AvisoDeAnexo = string.Join("\n", avisos);
     }
 
     [RelayCommand]

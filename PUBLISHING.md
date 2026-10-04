@@ -32,12 +32,12 @@ Os arquivos de projeto do usuário usam a extensão **`.pplan`** (um banco SQLit
 1. Suba a versão em [`Directory.Build.props`](Directory.Build.props), o único lugar em que ela está:
 
    ```xml
-   <Version>0.22.0</Version>
+   <Version>0.23.0</Version>
    ```
 
    O padrão é MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (Bloco 15 = `0.15.0`, Bloco 16 = `0.16.0`); o PATCH sobe em ajustes e correções dentro do mesmo bloco (Bloco 15.1 = `0.15.1`).
 
-   A versão vai para o título da janela ("obra.pplan — ProjectPlanner 0.22.0"), para os metadados do `.exe` (Propriedades → Detalhes no Windows), para o instalador (nome do arquivo e "Configurações → Aplicativos"), para o `Info.plist` do `.app` e para o nome dos `.zip`.
+   A versão vai para o título da janela ("obra.pplan — ProjectPlanner 0.23.0"), para os metadados do `.exe` (Propriedades → Detalhes no Windows), para o instalador (nome do arquivo e "Configurações → Aplicativos"), para o `Info.plist` do `.app` e para o nome dos `.zip`.
 
 2. Confira que tudo está passando:
 
@@ -54,10 +54,10 @@ Os arquivos de projeto do usuário usam a extensão **`.pplan`** (um banco SQLit
    scripts/publicar.sh osx-arm64
    ```
 
-   **A partir do Bloco 15, toda publicação confirma a versão antes de gerar os executáveis.** O script mostra a versão do `Directory.Build.props` e pergunta "Publicar a versão 0.22.0? [s/N]"; se já houver pacotes dessa versão em `publicacao/`, avisa que serão substituídos (sinal de que a versão não foi subida). Sem terminal para perguntar (em automação), a confirmação vem na linha de comando, e uma versão diferente da do `Directory.Build.props` interrompe tudo antes de compilar:
+   **A partir do Bloco 15, toda publicação confirma a versão antes de gerar os executáveis.** O script mostra a versão do `Directory.Build.props` e pergunta "Publicar a versão 0.23.0? [s/N]"; se já houver pacotes dessa versão em `publicacao/`, avisa que serão substituídos (sinal de que a versão não foi subida). Sem terminal para perguntar (em automação), a confirmação vem na linha de comando, e uma versão diferente da do `Directory.Build.props` interrompe tudo antes de compilar:
 
    ```bash
-   scripts/publicar.sh --versao 0.22.0 osx-arm64
+   scripts/publicar.sh --versao 0.23.0 osx-arm64
    ```
 
    Depois de gerar, confira a versão no resultado: no nome dos `.zip` e dos instaladores, no título da janela ao abrir o programa e, no Windows, em Propriedades → Detalhes do `.exe`.
@@ -66,12 +66,12 @@ Os arquivos de projeto do usuário usam a extensão **`.pplan`** (um banco SQLit
 
    ```
    publicacao/
-     ProjectPlanner-0.22.0-win-x64-instalador.exe    ← mande este para quem usa Windows
-     ProjectPlanner-0.22.0-win-arm64-instalador.exe
+     ProjectPlanner-0.23.0-win-x64-instalador.exe    ← mande este para quem usa Windows
+     ProjectPlanner-0.23.0-win-arm64-instalador.exe
      ProjectPlanner-x64.exe                          ← ou este, portátil, onde não der para instalar
-     ProjectPlanner-0.22.0-win-x64.zip
-     ProjectPlanner-0.22.0-win-arm64.zip
-     ProjectPlanner-0.22.0-osx-arm64.zip             ← para Mac
+     ProjectPlanner-0.23.0-win-x64.zip
+     ProjectPlanner-0.23.0-win-arm64.zip
+     ProjectPlanner-0.23.0-osx-arm64.zip             ← para Mac
      win-x64/ProjectPlanner-x64.exe
      win-arm64/ProjectPlanner-ARM64.exe
      ProjectPlanner.app
@@ -101,11 +101,11 @@ dotnet publish src/ProjectPlanner.App -c Release -r win-x64 --self-contained tru
 E o instalador, a partir do `.exe` publicado (o `LC_ALL` é necessário: o `makensis` precisa de um locale UTF-8 para ler os acentos do script):
 
 ```bash
-LC_ALL=en_US.UTF-8 makensis -DVERSAO=0.22.0 -DARQUITETURA=x64 \
+LC_ALL=en_US.UTF-8 makensis -DVERSAO=0.23.0 -DARQUITETURA=x64 \
   -DEXE="$PWD/publicacao/win-x64/ProjectPlanner-x64.exe" \
   -DICONE_APP="$PWD/src/ProjectPlanner.App/Assets/ProjectPlanner.ico" \
   -DICONE_ARQUIVO="$PWD/src/ProjectPlanner.App/Windows/ProjetoPplan.ico" \
-  -DSAIDA="$PWD/publicacao/ProjectPlanner-0.22.0-win-x64-instalador.exe" \
+  -DSAIDA="$PWD/publicacao/ProjectPlanner-0.23.0-win-x64-instalador.exe" \
   src/ProjectPlanner.App/Windows/ProjectPlanner.nsi
 ```
 
@@ -200,7 +200,8 @@ Roteiro para validar o instalador no Windows:
 4. Dê duplo clique: o ProjectPlanner abre com o projeto carregado e o nome do arquivo no título.
 5. Com o programa aberto, dê duplo clique em outro `.pplan`: abre em outra janela.
 6. Abra a galeria de fotos de uma tarefa e adicione uma foto JPG: a miniatura deve aparecer (confirma que a biblioteca de imagens foi junto no `.exe`).
-7. Desinstale por **Configurações → Aplicativos**: o `.pplan` volta ao ícone genérico e deixa de abrir no ProjectPlanner.
+7. Abra o painel do assistente, clique na engrenagem (Configurações do assistente), cole uma chave do Gemini, clique em **Testar conexão** e depois em **Salvar**: a chave vai para o **Gerenciador de Credenciais do Windows** (Painel de Controle → Gerenciador de Credenciais → Credenciais do Windows → `ProjectPlanner:gemini-api-key`). Feche e abra o programa: o assistente continua configurado e responde.
+8. Desinstale por **Configurações → Aplicativos**: o `.pplan` volta ao ícone genérico e deixa de abrir no ProjectPlanner.
 
 Sem Windows à mão, dá para conferir os binários gerados:
 
@@ -210,6 +211,8 @@ file publicacao/win-arm64/ProjectPlanner-ARM64.exe        # PE32+ executable (GU
 file publicacao/ProjectPlanner-*-win-x64-instalador.exe   # PE32 executable (GUI) Intel 80386, … Nullsoft Installer
 ls -lh publicacao/*.exe
 ```
+
+**Assistente de IA no binário publicado (Bloco 23):** no `.app`, abra o painel do assistente, clique na engrenagem, cole uma chave do Gemini, **Testar conexão** e **Salvar**, e mande uma pergunta sobre o cronograma. A chave fica nas **Chaves do macOS** (app Acesso às Chaves, item `ProjectPlanner`). Depois de publicar uma versão nova, o macOS pode perguntar se o programa pode usar esse item (o `.app` é assinado sem identidade de desenvolvedor): "Permitir sempre". Ver `docs/ASSISTENTE-IA.md`.
 
 **Fotos no binário publicado (Bloco 22):** a biblioteca de imagens precisa ir junto. No Mac, confira `publicacao/ProjectPlanner.app/Contents/MacOS/libSkiaSharp.dylib` e, no `.app`, abra a galeria de uma tarefa e adicione uma foto JPG (de preferência de celular, com EXIF): a miniatura aparece com a data da foto, e girar e ampliar funcionam. No Windows, o `.exe` único leva a `libSkiaSharp.dll` dentro dele:
 

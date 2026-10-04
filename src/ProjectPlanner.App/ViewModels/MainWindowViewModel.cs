@@ -38,11 +38,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     public MainWindowViewModel(IProjetoRepository repositorio, ICalculadoraCronograma calculadora,
         IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas,
-        IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens)
+        IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens,
+        IConfiguracaoAssistente configuracaoAssistente)
     {
         _fotos = new FotosDoProjeto(repositorio, processadorDeImagens, relogio);
         Colunas = new ColunasViewModel(preferenciasColunas);
-        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface);
+        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface, configuracaoAssistente,
+            RetratoParaOAssistente);
         _repositorio = repositorio;
         _calculadora = calculadora;
         _dialogos = dialogos;
@@ -66,6 +68,34 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     /// <summary>O painel lateral do assistente de IA (Bloco 19).</summary>
     public AssistenteViewModel Assistente { get; }
+
+    /// <summary>
+    /// O retrato só de leitura do cronograma que vai com cada mensagem ao assistente (Bloco 23): todas as linhas (também
+    /// as de resumos recolhidos), com o que a grid mostra e o resultado do último cálculo.
+    /// </summary>
+    public ContextoDoProjeto RetratoParaOAssistente()
+    {
+        var edicao = (IEdicaoCronograma)this;
+        var tarefas = Tarefas.Select(linha => new TarefaNoContexto(
+            linha.Numero,
+            linha.Edt,
+            linha.Tarefa.Nome,
+            linha.Nivel,
+            linha.EhResumo ? TipoNoContexto.Resumo : linha.EhMarco ? TipoNoContexto.Marco : TipoNoContexto.Tarefa,
+            linha.Tarefa.Duracao,
+            // As datas calculadas (as das barras do Gantt); antes do primeiro cálculo, as informadas.
+            DateOnly.FromDateTime(linha.Tarefa.InicioMaisCedo ?? linha.Tarefa.DataInicio),
+            DateOnly.FromDateTime(linha.Tarefa.TerminoMaisCedo ?? linha.Tarefa.DataTermino),
+            linha.Tarefa.PercentualConcluido,
+            edicao.TextoPredecessoras(linha.Tarefa),
+            linha.Tarefa.Folga,
+            linha.Tarefa.EhCritica,
+            linha.Tarefa.Notas,
+            linha.Tarefa.Fotos.Count)).ToList();
+        var inicio = DateOnly.FromDateTime(_cronograma.DataInicio);
+        var termino = TerminoProjeto is { } fim ? DateOnly.FromDateTime(fim) : tarefas.Select(t => t.Termino).DefaultIfEmpty(inicio).Max();
+        return new ContextoDoProjeto(_cronograma.Nome, inicio, termino, DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), tarefas);
+    }
 
     /// <summary>Todas as linhas, na ordem do cronograma: cada resumo seguido das suas subtarefas.</summary>
     public ObservableCollection<TarefaViewModel> Tarefas { get; } = [];

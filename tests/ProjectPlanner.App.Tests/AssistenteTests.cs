@@ -46,7 +46,7 @@ public sealed class AssistenteTests : IDisposable
     public void Enviar_ComOAssistenteIndisponivelDeVerdade_MostraARespostaPadrao()
     {
         var vm = new MainWindowViewModel(_ambiente.Repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio,
-            _ambiente.Preferencias, new AssistenteIAIndisponivel(TimeSpan.Zero), _ambiente.PreferenciasInterface, _ambiente.Processador);
+            _ambiente.Preferencias, new AssistenteIAIndisponivel(TimeSpan.Zero), _ambiente.PreferenciasInterface, _ambiente.Processador, _ambiente.ConfiguracaoAssistente);
         vm.Assistente.TextoDigitado = "Olá";
 
         vm.Assistente.EnviarCommand.Execute(null);
@@ -135,19 +135,19 @@ public sealed class AssistenteTests : IDisposable
     public void Anexar_PoeNaListaDePendentes_SemRepetir_EOEnvioLevaELimpa()
     {
         var planta = Arquivo("planta.pdf", 2048);
-        var contrato = Arquivo("contrato.docx");
+        var contrato = Arquivo("memorial.txt");
         _ambiente.Dialogos.DocumentosParaAnexar.AddRange([planta, contrato]);
 
         Painel.AnexarCommand.Execute(null);
         Painel.AnexarCommand.Execute(null); // os mesmos de novo
 
-        Painel.AnexosPendentes.Select(a => (a.Nome, a.Extensao)).Should().Equal(("planta.pdf", "pdf"), ("contrato.docx", "docx"));
+        Painel.AnexosPendentes.Select(a => (a.Nome, a.Extensao)).Should().Equal(("planta.pdf", "pdf"), ("memorial.txt", "txt"));
         Painel.EnviarCommand.CanExecute(null).Should().BeTrue("só com anexos já dá para enviar");
 
         Painel.EnviarCommand.Execute(null);
 
-        _ambiente.Assistente.Pedidos.Single().Anexos.Select(a => a.Nome).Should().Equal("planta.pdf", "contrato.docx");
-        Painel.Mensagens[0].Anexos.Select(a => a.Nome).Should().Equal("planta.pdf", "contrato.docx");
+        _ambiente.Assistente.Pedidos.Single().Anexos.Select(a => a.Nome).Should().Equal("planta.pdf", "memorial.txt");
+        Painel.Mensagens[0].Anexos.Select(a => a.Nome).Should().Equal("planta.pdf", "memorial.txt");
         Painel.AnexosPendentes.Should().BeEmpty("os anexos foram com a mensagem");
     }
 

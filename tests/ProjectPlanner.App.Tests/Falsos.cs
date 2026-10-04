@@ -1,5 +1,6 @@
 using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
+using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.App.ViewModels;
 using System.Security.Cryptography;
 using System.Text;
@@ -166,6 +167,18 @@ public sealed class DialogosFalsos : IDialogosService
     /// <summary>As galerias de fotos abertas, em ordem.</summary>
     public List<GaleriaFotosViewModel> Galerias { get; } = [];
 
+    /// <summary>As telas de configuração do assistente abertas (Bloco 23); <see cref="AoConfigurar"/> faz o papel do usuário.</summary>
+    public List<ConfiguracaoAssistenteViewModel> ConfiguracoesDoAssistente { get; } = [];
+
+    public Action<ConfiguracaoAssistenteViewModel>? AoConfigurar { get; set; }
+
+    public Task MostrarConfiguracaoAssistenteAsync(ConfiguracaoAssistenteViewModel configuracao)
+    {
+        ConfiguracoesDoAssistente.Add(configuracao);
+        AoConfigurar?.Invoke(configuracao);
+        return Task.CompletedTask;
+    }
+
     public Task MostrarFotosAsync(GaleriaFotosViewModel galeria)
     {
         Galerias.Add(galeria);
@@ -227,8 +240,10 @@ public sealed class Ambiente
 
     public ProcessadorFalso Processador { get; } = new();
 
+    public ConfiguracaoAssistenteFalsa ConfiguracaoAssistente { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
-        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador);
+        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -344,4 +359,91 @@ public sealed class ProcessadorFalso : IProcessadorDeImagens
 
     /// <summary>O nome que a imagem guardada descreve (para os testes conferirem a imagem certa).</summary>
     public static string Descrever(byte[]? bytes) => bytes is null ? "(nenhuma)" : Encoding.UTF8.GetString(bytes);
+}
+
+/// <summary>A configuração do assistente para os testes do painel (Bloco 23): só guarda o que a tela mudaria.</summary>
+public sealed class ConfiguracaoAssistenteFalsa : IConfiguracaoAssistente
+{
+    public string NomeDoProvedor => "Gemini (Google)";
+    public string NomeDoCofre => "Chaves do macOS";
+    public bool CofreDisponivel => true;
+    public string ModeloPadrao => "gemini-2.5-flash";
+    public string Modelo { get; set; } = "gemini-2.5-flash";
+    public string? Chave { get; set; }
+    public OrigemDaChave Origem => Chave is null ? OrigemDaChave.Nenhuma : OrigemDaChave.Cofre;
+    public string? FinalDaChave => Chave is null ? null : "…" + Chave[^4..];
+    public string? ProblemaNoCofre => null;
+    public void SalvarChave(string chave) => Chave = chave;
+    public void RemoverChave() => Chave = null;
+    public void SalvarModelo(string modelo) => Modelo = modelo;
+    public Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento) => Task.CompletedTask;
+}
+
+/// <summary>Um cofre em memória (Bloco 23); <see cref="Falha"/> faz toda operação falhar como um cofre bloqueado.</summary>
+public sealed class CofreEmMemoria : ICofreDeSegredos
+{
+    public Dictionary<string, string> Segredos { get; } = [];
+    public CofreException? Falha { get; set; }
+    public int Leituras { get; private set; }
+    public bool Disponivel { get; set; } = true;
+    public string Nome => "Chaves do macOS";
+
+    public string? Ler(string nome)
+    {
+        Leituras++;
+        if (Falha is not null)
+            throw Falha;
+        return Segredos.GetValueOrDefault(nome);
+    }
+
+    public void Gravar(string nome, string segredo)
+    {
+        if (Falha is not null)
+            throw Falha;
+        Segredos[nome] = segredo;
+    }
+
+    public void Remover(string nome)
+    {
+        if (Falha is not null)
+            throw Falha;
+        Segredos.Remove(nome);
+    }
+}
+
+public sealed class PreferenciasAssistenteEmMemoria : IPreferenciasAssistente
+{
+    public PreferenciasAssistente? Salvas { get; set; }
+    public PreferenciasAssistente? Carregar() => Salvas;
+    public void Salvar(PreferenciasAssistente preferencias) => Salvas = preferencias;
+}
+
+/// <summary>Um provedor de IA sem rede (Bloco 23): guarda os testes e os assistentes criados.</summary>
+public sealed class ProvedorFalso : IProvedorIA
+{
+    private readonly ProjectPlanner.IA.Gemini.ProvedorGemini _regras = new(new HttpClient());
+
+    public List<(string Chave, string Modelo)> Testes { get; } = [];
+    public List<(string Chave, string Modelo)> Criados { get; } = [];
+    public Exception? ErroNoTeste { get; set; }
+    public TaskCompletionSource? TesteSegurado { get; set; }
+
+    public string Nome => "Gemini (Google)";
+    public string ModeloPadrao => "gemini-2.5-flash";
+    public string NormalizarModelo(string modelo) => _regras.NormalizarModelo(modelo);
+
+    public IAssistenteIA CriarAssistente(string chave, string modelo)
+    {
+        Criados.Add((chave, modelo));
+        return new AssistenteFalso { EstaConfigurado = true, Responder = p => $"[{modelo}] {p.Mensagem}" };
+    }
+
+    public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
+    {
+        Testes.Add((chave, modelo));
+        if (TesteSegurado is { } segurado)
+            await segurado.Task.WaitAsync(cancelamento);
+        if (ErroNoTeste is not null)
+            throw ErroNoTeste;
+    }
 }

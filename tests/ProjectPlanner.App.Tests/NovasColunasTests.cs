@@ -121,7 +121,7 @@ public class NovasColunasTests
     {
         var repositorio = new RepositorioEmMemoria();
         MainWindowViewModel Janela() => new(repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio, _ambiente.Preferencias,
-                _ambiente.Assistente, _ambiente.PreferenciasInterface, _ambiente.Processador);
+                _ambiente.Assistente, _ambiente.PreferenciasInterface, _ambiente.Processador, _ambiente.ConfiguracaoAssistente);
         var vm = Janela();
         Ambiente.AdicionarTarefa(vm, "A", 3).Notas = "Linha 1\nLinha 2";
         Ambiente.AdicionarTarefa(vm, "B", 2);

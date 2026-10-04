@@ -73,7 +73,7 @@ public class FotosNoGanttTests : TesteDeFotos
     {
         var repositorio = new RepositorioEmMemoria();
         var vm = new MainWindowViewModel(repositorio, Ambiente.Calculadora, Ambiente.Dialogos, Ambiente.Relogio, Ambiente.Preferencias,
-            Ambiente.Assistente, Ambiente.PreferenciasInterface, Ambiente.Processador);
+            Ambiente.Assistente, Ambiente.PreferenciasInterface, Ambiente.Processador, Ambiente.ConfiguracaoAssistente);
         var linha = Ambiente.AdicionarTarefa(vm, "Fundação", 3);
         vm.GerenciarFotosCommand.Execute(linha);
         await Ambiente.Dialogos.Galerias.Last().AdicionarArquivosAsync(["/fotos/a.jpg", "/fotos/b.jpg"]);
@@ -81,7 +81,7 @@ public class FotosNoGanttTests : TesteDeFotos
         await vm.SalvarProjetoCommand.ExecuteAsync(null);
 
         var reaberta = new MainWindowViewModel(repositorio, Ambiente.Calculadora, Ambiente.Dialogos, Ambiente.Relogio, Ambiente.Preferencias,
-            Ambiente.Assistente, Ambiente.PreferenciasInterface, Ambiente.Processador);
+            Ambiente.Assistente, Ambiente.PreferenciasInterface, Ambiente.Processador, Ambiente.ConfiguracaoAssistente);
         Ambiente.Dialogos.ArquivoParaAbrir = "/obra.pplan";
         await reaberta.AbrirProjetoCommand.ExecuteAsync(null);
 

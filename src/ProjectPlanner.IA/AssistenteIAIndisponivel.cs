@@ -1,8 +1,8 @@
 namespace ProjectPlanner.IA;
 
 /// <summary>
-/// PROVISÓRIO até existir uma chave de API: responde sempre que a integração não está configurada. Não faz
-/// chamada de rede e não lê o conteúdo dos anexos.
+/// Sem chave de API: responde que a integração não está configurada. Não faz chamada de rede e não lê o conteúdo
+/// dos anexos.
 /// </summary>
 /// <param name="espera">
 /// Quanto esperar antes de responder (0,5 s no programa), só para o painel mostrar "Assistente digitando…"
@@ -36,7 +36,8 @@ public sealed class AssistenteIAIndisponivel(TimeSpan espera) : IAssistenteIA
             1 => " (nem o anexo, que não foi lido)",
             var n => $" (nem os {n} anexos, que não foram lidos)",
         };
-        return new RespostaIA($"{Resposta}{anexos}. Quando uma chave de API for configurada, o assistente poderá " +
-                              "responder perguntas sobre o cronograma e analisar os documentos anexados.");
+        return new RespostaIA($"{Resposta}{anexos}. Para o assistente responder de verdade (sobre o cronograma e os " +
+                              "documentos anexados), configure uma chave de API do Gemini em Configurações do assistente " +
+                              "(a engrenagem no topo do painel).");
     }
 }

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Camada do assistente de IA (Bloco 19). Sem dependências: o SDK/HttpClient da integração real, quando
-       vier, entra só aqui, longe do domínio (Core) e da interface (App). Ver docs/ASSISTENTE-IA.md. -->
+  <!-- Camada do assistente de IA (Blocos 19 e 23). Sem dependências de pacotes nem do domínio: o Gemini é chamado
+       pelo HttpClient do próprio .NET, só aqui, longe do Core e da interface (App). Ver docs/ASSISTENTE-IA.md. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

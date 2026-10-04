@@ -1,37 +1,37 @@
+using ProjectPlanner.IA.Gemini;
+
 namespace ProjectPlanner.IA;
 
-/// <summary>
-/// De onde vem a chave de API do assistente.
-/// </summary>
+/// <summary>A chave de API e o modelo que o assistente usa agora.</summary>
 /// <remarks>
-/// PONTO DE EXTENSÃO: a chave nunca vai no arquivo .pplan nem num JSON em texto puro. No bloco da integração,
-/// uma implementação lerá o cofre do sistema (Chaves do macOS, Gerenciador de Credenciais do Windows), onde a
-/// chave é gravada por uma tela Configurações > Assistente; uma variável de ambiente pode servir só para
-/// desenvolvimento.
+/// A chave nunca vai no arquivo .pplan nem num JSON em texto puro. No programa (Bloco 23), quem cumpre este contrato
+/// lê o cofre do sistema (Chaves do macOS, Gerenciador de Credenciais do Windows), gravado pela tela de configurações
+/// do assistente; a variável de ambiente GEMINI_API_KEY serve só para desenvolvimento. Ver docs/ASSISTENTE-IA.md.
 /// </remarks>
 public interface IConfiguracaoIA
 {
-    /// <summary>A chave de API; nula quando não há.</summary>
+    /// <summary>A chave de API; nula quando não há. Lida a cada envio: salvar ou remover a chave vale na hora.</summary>
     string? ChaveApi { get; }
+
+    /// <summary>O modelo do provedor, como "gemini-2.5-flash".</summary>
+    string Modelo { get; }
 }
 
-/// <summary>A configuração desta fase: nunca há chave.</summary>
+/// <summary>Sem chave: o assistente responde que não está configurado.</summary>
 public sealed class SemChaveDeApi : IConfiguracaoIA
 {
     public string? ChaveApi => null;
+
+    public string Modelo => ProvedorGemini.ModeloRecomendado;
 }
 
-/// <summary>Escolhe a implementação de <see cref="IAssistenteIA"/> conforme a configuração.</summary>
+/// <summary>Monta o assistente do painel a partir da configuração e do provedor.</summary>
 public static class FabricaAssistenteIA
 {
-    public static IAssistenteIA Criar(IConfiguracaoIA configuracao)
+    public static IAssistenteIA Criar(IConfiguracaoIA configuracao, IProvedorIA provedor)
     {
         ArgumentNullException.ThrowIfNull(configuracao);
-        if (string.IsNullOrWhiteSpace(configuracao.ChaveApi))
-            return new AssistenteIAIndisponivel();
-
-        // PONTO DE EXTENSÃO: com chave, devolver aqui a implementação real (ex.: new AssistenteIAClaude(chave)).
-        // Enquanto ela não existe, uma chave não muda nada.
-        return new AssistenteIAIndisponivel();
+        ArgumentNullException.ThrowIfNull(provedor);
+        return new AssistenteConformeConfiguracao(configuracao, provedor);
     }
 }

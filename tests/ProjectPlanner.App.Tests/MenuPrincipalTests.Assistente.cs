@@ -106,4 +106,65 @@ public partial class MenuPrincipalTests
         (Painel(a).FindControl<TextBlock>("Digitando")!.IsVisible, a.Vm.Assistente.Mensagens[^1].Texto)
             .Should().Be((false, "Resposta cancelada."));
     });
+
+    // ---- Bloco 23: configurações do assistente ----
+
+    [Fact]
+    public Task Assistente_NaoConfigurado_OAvisoTemOLinkParaConfigurar() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        a.Vm.Assistente.Visivel = true;
+        Pintar(a);
+        var link = Painel(a).FindControl<Button>("ConfigurarChave")!;
+        (link.IsEffectivelyVisible, Painel(a).FindControl<TextBlock>("Modelo")!.IsVisible).Should().Be((true, false));
+
+        a.ClicarComOMouse(link);
+        a.ClicarComOMouse(Painel(a).FindControl<Button>("Configurar")!);
+
+        a.Ambiente.Dialogos.ConfiguracoesDoAssistente.Should().HaveCount(2, "pelo link do aviso e pela engrenagem do cabeçalho");
+    });
+
+    [Fact]
+    public Task Assistente_Configurado_MostraOModeloNoCabecalho_SemOAviso() => Tela.Executar(() =>
+    {
+        var a = Abrir(ambiente => ambiente.Assistente.EstaConfigurado = true);
+        a.Vm.Assistente.Visivel = true;
+        Pintar(a);
+
+        var modelo = Painel(a).FindControl<TextBlock>("Modelo")!;
+        (modelo.IsVisible, modelo.Text).Should().Be((true, "Gemini (Google) · gemini-2.5-flash"));
+        Painel(a).FindControl<Border>("AvisoNaoConfigurado")!.IsVisible.Should().BeFalse();
+    });
+
+    [Fact]
+    public Task ConfiguracaoDoAssistente_ChaveEscondida_SalvarMostraSoOFim() => Tela.Executar(() =>
+    {
+        var ambiente = new Ambiente();
+        var tela = new ViewModels.ConfiguracaoAssistenteViewModel(ambiente.ConfiguracaoAssistente, ambiente.Dialogos);
+        var janela = new ConfiguracaoAssistenteWindow(tela);
+        janela.Show();
+        Dispatcher.UIThread.RunJobs();
+        var chave = janela.FindControl<TextBox>("Chave")!;
+        chave.PasswordChar.Should().Be('●');
+        janela.FindControl<TextBlock>("Situacao")!.Text.Should().Be("Nenhuma chave configurada: o assistente dá respostas simuladas.");
+        janela.FindControl<Button>("Remover")!.IsVisible.Should().BeFalse("sem chave salva, nada a remover");
+
+        chave.Focus();
+        janela.KeyTextInput("AIzaChaveDigitadaNaJanela000000004321");
+        Dispatcher.UIThread.RunJobs();
+        tela.ChaveDigitada.Should().Be("AIzaChaveDigitadaNaJanela000000004321");
+        var salvar = janela.FindControl<Button>("Salvar")!;
+        var ponto = salvar.TranslatePoint(new Point(salvar.Bounds.Width / 2, salvar.Bounds.Height / 2), janela)!.Value;
+        janela.Bounds.Contains(ponto).Should().BeTrue("os botões cabem na janela");
+        janela.MouseDown(ponto, MouseButton.Left);
+        janela.MouseUp(ponto, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+
+        ambiente.ConfiguracaoAssistente.Chave.Should().Be("AIzaChaveDigitadaNaJanela000000004321");
+        chave.Text.Should().BeEmpty("a chave salva não volta para o campo");
+        janela.FindControl<TextBlock>("Situacao")!.Text.Should().Be("Chave guardada no cofre do sistema (Chaves do macOS), terminada em …4321.");
+        janela.FindControl<TextBlock>("Mensagem")!.Text.Should().Be("Chave salva no cofre do sistema.");
+        (janela.FindControl<Button>("Remover")!.IsVisible, janela.FindControl<Button>("Remover")!.IsEffectivelyEnabled).Should().Be((true, true));
+        janela.Close();
+    });
 }

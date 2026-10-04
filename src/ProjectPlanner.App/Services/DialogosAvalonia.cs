@@ -19,9 +19,10 @@ public sealed class DialogosAvalonia : IDialogosService
         Patterns = [$"*.{Extensao}"],
     };
 
-    private static readonly FilePickerFileType Documentos = new("Documentos")
+    // Os formatos que o assistente lê (Bloco 23): PDF, imagens e texto.
+    private static readonly FilePickerFileType Documentos = new($"Documentos ({IA.AnexosAceitos.Descricao})")
     {
-        Patterns = ["*.pdf", "*.doc", "*.docx", "*.xls", "*.xlsx", "*.txt", "*.md", "*.csv", "*.png", "*.jpg", "*.jpeg"],
+        Patterns = [.. IA.AnexosAceitos.Padroes, .. IA.AnexosAceitos.Padroes.Select(p => p.ToUpperInvariant())],
     };
 
     private static readonly FilePickerFileType Fotos = new("Fotos (JPG, PNG, WebP)")
@@ -95,4 +96,7 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria) =>
         new GaleriaFotosWindow(galeria).ShowDialog(JanelaPrincipal);
+
+    public Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao) =>
+        new ConfiguracaoAssistenteWindow(configuracao).ShowDialog(JanelaPrincipal);
 }

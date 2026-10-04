@@ -28,6 +28,9 @@ public interface IDialogosService
 
     /// <summary>Mostra a galeria de fotos de uma tarefa e espera ser fechada.</summary>
     Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria);
+
+    /// <summary>Mostra as configurações do assistente (chave e modelo, Bloco 23) e espera ser fechada.</summary>
+    Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao);
 }
 
 public enum RespostaAlteracoesPendentes

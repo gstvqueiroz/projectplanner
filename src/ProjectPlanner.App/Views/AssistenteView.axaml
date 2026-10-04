@@ -6,7 +6,7 @@
              x:DataType="vm:AssistenteViewModel">
 
     <!-- Painel do assistente de IA (Bloco 19): cabeçalho, aviso de "não configurado", conversa, anexos pendentes
-         e a linha de entrada. Sem integração real: quem responde é o AssistenteIAIndisponivel. -->
+         e a linha de entrada. Com uma chave configurada (Bloco 23), quem responde é o Gemini. -->
     <UserControl.Styles>
         <Style Selector="Border.balao">
             <Setter Property="CornerRadius" Value="10" />
@@ -36,17 +36,28 @@
                     <Button x:Name="FecharPainel" DockPanel.Dock="Right" Classes="plano" Content="×" FontSize="16"
                             Command="{Binding FecharCommand}" ToolTip.Tip="Ocultar o painel do assistente"
                             AutomationProperties.Name="Ocultar o assistente" />
+                    <Button x:Name="Configurar" DockPanel.Dock="Right" Classes="plano" Content="⚙" FontSize="15"
+                            Command="{Binding ConfigurarCommand}" ToolTip.Tip="Configurações do assistente (chave de API e modelo)"
+                            AutomationProperties.Name="Configurações do assistente" />
                     <Button DockPanel.Dock="Right" Classes="plano" Content="Limpar conversa" FontSize="12"
                             Command="{Binding LimparConversaCommand}" IsVisible="{Binding !ConversaVazia}" />
-                    <TextBlock Text="Assistente" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Assistente" FontWeight="SemiBold" />
+                        <TextBlock x:Name="Modelo" Text="{Binding DescricaoDoModelo}" FontSize="11" Opacity="0.6"
+                                   IsVisible="{Binding EstaConfigurado}" />
+                    </StackPanel>
                 </DockPanel>
             </Border>
 
             <!-- Sem chave de API: respostas simuladas. -->
             <Border x:Name="AvisoNaoConfigurado" DockPanel.Dock="Top" Background="#FFF4E5" Padding="10,6"
                     IsVisible="{Binding !EstaConfigurado}">
-                <TextBlock Text="Integração com IA não configurada — respostas simuladas." FontSize="12"
-                           TextWrapping="Wrap" Foreground="#8A5300" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Integração com IA não configurada — respostas simuladas." FontSize="12"
+                               TextWrapping="Wrap" Foreground="#8A5300" />
+                    <Button x:Name="ConfigurarChave" Classes="plano" Padding="0" FontSize="12" Foreground="#0B57D0"
+                            Content="Configurar a chave do Gemini…" Command="{Binding ConfigurarCommand}" />
+                </StackPanel>
             </Border>
 
             <!-- Entrada: anexar, texto (Enter envia, Shift+Enter quebra a linha) e Enviar/Cancelar. -->

@@ -172,6 +172,14 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Action<ConfiguracaoAssistenteViewModel>? AoConfigurar { get; set; }
 
+    public List<string> PastasAbertas { get; } = [];
+
+    public Task AbrirPastaAsync(string pasta)
+    {
+        PastasAbertas.Add(pasta);
+        return Task.CompletedTask;
+    }
+
     /// <summary>Onde o CSV exportado vai (Bloco 25); nulo é cancelar.</summary>
     public string? ArquivoCsv { get; set; }
 

@@ -32,6 +32,9 @@ public interface IDialogosService
     /// <summary>Mostra as configurações do assistente (chave e modelo, Bloco 23) e espera ser fechada.</summary>
     Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao);
 
+    /// <summary>Abre a pasta no Finder ou no Explorador de Arquivos (Bloco 25), criando-a se ainda não existe.</summary>
+    Task AbrirPastaAsync(string pasta);
+
     /// <summary>Escolhe onde gravar o CSV exportado (Bloco 25).</summary>
     /// <returns>O caminho escolhido, ou nulo se o usuário cancelar.</returns>
     Task<string?> EscolherArquivoCsvAsync(string nomeSugerido);

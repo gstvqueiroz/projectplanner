@@ -156,6 +156,9 @@
                 </MenuItem>
                 <!-- Bloco 25 -->
                 <MenuItem Header="Ajuda">
+                    <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"
+                              ToolTip.Tip="Os erros inesperados ficam registrados ali, um arquivo por mês" />
+                    <Separator />
                     <MenuItem Header="Sobre o ProjectPlanner…" Command="{Binding SobreCommand}" />
                 </MenuItem>
             </Menu>

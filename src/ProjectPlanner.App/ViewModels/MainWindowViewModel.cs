@@ -359,6 +359,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         Gantt.MostrarTarefa(linha.Tarefa.Id);
     }
 
+    /// <summary>Ajuda > Abrir a pasta de registros de erros (Bloco 25, R1).</summary>
+    [RelayCommand]
+    private Task AbrirRegistrosDeErros() => _dialogos.AbrirPastaAsync(RegistroDeErros.PastaPadrao());
+
     /// <summary>Ajuda > Sobre o ProjectPlanner (Bloco 25).</summary>
     [RelayCommand]
     private Task Sobre() => _dialogos.MostrarSobreAsync(new SobreViewModel());

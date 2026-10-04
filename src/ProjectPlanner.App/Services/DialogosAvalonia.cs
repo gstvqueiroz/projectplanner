@@ -102,6 +102,19 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarSobreAsync(ViewModels.SobreViewModel sobre) => new SobreWindow(sobre).ShowDialog(JanelaPrincipal);
 
+    public async Task AbrirPastaAsync(string pasta)
+    {
+        try
+        {
+            Directory.CreateDirectory(pasta);
+            await JanelaPrincipal.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(pasta));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Sem a pasta, não há o que mostrar.
+        }
+    }
+
     public async Task<string?> EscolherArquivoCsvAsync(string nomeSugerido)
     {
         var arquivo = await JanelaPrincipal.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

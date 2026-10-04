@@ -21,6 +21,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   crítica, predecessoras e fotos.
 - Arquivo > Exportar para CSV…: a tabela do cronograma (com as datas do cálculo) numa planilha que o Excel em
   português abre direto.
+- Erros inesperados não fecham mais o programa sem aviso: ficam num registro local (um arquivo por mês, em
+  Ajuda > Abrir a pasta de registros de erros), e os da interface viram um aviso, com o programa aberto para salvar.
 
 ## 0.24.0
 

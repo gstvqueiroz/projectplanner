@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ProjectPlanner.App.Views.AvisoDeErroWindow"
+        Title="Erro inesperado"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 25 (R1): o aviso de um erro que nenhum código tratou; o programa continua aberto. -->
+    <StackPanel Margin="20" Spacing="16" MaxWidth="460">
+        <SelectableTextBlock x:Name="Mensagem" TextWrapping="Wrap" />
+        <Button Content="OK" Classes="accent" HorizontalAlignment="Right" Click="Fechar" IsDefault="True" IsCancel="True" />
+    </StackPanel>
+</Window>

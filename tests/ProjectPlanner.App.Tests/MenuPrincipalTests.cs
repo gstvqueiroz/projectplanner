@@ -113,7 +113,7 @@ public partial class MenuPrincipalTests
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…");
-        Titulos(a.Item("Ajuda")).Should().Equal("Sobre o ProjectPlanner…");
+        Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Sobre o ProjectPlanner…");
     });
 
     [Fact]

@@ -51,6 +51,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += tarefaId => TarefaSelecionada = LinhasVisiveis.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
         Gantt.Ligacoes = this;
+        Gantt.DicaDaTarefa = DicaDaTarefaNoGantt;
         Gantt.FotosPedidas += tarefaId => _ = MostrarFotosAsync(tarefaId);
         // Um controle só para o caminho crítico: o do Gantt também liga e desliga o fundo das linhas na grid.
         Gantt.PropertyChanged += (_, e) =>

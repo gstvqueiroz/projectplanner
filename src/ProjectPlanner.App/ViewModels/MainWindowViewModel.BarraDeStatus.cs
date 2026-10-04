@@ -60,6 +60,34 @@ public sealed partial class MainWindowViewModel
 
     public string TextoVersaoNaBarra => $"v{VersaoDoProduto.Atual}";
 
+    /// <summary>
+    /// A dica de uma barra do Gantt (Bloco 25, V4): EDT e nome, datas do cálculo, duração, % concluído, folga, se é
+    /// crítica, predecessoras e fotos. Linhas sem informação ficam de fora.
+    /// </summary>
+    public string DicaDaTarefaNoGantt(Guid tarefaId)
+    {
+        if (Tarefas.FirstOrDefault(l => l.Tarefa.Id == tarefaId) is not { } linha)
+            return "";
+        var tarefa = linha.Tarefa;
+        var (inicio, termino) = (tarefa.InicioMaisCedo ?? tarefa.DataInicio, tarefa.TerminoMaisCedo ?? tarefa.DataTermino);
+        string Data(DateTime data) => data.ToString("dd/MM/yyyy", Cultura);
+        var linhas = new List<string> { $"{linha.Edt} {tarefa.Nome}" };
+        if (tarefa.EhMarco)
+            linhas.Add($"Marco em {Data(inicio)}");
+        else
+            linhas.Add($"{Data(inicio)} → {Data(termino)} · " + (tarefa.Duracao == 1 ? "1 dia" : $"{tarefa.Duracao} dias") +
+                       (tarefa.EhResumo ? " (resumo)" : ""));
+        if (!tarefa.EhMarco)
+            linhas.Add($"{tarefa.PercentualConcluido}% concluído");
+        if (tarefa.Folga is { } folga && !tarefa.EhResumo)
+            linhas.Add("Folga: " + (folga == 1 ? "1 dia" : $"{folga} dias") + (tarefa.EhCritica ? " (crítica)" : ""));
+        if (!string.IsNullOrWhiteSpace(linha.Predecessoras))
+            linhas.Add($"Predecessoras: {linha.Predecessoras}");
+        if (tarefa.Fotos.Count > 0)
+            linhas.Add(tarefa.Fotos.Count == 1 ? "1 foto" : $"{tarefa.Fotos.Count} fotos");
+        return string.Join("\n", linhas);
+    }
+
     private void AtualizarBarraDeStatus()
     {
         OnPropertyChanged(nameof(TextoTarefasNaBarra));

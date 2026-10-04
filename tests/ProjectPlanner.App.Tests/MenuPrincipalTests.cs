@@ -211,6 +211,23 @@ public partial class MenuPrincipalTests
         cabecalho.Children.OfType<Border>().Should().NotContain(b => b.Name == "RotuloHoje");
     });
 
+    // Bloco 25 (V4)
+    [Fact]
+    public Task Gantt_DicaDaBarra_SoOMontaAoAbrir() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var linha = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        Pintar(a);
+        var corpo = a.Janela.Gantt.FindControl<Canvas>("Corpo")!;
+        var barra = corpo.Children.OfType<Avalonia.Controls.Shapes.Shape>().Single(f => f.Tag is Guid id && id == linha.Tarefa.Id);
+        ToolTip.GetTip(barra).Should().Be("Fundação", "antes de abrir, só o nome");
+
+        barra.RaiseEvent(new Avalonia.Interactivity.CancelRoutedEventArgs(ToolTip.ToolTipOpeningEvent));
+
+        ToolTip.GetTip(barra).Should().Be(a.Vm.DicaDaTarefaNoGantt(linha.Tarefa.Id)).And.BeOfType<string>()
+            .Which.Should().StartWith("1 Fundação\n28/09/2026 → 30/09/2026 · 3 dias");
+    });
+
     // Bloco 25 (B6)
     [Fact]
     public Task BarraDeStatus_NomeDoArquivo_ECaminhoNaDica() => Tela.Executar(() =>

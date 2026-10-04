@@ -331,6 +331,12 @@ public partial class GanttChartView : UserControl
             IsHitTestVisible = false,
         }, 0, barra.Linha * GanttViewModel.AlturaLinha);
 
+    private void AbrindoDicaDaBarra(object? sender, CancelRoutedEventArgs e)
+    {
+        if (sender is Control { Tag: Guid tarefaId } forma && _viewModel?.DicaDaTarefa?.Invoke(tarefaId) is { Length: > 0 } dica)
+            ToolTip.SetTip(forma, dica);
+    }
+
     private void DesenharBarra(BarraGantt barra, GanttViewModel viewModel)
     {
         // A folga (só com Exibir > Folga ligado) corre logo abaixo da barra, como no MS Project, para não
@@ -360,7 +366,10 @@ public partial class GanttChartView : UserControl
         };
         forma.Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : null;
         forma.StrokeThickness = 1.5;
+        // A dica rica (Bloco 25, V4) é montada só quando vai abrir: montar a de todas as barras a cada desenho pesaria.
         ToolTip.SetTip(forma, barra.Nome);
+        forma.Tag = barra.TarefaId;
+        ToolTip.AddToolTipOpeningHandler(forma, AbrindoDicaDaBarra);
         if (forma is Rectangle)
             Posicionar(Corpo, forma, barra.X, barra.Y);
         else

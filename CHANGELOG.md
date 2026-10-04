@@ -17,6 +17,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 - Tarefa > Ir para a tarefa… (⌘/Ctrl+G), pelo Nº ou pela EDT, abrindo os resumos recolhidos, e Tarefa > Rolar até a
   tarefa, que traz a selecionada para a vista na grid e no Gantt.
 - No controle de zoom do Gantt: Ajustar ao projeto (o projeto inteiro na largura) e Ir para hoje.
+- Dica completa ao parar o mouse sobre uma barra do Gantt: EDT e nome, datas, duração, % concluído, folga, se é
+  crítica, predecessoras e fotos.
 
 ## 0.24.0
 

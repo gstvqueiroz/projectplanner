@@ -110,6 +110,9 @@ public sealed partial class GanttViewModel : ViewModelBase
     [ObservableProperty]
     public partial Guid? TarefaDestacada { get; set; }
 
+    /// <summary>A dica rica de uma barra (Bloco 25, V4), dada pela janela principal; sem ela, a dica é só o nome.</summary>
+    public Func<Guid, string>? DicaDaTarefa { get; set; }
+
     /// <summary>O usuário clicou na barra de uma tarefa; a janela principal a seleciona.</summary>
     public event Action<Guid>? BarraClicada;
 

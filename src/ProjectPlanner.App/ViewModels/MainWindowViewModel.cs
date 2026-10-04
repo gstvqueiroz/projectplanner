@@ -125,7 +125,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAcimaCommand))]
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAbaixoCommand))]
     [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
+    [NotifyPropertyChangedFor(nameof(FotosDaSelecionada))]
+    [NotifyPropertyChangedFor(nameof(DicaFotosDaSelecionada))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
+
+    /// <summary>Quantas fotos tem a tarefa selecionada: o número no botão de fotos da barra (Bloco 25, F1).</summary>
+    public int FotosDaSelecionada => TarefaSelecionada?.QuantidadeDeFotos ?? 0;
+
+    /// <summary>A dica do botão de fotos da barra (Bloco 25, F1).</summary>
+    public string DicaFotosDaSelecionada => TarefaSelecionada is not { } linha
+        ? "Fotos da tarefa: selecione uma tarefa para ver as fotos dela"
+        : $"Fotos de \"{linha.Nome}\": " + linha.QuantidadeDeFotos switch
+        {
+            0 => "nenhuma ainda — abrir a galeria para adicionar",
+            1 => "1 foto — abrir a galeria",
+            var n => $"{n} fotos — abrir a galeria",
+        };
 
     /// <summary>
     /// Opção de exibição (só da sessão): falso esconde o destaque da linha selecionada na grid e da barra
@@ -433,6 +448,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         return _dialogos.MostrarFotosAsync(new GaleriaFotosViewModel(linha, _fotos, _dialogos, _relogio, () =>
         {
             linha.FotosMudaram();
+            OnPropertyChanged(nameof(FotosDaSelecionada));
+            OnPropertyChanged(nameof(DicaFotosDaSelecionada));
             MarcarAlteracao();
         }));
     }

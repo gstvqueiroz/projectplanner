@@ -6,6 +6,7 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 ## 0.25.0
 
 - Ajuda > Sobre o ProjectPlanner: versão, novidades desta versão e os componentes de terceiros com as licenças.
+- Botão de fotos na barra de ícones: abre a galeria da tarefa selecionada e mostra quantas fotos ela tem.
 
 ## 0.24.0
 

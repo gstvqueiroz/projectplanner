@@ -57,10 +57,46 @@ public partial class MainWindow : Window
         if (_viewModel is null)
             return;
         MontarMenuDeColunas(_viewModel.Colunas);
+        MostrarContadorDeFotos(_viewModel);
         _viewModel.PropertyChanged += ViewModelMudou;
         _viewModel.Assistente.PropertyChanged += AssistenteMudou;
         AplicarModoVisualizacao();
         AplicarPainelDoAssistente();
+    }
+
+    /// <summary>O número no canto do botão de fotos (Bloco 25, F1): quantas fotos tem a tarefa selecionada.</summary>
+    internal Border? ContadorDeFotos { get; private set; }
+
+    // Um adorno, e não o conteúdo do botão: os botões da barra são só o ícone.
+    private void MostrarContadorDeFotos(MainWindowViewModel viewModel)
+    {
+        ContadorDeFotos ??= new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#1565C0")),
+            CornerRadius = new CornerRadius(7),
+            MinWidth = 14,
+            Height = 14,
+            Padding = new Thickness(3, 0),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            Margin = new Thickness(0, 1, 1, 0),
+            IsHitTestVisible = false,
+            Child = new TextBlock
+            {
+                Foreground = Brushes.White,
+                FontSize = 9,
+                FontWeight = FontWeight.SemiBold,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            },
+        };
+        ContadorDeFotos.DataContext = viewModel;
+        ContadorDeFotos.Bind(IsVisibleProperty, new Binding(nameof(MainWindowViewModel.FotosDaSelecionada))
+        {
+            Converter = new Avalonia.Data.Converters.FuncValueConverter<int, bool>(n => n > 0),
+        });
+        ((TextBlock)ContadorDeFotos.Child!).Bind(TextBlock.TextProperty, new Binding(nameof(MainWindowViewModel.FotosDaSelecionada)));
+        AdornerLayer.SetAdorner(BotaoFotos, ContadorDeFotos);
     }
 
     private void AssistenteMudou(object? sender, PropertyChangedEventArgs e)

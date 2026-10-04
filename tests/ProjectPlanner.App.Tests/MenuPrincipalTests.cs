@@ -159,6 +159,7 @@ public partial class MenuPrincipalTests
             (a.Vm.PromoverCommand, "Promover"),
             (a.Vm.RebaixarCommand, "Rebaixar"),
             (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"),
+            (a.Vm.GerenciarFotosCommand, "Fotos da tarefa"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Dividido"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Somente Tabela"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Somente Gantt"),
@@ -167,6 +168,29 @@ public partial class MenuPrincipalTests
         botoes.Select(b => ToolTip.GetTip(b) as string).Should().OnlyContain(dica => !string.IsNullOrWhiteSpace(dica));
         botoes.Select(b => (string)ToolTip.GetTip(b)!).Should().Contain(d => d.StartsWith("Promover") && d.Contains("Alt+Shift+←"))
             .And.Contain(d => d.StartsWith("Rebaixar") && d.Contains("Alt+Shift+→"));
+    });
+
+    // Bloco 25 (F1)
+    [Fact]
+    public Task AcessoRapido_BotaoDeFotos_ContadorEClique() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var fotos = Botao(a, "Fotos da tarefa");
+        Pintar(a);
+        (fotos.IsEffectivelyEnabled, a.Janela.ContadorDeFotos!.IsVisible).Should().Be((false, false));
+
+        var linha = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        a.Vm.TarefaSelecionada = linha;
+        a.Vm.GerenciarFotosCommand.Execute(linha);
+        Esperar(a.Ambiente.Dialogos.Galerias.Last().AdicionarArquivosAsync(["/fotos/a.jpg", "/fotos/b.jpg"]));
+        Pintar(a);
+
+        fotos.IsEffectivelyEnabled.Should().BeTrue();
+        (a.Janela.ContadorDeFotos.IsVisible, ((TextBlock)a.Janela.ContadorDeFotos.Child!).Text).Should().Be((true, "2"));
+        ToolTip.GetTip(fotos).Should().Be("Fotos de \"Fundação\": 2 fotos — abrir a galeria");
+        var galerias = a.Ambiente.Dialogos.Galerias.Count;
+        a.ClicarComOMouse(fotos);
+        a.Ambiente.Dialogos.Galerias.Should().HaveCount(galerias + 1);
     });
 
     [Fact]

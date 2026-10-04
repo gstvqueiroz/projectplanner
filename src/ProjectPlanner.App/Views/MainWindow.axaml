@@ -191,6 +191,14 @@
                         <Path Data="M13.5,8 A5.5,5.5 0 1 1 11.9,4.1 M12.2,1.2 L12,4.3 L8.9,4.2" />
                     </Button>
                     <Border Classes="divisor" />
+                    <!-- Bloco 25 (F1): a galeria da tarefa selecionada, com quantas fotos ela tem; desabilitado sem seleção. -->
+                    <Button x:Name="BotaoFotos" Classes="acessoRapido" Command="{Binding GerenciarFotosCommand}"
+                            ToolTip.Tip="{Binding DicaFotosDaSelecionada}" ToolTip.ShowOnDisabled="True"
+                            AutomationProperties.Name="Fotos da tarefa">
+                        <!-- Câmera. O número de fotos vai por cima, num adorno (ver MainWindow.axaml.cs, ContadorDeFotos). -->
+                        <Path Data="M1.5,5 A1,1 0 0 1 2.5,4 H5 L6.2,2.3 H9.8 L11,4 H13.5 A1,1 0 0 1 14.5,5 V12.5 A1,1 0 0 1 13.5,13.5 H2.5 A1,1 0 0 1 1.5,12.5 Z M8,6.2 A2.6,2.6 0 1 0 8,11.4 A2.6,2.6 0 1 0 8,6.2" />
+                    </Button>
+                    <Border Classes="divisor" />
                     <!-- Modos de visualização: o do modo atual fica marcado (classe ativo). -->
                     <Button Classes="acessoRapido" Classes.ativo="{Binding EhDividido}"
                             Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Dividido}"

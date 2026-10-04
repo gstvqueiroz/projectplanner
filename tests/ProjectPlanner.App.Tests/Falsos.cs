@@ -172,6 +172,17 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Action<ConfiguracaoAssistenteViewModel>? AoConfigurar { get; set; }
 
+    /// <summary>Onde o CSV exportado vai (Bloco 25); nulo é cancelar.</summary>
+    public string? ArquivoCsv { get; set; }
+
+    public string? CsvSugerido { get; private set; }
+
+    public Task<string?> EscolherArquivoCsvAsync(string nomeSugerido)
+    {
+        CsvSugerido = nomeSugerido;
+        return Task.FromResult(ArquivoCsv);
+    }
+
     /// <summary>O que o usuário "digita" quando o programa pede um texto (Bloco 25); nulo é cancelar.</summary>
     public string? TextoDigitado { get; set; }
 

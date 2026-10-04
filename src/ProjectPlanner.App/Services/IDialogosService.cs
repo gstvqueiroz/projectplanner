@@ -32,6 +32,10 @@ public interface IDialogosService
     /// <summary>Mostra as configurações do assistente (chave e modelo, Bloco 23) e espera ser fechada.</summary>
     Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao);
 
+    /// <summary>Escolhe onde gravar o CSV exportado (Bloco 25).</summary>
+    /// <returns>O caminho escolhido, ou nulo se o usuário cancelar.</returns>
+    Task<string?> EscolherArquivoCsvAsync(string nomeSugerido);
+
     /// <summary>Pede um texto curto (Bloco 25: o Nº da tarefa em Ir para a tarefa).</summary>
     /// <returns>O texto digitado, ou nulo se o usuário cancelar.</returns>
     Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null);

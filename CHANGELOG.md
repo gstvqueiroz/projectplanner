@@ -19,6 +19,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 - No controle de zoom do Gantt: Ajustar ao projeto (o projeto inteiro na largura) e Ir para hoje.
 - Dica completa ao parar o mouse sobre uma barra do Gantt: EDT e nome, datas, duração, % concluído, folga, se é
   crítica, predecessoras e fotos.
+- Arquivo > Exportar para CSV…: a tabela do cronograma (com as datas do cálculo) numa planilha que o Excel em
+  português abre direto.
 
 ## 0.24.0
 

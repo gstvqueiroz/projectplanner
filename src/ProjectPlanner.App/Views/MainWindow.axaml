@@ -76,6 +76,10 @@
                     <Separator />
                     <MenuItem x:Name="ItemSalvar" Header="Salvar" Command="{Binding SalvarProjetoCommand}" />
                     <MenuItem x:Name="ItemSalvarComo" Header="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
+                    <Separator />
+                    <!-- Bloco 25 (E1) -->
+                    <MenuItem Header="Exportar para CSV…" Command="{Binding ExportarCsvCommand}"
+                              ToolTip.Tip="A tabela do cronograma numa planilha CSV, que o Excel abre direto" />
                 </MenuItem>
                 <!-- Opções de exibição: valem só durante a sessão (não vão para o .pplan). O ✓ mostra se estão ligadas. -->
                 <MenuItem Header="Exibir">

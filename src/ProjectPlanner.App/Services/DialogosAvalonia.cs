@@ -102,6 +102,19 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarSobreAsync(ViewModels.SobreViewModel sobre) => new SobreWindow(sobre).ShowDialog(JanelaPrincipal);
 
+    public async Task<string?> EscolherArquivoCsvAsync(string nomeSugerido)
+    {
+        var arquivo = await JanelaPrincipal.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Exportar para CSV",
+            SuggestedFileName = nomeSugerido,
+            DefaultExtension = "csv",
+            FileTypeChoices = [new FilePickerFileType("Planilha CSV (Excel)") { Patterns = ["*.csv"] }],
+            ShowOverwritePrompt = true,
+        });
+        return arquivo?.TryGetLocalPath();
+    }
+
     public Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null) =>
         new EntradaDeTextoWindow(titulo, pergunta, valorInicial).ShowDialog<string?>(JanelaAtiva);
 }

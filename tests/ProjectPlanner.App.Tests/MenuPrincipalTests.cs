@@ -171,6 +171,23 @@ public partial class MenuPrincipalTests
             .And.Contain(d => d.StartsWith("Rebaixar") && d.Contains("Alt+Shift+→"));
     });
 
+    // Bloco 25 (V1)
+    [Fact]
+    public Task BarraDeStatus_MensagemAEsquerda_InformacoesADireita() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var linha = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        a.Vm.TarefaSelecionada = linha;
+        Pintar(a);
+        TextBlock Status(string nome) => a.Janela.FindControl<TextBlock>(nome)!;
+
+        (Status("StatusTarefas").Text, Status("StatusPeriodo").Text, Status("StatusSelecionada").Text, Status("StatusVersao").Text)
+            .Should().Be(("1 tarefa", "28/09/2026 → 30/09/2026 · 3 dias úteis", "1 Fundação: 28/09/2026 → 30/09/2026", $"v{VersaoDoProduto.Atual}"));
+        var informacoes = a.Janela.FindControl<StackPanel>("InformacoesDaBarra")!;
+        var direita = informacoes.TranslatePoint(new Point(informacoes.Bounds.Width, 0), a.Janela)!.Value.X;
+        (a.Janela.Bounds.Width - direita).Should().BeInRange(0, 12, "fica encostada à direita");
+    });
+
     // Bloco 25 (F1)
     [Fact]
     public Task AcessoRapido_BotaoDeFotos_ContadorEClique() => Tela.Executar(() =>

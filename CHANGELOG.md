@@ -9,6 +9,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 - Botão de fotos na barra de ícones: abre a galeria da tarefa selecionada e mostra quantas fotos ela tem.
 - Atalhos de teclado (⌘ no Mac, Ctrl no Windows): N novo, O abrir, S salvar, ⇧S salvar como, ⇧F fotos da tarefa,
   1/2/3 modos de visualização, J assistente, e F9 recalcular. Aparecem nos menus e nas dicas da barra.
+- Barra de status mais completa: à direita, o tamanho do projeto (tarefas, resumos, marcos), o período em dias úteis,
+  a tarefa selecionada com as datas do cronograma e a versão.
 
 ## 0.24.0
 

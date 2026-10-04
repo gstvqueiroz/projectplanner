@@ -127,6 +127,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
     [NotifyPropertyChangedFor(nameof(FotosDaSelecionada))]
     [NotifyPropertyChangedFor(nameof(DicaFotosDaSelecionada))]
+    [NotifyPropertyChangedFor(nameof(TextoSelecionadaNaBarra))]
     public partial TarefaViewModel? TarefaSelecionada { get; set; }
 
     /// <summary>Quantas fotos tem a tarefa selecionada: o número no botão de fotos da barra (Bloco 25, F1).</summary>
@@ -769,6 +770,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
         foreach (var linha in Tarefas)
             linha.AtualizarTela();
+        AtualizarBarraDeStatus();
         return calculou;
     }
 

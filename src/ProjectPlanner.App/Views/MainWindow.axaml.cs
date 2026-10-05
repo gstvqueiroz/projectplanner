@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ProjectPlanner.App.Services;
@@ -68,6 +69,20 @@ public partial class MainWindow : Window
         _viewModel.Assistente.PropertyChanged += AssistenteMudou;
         AplicarModoVisualizacao();
         AplicarPainelDoAssistente();
+        AplicarTema();
+    }
+
+    // Bloco 25 (V3): o tema vale para o programa inteiro (as outras janelas também), por isso vai no Application.
+    private void AplicarTema()
+    {
+        if (_viewModel is null || Application.Current is not { } aplicacao)
+            return;
+        aplicacao.RequestedThemeVariant = _viewModel.Tema switch
+        {
+            TemaDaInterface.Claro => ThemeVariant.Light,
+            TemaDaInterface.Escuro => ThemeVariant.Dark,
+            _ => ThemeVariant.Default,
+        };
     }
 
     // Bloco 25 (P3): a grid rola até a linha pedida (Ir para a tarefa, Rolar até a tarefa).
@@ -135,6 +150,8 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainWindowViewModel.ModoVisualizacao))
             AplicarModoVisualizacao();
+        else if (e.PropertyName == nameof(MainWindowViewModel.Tema))
+            AplicarTema();
     }
 
     // Clique direito numa linha da grid: seleciona a linha e deixa o menu de contexto abrir para ela. Fora

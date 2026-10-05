@@ -25,7 +25,7 @@
                     <TextBlock x:Name="Andamento" Text="{Binding Andamento}" Classes.atrasado="{Binding AbaixoDoPrevisto}">
                         <TextBlock.Styles>
                             <Style Selector="TextBlock.atrasado">
-                                <Setter Property="Foreground" Value="#C62828" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
                             </Style>
                         </TextBlock.Styles>
                     </TextBlock>
@@ -46,7 +46,7 @@
                                                Classes.destaque="{Binding Destaque}">
                                         <TextBlock.Styles>
                                             <Style Selector="TextBlock.destaque">
-                                                <Setter Property="Foreground" Value="#C62828" />
+                                                <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
                                             </Style>
                                         </TextBlock.Styles>
                                     </TextBlock>

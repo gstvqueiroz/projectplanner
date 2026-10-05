@@ -48,6 +48,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _calculadora = calculadora;
         _dialogos = dialogos;
         _relogio = relogio;
+        _preferenciasInterface = preferenciasInterface;
+        Tema = preferenciasInterface.Carregar()?.Tema ?? TemaDaInterface.Sistema;
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += tarefaId => TarefaSelecionada = LinhasVisiveis.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
         Gantt.Ligacoes = this;

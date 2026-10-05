@@ -15,7 +15,7 @@
             <Setter Property="MaxWidth" Value="280" />
         </Style>
         <Style Selector="Border.anexo">
-            <Setter Property="Background" Value="#14000000" />
+            <Setter Property="Background" Value="{DynamicResource FundoSutil}" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="6,2" />
             <Setter Property="Margin" Value="0,2,4,0" />
@@ -50,12 +50,12 @@
             </Border>
 
             <!-- Sem chave de API: respostas simuladas. -->
-            <Border x:Name="AvisoNaoConfigurado" DockPanel.Dock="Top" Background="#FFF4E5" Padding="10,6"
+            <Border x:Name="AvisoNaoConfigurado" DockPanel.Dock="Top" Background="{DynamicResource FundoDeAviso}" Padding="10,6"
                     IsVisible="{Binding !EstaConfigurado}">
                 <StackPanel Spacing="2">
                     <TextBlock Text="Integração com IA não configurada — respostas simuladas." FontSize="12"
-                               TextWrapping="Wrap" Foreground="#8A5300" />
-                    <Button x:Name="ConfigurarChave" Classes="plano" Padding="0" FontSize="12" Foreground="#0B57D0"
+                               TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
+                    <Button x:Name="ConfigurarChave" Classes="plano" Padding="0" FontSize="12" Foreground="{DynamicResource TextoDeLink}"
                             Content="Configurar a chave do Gemini…" Command="{Binding ConfigurarCommand}" />
                 </StackPanel>
             </Border>
@@ -83,7 +83,7 @@
             <!-- Anexos pendentes (vão com a próxima mensagem) e aviso de anexo que falhou. -->
             <StackPanel DockPanel.Dock="Bottom" Margin="8,0" Spacing="2">
                 <TextBlock Text="{Binding AvisoDeAnexo}" IsVisible="{Binding AvisoDeAnexo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                           Foreground="#C62828" FontSize="11" TextWrapping="Wrap" />
+                           Foreground="{DynamicResource TextoDeErro}" FontSize="11" TextWrapping="Wrap" />
                 <ItemsControl x:Name="Pendentes" ItemsSource="{Binding AnexosPendentes}" IsVisible="{Binding TemAnexosPendentes}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -162,21 +162,21 @@
                         <ItemsControl.Styles>
                             <!-- Usuário à direita, em azul; assistente à esquerda, em cinza; avisos (erro, cancelamento) em vermelho claro. -->
                             <Style Selector="Border.alteracoes">
-                                <Setter Property="Background" Value="#FFF4E5" />
+                                <Setter Property="Background" Value="{DynamicResource FundoDeAviso}" />
                             </Style>
                             <Style Selector="Border.alteracoes.aplicadas">
-                                <Setter Property="Background" Value="#E6F4EA" />
+                                <Setter Property="Background" Value="{DynamicResource FundoDeSucesso}" />
                             </Style>
                             <Style Selector="Border.balao.doUsuario">
-                                <Setter Property="Background" Value="#DCEBFA" />
+                                <Setter Property="Background" Value="{DynamicResource FundoDoBalaoDoUsuario}" />
                                 <Setter Property="HorizontalAlignment" Value="Right" />
                             </Style>
                             <Style Selector="Border.balao.doAssistente">
-                                <Setter Property="Background" Value="#F0F0F0" />
+                                <Setter Property="Background" Value="{DynamicResource FundoDoBalaoDoAssistente}" />
                                 <Setter Property="HorizontalAlignment" Value="Left" />
                             </Style>
                             <Style Selector="Border.balao.erro">
-                                <Setter Property="Background" Value="#FDECEA" />
+                                <Setter Property="Background" Value="{DynamicResource FundoDoBalaoDeErro}" />
                             </Style>
                         </ItemsControl.Styles>
                     </ItemsControl>

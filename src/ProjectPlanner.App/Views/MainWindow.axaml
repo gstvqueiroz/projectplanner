@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ProjectPlanner.App.ViewModels"
         xmlns:v="using:ProjectPlanner.App.Views"
+        xmlns:s="using:ProjectPlanner.App.Services"
         x:Class="ProjectPlanner.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/ProjectPlanner.ico"
@@ -34,7 +35,7 @@
         </Style>
         <!-- Modo de visualização atual, na faixa: botão marcado. -->
         <Style Selector="Button.acessoRapido.ativo /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#D6E4F0" />
+            <Setter Property="Background" Value="{DynamicResource FundoDoBotaoAtivo}" />
         </Style>
         <!-- Botões − e + do zoom flutuante: redondos, sem fundo até o mouse passar. -->
         <Style Selector="Button.zoom">
@@ -123,6 +124,20 @@
                     <!-- Painel do assistente de IA (Bloco 19); fica salvo entre as sessões. -->
                     <MenuItem x:Name="ItemAssistente" Header="Assistente (IA)" ToggleType="CheckBox" IsChecked="{Binding Assistente.Visivel, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar ou ocultar o painel do assistente, à direita" />
+                    <Separator />
+                    <!-- Bloco 25 (V3): fica salvo entre as sessões (interface.json). -->
+                    <MenuItem x:Name="MenuTema" Header="Tema">
+                        <MenuItem Header="Igual ao sistema" ToggleType="Radio" GroupName="Tema"
+                                  IsChecked="{Binding EhTemaDoSistema, Mode=OneWay}"
+                                  Command="{Binding DefinirTemaCommand}" CommandParameter="{x:Static s:TemaDaInterface.Sistema}"
+                                  ToolTip.Tip="Claro ou escuro, como o sistema estiver" />
+                        <MenuItem Header="Claro" ToggleType="Radio" GroupName="Tema"
+                                  IsChecked="{Binding EhTemaClaro, Mode=OneWay}"
+                                  Command="{Binding DefinirTemaCommand}" CommandParameter="{x:Static s:TemaDaInterface.Claro}" />
+                        <MenuItem Header="Escuro" ToggleType="Radio" GroupName="Tema"
+                                  IsChecked="{Binding EhTemaEscuro, Mode=OneWay}"
+                                  Command="{Binding DefinirTemaCommand}" CommandParameter="{x:Static s:TemaDaInterface.Escuro}" />
+                    </MenuItem>
                 </MenuItem>
                 <!-- Inserir: vazio e oculto por ora (Bloco 15.1). Volta quando chegar a primeira funcionalidade dele
                      (ex.: data limite, anexos, comentários, link, coluna personalizada). -->
@@ -402,7 +417,7 @@
                                        Classes.atrasada="{Binding EstaAtrasada}">
                                 <TextBlock.Styles>
                                     <Style Selector="TextBlock.atrasada">
-                                        <Setter Property="Foreground" Value="#C62828" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
                                     </Style>
                                 </TextBlock.Styles>
@@ -428,7 +443,7 @@
             <!-- Zoom flutuante no canto inferior direito do Gantt, acima da barra de rolagem horizontal, com fundo
                  semitransparente para ficar legível sobre as barras. − e + mudam 5 px/dia; o slider, livremente. -->
             <Border x:Name="ControleDeZoom" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,20"
-                    Background="#E6FFFFFF" BorderBrush="#33000000" BorderThickness="1" CornerRadius="16"
+                    Background="{DynamicResource FundoDoControleDeZoom}" BorderBrush="{DynamicResource BordaDoControleDeZoom}" BorderThickness="1" CornerRadius="16"
                     Padding="4,0" BoxShadow="0 1 4 0 #26000000">
                 <StackPanel Orientation="Horizontal" Spacing="2">
                     <Button Classes="zoom" Content="−" Command="{Binding Gantt.DiminuirZoomCommand}"

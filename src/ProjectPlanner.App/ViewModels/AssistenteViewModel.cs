@@ -129,8 +129,9 @@ public sealed partial class AssistenteViewModel : ViewModelBase
 
     partial void OnVisivelChanged(bool value)
     {
+        // Só o painel muda: o resto do interface.json (o tema) fica como está.
         if (_carregado)
-            _preferencias.Salvar(new PreferenciasInterface(value));
+            _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasInterface(false)) with { MostrarAssistente = value });
     }
 
     [RelayCommand]

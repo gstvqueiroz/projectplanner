@@ -3,7 +3,66 @@
              x:Class="ProjectPlanner.App.App"
              Name="ProjectPlanner"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options.
+                  Exibir > Tema (Bloco 25) troca para Light ou Dark (ver MainWindow.AplicarTema). -->
+
+    <!-- Cores próprias do programa, uma versão por tema (Bloco 25, B2). As do claro são as de sempre; as do escuro
+         mantêm o mesmo papel (aviso, erro, balões, cartões) com contraste sobre fundo escuro. As telas usam estas
+         chaves com DynamicResource, e o Gantt as lê ao desenhar (GanttChartView). -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="FundoDoBotaoAtivo" Color="#D6E4F0" />
+                    <SolidColorBrush x:Key="FundoDoControleDeZoom" Color="#E6FFFFFF" />
+                    <SolidColorBrush x:Key="BordaDoControleDeZoom" Color="#33000000" />
+                    <SolidColorBrush x:Key="TextoDeErro" Color="#C62828" />
+                    <SolidColorBrush x:Key="TextoDeErroForte" Color="#B3261E" />
+                    <SolidColorBrush x:Key="TextoDeAviso" Color="#8A5300" />
+                    <SolidColorBrush x:Key="FundoDeAviso" Color="#FFF4E5" />
+                    <SolidColorBrush x:Key="TextoDeLink" Color="#0B57D0" />
+                    <SolidColorBrush x:Key="FundoSutil" Color="#14000000" />
+                    <SolidColorBrush x:Key="FundoDeSucesso" Color="#E6F4EA" />
+                    <SolidColorBrush x:Key="FundoDoBalaoDoUsuario" Color="#DCEBFA" />
+                    <SolidColorBrush x:Key="FundoDoBalaoDoAssistente" Color="#F0F0F0" />
+                    <SolidColorBrush x:Key="FundoDoBalaoDeErro" Color="#FDECEA" />
+                    <SolidColorBrush x:Key="FundoDosFiltros" Color="#F4F6F8" />
+                    <SolidColorBrush x:Key="FundoDaMiniatura" Color="#F4F6F8" />
+                    <SolidColorBrush x:Key="FundoDaMiniaturaSelecionada" Color="#E3ECF5" />
+                    <SolidColorBrush x:Key="FundoDaImagemDaMiniatura" Color="#CFD8DC" />
+                    <SolidColorBrush x:Key="FundoDaFotoNosDetalhes" Color="#ECEFF1" />
+                    <SolidColorBrush x:Key="FundoDeOcupado" Color="#CCFFFFFF" />
+                    <SolidColorBrush x:Key="GanttMarco" Color="#212121" />
+                    <SolidColorBrush x:Key="GanttResumo" Color="#37474F" />
+                    <SolidColorBrush x:Key="GanttContornoDaSelecao" Color="#263238" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="FundoDoBotaoAtivo" Color="#34506E" />
+                    <SolidColorBrush x:Key="FundoDoControleDeZoom" Color="#E62B2D30" />
+                    <SolidColorBrush x:Key="BordaDoControleDeZoom" Color="#40FFFFFF" />
+                    <SolidColorBrush x:Key="TextoDeErro" Color="#FF8A80" />
+                    <SolidColorBrush x:Key="TextoDeErroForte" Color="#F2B8B5" />
+                    <SolidColorBrush x:Key="TextoDeAviso" Color="#FFCC80" />
+                    <SolidColorBrush x:Key="FundoDeAviso" Color="#3D2E14" />
+                    <SolidColorBrush x:Key="TextoDeLink" Color="#8AB4F8" />
+                    <SolidColorBrush x:Key="FundoSutil" Color="#1FFFFFFF" />
+                    <SolidColorBrush x:Key="FundoDeSucesso" Color="#1C3A26" />
+                    <SolidColorBrush x:Key="FundoDoBalaoDoUsuario" Color="#1E3A5C" />
+                    <SolidColorBrush x:Key="FundoDoBalaoDoAssistente" Color="#2B2B2B" />
+                    <SolidColorBrush x:Key="FundoDoBalaoDeErro" Color="#4A1E1B" />
+                    <SolidColorBrush x:Key="FundoDosFiltros" Color="#24282C" />
+                    <SolidColorBrush x:Key="FundoDaMiniatura" Color="#24282C" />
+                    <SolidColorBrush x:Key="FundoDaMiniaturaSelecionada" Color="#2E4560" />
+                    <SolidColorBrush x:Key="FundoDaImagemDaMiniatura" Color="#37474F" />
+                    <SolidColorBrush x:Key="FundoDaFotoNosDetalhes" Color="#1C1F22" />
+                    <SolidColorBrush x:Key="FundoDeOcupado" Color="#CC000000" />
+                    <SolidColorBrush x:Key="GanttMarco" Color="#E0E0E0" />
+                    <SolidColorBrush x:Key="GanttResumo" Color="#B0BEC5" />
+                    <SolidColorBrush x:Key="GanttContornoDaSelecao" Color="#ECEFF1" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />

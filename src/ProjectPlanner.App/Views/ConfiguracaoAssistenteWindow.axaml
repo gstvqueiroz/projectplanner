@@ -16,11 +16,11 @@
         </StackPanel>
 
         <!-- A chave em uso (só o fim dela) -->
-        <Border Background="#14000000" CornerRadius="4" Padding="10,8">
+        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8">
             <StackPanel Spacing="6">
                 <TextBlock x:Name="Situacao" Text="{Binding Situacao}" TextWrapping="Wrap" />
                 <TextBlock x:Name="ProblemaNoCofre" Text="{Binding ProblemaNoCofre}" IsVisible="{Binding TemProblemaNoCofre}"
-                           TextWrapping="Wrap" Foreground="#B3261E" FontSize="12" />
+                           TextWrapping="Wrap" Foreground="{DynamicResource TextoDeErroForte}" FontSize="12" />
                 <Button x:Name="Remover" Content="Remover chave salva" Command="{Binding RemoverChaveCommand}"
                         IsVisible="{Binding TemChave}" FontSize="12" />
             </StackPanel>
@@ -44,7 +44,7 @@
         </StackPanel>
 
         <TextBlock Text="{x:Static vm:ConfiguracaoAssistenteViewModel.AvisoDePrivacidade}" TextWrapping="Wrap" FontSize="12"
-                   Foreground="#8A5300" />
+                   Foreground="{DynamicResource TextoDeAviso}" />
 
         <!-- Resultado da última ação -->
         <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap"
@@ -52,7 +52,7 @@
                    Classes.erro="{Binding MensagemEhErro}">
             <TextBlock.Styles>
                 <Style Selector="TextBlock.erro">
-                    <Setter Property="Foreground" Value="#B3261E" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextoDeErroForte}" />
                 </Style>
             </TextBlock.Styles>
         </TextBlock>

@@ -53,9 +53,14 @@ public partial class GanttChartView : UserControl
     private static readonly IBrush SetaNaoCritica = new SolidColorBrush(Color.Parse("#607D8B"));
     // Seleção: o mesmo cinza-azulado do contorno da linha selecionada na grid (MainWindow.axaml).
     private static readonly IBrush ContornoDaLinha = new SolidColorBrush(Color.Parse("#6A8CAF"));
+    // As cores escuras do claro, que somem no fundo do tema escuro (Bloco 25, B2): cada tema tem a sua no App.axaml
+    // (GanttContornoDaSelecao, GanttMarco, GanttResumo); estas valem só se o recurso não for achado.
     private static readonly IBrush ContornoDaBarra = new SolidColorBrush(Color.Parse("#263238"));
     private static readonly IBrush Marco = new SolidColorBrush(Color.Parse("#212121"));
     private static readonly IBrush Resumo = new SolidColorBrush(Color.Parse("#37474F"));
+    private IBrush _contornoDaBarra = ContornoDaBarra;
+    private IBrush _marco = Marco;
+    private IBrush _resumo = Resumo;
     // Ícone de fotos: cinza-azulado de baixo contraste, para não competir com as barras.
     private static readonly IBrush IconeDeFotos = new SolidColorBrush(Color.Parse("#90A4AE"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
@@ -120,6 +125,7 @@ public partial class GanttChartView : UserControl
             if (_arraste == EstadoDoArraste.Parado)
                 LimparAlcaSobOMouse();
         };
+        ActualThemeVariantChanged += (_, _) => Desenhar();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -206,8 +212,14 @@ public partial class GanttChartView : UserControl
         e.Handled = true;
     }
 
+    private IBrush CorDoTema(string chave, IBrush padrao) =>
+        this.TryFindResource(chave, ActualThemeVariant, out var valor) && valor is IBrush pincel ? pincel : padrao;
+
     private void Desenhar()
     {
+        _contornoDaBarra = CorDoTema("GanttContornoDaSelecao", ContornoDaBarra);
+        _marco = CorDoTema("GanttMarco", Marco);
+        _resumo = CorDoTema("GanttResumo", Resumo);
         Cabecalho.Children.Clear();
         Corpo.Children.Clear();
         if (_viewModel?.Layout is not { } layout)
@@ -354,8 +366,8 @@ public partial class GanttChartView : UserControl
 
         Shape forma = barra.Tipo switch
         {
-            TipoTarefa.Marco => Losango(barra, viewModel.PintarComoCritica(barra) ? Critica : Marco),
-            TipoTarefa.Resumo => Chapeu(barra),
+            TipoTarefa.Marco => Losango(barra, viewModel.PintarComoCritica(barra) ? Critica : _marco),
+            TipoTarefa.Resumo => Chapeu(barra, _resumo),
             _ => new Rectangle
             {
                 Width = barra.Largura,
@@ -367,7 +379,7 @@ public partial class GanttChartView : UserControl
         };
         // Selecionada: contorno escuro; atrasada (Bloco 25, C2): contorno laranja.
         var atrasada = viewModel.TarefasAtrasadas.Contains(barra.TarefaId);
-        forma.Stroke = viewModel.EstaDestacada(barra) ? ContornoDaBarra : atrasada ? ContornoDeAtrasada : null;
+        forma.Stroke = viewModel.EstaDestacada(barra) ? _contornoDaBarra : atrasada ? ContornoDeAtrasada : null;
         forma.StrokeThickness = atrasada && !viewModel.EstaDestacada(barra) ? 2 : 1.5;
         // A dica rica (Bloco 25, V4) é montada só quando vai abrir: montar a de todas as barras a cada desenho pesaria.
         ToolTip.SetTip(forma, barra.Nome);
@@ -430,7 +442,7 @@ public partial class GanttChartView : UserControl
 
     // O resumo: uma barra fina na parte de cima da linha, com as pontas descendo em triângulo (o
     // "chapéu" do MS Project), de ponta a ponta das subtarefas.
-    private static Polygon Chapeu(BarraGantt barra)
+    private static Polygon Chapeu(BarraGantt barra, IBrush cor)
     {
         var (inicio, fim) = barra.Largura >= 4 ? (barra.X, barra.Direita) : (barra.X - 3, barra.X + 3);
         var topo = barra.Y;
@@ -448,7 +460,7 @@ public partial class GanttChartView : UserControl
                 new Point(inicio + ponta, topo + espessura),
                 new Point(inicio, topo + espessura + perna),
             ],
-            Fill = Resumo,
+            Fill = cor,
         };
     }
 

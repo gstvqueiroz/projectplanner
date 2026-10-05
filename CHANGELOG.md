@@ -32,6 +32,9 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   atrasadas, críticas em aberto, fotos), a lista das atrasadas e os próximos marcos dos próximos 30 dias.
 - Correção: em janelas estreitas, a grid encolhe para o Gantt manter pelo menos 340 px, e o controle de zoom não
   cobre mais o campo do chat.
+- Correção: o tema escuro ficou legível (controle de zoom, balões e avisos do assistente, filtros e miniaturas da
+  galeria, marcos, resumos e a seleção no Gantt); o tema claro continua igual.
+- Exibir > Tema: igual ao sistema (padrão), claro ou escuro, guardado para as próximas vezes.
 
 ## 0.24.0
 

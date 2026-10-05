@@ -22,6 +22,11 @@ namespace ProjectPlanner.App.Views;
 /// </summary>
 /// <remarks>
 /// <para>
+/// Trocar a seleção não redesenha o Gantt (Bloco 25, D1): as formas das barras ficam guardadas por tarefa e o
+/// contorno da linha é um retângulo só, que muda de lugar; só o contorno de duas barras (a que saiu e a que entrou)
+/// é trocado. O desenho completo fica para quando o layout ou as opções de exibição mudam.
+/// </para>
+/// <para>
 /// Arrastar a partir da alça de uma ponta de barra até outra barra cria um vínculo (Bloco 12). O que
 /// está sob o mouse vem da geometria do layout (<see cref="LocalizadorGantt"/>), não das formas
 /// desenhadas; o tipo vem das bordas (<see cref="InferenciaDependencia"/>); a validação e a criação ficam
@@ -61,6 +66,11 @@ public partial class GanttChartView : UserControl
     private IBrush _contornoDaBarra = ContornoDaBarra;
     private IBrush _marco = Marco;
     private IBrush _resumo = Resumo;
+
+    // O último desenho, para a seleção mudar sem redesenhar (Bloco 25, D1).
+    private readonly Dictionary<Guid, (Shape Forma, BarraGantt Barra)> _barrasDesenhadas = [];
+    private Rectangle? _contornoDaSelecao;
+    private Guid? _destacadaNoDesenho;
     // Ícone de fotos: cinza-azulado de baixo contraste, para não competir com as barras.
     private static readonly IBrush IconeDeFotos = new SolidColorBrush(Color.Parse("#90A4AE"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
@@ -185,9 +195,46 @@ public partial class GanttChartView : UserControl
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(GanttViewModel.Layout) or nameof(GanttViewModel.MostrarCaminhoCritico)
-            or nameof(GanttViewModel.TarefaDestacada) or nameof(GanttViewModel.MostrarFotos)
-            or nameof(GanttViewModel.MostrarFolga))
+            or nameof(GanttViewModel.MostrarFotos) or nameof(GanttViewModel.MostrarFolga))
             Desenhar();
+        else if (e.PropertyName == nameof(GanttViewModel.TarefaDestacada))
+            AtualizarDestaque();
+    }
+
+    // Bloco 25 (D1): só o contorno da barra que saiu e da que entrou, e o retângulo da linha muda de lugar.
+    private void AtualizarDestaque()
+    {
+        if (_viewModel?.Layout is null || _contornoDaSelecao is null)
+            return;
+        var (anterior, atual) = (_destacadaNoDesenho, _viewModel.TarefaDestacada);
+        if (anterior == atual)
+            return;
+        _destacadaNoDesenho = atual;
+        foreach (var id in new[] { anterior, atual })
+            if (id is { } tarefaId && _barrasDesenhadas.TryGetValue(tarefaId, out var desenhada))
+                PintarContorno(desenhada.Forma, tarefaId);
+        PosicionarContornoDaSelecao();
+    }
+
+    // Selecionada: contorno escuro (claro no tema escuro); atrasada (Bloco 25, C2): contorno laranja.
+    private void PintarContorno(Shape forma, Guid tarefaId)
+    {
+        var destacada = _viewModel!.TarefaDestacada == tarefaId;
+        var atrasada = _viewModel.TarefasAtrasadas.Contains(tarefaId);
+        forma.Stroke = destacada ? _contornoDaBarra : atrasada ? ContornoDeAtrasada : null;
+        forma.StrokeThickness = atrasada && !destacada ? 2 : 1.5;
+    }
+
+    // O contorno de 2 px na linha inteira da selecionada, por dentro dela, continuando o da linha na grid. Some quando a
+    // selecionada não tem barra (sem seleção, Exibir > Seleção desligado ou dentro de um resumo recolhido).
+    private void PosicionarContornoDaSelecao()
+    {
+        var barra = _viewModel?.TarefaDestacada is { } id && _barrasDesenhadas.TryGetValue(id, out var desenhada)
+            ? desenhada.Barra
+            : null;
+        _contornoDaSelecao!.IsVisible = barra is not null;
+        if (barra is not null)
+            Canvas.SetTop(_contornoDaSelecao, barra.Linha * GanttViewModel.AlturaLinha);
     }
 
     // A grid é a única dona da rolagem vertical: se o corpo se mexer na vertical por qualquer outro
@@ -222,6 +269,8 @@ public partial class GanttChartView : UserControl
         _resumo = CorDoTema("GanttResumo", Resumo);
         Cabecalho.Children.Clear();
         Corpo.Children.Clear();
+        _barrasDesenhadas.Clear();
+        _contornoDaSelecao = null;
         if (_viewModel?.Layout is not { } layout)
         {
             Cabecalho.Width = Corpo.Width = Corpo.Height = 0;
@@ -234,10 +283,21 @@ public partial class GanttChartView : UserControl
 
         DesenharCabecalho(layout.Escala);
         DesenharGradeDeFundo(layout);
-        foreach (var barra in layout.Barras.Where(_viewModel.EstaDestacada))
-            DesenharContornoDaLinha(barra, layout.Largura);
+        // O contorno da linha selecionada vem logo depois da grade e antes das barras, como sempre.
+        _destacadaNoDesenho = _viewModel.TarefaDestacada;
+        _contornoDaSelecao = new Rectangle
+        {
+            Name = "ContornoDaSelecao",
+            Width = layout.Largura,
+            Height = GanttViewModel.AlturaLinha,
+            Stroke = ContornoDaLinha,
+            StrokeThickness = 2,
+            IsHitTestVisible = false,
+        };
+        Posicionar(Corpo, _contornoDaSelecao, 0, 0);
         foreach (var barra in layout.Barras)
             DesenharBarra(barra, _viewModel);
+        PosicionarContornoDaSelecao();
         foreach (var seta in layout.Setas)
             DesenharSeta(seta, _viewModel);
         if (layout.XDeHoje is { } xDeHoje)
@@ -333,17 +393,6 @@ public partial class GanttChartView : UserControl
             });
     }
 
-    // Contorno de 2 px na linha inteira, por dentro dela, continuando o da linha na grid.
-    private void DesenharContornoDaLinha(BarraGantt barra, double largura) =>
-        Posicionar(Corpo, new Rectangle
-        {
-            Width = largura,
-            Height = GanttViewModel.AlturaLinha,
-            Stroke = ContornoDaLinha,
-            StrokeThickness = 2,
-            IsHitTestVisible = false,
-        }, 0, barra.Linha * GanttViewModel.AlturaLinha);
-
     private void AbrindoDicaDaBarra(object? sender, CancelRoutedEventArgs e)
     {
         if (sender is Control { Tag: Guid tarefaId } forma && _viewModel?.DicaDaTarefa?.Invoke(tarefaId) is { Length: > 0 } dica)
@@ -377,10 +426,8 @@ public partial class GanttChartView : UserControl
                 RadiusY = 2,
             },
         };
-        // Selecionada: contorno escuro; atrasada (Bloco 25, C2): contorno laranja.
-        var atrasada = viewModel.TarefasAtrasadas.Contains(barra.TarefaId);
-        forma.Stroke = viewModel.EstaDestacada(barra) ? _contornoDaBarra : atrasada ? ContornoDeAtrasada : null;
-        forma.StrokeThickness = atrasada && !viewModel.EstaDestacada(barra) ? 2 : 1.5;
+        PintarContorno(forma, barra.TarefaId);
+        _barrasDesenhadas[barra.TarefaId] = (forma, barra);
         // A dica rica (Bloco 25, V4) é montada só quando vai abrir: montar a de todas as barras a cada desenho pesaria.
         ToolTip.SetTip(forma, barra.Nome);
         forma.Tag = barra.TarefaId;
@@ -499,9 +546,9 @@ public partial class GanttChartView : UserControl
             && (IconeDeFotosEm(layout, p) ?? LocalizadorGantt.BarraEm(layout, p.X, p.Y)) is { } barra)
         {
             _tarefaDoMenu = barra.TarefaId;
-            // O menu é aberto aqui, ancorado na superfície (que não é redesenhada), e não pelo Avalonia, que o
-            // ancoraria na forma clicada: a seleção redesenha o Gantt, a forma sai da tela e o menu ficava
-            // aberto mas invisível.
+            // O menu é aberto aqui, ancorado na superfície (que nunca é redesenhada), e não pelo Avalonia, que o
+            // ancoraria na forma clicada: se o Gantt for redesenhado com o menu aberto, a forma sai da tela e o
+            // menu ficava aberto mas invisível.
             var menu = Superficie.ContextMenu!;
             menu.Placement = PlacementMode.Pointer;
             menu.Open(Superficie);
@@ -531,8 +578,8 @@ public partial class GanttChartView : UserControl
         _viewModel.ClicarNaBarra(barra.TarefaId); // seleciona, como no Bloco 9
         if (alca is not null)
         {
-            // O ponteiro fica com a superfície: o desenho é refeito com a seleção, e o gesto continua
-            // mesmo que o mouse saia do Gantt.
+            // O ponteiro fica com a superfície (que nunca é redesenhada): o gesto continua mesmo que o mouse
+            // saia do Gantt.
             _arraste = EstadoDoArraste.Armado;
             _origem = alca;
             _ponteiro = e.Pointer;

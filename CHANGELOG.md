@@ -35,6 +35,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 - Correção: o tema escuro ficou legível (controle de zoom, balões e avisos do assistente, filtros e miniaturas da
   galeria, marcos, resumos e a seleção no Gantt); o tema claro continua igual.
 - Exibir > Tema: igual ao sistema (padrão), claro ou escuro, guardado para as próximas vezes.
+- Desempenho: selecionar uma tarefa não redesenha mais o Gantt (só o contorno muda de lugar). Com 2.024 tarefas, a
+  seleção caiu de cerca de 750 ms para 4 ms, e adicionar uma tarefa, de cerca de 1,0 s para 0,8 s.
 
 ## 0.24.0
 

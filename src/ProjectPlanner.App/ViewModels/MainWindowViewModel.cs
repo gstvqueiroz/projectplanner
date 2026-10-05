@@ -369,6 +369,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [RelayCommand]
     private Task AbrirRegistrosDeErros() => _dialogos.AbrirPastaAsync(RegistroDeErros.PastaPadrao());
 
+    /// <summary>Exibir > Resumo do projeto… (Bloco 25, C7): o andamento na data de hoje, do último cálculo.</summary>
+    [RelayCommand]
+    private Task ResumoDoProjeto()
+    {
+        Recalcular();
+        var hoje = _relogio.GetLocalNow().Date;
+        return _dialogos.MostrarResumoDoProjetoAsync(new ResumoDoProjetoViewModel(
+            Core.ResumoDoProjeto.Calcular(_cronograma, _andamento, hoje), hoje));
+    }
+
     /// <summary>Ajuda > Sobre o ProjectPlanner (Bloco 25).</summary>
     [RelayCommand]
     private Task Sobre() => _dialogos.MostrarSobreAsync(new SobreViewModel());

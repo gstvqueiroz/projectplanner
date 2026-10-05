@@ -28,6 +28,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 - Situação de cada tarefa na data de hoje (não iniciada, em dia, atrasada, concluída), pelo % previsto × informado:
   coluna Situação na grid (antes de Notas; dá para ocultar em Exibir > Colunas), contorno laranja nas barras atrasadas
   e a situação na dica da barra.
+- Exibir > Resumo do projeto…: % concluído geral × previsto para hoje, período, contagens (concluídas, em dia,
+  atrasadas, críticas em aberto, fotos), a lista das atrasadas e os próximos marcos dos próximos 30 dias.
 
 ## 0.24.0
 

@@ -202,6 +202,14 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.FromResult(TextoDigitado);
     }
 
+    public List<ResumoDoProjetoViewModel> Resumos { get; } = [];
+
+    public Task MostrarResumoDoProjetoAsync(ResumoDoProjetoViewModel resumo)
+    {
+        Resumos.Add(resumo);
+        return Task.CompletedTask;
+    }
+
     /// <summary>As telas Sobre abertas (Bloco 25).</summary>
     public List<SobreViewModel> Sobres { get; } = [];
 

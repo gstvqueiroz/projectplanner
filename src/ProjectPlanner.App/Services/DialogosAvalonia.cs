@@ -102,6 +102,9 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarSobreAsync(ViewModels.SobreViewModel sobre) => new SobreWindow(sobre).ShowDialog(JanelaPrincipal);
 
+    public Task MostrarResumoDoProjetoAsync(ViewModels.ResumoDoProjetoViewModel resumo) =>
+        new ResumoDoProjetoWindow(resumo).ShowDialog(JanelaPrincipal);
+
     public async Task AbrirPastaAsync(string pasta)
     {
         try

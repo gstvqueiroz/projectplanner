@@ -43,6 +43,9 @@ public interface IDialogosService
     /// <returns>O texto digitado, ou nulo se o usuário cancelar.</returns>
     Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null);
 
+    /// <summary>Mostra Exibir > Resumo do projeto (Bloco 25) e espera ser fechada.</summary>
+    Task MostrarResumoDoProjetoAsync(ViewModels.ResumoDoProjetoViewModel resumo);
+
     /// <summary>Mostra Ajuda > Sobre o ProjectPlanner (Bloco 25) e espera ser fechada.</summary>
     Task MostrarSobreAsync(ViewModels.SobreViewModel sobre);
 }

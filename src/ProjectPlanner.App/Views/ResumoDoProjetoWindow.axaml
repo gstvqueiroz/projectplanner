@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.ResumoDoProjetoWindow"
+        x:DataType="vm:ResumoDoProjetoViewModel"
+        Title="{Binding Titulo}"
+        Width="560" SizeToContent="Height" MaxHeight="800"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 25 (C7): o andamento do projeto na data de hoje. -->
+    <DockPanel Margin="20">
+        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,16,0,0" Content="Fechar" Click="Fechar"
+                IsCancel="True" IsDefault="True" />
+        <ScrollViewer>
+            <StackPanel Spacing="14">
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Resumo.Nome}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="Periodo" Text="{Binding Periodo}" Opacity="0.75" />
+                    <TextBlock Text="{Binding Situacao}" Opacity="0.6" FontSize="12" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <ProgressBar x:Name="Barra" Minimum="0" Maximum="100" Value="{Binding PercentualConcluido}" Height="10" />
+                    <TextBlock x:Name="Andamento" Text="{Binding Andamento}" Classes.atrasado="{Binding AbaixoDoPrevisto}">
+                        <TextBlock.Styles>
+                            <Style Selector="TextBlock.atrasado">
+                                <Setter Property="Foreground" Value="#C62828" />
+                            </Style>
+                        </TextBlock.Styles>
+                    </TextBlock>
+                </StackPanel>
+
+                <ItemsControl x:Name="Contagens" ItemsSource="{Binding Contagens}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ContagemNoResumo">
+                            <Border Width="164" Margin="0,0,8,8" Padding="10,6" CornerRadius="6"
+                                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Quantidade}" FontSize="20" FontWeight="SemiBold"
+                                               Classes.destaque="{Binding Destaque}">
+                                        <TextBlock.Styles>
+                                            <Style Selector="TextBlock.destaque">
+                                                <Setter Property="Foreground" Value="#C62828" />
+                                            </Style>
+                                        </TextBlock.Styles>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Nome}" FontSize="12" Opacity="0.75" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Spacing="4" IsVisible="{Binding TemAtrasadas}">
+                    <TextBlock Text="Atrasadas" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="ListaDeAtrasadas" ItemsSource="{Binding Atrasadas}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Próximos marcos" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="ProximosMarcos" ItemsSource="{Binding ProximosMarcos}" IsVisible="{Binding TemProximosMarcos}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding SemProximosMarcos}" Opacity="0.6" IsVisible="{Binding !TemProximosMarcos}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

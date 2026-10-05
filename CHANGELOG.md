@@ -82,3 +82,19 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 ## 0.15.0
 
 - Menu no estilo do Office (Arquivo, Exibir, Inserir, Tarefa) e a versão no título da janela.
+
+## Roteiro dos próximos blocos
+
+Combinado no Bloco 25 (cada bloco ainda passa pela aprovação dos itens antes de começar):
+
+- Bloco 26: desfazer e refazer na grid e no Gantt (vários níveis, também o do assistente), copiar, colar e duplicar
+  tarefas.
+- Bloco 27: localizar e filtrar tarefas, e um painel de fotos do projeto inteiro.
+- Bloco 28: linha de base (o planejado × o real) e prazos (data limite por tarefa).
+- Bloco 29: datas de tarefa e restrições ("não iniciar antes de"); corrige as colunas Início e Término, que hoje mostram
+  a data digitada mas o cálculo usa só o início do projeto e as predecessoras.
+- Bloco 30: feriados e calendário de trabalho configurável.
+- Bloco 31: entregas: o Gantt como imagem PNG (e PDF depois de avaliar as licenças), Excel nativo, importar CSV e
+  modelos de projeto (residência, galpão…).
+- Bloco 32: Gantt virtualizado, que desenha só a área visível (projetos com mais de 5.000 tarefas).
+- Bloco 33: salvamento automático, rótulos e cores nas barras.

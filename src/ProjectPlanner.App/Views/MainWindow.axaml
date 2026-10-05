@@ -420,7 +420,8 @@
 
         <GridSplitter x:Name="Divisor" Grid.Column="1" ResizeDirection="Columns" Background="Transparent" />
 
-        <Panel x:Name="PainelGantt" Grid.Column="2">
+        <!-- ClipToBounds (Bloco 25, B3): numa janela estreita, nada do Gantt (o controle de zoom) passa por cima do resto. -->
+        <Panel x:Name="PainelGantt" Grid.Column="2" ClipToBounds="True">
             <Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                 <v:GanttChartView x:Name="Gantt" DataContext="{Binding Gantt}" />
             </Border>

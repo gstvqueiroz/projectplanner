@@ -30,6 +30,8 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
   e a situação na dica da barra.
 - Exibir > Resumo do projeto…: % concluído geral × previsto para hoje, período, contagens (concluídas, em dia,
   atrasadas, críticas em aberto, fotos), a lista das atrasadas e os próximos marcos dos próximos 30 dias.
+- Correção: em janelas estreitas, a grid encolhe para o Gantt manter pelo menos 340 px, e o controle de zoom não
+  cobre mais o campo do chat.
 
 ## 0.24.0
 

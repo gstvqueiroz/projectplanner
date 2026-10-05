@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         Grade.LayoutUpdated += (_, _) => AtualizarLinhasVazias();
         Grade.AddHandler(ContextRequestedEvent, PedirMenuDaGrade, RoutingStrategies.Tunnel);
         LigarArrasteDaGrade();
+        Paineis.SizeChanged += (_, _) => LimitarLarguraDaTabela();
         _larguraParou.Tick += (_, _) =>
         {
             _larguraParou.Stop();
@@ -127,6 +128,7 @@ public partial class MainWindow : Window
         colunas[4].Width = visivel ? _larguraDoAssistente : new GridLength(0);
         colunas[4].MinWidth = visivel ? 260 : 0;
         PainelAssistente.IsVisible = DivisorDoAssistente.IsVisible = visivel;
+        LimitarLarguraDaTabela();
     }
 
     private void ViewModelMudou(object? sender, PropertyChangedEventArgs e)
@@ -168,10 +170,33 @@ public partial class MainWindow : Window
             _ => (_larguraDaTabela, new GridLength(6), GridLength.Star),
         };
         Divisor.IsVisible = modo == ModoVisualizacao.Dividido;
+        LimitarLarguraDaTabela();
         PainelGantt.IsVisible = _viewModel.MostrarGantt;
         Grade.IsHitTestVisible = LinhasVazias.IsVisible = _viewModel.MostrarTabela;
         Grade.Opacity = _viewModel.MostrarTabela ? 1 : 0;
         _modoAplicado = modo;
+    }
+
+    /// <summary>A menor largura do Gantt no modo Dividido, numa janela estreita (Bloco 25, B3).</summary>
+    public const double LarguraMinimaDoGantt = 340;
+
+    /// <summary>A grid não fica mais estreita que isto só para dar lugar ao Gantt.</summary>
+    public const double LarguraMinimaDaTabela = 260;
+
+    // Bloco 25 (B3): numa janela estreita, a grid (620 px, ou o que o usuário arrastou) não espreme o Gantt até sumir: a
+    // largura dela fica limitada (MaxWidth) para sobrar LarguraMinimaDoGantt. A largura escolhida não muda; quando a
+    // janela volta a ter espaço, ela volta inteira.
+    private void LimitarLarguraDaTabela()
+    {
+        var colunas = Paineis.ColumnDefinitions;
+        if (_viewModel?.ModoVisualizacao != ModoVisualizacao.Dividido || Paineis.Bounds.Width <= 0)
+        {
+            colunas[0].MaxWidth = double.PositiveInfinity;
+            return;
+        }
+        static double Largura(ColumnDefinition coluna) => coluna.Width.IsAbsolute ? coluna.Width.Value : coluna.ActualWidth;
+        var disponivel = Paineis.Bounds.Width - Largura(colunas[1]) - Largura(colunas[3]) - Largura(colunas[4]);
+        colunas[0].MaxWidth = Math.Max(LarguraMinimaDaTabela, disponivel - LarguraMinimaDoGantt);
     }
 
     // Recalcula as linhas vazias da grid a partir do que o DataGrid mostra de fato: a área das linhas (sem

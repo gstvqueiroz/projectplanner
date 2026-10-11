@@ -30,14 +30,23 @@ public interface ICronogramaDoAssistente
     /// <summary>Aplica as alterações, achando as tarefas existentes pelo <paramref name="retrato"/> mandado com o pedido.</summary>
     Task<ResultadoDaAplicacao> AplicarAsync(IReadOnlyList<AlteracaoDoCronograma> alteracoes, ContextoDoProjeto retrato);
 
-    /// <summary>Se a aplicação ainda pode ser desfeita (só a última, e enquanto o projeto não for trocado).</summary>
+    /// <summary>
+    /// Se a aplicação ainda pode ser desfeita: está no histórico do Desfazer (Bloco 30: qualquer uma, não só a última),
+    /// e o projeto não foi trocado.
+    /// </summary>
     bool PodeDesfazer(object marca);
 
-    /// <summary>Volta o cronograma para como estava antes da aplicação (perguntando, se ele mudou depois dela).</summary>
+    /// <summary>Bloco 30: a aplicação foi desfeita (pelo Desfazer da conversa ou pelo Desfazer geral) e não refeita.</summary>
+    bool FoiDesfeita(object marca);
+
+    /// <summary>
+    /// Volta o cronograma para como estava antes da aplicação. Se houve alterações depois dela, elas também são desfeitas
+    /// (perguntando antes); tudo pode voltar com o Refazer.
+    /// </summary>
     /// <returns>Se desfez.</returns>
     Task<bool> DesfazerAsync(object marca);
 
-    /// <summary>A aplicação que pode ser desfeita mudou (outra aplicação, desfazer, outro projeto).</summary>
+    /// <summary>O histórico do Desfazer mudou (alteração, desfazer, refazer, outro projeto).</summary>
     event Action? DesfazerMudou;
 
     /// <summary>A conversa e a ficha do projeto aberto (Bloco 26), guardadas no .pplan.</summary>

@@ -366,6 +366,8 @@ public partial class MainWindow : Window
                      (ItemFotos, AcaoComAtalho.FotosDaTarefa), (ItemDividido, AcaoComAtalho.Dividido),
                      (ItemSomenteTabela, AcaoComAtalho.SomenteTabela), (ItemSomenteGantt, AcaoComAtalho.SomenteGantt),
                      (ItemAssistente, AcaoComAtalho.Assistente), (ItemIrParaTarefa, AcaoComAtalho.IrParaTarefa),
+                     (ItemDesfazer, AcaoComAtalho.Desfazer), (ItemRefazer, AcaoComAtalho.Refazer),
+                     (ItemCopiar, AcaoComAtalho.Copiar), (ItemColar, AcaoComAtalho.Colar), (ItemDuplicar, AcaoComAtalho.Duplicar),
                  })
             item.InputGesture = AtalhosDeTeclado.Gesto(acao, mac);
 
@@ -380,6 +382,16 @@ public partial class MainWindow : Window
                 .Single(b => Avalonia.Automation.AutomationProperties.GetName(b) == nome);
             ToolTip.SetTip(botao, AtalhosDeTeclado.Dica((string)ToolTip.GetTip(botao)!, acao, mac));
         }
+        // Bloco 30: "Desfazer Duração de "Escavação" (⌘Z)".
+        foreach (var (botao, propriedade, acao) in new (Button, string, AcaoComAtalho)[]
+                 {
+                     (BotaoDesfazer, nameof(MainWindowViewModel.TextoDesfazer), AcaoComAtalho.Desfazer),
+                     (BotaoRefazer, nameof(MainWindowViewModel.TextoRefazer), AcaoComAtalho.Refazer),
+                 })
+            botao.Bind(ToolTip.TipProperty, new Binding(propriedade)
+            {
+                StringFormat = "{0} (" + AtalhosDeTeclado.Texto(acao, mac).Replace("{", "{{").Replace("}", "}}") + ")",
+            });
         BotaoFotos.Bind(ToolTip.TipProperty, new Binding(nameof(MainWindowViewModel.DicaFotosDaSelecionada))
         {
             StringFormat = "{0} (" + AtalhosDeTeclado.Texto(AcaoComAtalho.FotosDaTarefa, mac).Replace("{", "{{").Replace("}", "}}") + ")",
@@ -391,7 +403,8 @@ public partial class MainWindow : Window
     private void AtalhosDoTeclado(object? sender, KeyEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm
-            || AtalhosDeTeclado.Achar(e.Key, e.KeyModifiers, AtalhosDeTeclado.EhMac) is not { } acao)
+            || AtalhosDeTeclado.Achar(e.Key, e.KeyModifiers, AtalhosDeTeclado.EhMac) is not { } acao
+            || (AtalhosDeTeclado.De(acao).ForaDoTexto && e.Source is TextBox))
             return;
         e.Handled = true;
         Grade.CommitEdit();
@@ -408,6 +421,11 @@ public partial class MainWindow : Window
             AcaoComAtalho.SomenteGantt => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteGantt),
             AcaoComAtalho.Assistente => ((System.Windows.Input.ICommand)vm.Assistente.AlternarVisibilidadeCommand, (object?)null),
             AcaoComAtalho.IrParaTarefa => (vm.IrParaTarefaCommand, null),
+            AcaoComAtalho.Desfazer => (vm.DesfazerAlteracaoCommand, null),
+            AcaoComAtalho.Refazer => (vm.RefazerAlteracaoCommand, null),
+            AcaoComAtalho.Copiar => (vm.CopiarTarefaCommand, null),
+            AcaoComAtalho.Colar => (vm.ColarTarefaCommand, null),
+            AcaoComAtalho.Duplicar => (vm.DuplicarTarefaCommand, null),
             _ => ((System.Windows.Input.ICommand?)null, (object?)null),
         };
         if (comando?.CanExecute(parametro) == true)

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Models;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Edicao;
 using ProjectPlanner.Core.Fotos;
 using ProjectPlanner.IA;
 
@@ -129,6 +130,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAcimaCommand))]
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAbaixoCommand))]
     [NotifyCanExecuteChangedFor(nameof(RolarAteTarefaCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopiarTarefaCommand), nameof(DuplicarTarefaCommand))]
     [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
     [NotifyPropertyChangedFor(nameof(FotosDaSelecionada))]
     [NotifyPropertyChangedFor(nameof(DicaFotosDaSelecionada))]
@@ -233,7 +235,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         set
         {
             if (AlterarDominio(nameof(NomeProjeto), value, value == _cronograma.Nome, () => _cronograma.Renomear(value)))
-                MarcarAlteracao();
+                MarcarAlteracao("Nome do projeto");
             else if (ErroDe(nameof(NomeProjeto)) is { } erro)
                 Mensagem = erro;
         }
@@ -248,7 +250,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             if (AlterarDominio(nameof(InicioProjeto), inicio, inicio == _cronograma.DataInicio,
                 () => _cronograma.AlterarDataInicio(inicio ?? throw new DomainValidationException(
                     nameof(InicioProjeto), "Informe a data de início do projeto."))))
-                MarcarAlteracao();
+                MarcarAlteracao("Início do projeto");
             else if (ErroDe(nameof(InicioProjeto)) is { } erro)
                 Mensagem = erro;
         }
@@ -397,7 +399,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         var tarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
         _cronograma.AdicionarTarefa(tarefa);
-        AposMudarAEstrutura(selecionar: tarefa);
+        AposMudarAEstrutura(selecionar: tarefa, "Adicionar tarefa");
     }
 
     /// <summary>
@@ -424,7 +426,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         var posicao = _cronograma.Tarefas.Where(t => t.TarefaPaiId == pai).ToList().IndexOf(referencia.Tarefa) + (depois ? 1 : 0);
         var tarefa = new Tarefa("Nova tarefa", _cronograma.DataInicio, 1);
         if (MudarEstrutura(() => _cronograma.InserirTarefaNaPosicao(tarefa, pai, posicao)))
-            AposMudarAEstrutura(selecionar: tarefa);
+            AposMudarAEstrutura(selecionar: tarefa, "Inserir tarefa");
     }
 
     /// <summary>Acrescenta um marco (tarefa de duração 0) no fim da lista, como o Adicionar tarefa.</summary>
@@ -433,7 +435,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         var marco = new Tarefa("Novo marco", _cronograma.DataInicio, 0);
         _cronograma.AdicionarTarefa(marco);
-        AposMudarAEstrutura(selecionar: marco);
+        AposMudarAEstrutura(selecionar: marco, "Adicionar marco");
     }
 
     /// <summary>
@@ -449,7 +451,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _cronograma.AdicionarTarefa(subtarefa, resumo.Id);
         SincronizarLinhas();
         Expandir(LinhaDe(resumo.Id));
-        AposMudarAEstrutura(selecionar: subtarefa);
+        AposMudarAEstrutura(selecionar: subtarefa, "Adicionar resumo");
     }
 
     /// <summary>Adiciona uma tarefa como última subtarefa da selecionada, que vira resumo (e é expandido).</summary>
@@ -461,7 +463,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         if (!MudarEstrutura(() => _cronograma.AdicionarTarefa(tarefa, pai.Tarefa.Id)))
             return;
         Expandir(pai);
-        AposMudarAEstrutura(selecionar: tarefa);
+        AposMudarAEstrutura(selecionar: tarefa, $"Adicionar subtarefa em \"{pai.Nome}\"");
     }
 
     /// <summary>
@@ -475,7 +477,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         if (!MudarEstrutura(() => _cronograma.Rebaixar(linha.Tarefa.Id)))
             return;
         Expandir(LinhaDe(linha.Tarefa.TarefaPaiId!.Value));
-        AposMudarAEstrutura(selecionar: linha.Tarefa);
+        AposMudarAEstrutura(selecionar: linha.Tarefa, $"Rebaixar \"{linha.Nome}\"");
     }
 
     /// <summary>
@@ -487,7 +489,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         var linha = TarefaSelecionada!;
         if (MudarEstrutura(() => _cronograma.Promover(linha.Tarefa.Id)))
-            AposMudarAEstrutura(selecionar: linha.Tarefa);
+            AposMudarAEstrutura(selecionar: linha.Tarefa, $"Promover \"{linha.Nome}\"");
     }
 
     /// <summary>Remove a selecionada; um resumo sai com todas as subtarefas, depois de confirmar.</summary>
@@ -517,7 +519,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _cronograma.RemoverTarefa(linha.Tarefa.Id);
         SincronizarLinhas();
         TarefaSelecionada = LinhasVisiveis.Count == 0 ? null : LinhasVisiveis[Math.Clamp(posicao, 0, LinhasVisiveis.Count - 1)];
-        MarcarAlteracao();
+        MarcarAlteracao($"Remover \"{linha.Nome}\"");
     }
 
     private bool HaTarefaSelecionada() => TarefaSelecionada is not null;
@@ -535,7 +537,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             linha.FotosMudaram();
             OnPropertyChanged(nameof(FotosDaSelecionada));
             OnPropertyChanged(nameof(DicaFotosDaSelecionada));
-            MarcarAlteracao();
+            MarcarAlteracao($"Fotos de \"{linha.Nome}\"");
         }, SugestoesDeLocal));
     }
 
@@ -609,6 +611,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             linha.AtualizarTela(); // EDT e predecessoras/sucessoras (que usam o Nº das linhas)
         TarefaSelecionada = arrastada;
         Gantt.RedesenharNaNovaOrdem();
+        RegistrarNoHistorico($"Mover \"{arrastada.Nome}\"");
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
         Mensagem = $"\"{arrastada.Nome}\" agora é a {arrastada.Edt}.";
@@ -657,11 +660,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         }
     }
 
-    private void AposMudarAEstrutura(Tarefa selecionar)
+    private void AposMudarAEstrutura(Tarefa selecionar, string descricao)
     {
         SincronizarLinhas();
         TarefaSelecionada = LinhaDe(selecionar.Id);
-        MarcarAlteracao();
+        MarcarAlteracao(descricao);
     }
 
     [RelayCommand]
@@ -685,6 +688,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         if (caminho is null)
             return false;
 
+        // Bloco 30: as imagens que o Desfazer pode trazer de volta e que só estão no arquivo de origem vão para a memória
+        // antes de ele ser substituído.
+        var fotosAbertas = _cronograma.Tarefas.SelectMany(t => t.FotosNaOrdemDeCadastro).Select(f => f.Id).ToHashSet();
+        _fotos.Preservar(_historico.FotosNoHistorico().Where(id => !fotosAbertas.Contains(id)));
         try
         {
             _repositorio.Salvar(_cronograma, caminho, _fotos.ParaSalvar());
@@ -696,7 +703,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             return false;
         }
 
-        _fotos.Salvou(caminho);
+        _fotos.Salvou(caminho, fotosAbertas);
+        _historico.MarcarSalvo();
+        _alteracoesForaDoHistorico = false;
         CaminhoArquivo = caminho;
         PossuiAlteracoesNaoSalvas = false;
         _caminhoNaMensagem = caminho;
@@ -746,7 +755,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         }
 
         _cronograma.AdicionarPredecessora(new Predecessora(predecessoraId, sucessoraId, tipo));
-        MarcarAlteracao();
+        MarcarAlteracao($"Vínculo {NomeDa(predecessoraId)} → {NomeDa(sucessoraId)}");
         if (Mensagem.Length == 0)
             Mensagem = $"Vínculo criado: {NomeDa(predecessoraId)} → {NomeDa(sucessoraId)} ({NotacaoPredecessoras.Sigla(tipo)}).";
         return true;
@@ -827,21 +836,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         }
     }
 
-    void IEdicaoCronograma.TarefaAlterada() => MarcarAlteracao();
+    void IEdicaoCronograma.TarefaAlterada(string descricao) => MarcarAlteracao(descricao);
 
     void IEdicaoCronograma.AlteracaoRecusada(string mensagem) => Mensagem = mensagem;
 
     void IEdicaoCronograma.EdicaoCancelada() => Mensagem = "";
 
-    private void MarcarAlteracao()
+    // Uma alteração do cronograma (ou das fotos): entra no histórico do Desfazer, marca o projeto e recalcula.
+    private PassoDoHistorico MarcarAlteracao(string descricao)
     {
-        _versao++;
+        var passo = RegistrarNoHistorico(descricao);
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
         Mensagem = "";
         // Duração (virar marco) e vínculos mudam se a tarefa de cima pode receber a selecionada.
         RebaixarCommand.NotifyCanExecuteChanged();
         Recalcular();
+        return passo;
     }
 
     /// <returns>Se o cálculo deu certo.</returns>
@@ -875,7 +886,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     {
         _cronograma = cronograma;
         _fotos.Recomecar(caminho);
-        EsquecerAplicacaoDoAssistente();
+        RecomecarHistorico();
         Assistente.RecomecarParaOutroProjeto();
         Tarefas.Clear();
         SincronizarLinhas();

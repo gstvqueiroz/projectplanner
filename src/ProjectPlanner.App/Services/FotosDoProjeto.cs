@@ -38,6 +38,11 @@ public sealed class FotosDoProjeto(IProjetoRepository repositorio, IProcessadorD
     private readonly Dictionary<Guid, ConteudoDeFoto> _novas = [];
     private readonly Dictionary<Guid, byte[]> _miniaturas = [];
 
+    // Bloco 30: imagens de fotos que saíram do projeto (excluídas, versão de antes de girar, ou de fotos que o Desfazer
+    // tirou) e que o Desfazer ou o Refazer podem trazer de volta. Não contam como pendentes; vão para o arquivo só se a
+    // foto estiver no projeto ao salvar.
+    private readonly Dictionary<Guid, ConteudoDeFoto> _guardadas = [];
+
     /// <summary>O .pplan de onde vêm as imagens que não estão na memória (nulo num projeto novo).</summary>
     public string? ArquivoDeOrigem { get; private set; }
 
@@ -49,23 +54,65 @@ public sealed class FotosDoProjeto(IProjetoRepository repositorio, IProcessadorD
     {
         ArquivoDeOrigem = arquivo;
         _novas.Clear();
+        _guardadas.Clear();
         _miniaturas.Clear();
     }
 
-    /// <summary>O projeto foi salvo em <paramref name="arquivo"/>: as imagens da memória agora estão lá.</summary>
-    public void Salvou(string arquivo)
+    /// <summary>
+    /// O projeto foi salvo em <paramref name="arquivo"/>: as imagens de <paramref name="fotosSalvas"/> agora estão lá. As
+    /// das outras fotos da memória (que o Desfazer pode trazer de volta) continuam guardadas.
+    /// </summary>
+    public void Salvou(string arquivo, IEnumerable<Guid> fotosSalvas)
     {
+        ArgumentNullException.ThrowIfNull(fotosSalvas);
+        var salvas = fotosSalvas.ToHashSet();
         ArquivoDeOrigem = arquivo;
+        foreach (var (id, conteudo) in _novas.Where(n => !salvas.Contains(n.Key)))
+            _guardadas[id] = conteudo;
         _novas.Clear();
+        foreach (var id in salvas)
+            _guardadas.Remove(id);
     }
 
-    /// <summary>O que gravar no próximo salvamento.</summary>
-    public ImagensParaSalvar ParaSalvar() => new(ArquivoDeOrigem, new Dictionary<Guid, ConteudoDeFoto>(_novas));
+    /// <summary>
+    /// Bloco 30: antes de salvar por cima do arquivo de origem, traz para a memória as imagens destas fotos (as que o
+    /// Desfazer ou o Refazer podem trazer de volta e que só existem no arquivo). As que não der para ler ficam de fora.
+    /// </summary>
+    public void Preservar(IEnumerable<Guid> fotos)
+    {
+        ArgumentNullException.ThrowIfNull(fotos);
+        var faltando = fotos.Where(id => !_novas.ContainsKey(id) && !_guardadas.ContainsKey(id)).ToList();
+        if (faltando.Count == 0 || ArquivoDeOrigem is not { } origem)
+            return;
+        try
+        {
+            var miniaturas = repositorio.LerMiniaturas(origem, faltando);
+            foreach (var id in faltando)
+                if (repositorio.LerImagem(origem, id) is { } imagem && miniaturas.TryGetValue(id, out var miniatura))
+                    _guardadas[id] = new ConteudoDeFoto(imagem, miniatura, 1, 1);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+                                       or Microsoft.Data.Sqlite.SqliteException)
+        {
+            // Arquivo movido ou em uso: essas fotos voltariam sem imagem num Desfazer (como uma foto de arquivo movido).
+        }
+    }
+
+    /// <summary>O que gravar no próximo salvamento (as imagens da memória; o repositório grava só as das fotos do projeto).</summary>
+    public ImagensParaSalvar ParaSalvar()
+    {
+        var imagens = new Dictionary<Guid, ConteudoDeFoto>(_guardadas);
+        foreach (var (id, conteudo) in _novas)
+            imagens[id] = conteudo;
+        return new(ArquivoDeOrigem, imagens);
+    }
 
     /// <summary>As miniaturas disponíveis das fotos pedidas (as que não der para ler ficam de fora).</summary>
     public IReadOnlyDictionary<Guid, byte[]> Miniaturas(IEnumerable<Guid> fotos)
     {
         var pedidas = fotos.ToList();
+        foreach (var id in pedidas.Where(id => !_miniaturas.ContainsKey(id) && _guardadas.ContainsKey(id)))
+            _miniaturas[id] = _guardadas[id].Miniatura;
         var faltando = pedidas.Where(id => !_miniaturas.ContainsKey(id)).ToList();
         if (faltando.Count > 0 && ArquivoDeOrigem is { } origem)
         {
@@ -86,7 +133,7 @@ public sealed class FotosDoProjeto(IProjetoRepository repositorio, IProcessadorD
     /// <summary>A imagem completa (versão reduzida) da foto, ou nula se não der para ler.</summary>
     public byte[]? Imagem(Guid foto)
     {
-        if (_novas.TryGetValue(foto, out var conteudo))
+        if (_novas.TryGetValue(foto, out var conteudo) || _guardadas.TryGetValue(foto, out conteudo))
             return conteudo.Imagem;
         if (ArquivoDeOrigem is not { } origem)
             return null;
@@ -200,22 +247,30 @@ public sealed class FotosDoProjeto(IProjetoRepository repositorio, IProcessadorD
         var imagem = Imagem(fotoId) ?? throw new ImagemRecusadaException(
             $"{foto.Imagem.NomeArquivoOriginal}: a imagem desta foto não está disponível (o arquivo do projeto foi movido?).");
         var girada = await Task.Run(() => processador.Girar(imagem, sentidoHorario));
+        // A versão girada é outra foto (outro Id), para a de antes continuar disponível ao Desfazer (Bloco 30).
         var nova = foto.ComImagem(new DadosDaImagem(foto.Imagem.NomeArquivoOriginal, girada.Largura, girada.Altura,
-            girada.Imagem.Length, foto.Imagem.HashOriginal));
-        tarefa.SubstituirFoto(nova);
-        _novas[fotoId] = girada;
-        _miniaturas[fotoId] = girada.Miniatura;
+            girada.Imagem.Length, foto.Imagem.HashOriginal), Guid.NewGuid());
+        tarefa.TrocarFoto(fotoId, nova);
+        Guardar(fotoId);
+        _novas[nova.Id] = girada;
+        _miniaturas[nova.Id] = girada.Miniatura;
         return nova;
     }
 
-    /// <summary>Tira as fotos da tarefa (e as imagens delas da memória).</summary>
+    /// <summary>Tira as fotos da tarefa; as imagens das que ainda não foram salvas ficam guardadas para o Desfazer.</summary>
     public void Excluir(Tarefa tarefa, IEnumerable<Guid> fotos)
     {
         foreach (var id in fotos.ToList())
         {
             tarefa.RemoverFoto(id);
-            _novas.Remove(id);
-            _miniaturas.Remove(id);
+            Guardar(id);
         }
+    }
+
+    // A imagem de uma foto que saiu do projeto passa de pendente a guardada (se só existia na memória).
+    private void Guardar(Guid foto)
+    {
+        if (_novas.Remove(foto, out var conteudo))
+            _guardadas[foto] = conteudo;
     }
 }

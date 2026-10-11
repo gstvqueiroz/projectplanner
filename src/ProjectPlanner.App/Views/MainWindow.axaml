@@ -88,6 +88,19 @@
                     <MenuItem Header="Abrir a pasta de cópias de segurança" Command="{Binding AbrirBackupsCommand}"
                               ToolTip.Tip="As 5 versões anteriores de cada projeto, guardadas a cada salvamento; para recuperar, abra uma delas" />
                 </MenuItem>
+                <!-- Bloco 30: Desfazer e Refazer (com o nome da alteração), e copiar, colar e duplicar tarefas. Os atalhos
+                     (⌘Z, ⇧⌘Z, ⌘C, ⌘V, ⌘D) são tratados pela janela (AtalhosDoTeclado), fora dos campos de texto. -->
+                <MenuItem Header="Editar">
+                    <MenuItem x:Name="ItemDesfazer" Header="{Binding TextoDesfazer}" Command="{Binding DesfazerAlteracaoCommand}" />
+                    <MenuItem x:Name="ItemRefazer" Header="{Binding TextoRefazer}" Command="{Binding RefazerAlteracaoCommand}" />
+                    <Separator />
+                    <MenuItem x:Name="ItemCopiar" Header="Copiar tarefa" Command="{Binding CopiarTarefaCommand}"
+                              ToolTip.Tip="Copia a tarefa selecionada, com as subtarefas e os vínculos entre elas (sem as fotos)" />
+                    <MenuItem x:Name="ItemColar" Header="Colar tarefa" Command="{Binding ColarTarefaCommand}"
+                              ToolTip.Tip="Cola a cópia logo abaixo da tarefa selecionada (também em outro projeto)" />
+                    <MenuItem x:Name="ItemDuplicar" Header="Duplicar tarefa" Command="{Binding DuplicarTarefaCommand}"
+                              ToolTip.Tip="Uma cópia da tarefa selecionada logo abaixo dela" />
+                </MenuItem>
                 <!-- Opções de exibição: valem só durante a sessão (não vão para o .pplan). O ✓ mostra se estão ligadas. -->
                 <MenuItem Header="Exibir">
                     <MenuItem Header="Seleção" ToggleType="CheckBox" IsChecked="{Binding MostrarSelecao, Mode=TwoWay}"
@@ -202,6 +215,18 @@
                             AutomationProperties.Name="Salvar">
                         <!-- Disquete -->
                         <Path Data="M2.5,1.5 H11 L14.5,5 V14.5 H1.5 V2.5 Z M4.5,1.5 V5.5 H10.5 V1.5 M4.5,14.5 V9.5 H11.5 V14.5" />
+                    </Button>
+                    <Border Classes="divisor" />
+                    <!-- Bloco 30: a dica mostra o nome da alteração (MainWindow.axaml.cs, MostrarAtalhos). -->
+                    <Button x:Name="BotaoDesfazer" Classes="acessoRapido" Command="{Binding DesfazerAlteracaoCommand}"
+                            ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Desfazer">
+                        <!-- Seta curva para a esquerda -->
+                        <Path Data="M5,3 L1.5,6.5 L5,10 M1.5,6.5 H10 A4.5,4.5 0 0 1 10,15.5 H6" />
+                    </Button>
+                    <Button x:Name="BotaoRefazer" Classes="acessoRapido" Command="{Binding RefazerAlteracaoCommand}"
+                            ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Refazer">
+                        <!-- Seta curva para a direita -->
+                        <Path Data="M11,3 L14.5,6.5 L11,10 M14.5,6.5 H6 A4.5,4.5 0 0 0 6,15.5 H10" />
                     </Button>
                     <Border Classes="divisor" />
                     <Button Classes="acessoRapido" Command="{Binding AdicionarTarefaCommand}" ToolTip.Tip="Adicionar tarefa"
@@ -335,6 +360,11 @@
                     <!-- O clique direito seleciona a linha antes; nas linhas vazias não há menu (PedirMenuDaGrade). -->
                     <MenuItem Header="Inserir tarefa acima" Command="{Binding InserirTarefaAcimaCommand}" />
                     <MenuItem Header="Inserir tarefa abaixo" Command="{Binding InserirTarefaAbaixoCommand}" />
+                    <Separator />
+                    <!-- Bloco 30 -->
+                    <MenuItem Header="Copiar tarefa" Command="{Binding CopiarTarefaCommand}" />
+                    <MenuItem Header="Colar tarefa" Command="{Binding ColarTarefaCommand}" />
+                    <MenuItem Header="Duplicar tarefa" Command="{Binding DuplicarTarefaCommand}" />
                     <Separator />
                     <MenuItem Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}" />
                 </ContextMenu>

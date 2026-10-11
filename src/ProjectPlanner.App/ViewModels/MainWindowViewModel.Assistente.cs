@@ -1,21 +1,15 @@
 using ProjectPlanner.App.Services;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Edicao;
 using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
 
 // Bloco 24: o assistente altera o cronograma. As alterações de uma resposta são aplicadas numa cópia do cronograma; se
-// todas valem (e o cálculo fecha), a cópia entra no lugar do aberto, e o de antes fica guardado para o Desfazer.
+// todas valem (e o cálculo fecha), a cópia entra no lugar do aberto. Bloco 30: cada aplicação é um passo do histórico
+// do Desfazer (a marca da resposta é o passo), e qualquer uma pode ser desfeita, não só a última.
 public sealed partial class MainWindowViewModel : ICronogramaDoAssistente
 {
-    /// <summary>A última aplicação do assistente: o cronograma de antes dela e a versão do projeto logo depois.</summary>
-    private sealed record AplicacaoDoAssistente(Cronograma Anterior, int Versao);
-
-    private AplicacaoDoAssistente? _ultimaAplicacao;
-
-    /// <summary>Muda a cada alteração do projeto: diz se o cronograma mudou depois de uma aplicação do assistente.</summary>
-    private int _versao;
-
     public event Action? DesfazerMudou;
 
     ContextoDoProjeto ICronogramaDoAssistente.Retrato() => RetratoParaOAssistente();
@@ -25,9 +19,11 @@ public sealed partial class MainWindowViewModel : ICronogramaDoAssistente
     // Bloco 26: a conversa não é uma mudança do cronograma (não conta para o "mudou depois" do Desfazer nem recalcula).
     public void ConversaMudou() => MarcarSemRecalcular();
 
-    // Uma mudança do projeto que não é do cronograma (conversa, dados da obra, histórico de relatórios).
+    // Uma mudança do projeto que não é do cronograma (conversa, dados da obra, histórico de relatórios, locais das
+    // fotos): não entra no histórico do Desfazer, e desfazer não a tira.
     private void MarcarSemRecalcular()
     {
+        _alteracoesForaDoHistorico = true;
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
     }
@@ -69,44 +65,35 @@ public sealed partial class MainWindowViewModel : ICronogramaDoAssistente
 
         if (resumo.Vazio)
             return new ResultadoDaAplicacao(SituacaoDaAplicacao.Aplicada, resumo.Texto);
-        var anterior = _cronograma;
-        TrocarCronograma(copia);
-        _ultimaAplicacao = new AplicacaoDoAssistente(anterior, _versao);
+        var passo = TrocarCronograma(copia, registrarComo: "Alterações do assistente");
         Mensagem = $"Assistente: {resumo.Texto}.";
-        DesfazerMudou?.Invoke();
-        return new ResultadoDaAplicacao(SituacaoDaAplicacao.Aplicada, resumo.Texto, _ultimaAplicacao);
+        return new ResultadoDaAplicacao(SituacaoDaAplicacao.Aplicada, resumo.Texto, passo);
     }
 
-    public bool PodeDesfazer(object marca) => _ultimaAplicacao is not null && ReferenceEquals(marca, _ultimaAplicacao);
+    public bool PodeDesfazer(object marca) =>
+        marca is PassoDoHistorico passo && _historico.Situacao(passo) == SituacaoNoHistorico.Feita;
+
+    public bool FoiDesfeita(object marca) =>
+        marca is PassoDoHistorico passo && _historico.Situacao(passo) == SituacaoNoHistorico.Desfeita;
 
     public async Task<bool> DesfazerAsync(object marca)
     {
-        if (!PodeDesfazer(marca))
+        if (marca is not PassoDoHistorico passo || _historico.AlteracoesDepoisDe(passo) is not (>= 0 and var depois))
             return false;
-        var aplicacao = _ultimaAplicacao!;
-        if (_versao != aplicacao.Versao && !await _dialogos.ConfirmarAsync("Desfazer",
+        if (depois > 0 && !await _dialogos.ConfirmarAsync("Desfazer",
                 "O cronograma mudou depois desta resposta do assistente. Desfazer volta para como ele estava antes dela, " +
                 "e essas mudanças também se perdem. Desfazer mesmo assim?", "Desfazer"))
             return false;
-        _ultimaAplicacao = null;
-        TrocarCronograma(aplicacao.Anterior);
+        for (var i = 0; i <= depois; i++)
+            VoltarUmPasso(desfazer: true);
         Mensagem = "Alterações do assistente desfeitas.";
-        DesfazerMudou?.Invoke();
         return true;
     }
 
-    /// <summary>Outro projeto (Novo, Abrir): não há mais o que desfazer.</summary>
-    private void EsquecerAplicacaoDoAssistente()
-    {
-        if (_ultimaAplicacao is null)
-            return;
-        _ultimaAplicacao = null;
-        DesfazerMudou?.Invoke();
-    }
-
     // Põe outro cronograma (do mesmo projeto) no lugar do aberto: as linhas são refeitas, mantendo recolhidos os resumos
-    // que estavam recolhidos e a seleção, se a tarefa continua lá. A conversa e as imagens das fotos ficam.
-    private void TrocarCronograma(Cronograma novo)
+    // que estavam recolhidos e a seleção, se a tarefa continua lá. A conversa e as imagens das fotos ficam. Com
+    // registrarComo, é uma alteração nova (entra no histórico); sem, é o Desfazer ou o Refazer.
+    private PassoDoHistorico? TrocarCronograma(Cronograma novo, string? registrarComo)
     {
         var recolhidos = Tarefas.Where(l => !l.Expandido).Select(l => l.Tarefa.Id).ToHashSet();
         var selecionada = TarefaSelecionada?.Tarefa.Id;
@@ -128,6 +115,11 @@ public sealed partial class MainWindowViewModel : ICronogramaDoAssistente
         LimparRecusas();
         OnPropertyChanged(nameof(NomeProjeto));
         OnPropertyChanged(nameof(InicioProjeto));
-        MarcarAlteracao();
+        if (registrarComo is not null)
+            return MarcarAlteracao(registrarComo);
+        Mensagem = "";
+        RebaixarCommand.NotifyCanExecuteChanged();
+        Recalcular();
+        return null;
     }
 }

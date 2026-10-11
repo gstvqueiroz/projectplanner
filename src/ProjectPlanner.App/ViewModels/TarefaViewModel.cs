@@ -38,7 +38,7 @@ public interface IEdicaoCronograma
     void GerenciarFotos(TarefaViewModel linha);
 
     /// <summary>Uma alteração foi aplicada: marca o projeto como alterado e recalcula.</summary>
-    void TarefaAlterada();
+    void TarefaAlterada(string descricao);
 
     /// <summary>Uma alteração foi recusada: mostra a mensagem ao usuário.</summary>
     void AlteracaoRecusada(string mensagem);
@@ -245,7 +245,7 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     {
         var estavaRecusado = ErroDe(propriedade) is not null;
         if (AlterarDominio(propriedade, valor, igualAoAtual, alteracao))
-            _edicao.TarefaAlterada();
+            _edicao.TarefaAlterada($"{rotulo} de \"{Tarefa.Nome}\"");
         else if (ErroDe(propriedade) is { } erro)
             _edicao.AlteracaoRecusada($"Linha {Numero}, {rotulo}: {erro} Corrija o valor ou tecle Esc para desfazer.");
         else if (estavaRecusado)

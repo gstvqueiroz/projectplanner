@@ -115,8 +115,10 @@ public class AssistenteAlteracoesTests
         Linhas.Should().BeEmpty();
     }
 
+    // Bloco 30 (IA3): antes só a última resposta podia ser desfeita; agora qualquer uma ainda no histórico do Desfazer. As
+    // respostas de depois dela também são desfeitas (perguntando antes), e o Refazer traz tudo de volta.
     [Fact]
-    public void SoAUltimaAplicacaoPodeSerDesfeita()
+    public void QualquerAplicacaoPodeSerDesfeita_ComAsDeDepois_EORefazerTrazDeVolta()
     {
         Responder("Etapa 1.", Criar("n1", "Fundação", 3));
         Pedir("Crie a fundação");
@@ -124,14 +126,39 @@ public class AssistenteAlteracoesTests
         Pedir("Crie a estrutura depois dela");
 
         var (primeira, segunda) = (Painel.Mensagens[1].Alteracoes!, Painel.Mensagens[3].Alteracoes!);
-        (primeira.PodeDesfazer, segunda.PodeDesfazer).Should().Be((false, true));
+        (primeira.PodeDesfazer, segunda.PodeDesfazer).Should().Be((true, true));
 
+        _ambiente.Dialogos.Confirmar = false;
         Painel.DesfazerCommand.Execute(primeira);
-        Linhas.Should().HaveCount(2, "a primeira não pode mais ser desfeita");
+        _ambiente.Dialogos.Confirmacoes.Last().Should().StartWith("O cronograma mudou depois desta resposta do assistente.");
+        Linhas.Should().HaveCount(2, "cancelou");
 
-        Painel.DesfazerCommand.Execute(segunda);
+        _ambiente.Dialogos.Confirmar = true;
+        Painel.DesfazerCommand.Execute(primeira);
+        Linhas.Should().BeEmpty("desfez a primeira e a segunda, que veio depois");
+        (primeira.Desfeitas, segunda.Desfeitas, primeira.PodeDesfazer, segunda.PodeDesfazer).Should().Be((true, true, false, false));
+        primeira.Texto.Should().Be("Desfeito: 1 tarefa criada");
+
+        _vm.RefazerAlteracaoCommand.Execute(null);
         Linhas.Should().Equal("1 Fundação");
-        (primeira.PodeDesfazer, segunda.PodeDesfazer).Should().Be((false, false), "desfazer não volta duas respostas");
+        (primeira.Desfeitas, primeira.PodeDesfazer, segunda.Desfeitas).Should().Be((false, true, true));
+        primeira.Texto.Should().Be("Cronograma alterado: 1 tarefa criada");
+    }
+
+    [Fact]
+    public void DesfazerGeral_MarcaARespostaComoDesfeita()
+    {
+        Responder("Etapa 1.", Criar("n1", "Fundação", 3));
+        Pedir("Crie a fundação");
+        var alteracoes = Painel.Mensagens[^1].Alteracoes!;
+
+        _vm.DesfazerAlteracaoCommand.Execute(null);
+
+        Linhas.Should().BeEmpty();
+        (alteracoes.Desfeitas, alteracoes.PodeDesfazer, _vm.Mensagem).Should().Be((true, false, "Desfeito: Alterações do assistente."));
+        Ambiente.AdicionarTarefa(_vm, "Outra", 2);
+        (alteracoes.Desfeitas, alteracoes.PodeDesfazer).Should().Be((true, false), "uma alteração nova apaga o Refazer, e a resposta continua desfeita");
+        _vm.Conversa.Mensagens[^1].ResultadoDasAlteracoes.Should().Be("Desfeito: 1 tarefa criada");
     }
 
     [Fact]

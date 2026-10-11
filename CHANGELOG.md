@@ -3,6 +3,24 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.29.0
+
+Bloco 30 (feito antes do 29, que precisa da chave do Gemini para calibrar; por isso a 0.29 é a do Bloco 30, e o Bloco 29
+sai na 0.30).
+
+- Editar > Desfazer e Refazer (⌘Z e ⇧⌘Z; no Windows, Ctrl+Z e Ctrl+Shift+Z ou Ctrl+Y), em até 100 níveis: edições da
+  grid, tarefas adicionadas, inseridas e removidas (com as subtarefas e os vínculos), Promover e Rebaixar, mover na grid,
+  vínculos criados no Gantt, nome e início do projeto, fotos (adicionar, excluir, girar, editar as informações, entrar
+  no relatório e destaque) e as alterações do assistente. O menu e a dica do botão dizem o que vai ser desfeito.
+- Desfazer até o estado salvo tira o * do título. A conversa com o assistente, os dados da obra, os locais e o alerta das
+  fotos e o histórico dos relatórios não voltam no Desfazer (não são edições do cronograma).
+- Uma foto excluída volta com a imagem, mesmo que o projeto tenha sido salvo depois.
+- No chat, qualquer resposta aplicada pode ser desfeita, não só a última (as alterações feitas depois dela também são
+  desfeitas, perguntando antes); e o Desfazer geral mostra a resposta como desfeita no chat.
+- Editar > Copiar, Colar e Duplicar tarefa (⌘C, ⌘V, ⌘D; também no menu de contexto da grid): a tarefa com as subtarefas e
+  os vínculos entre elas, sem as fotos, logo abaixo da selecionada. Dá para colar várias vezes e em outro projeto.
+- Botões Desfazer e Refazer na barra. Num campo de texto, ⌘Z, ⌘C, ⌘V e ⌘D continuam sendo do texto.
+
 ## 0.28.0
 
 - Exibir > Fotos do projeto…: todas as fotos do projeto numa linha do tempo, por dia, com a tarefa de cada foto e
@@ -133,8 +151,9 @@ começar):
 - Bloco 27 (feito): relatório fotográfico em PDF e Word e a curadoria das fotos para o relatório.
 - Bloco 28 (feito): fotos do projeto inteiro, importação em lote com a tarefa sugerida pela data, locais padronizados,
   GPS e alerta de tarefa sem foto.
-- Bloco 29: IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
-- Bloco 30: desfazer e refazer na grid e no Gantt (vários níveis, também o do assistente), copiar, colar e duplicar.
+- Bloco 29 (sai na 0.30): IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
+- Bloco 30 (feito, na 0.29): desfazer e refazer em vários níveis (também o do assistente e as fotos), copiar, colar e
+  duplicar.
 - Depois: localizar e filtrar; linha de base e prazos; datas de tarefa e restrições (corrige as colunas Início e Término,
   que hoje mostram a data digitada mas o cálculo usa só o início do projeto e as predecessoras); feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

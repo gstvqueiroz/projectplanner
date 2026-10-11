@@ -280,27 +280,38 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         $"As alterações da sua resposta anterior não foram aplicadas, e o cronograma não mudou. Motivo: {motivo} " +
         "Corrija e mande de novo a lista completa de alterações (os Nº continuam os do retrato desta mensagem).";
 
-    /// <summary>Volta o cronograma para como estava antes da resposta (só a última aplicação pode ser desfeita).</summary>
+    /// <summary>
+    /// Volta o cronograma para como estava antes da resposta. Bloco 30: vale para qualquer resposta ainda no histórico do
+    /// Desfazer (as alterações feitas depois dela também são desfeitas, perguntando antes), e o Refazer traz de volta.
+    /// </summary>
     [RelayCommand]
     private async Task Desfazer(AlteracoesNaConversa? alteracoes)
     {
         if (alteracoes?.Resultado.Marca is not { } marca)
             return;
-        if (await _cronograma.DesfazerAsync(marca))
-        {
-            alteracoes.Desfeitas = true;
-            // A conversa guardada mostra o "Desfeito" ao reabrir.
-            if (Mensagens.FirstOrDefault(m => ReferenceEquals(m.Alteracoes, alteracoes)) is { IndiceNaConversa: { } i }
-                && i < _conversa.Mensagens.Count)
-                _conversa.Substituir(i, _conversa.Mensagens[i] with { ResultadoDasAlteracoes = alteracoes.Texto });
-        }
+        await _cronograma.DesfazerAsync(marca);
         AtualizarDesfazer();
     }
 
+    // Cada resposta aplicada mostra se está feita (com o Desfazer) ou desfeita, pelo histórico do Desfazer: vale também o
+    // Desfazer e o Refazer gerais (Cmd/Ctrl+Z). Uma resposta que saiu do histórico continua como estava.
     private void AtualizarDesfazer()
     {
-        foreach (var alteracoes in Mensagens.Select(m => m.Alteracoes).OfType<AlteracoesNaConversa>())
-            alteracoes.PodeDesfazer = !alteracoes.Desfeitas && alteracoes.Resultado.Marca is { } marca && _cronograma.PodeDesfazer(marca);
+        foreach (var mensagem in Mensagens.Where(m => m.Alteracoes?.Resultado.Marca is not null))
+        {
+            var alteracoes = mensagem.Alteracoes!;
+            var marca = alteracoes.Resultado.Marca!;
+            var feita = _cronograma.PodeDesfazer(marca);
+            var desfeitas = _cronograma.FoiDesfeita(marca) || (!feita && alteracoes.Desfeitas);
+            if (desfeitas != alteracoes.Desfeitas)
+            {
+                alteracoes.Desfeitas = desfeitas;
+                // A conversa guardada mostra o "Desfeito" ao reabrir.
+                if (mensagem.IndiceNaConversa is { } i && i < _conversa.Mensagens.Count)
+                    _conversa.Substituir(i, _conversa.Mensagens[i] with { ResultadoDasAlteracoes = alteracoes.Texto });
+            }
+            alteracoes.PodeDesfazer = feita;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(Aguardando))]

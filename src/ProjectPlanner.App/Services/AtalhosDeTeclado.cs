@@ -16,10 +16,19 @@ public enum AcaoComAtalho
     SomenteGantt,
     Assistente,
     IrParaTarefa,
+    Desfazer,
+    Refazer,
+    Copiar,
+    Colar,
+    Duplicar,
 }
 
 /// <param name="Comando">Com a tecla de comando da plataforma: ⌘ no Mac, Ctrl no Windows.</param>
-public sealed record Atalho(AcaoComAtalho Acao, Key Tecla, bool Comando = true, bool Shift = false);
+/// <param name="ForaDoTexto">
+/// Bloco 30: dentro de um campo de texto (editando uma célula, o nome do projeto, o chat), a tecla continua sendo do
+/// texto (desfazer a digitação, copiar e colar o texto).
+/// </param>
+public sealed record Atalho(AcaoComAtalho Acao, Key Tecla, bool Comando = true, bool Shift = false, bool ForaDoTexto = false);
 
 /// <summary>
 /// Os atalhos de teclado do programa (Bloco 25, P1), num lugar só: quem trata a tecla é a janela principal, e os menus e
@@ -42,6 +51,11 @@ public static class AtalhosDeTeclado
         new(AcaoComAtalho.SomenteGantt, Key.D3),
         new(AcaoComAtalho.Assistente, Key.J),
         new(AcaoComAtalho.IrParaTarefa, Key.G),
+        new(AcaoComAtalho.Desfazer, Key.Z, ForaDoTexto: true),
+        new(AcaoComAtalho.Refazer, Key.Z, Shift: true, ForaDoTexto: true),
+        new(AcaoComAtalho.Copiar, Key.C, ForaDoTexto: true),
+        new(AcaoComAtalho.Colar, Key.V, ForaDoTexto: true),
+        new(AcaoComAtalho.Duplicar, Key.D, ForaDoTexto: true),
     ];
 
     public static Atalho De(AcaoComAtalho acao) => Todos.Single(a => a.Acao == acao);
@@ -76,6 +90,9 @@ public static class AtalhosDeTeclado
     /// <summary>A ação da tecla apertada; nula se ela não é um atalho. Os números valem também no teclado numérico.</summary>
     public static AcaoComAtalho? Achar(Key tecla, KeyModifiers modificadores, bool mac)
     {
+        // No Windows, Ctrl+Y também refaz (o costume do Office), além de Ctrl+Shift+Z.
+        if (!mac && tecla == Key.Y && modificadores == KeyModifiers.Control)
+            return AcaoComAtalho.Refazer;
         var normalizada = tecla is >= Key.NumPad0 and <= Key.NumPad9 ? Key.D0 + (tecla - Key.NumPad0) : tecla;
         return Todos.FirstOrDefault(a => a.Tecla == normalizada && Modificadores(a, mac) == modificadores)?.Acao;
     }

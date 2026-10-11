@@ -159,6 +159,19 @@ public class Tarefa
         _fotos[indice] = foto;
     }
 
+    /// <summary>Bloco 30: põe <paramref name="nova"/> (outro Id, a versão girada) no lugar da foto <paramref name="fotoId"/>.</summary>
+    /// <exception cref="DomainValidationException">A foto não é desta tarefa, ou o Id novo já existe nela.</exception>
+    public void TrocarFoto(Guid fotoId, FotoTarefa nova)
+    {
+        ArgumentNullException.ThrowIfNull(nova);
+        var indice = _fotos.FindIndex(f => f.Id == fotoId);
+        if (indice < 0 || nova.TarefaId != Id)
+            throw new DomainValidationException(nameof(Fotos), $"A foto {fotoId} não pertence a \"{Nome}\".");
+        if (nova.Id != fotoId && _fotos.Exists(f => f.Id == nova.Id))
+            throw new DomainValidationException(nameof(Fotos), $"A foto já pertence a \"{Nome}\".");
+        _fotos[indice] = nova;
+    }
+
     /// <exception cref="DomainValidationException">A foto não é desta tarefa.</exception>
     public void RemoverFoto(Guid fotoId)
     {

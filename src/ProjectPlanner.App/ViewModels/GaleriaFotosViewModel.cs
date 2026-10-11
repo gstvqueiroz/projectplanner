@@ -363,7 +363,7 @@ public sealed partial class GaleriaFotosViewModel : ViewModelBase
         var id = FotoAtual!.Foto.Id;
         try
         {
-            await _fotos.GirarAsync(Tarefa, id, sentidoHorario);
+            id = (await _fotos.GirarAsync(Tarefa, id, sentidoHorario)).Id; // a versão girada tem outro Id (Bloco 30)
         }
         catch (ImagemRecusadaException ex)
         {

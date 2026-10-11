@@ -101,11 +101,12 @@ public partial class MenuPrincipalTests
         var a = Abrir();
 
         a.Janela.MenuPrincipal.Items.OfType<MenuItem>().Select(m => m.Header)
-            .Should().Equal("Arquivo", "Exibir", "Inserir", "Tarefa", "Ajuda");
+            .Should().Equal("Arquivo", "Editar", "Exibir", "Inserir", "Tarefa", "Ajuda");
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…",
             "Abrir a pasta de cópias de segurança");
+        Titulos(a.Item("Editar")).Should().Equal("Desfazer", "Refazer", Linha, "Copiar tarefa", "Colar tarefa", "Duplicar tarefa");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha Hoje", Linha,
             "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
         Titulos(a.Item("Tarefa")).Should().Equal(
@@ -157,6 +158,8 @@ public partial class MenuPrincipalTests
 
         botoes.Select(b => (b.Command, Avalonia.Automation.AutomationProperties.GetName(b))).Should().Equal(
             (a.Vm.SalvarProjetoCommand, "Salvar"),
+            (a.Vm.DesfazerAlteracaoCommand, "Desfazer"),
+            (a.Vm.RefazerAlteracaoCommand, "Refazer"),
             (a.Vm.AdicionarTarefaCommand, "Adicionar tarefa"),
             (a.Vm.RemoverTarefaCommand, "Remover tarefa"),
             (a.Vm.PromoverCommand, "Promover"),

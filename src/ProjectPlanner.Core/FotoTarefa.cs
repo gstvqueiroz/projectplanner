@@ -57,8 +57,12 @@ public sealed record FotoTarefa
         new(Id, TarefaId, Imagem, metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque, Gps = Gps };
 
     /// <summary>A mesma foto com outra imagem guardada (girada), mantendo o hash do original.</summary>
-    public FotoTarefa ComImagem(DadosDaImagem imagem) =>
-        new(Id, TarefaId, imagem, Metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque, Gps = Gps };
+    /// <param name="novoId">
+    /// Bloco 30: o Id da versão nova. A imagem é guardada pelo Id, então a versão girada ganha outro e a de antes
+    /// continua existindo para o Desfazer; nulo mantém o mesmo Id.
+    /// </param>
+    public FotoTarefa ComImagem(DadosDaImagem imagem, Guid? novoId = null) =>
+        new(novoId ?? Id, TarefaId, imagem, Metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque, Gps = Gps };
 
     /// <summary>A mesma foto com outra escolha para o relatório (Bloco 27). Fora do relatório, não há destaque.</summary>
     public FotoTarefa ComCuradoria(bool noRelatorio, bool destaque) =>

@@ -23,7 +23,7 @@ public sealed partial class MainWindowViewModel
             linha.FotosMudaram();
         OnPropertyChanged(nameof(FotosDaSelecionada));
         OnPropertyChanged(nameof(DicaFotosDaSelecionada));
-        MarcarAlteracao();
+        MarcarAlteracao(tarefas.Count == 1 ? "Importar fotos" : $"Importar fotos em {tarefas.Count} tarefas");
     }
 
     private void ConfiguracaoDasFotosMudou()

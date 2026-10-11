@@ -447,6 +447,21 @@ public class Cronograma
         return copia;
     }
 
+    /// <summary>
+    /// Bloco 30: o que não volta no Desfazer (a conversa, os dados da obra, os locais e o alerta das fotos e o
+    /// histórico dos relatórios) passa a ser o de <paramref name="atual"/>; o resto continua o deste cronograma.
+    /// </summary>
+    internal void ManterDadosDoProjetoDe(Cronograma atual)
+    {
+        Assistente = atual.Assistente;
+        ConversaDescartadaAoAbrir = atual.ConversaDescartadaAoAbrir;
+        FotosDescartadasAoAbrir = atual.FotosDescartadasAoAbrir;
+        Obra = atual.Obra;
+        ConfiguracaoDasFotos = atual.ConfiguracaoDasFotos;
+        _relatorios.Clear();
+        _relatorios.AddRange(atual._relatorios);
+    }
+
     internal void DefinirDatasDoArquivo(DateTime criacao, DateTime ultimaModificacao)
     {
         DataCriacao = criacao;

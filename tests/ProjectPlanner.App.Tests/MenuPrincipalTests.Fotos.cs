@@ -66,7 +66,7 @@ public partial class MenuPrincipalTests
         a.Vm.TarefaSelecionada.Should().Be(segunda);
         pedido.Handled.Should().BeTrue("o menu de contexto abriu");
         a.Janela.MenuDaGrade.Items.OfType<MenuItem>().Select(i => i.Header)
-            .Should().Equal("Inserir tarefa acima", "Inserir tarefa abaixo", "Gerenciar fotos…");
+            .Should().Equal("Inserir tarefa acima", "Inserir tarefa abaixo", "Copiar tarefa", "Colar tarefa", "Duplicar tarefa", "Gerenciar fotos…");
         var item = a.Janela.MenuDaGrade.Items.OfType<MenuItem>().Last();
         item.Command!.Execute(item.CommandParameter);
         a.Ambiente.Dialogos.Galerias.Last().Titulo.Should().Be("Fotos — 2 Estrutura");

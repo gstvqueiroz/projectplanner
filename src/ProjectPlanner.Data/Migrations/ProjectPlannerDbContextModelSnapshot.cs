@@ -17,6 +17,23 @@ namespace ProjectPlanner.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("ProjectPlanner.Data.AssistenteRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("AssistenteDoProjeto", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.FotoImagemRegistro", b =>
                 {
                     b.Property<Guid>("FotoId")
@@ -222,6 +239,15 @@ namespace ProjectPlanner.Data.Migrations
 
                             t.HasCheckConstraint("CK_Tarefas_Tipo", "Tipo BETWEEN 0 AND 2");
                         });
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.AssistenteRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.AssistenteRegistro", "ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProjectPlanner.Data.FotoImagemRegistro", b =>

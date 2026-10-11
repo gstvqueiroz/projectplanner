@@ -78,3 +78,17 @@ internal sealed class FotoMiniaturaRegistro
     public Guid FotoId { get; set; }
     public required byte[] Dados { get; set; }
 }
+
+/// <summary>
+/// A conversa com o assistente e a ficha do projeto (Bloco 26), em JSON (ver <see cref="FormatoDaConversa"/>): só uma
+/// linha por projeto, e nenhuma quando a conversa está vazia.
+/// </summary>
+internal sealed class AssistenteRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    /// <summary>A versão do formato do JSON; uma que esta versão do programa não conhece é deixada de fora ao abrir.</summary>
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}

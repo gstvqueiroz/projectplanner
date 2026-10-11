@@ -253,6 +253,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Tipo = p.Tipo,
             Lag = p.Lag,
         }));
+
+        if (!cronograma.Assistente.Vazia)
+            contexto.Assistente.Add(new AssistenteRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDaConversa.Versao,
+                Dados = FormatoDaConversa.Serializar(cronograma.Assistente),
+            });
     }
 
     // Um arquivo de projeto tem a migration inicial aplicada; se tiver alguma que esta versão não
@@ -322,6 +330,21 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
         foreach (var registro in contexto.Predecessoras.AsNoTracking().OrderBy(p => p.Ordem))
             cronograma.AdicionarPredecessora(new Predecessora(
                 registro.TarefaOrigemId, registro.TarefaDestinoId, registro.Tipo, registro.Lag));
+
+        // A conversa nunca impede de abrir o projeto: uma que não dá para ler fica de fora, com aviso (Bloco 26).
+        if (contexto.Assistente.AsNoTracking().FirstOrDefault() is { } assistente)
+        {
+            try
+            {
+                if (assistente.Versao != FormatoDaConversa.Versao)
+                    throw new InvalidDataException($"Formato {assistente.Versao} da conversa, desconhecido.");
+                cronograma.DefinirAssistente(FormatoDaConversa.Ler(assistente.Dados));
+            }
+            catch (InvalidDataException)
+            {
+                cronograma.RegistrarConversaDescartada();
+            }
+        }
 
         return cronograma;
     }

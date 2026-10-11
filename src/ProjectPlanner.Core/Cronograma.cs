@@ -1,3 +1,5 @@
+using ProjectPlanner.Core.Assistente;
+
 namespace ProjectPlanner.Core;
 
 /// <summary>
@@ -382,6 +384,18 @@ public class Cronograma
     internal void RegistrarFotosDescartadas(int quantidade) => FotosDescartadasAoAbrir = quantidade;
 
     /// <summary>
+    /// A conversa com o assistente e a ficha do projeto (Bloco 26). É do projeto: as cópias do cronograma usam a mesma.
+    /// </summary>
+    public ConversaDoProjeto Assistente { get; private set; } = new();
+
+    /// <summary>A conversa guardada no arquivo não pôde ser lida (formato de outra versão ou com defeito) e ficou de fora.</summary>
+    public bool ConversaDescartadaAoAbrir { get; private set; }
+
+    internal void DefinirAssistente(ConversaDoProjeto conversa) => Assistente = conversa ?? throw new ArgumentNullException(nameof(conversa));
+
+    internal void RegistrarConversaDescartada() => ConversaDescartadaAoAbrir = true;
+
+    /// <summary>
     /// Um cronograma igual a este, com os mesmos Ids, a mesma estrutura e ordem, os mesmos vínculos e as mesmas fotos,
     /// mas independente: mudar a cópia não muda o original (Bloco 24: as alterações do assistente são feitas numa
     /// cópia, e o original fica guardado para o Desfazer).
@@ -393,6 +407,8 @@ public class Cronograma
             DataCriacao = DataCriacao,
             DataUltimaModificacao = DataUltimaModificacao,
             FotosDescartadasAoAbrir = FotosDescartadasAoAbrir,
+            Assistente = Assistente, // a mesma conversa: ela é do projeto, não desta versão do cronograma
+            ConversaDescartadaAoAbrir = ConversaDescartadaAoAbrir,
         };
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));
         copia._predecessoras.AddRange(_predecessoras); // vínculos são registros imutáveis

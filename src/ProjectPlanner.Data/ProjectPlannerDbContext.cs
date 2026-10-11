@@ -16,6 +16,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<FotoRegistro> Fotos => Set<FotoRegistro>();
     public DbSet<FotoImagemRegistro> Imagens => Set<FotoImagemRegistro>();
     public DbSet<FotoMiniaturaRegistro> Miniaturas => Set<FotoMiniaturaRegistro>();
+    public DbSet<AssistenteRegistro> Assistente => Set<AssistenteRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +87,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             miniatura.HasKey(m => m.FotoId);
             miniatura.HasOne<FotoRegistro>().WithOne()
                 .HasForeignKey<FotoMiniaturaRegistro>(m => m.FotoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // A conversa com o assistente e a ficha do projeto (Bloco 26).
+        modelBuilder.Entity<AssistenteRegistro>(assistente =>
+        {
+            assistente.ToTable("AssistenteDoProjeto");
+            assistente.HasKey(a => a.ProjetoId);
+            assistente.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<AssistenteRegistro>(a => a.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 

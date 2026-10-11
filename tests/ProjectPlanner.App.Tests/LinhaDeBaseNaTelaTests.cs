@@ -163,7 +163,8 @@ public class LinhaDeBaseNaTelaTests
         _vm.DesfazerAlteracaoCommand.Execute(null); // a duração
         _vm.TextoDesfazer.Should().Be("Desfazer Salvar a linha de base LB0");
         _vm.DesfazerAlteracaoCommand.Execute(null);
-        (_vm.LinhaDeBaseEmUso, _vm.Tarefas[1].InicioLinhaDeBase, _vm.Tarefas[1].DesvioDoInicio).Should().Be((null, null, null));
+        _vm.LinhaDeBaseEmUso.Should().BeNull();
+        (_vm.Tarefas[1].InicioLinhaDeBase, _vm.Tarefas[1].DesvioDoInicio).Should().Be((null, null));
     }
 
     [Fact]
@@ -205,7 +206,8 @@ public class LinhaDeBaseNaTelaTests
             (0, 1, "Comparando com a LB0.", "Desfazer Usar a linha de base LB0"));
 
         tela.UsarNenhumaCommand.Execute(null);
-        (_vm.LinhaDeBaseEmUso, _b.DesvioDoTermino, tela.UsarNenhumaCommand.CanExecute(null)).Should().Be((null, null, false));
+        _vm.LinhaDeBaseEmUso.Should().BeNull();
+        (_b.DesvioDoTermino, tela.UsarNenhumaCommand.CanExecute(null)).Should().Be((null, false));
 
         _ambiente.Dialogos.Confirmar = false;
         await tela.RemoverCommand.ExecuteAsync(tela.Linhas[1]);

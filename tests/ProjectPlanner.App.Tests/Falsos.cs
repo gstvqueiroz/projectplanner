@@ -291,6 +291,33 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    // ---- Bloco 35 ----
+
+    public List<FisicoFinanceiroViewModel> FisicosFinanceiros { get; } = [];
+
+    public Func<FisicoFinanceiroViewModel, Task>? AoMostrarFisicoFinanceiro { get; set; }
+
+    /// <summary>O caminho que o "salvar como" devolve (sem extensão: ela vem do pedido); nulo cancela.</summary>
+    public string? ArquivoExportado { get; set; }
+
+    public List<(string Titulo, string Nome, string Extensao)> Exportacoes { get; } = [];
+
+    public string? PlanilhaEscolhida { get; set; }
+
+    public Task MostrarFisicoFinanceiroAsync(FisicoFinanceiroViewModel fisicoFinanceiro)
+    {
+        FisicosFinanceiros.Add(fisicoFinanceiro);
+        return AoMostrarFisicoFinanceiro?.Invoke(fisicoFinanceiro) ?? Task.CompletedTask;
+    }
+
+    public Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao)
+    {
+        Exportacoes.Add((titulo, nomeSugerido, extensao));
+        return Task.FromResult(ArquivoExportado is null ? null : Path.ChangeExtension(ArquivoExportado, extensao));
+    }
+
+    public Task<string?> EscolherPlanilhaAsync() => Task.FromResult(PlanilhaEscolhida);
+
     public Task MostrarConfiguracaoAssistenteAsync(ConfiguracaoAssistenteViewModel configuracao)
     {
         ConfiguracoesDoAssistente.Add(configuracao);

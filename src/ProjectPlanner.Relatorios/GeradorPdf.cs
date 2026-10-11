@@ -472,36 +472,36 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
         var y = centralizar ? caixa.MidY - a / 2 : caixa.Top;
         return new SKRect(x, y, x + l, y + a);
     }
+}
 
-    // As fontes do sistema (Helvetica no Mac, Arial no Windows), com os acentos do português.
-    private sealed class Fontes : IDisposable
+// As fontes do sistema (Helvetica no Mac, Arial no Windows), com os acentos do português.
+internal sealed class Fontes : IDisposable
+{
+    private readonly SKTypeface _normal = Familia(SKFontStyle.Normal);
+    private readonly SKTypeface _negrito = Familia(SKFontStyle.Bold);
+    private readonly Dictionary<(bool, float), SKFont> _fontes = [];
+
+    private static SKTypeface Familia(SKFontStyle estilo)
     {
-        private readonly SKTypeface _normal = Familia(SKFontStyle.Normal);
-        private readonly SKTypeface _negrito = Familia(SKFontStyle.Bold);
-        private readonly Dictionary<(bool, float), SKFont> _fontes = [];
+        foreach (var nome in new[] { "Helvetica Neue", "Helvetica", "Arial", "Segoe UI" })
+            if (SKTypeface.FromFamilyName(nome, estilo) is { } achada && string.Equals(achada.FamilyName, nome, StringComparison.OrdinalIgnoreCase))
+                return achada;
+        return SKTypeface.FromFamilyName(null, estilo) ?? SKTypeface.Default;
+    }
 
-        private static SKTypeface Familia(SKFontStyle estilo)
-        {
-            foreach (var nome in new[] { "Helvetica Neue", "Helvetica", "Arial", "Segoe UI" })
-                if (SKTypeface.FromFamilyName(nome, estilo) is { } achada && string.Equals(achada.FamilyName, nome, StringComparison.OrdinalIgnoreCase))
-                    return achada;
-            return SKTypeface.FromFamilyName(null, estilo) ?? SKTypeface.Default;
-        }
+    public SKFont Normal(float tamanho) => Fonte(false, tamanho);
+    public SKFont Negrito(float tamanho) => Fonte(true, tamanho);
 
-        public SKFont Normal(float tamanho) => Fonte(false, tamanho);
-        public SKFont Negrito(float tamanho) => Fonte(true, tamanho);
+    private SKFont Fonte(bool negrito, float tamanho)
+    {
+        if (!_fontes.TryGetValue((negrito, tamanho), out var fonte))
+            _fontes[(negrito, tamanho)] = fonte = new SKFont(negrito ? _negrito : _normal, tamanho) { Subpixel = true };
+        return fonte;
+    }
 
-        private SKFont Fonte(bool negrito, float tamanho)
-        {
-            if (!_fontes.TryGetValue((negrito, tamanho), out var fonte))
-                _fontes[(negrito, tamanho)] = fonte = new SKFont(negrito ? _negrito : _normal, tamanho) { Subpixel = true };
-            return fonte;
-        }
-
-        public void Dispose()
-        {
-            foreach (var fonte in _fontes.Values)
-                fonte.Dispose();
-        }
+    public void Dispose()
+    {
+        foreach (var fonte in _fontes.Values)
+            fonte.Dispose();
     }
 }

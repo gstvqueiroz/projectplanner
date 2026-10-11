@@ -14,7 +14,7 @@ internal static class FormatoDasLinhasDeBase
     public static string Serializar(Cronograma cronograma) => JsonSerializer.Serialize(new Dados(
         cronograma.LinhaDeBaseEmUso?.Numero,
         [.. cronograma.LinhasDeBase.Select(l => new Linha(l.Numero, l.Nome, l.SalvaEm,
-            [.. l.Tarefas.Select(t => new TarefaDaLinha(t.Key, t.Value.Inicio, t.Value.Termino, t.Value.Duracao, t.Value.Valor))]))]), Opcoes);
+            [.. l.Tarefas.Select(t => new TarefaDaLinha(t.Key, t.Value.Inicio, t.Value.Termino, t.Value.Duracao, t.Value.Valor, t.Value.EhResumo))]))]), Opcoes);
 
     /// <exception cref="InvalidDataException">JSON com defeito ou valores que o domínio recusa.</exception>
     public static void Ler(string json, Cronograma cronograma)
@@ -24,7 +24,7 @@ internal static class FormatoDasLinhasDeBase
             var dados = JsonSerializer.Deserialize<Dados>(json, Opcoes) ?? throw new InvalidDataException("As linhas de base estão vazias.");
             foreach (var linha in dados.Linhas ?? [])
                 cronograma.AdicionarLinhaDeBase(new LinhaDeBase(linha.Numero, linha.Nome, linha.SalvaEm,
-                    (linha.Tarefas ?? []).ToDictionary(t => t.Id, t => new TarefaNaLinhaDeBase(t.Inicio, t.Termino, t.Duracao, t.Valor))),
+                    (linha.Tarefas ?? []).ToDictionary(t => t.Id, t => new TarefaNaLinhaDeBase(t.Inicio, t.Termino, t.Duracao, t.Valor, t.EhResumo))),
                     emUso: linha.Numero == dados.EmUso);
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or DomainValidationException or ArgumentException)
@@ -37,5 +37,6 @@ internal static class FormatoDasLinhasDeBase
 
     private sealed record Linha(int Numero, string? Nome, DateTime SalvaEm, List<TarefaDaLinha>? Tarefas);
 
-    private sealed record TarefaDaLinha(Guid Id, DateTime Inicio, DateTime Termino, int Duracao, decimal? Valor);
+    // Bloco 35: EhResumo (opcional; ausente nas linhas de base salvas na 0.31).
+    private sealed record TarefaDaLinha(Guid Id, DateTime Inicio, DateTime Termino, int Duracao, decimal? Valor, bool? EhResumo = null);
 }

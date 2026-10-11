@@ -204,6 +204,11 @@
                               ToolTip.Tip="Guardar o cronograma de agora (datas, durações e valores) para comparar o previsto com o atual" />
                     <MenuItem Header="Linhas de base…" Command="{Binding GerenciarLinhasDeBaseCommand}"
                               ToolTip.Tip="Escolher com qual linha de base comparar e remover as antigas" />
+                    <Separator />
+                    <MenuItem Header="Cronograma físico-financeiro…" Command="{Binding FisicoFinanceiroCommand}"
+                              ToolTip.Tip="O valor e o % de cada etapa por período (semanal, quinzenal, mensal ou datas de corte), e a Curva S" />
+                    <MenuItem Header="Importar valores…" Command="{Binding ImportarValoresCommand}"
+                              ToolTip.Tip="Os valores das tarefas de uma planilha (.xlsx ou .csv) com a EDT e o valor de cada uma" />
                 </MenuItem>
                 <MenuItem Header="Ajuda">
                     <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"

@@ -35,8 +35,8 @@ public class LinhaDeBaseTests
         var lb0 = c.SalvarLinhaDeBase("  Contrato assinado ", Agora);
 
         (lb0.Numero, lb0.Nome, lb0.SalvaEm, lb0.Termino, c.LinhaDeBaseEmUso).Should().Be((0, "Contrato assinado", Agora, D(2), lb0));
-        lb0.Tarefas[a.Id].Should().Be(new TarefaNaLinhaDeBase(Seg, new DateTime(2026, 9, 30), 3, 3000));
-        lb0.Tarefas[b.Id].Should().Be(new TarefaNaLinhaDeBase(D(1), D(2), 2, 2000));
+        lb0.Tarefas[a.Id].Should().Be(new TarefaNaLinhaDeBase(Seg, new DateTime(2026, 9, 30), 3, 3000, EhResumo: false));
+        lb0.Tarefas[b.Id].Should().Be(new TarefaNaLinhaDeBase(D(1), D(2), 2, 2000, EhResumo: false));
         lb0.Descricao.Should().Be("LB0 · Contrato assinado · salva em 28/09/2026 10:00");
         c.SalvarLinhaDeBase(null, Agora).Descricao.Should().Be("LB1 · salva em 28/09/2026 10:00");
         (c.LinhasDeBase.Count, c.LinhaDeBaseEmUso!.Numero).Should().Be((2, 1));

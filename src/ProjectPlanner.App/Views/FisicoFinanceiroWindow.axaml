@@ -1,0 +1,130 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        x:Class="ProjectPlanner.App.Views.FisicoFinanceiroWindow"
+        x:DataType="vm:FisicoFinanceiroViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="720" MinWidth="760" MinHeight="460"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 35: a tabela etapa × período e a Curva S, com as exportações. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.cabecalho">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Border.celula">
+            <Setter Property="Width" Value="96" />
+            <Setter Property="Padding" Value="4,3" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <!-- Escolhas -->
+        <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="6" Margin="0,0,0,8">
+            <TextBlock Text="Períodos" VerticalAlignment="Center" />
+            <ComboBox x:Name="Periodicidade" ItemsSource="{Binding Periodicidades}" SelectedItem="{Binding PeriodicidadeEscolhida}" MinWidth="140" />
+            <TextBox x:Name="Cortes" Text="{Binding TextoDosCortes}" IsVisible="{Binding MostraCortes}" Width="300"
+                     PlaceholderText="Datas de corte: 31/10/2026, 30/11/2026…" />
+            <TextBlock Text="Base" VerticalAlignment="Center" Margin="8,0,0,0" />
+            <ComboBox x:Name="Base" ItemsSource="{Binding Bases}" SelectedItem="{Binding BaseEscolhida}" MinWidth="200" />
+            <TextBlock Text="Linhas" VerticalAlignment="Center" Margin="8,0,0,0" />
+            <ComboBox x:Name="LinhasDaTabela" ItemsSource="{Binding OpcoesDeLinhas}" SelectedItem="{Binding LinhasEscolhidas}" MinWidth="170" />
+        </WrapPanel>
+
+        <!-- Avisos, resumo e botões -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
+            <Border Background="{DynamicResource FundoDeAviso}" CornerRadius="4" Padding="10,8" IsVisible="{Binding SemValores}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Button Content="Mostrar a coluna Valor" Command="{Binding MostrarColunaValorCommand}" />
+                        <Button Content="Importar valores…" Command="{Binding ImportarValoresCommand}" />
+                    </StackPanel>
+                    <TextBlock x:Name="Aviso" Text="{Binding Aviso}" TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
+                </DockPanel>
+            </Border>
+            <TextBlock Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap"
+                       IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Importar valores…" Command="{Binding ImportarValoresCommand}" IsVisible="{Binding !SemValores}" />
+                    <Button x:Name="ExportarCsv" Content="Exportar CSV…" Command="{Binding ExportarCsvCommand}" />
+                    <Button x:Name="ExportarPdf" Classes="accent" Content="Exportar PDF…" Command="{Binding ExportarPdfCommand}" />
+                    <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="Resumo" Text="{Binding Resumo}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" FontSize="12" TextWrapping="Wrap"
+                               IsVisible="{Binding Mensagem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+            </DockPanel>
+        </StackPanel>
+
+        <TabControl x:Name="Abas">
+            <TabItem Header="Tabela">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Background="{DynamicResource FundoDosFiltros}">
+                            <TextBlock Classes="cabecalho" Text="Etapa" Width="280" Margin="6,6" />
+                            <TextBlock Classes="cabecalho" Text="{Binding RotuloDoValor}" Width="110" TextAlignment="Right" Margin="0,6,10,6" />
+                            <ItemsControl x:Name="Periodos" ItemsSource="{Binding RotulosDosPeriodos}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <TextBlock Classes="cabecalho" Text="{Binding}" Width="96" TextAlignment="Right" Padding="4,6" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <ItemsControl x:Name="Linhas" ItemsSource="{Binding Linhas}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LinhaFisicoFinanceiraNaTela">
+                                    <StackPanel Orientation="Horizontal" Classes.total="{Binding Total}">
+                                        <StackPanel.Styles>
+                                            <Style Selector="StackPanel.total">
+                                                <Setter Property="Background" Value="{DynamicResource FundoDosFiltros}" />
+                                            </Style>
+                                            <Style Selector="StackPanel.total TextBlock">
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </Style>
+                                        </StackPanel.Styles>
+                                        <TextBlock Text="{Binding Nome}" Width="280" Margin="6,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                   ToolTip.Tip="{Binding Nome}" />
+                                        <TextBlock Text="{Binding Valor}" Width="110" TextAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                        <ItemsControl ItemsSource="{Binding Celulas}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:CelulaFisicoFinanceira">
+                                                    <Border Classes="celula">
+                                                        <StackPanel HorizontalAlignment="Right">
+                                                            <TextBlock Text="{Binding Valor}" FontSize="12" HorizontalAlignment="Right" />
+                                                            <TextBlock Text="{Binding Percentual}" FontSize="11" Opacity="0.65" HorizontalAlignment="Right" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Curva S">
+                <v:CurvaSView x:Name="CurvaS" Curva="{Binding Curva}" Margin="0,12,0,0" />
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

@@ -69,6 +69,15 @@ public interface IDialogosService
 
     /// <summary>Mostra Projeto > Linhas de base… (Bloco 31) e espera ser fechada.</summary>
     Task MostrarLinhasDeBaseAsync(ViewModels.LinhasDeBaseViewModel linhas);
+
+    /// <summary>Mostra Projeto > Cronograma físico-financeiro… (Bloco 35) e espera ser fechada.</summary>
+    Task MostrarFisicoFinanceiroAsync(ViewModels.FisicoFinanceiroViewModel fisicoFinanceiro);
+
+    /// <summary>Bloco 35: onde salvar um arquivo exportado ("pdf" ou "csv"); nulo se cancelar.</summary>
+    Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao);
+
+    /// <summary>Bloco 35: uma planilha (.xlsx ou .csv) para importar valores; nula se cancelar.</summary>
+    Task<string?> EscolherPlanilhaAsync();
 }
 
 public enum RespostaAlteracoesPendentes

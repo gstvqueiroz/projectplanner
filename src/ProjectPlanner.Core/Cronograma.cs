@@ -437,7 +437,7 @@ public class Cronograma
                 $"O projeto já tem {LinhasDeBaseMaximas} linhas de base; remova uma antiga antes de salvar outra.");
         var numero = _linhasDeBase.Count == 0 ? 0 : _linhasDeBase.Max(l => l.Numero) + 1;
         var linha = new Planejamento.LinhaDeBase(numero, nome, agora, _tarefas.ToDictionary(t => t.Id,
-            t => new Planejamento.TarefaNaLinhaDeBase(t.InicioMaisCedo!.Value, t.TerminoMaisCedo!.Value, t.Duracao, t.Valor)));
+            t => new Planejamento.TarefaNaLinhaDeBase(t.InicioMaisCedo!.Value, t.TerminoMaisCedo!.Value, t.Duracao, t.Valor, t.EhResumo)));
         _linhasDeBase.Add(linha);
         LinhaDeBaseEmUso = linha;
         return linha;

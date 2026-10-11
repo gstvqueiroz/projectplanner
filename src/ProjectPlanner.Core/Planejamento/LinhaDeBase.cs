@@ -3,7 +3,11 @@ using System.Globalization;
 namespace ProjectPlanner.Core.Planejamento;
 
 /// <summary>Uma tarefa como estava quando a linha de base foi salva: as datas calculadas, a duração e o valor.</summary>
-public sealed record TarefaNaLinhaDeBase(DateTime Inicio, DateTime Termino, int Duracao, decimal? Valor);
+/// <param name="EhResumo">
+/// Bloco 35: se era um resumo (o valor dele é a soma, e o físico-financeiro conta só as outras). Nulo numa linha de base
+/// salva na 0.31, que não guardava: vale a estrutura atual.
+/// </param>
+public sealed record TarefaNaLinhaDeBase(DateTime Inicio, DateTime Termino, int Duracao, decimal? Valor, bool? EhResumo = null);
 
 /// <summary>
 /// Bloco 31: o retrato do cronograma num momento (as datas calculadas, a duração e o valor de cada tarefa), para comparar

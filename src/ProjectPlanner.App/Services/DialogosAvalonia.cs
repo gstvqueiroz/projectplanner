@@ -179,4 +179,36 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarLinhasDeBaseAsync(ViewModels.LinhasDeBaseViewModel linhas) =>
         new LinhasDeBaseWindow(linhas).ShowDialog(JanelaPrincipal);
+
+    // ---- Bloco 35 ----
+
+    public Task MostrarFisicoFinanceiroAsync(ViewModels.FisicoFinanceiroViewModel fisicoFinanceiro) =>
+        new FisicoFinanceiroWindow(fisicoFinanceiro).ShowDialog(JanelaPrincipal);
+
+    public async Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao)
+    {
+        var tipo = extensao == "pdf"
+            ? new FilePickerFileType("Documento PDF") { Patterns = ["*.pdf"] }
+            : new FilePickerFileType("Planilha CSV (Excel)") { Patterns = ["*.csv"] };
+        var arquivo = await JanelaAtiva.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = titulo,
+            SuggestedFileName = $"{nomeSugerido}.{extensao}",
+            DefaultExtension = extensao,
+            FileTypeChoices = [tipo],
+            ShowOverwritePrompt = true,
+        });
+        return arquivo?.TryGetLocalPath();
+    }
+
+    public async Task<string?> EscolherPlanilhaAsync()
+    {
+        var arquivos = await JanelaAtiva.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Importar valores de uma planilha",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Planilha do Excel ou CSV") { Patterns = ["*.xlsx", "*.csv", "*.txt"] }],
+        });
+        return arquivos.Select(a => a.TryGetLocalPath()).OfType<string>().FirstOrDefault();
+    }
 }

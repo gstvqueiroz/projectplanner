@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.32.0
+
+Bloco 35 (a versão segue a ordem de entrega: os Blocos 32 a 34, de recursos, vêm depois das medições).
+
+- Projeto > Cronograma físico-financeiro…: o valor e o % de cada etapa (ou de cada tarefa) por período — semanal,
+  quinzenal, mensal ou datas de corte escolhidas — com o total do período e o acumulado, em R$ e em %. O valor de cada
+  tarefa é distribuído igualmente pelos dias úteis dela (o de um marco, no dia dele).
+- Base: o cronograma atual ou a linha de base em uso. Curva S: prevista (linha de base) × atual, com o ponto do
+  realizado hoje (% concluído das tarefas, pesado pelo valor).
+- Sem valores, o físico é pesado pela duração, e a tela mostra como preencher: a coluna Valor (R$) da grid ou
+  Projeto > Importar valores… (planilha .xlsx ou .csv com a EDT, ou Item, e o valor, ou Total).
+- Exporta em PDF (A4 paisagem, a tabela dividida em páginas e a Curva S) e em CSV para o Excel.
+
 ## 0.31.0
 
 Bloco 31: linha de base e datas.
@@ -185,7 +198,7 @@ começar):
 - Bloco 30 (feito, na 0.29): desfazer e refazer em vários níveis (também o do assistente e as fotos), copiar, colar e
   duplicar.
 - Bloco 31 (feito, na 0.31): linha de base, prazos, restrição de início e as colunas Início e Término calculadas.
-- Bloco 35 (sai na 0.32): cronograma físico-financeiro e Curva S. Depois, as medições (36) e os indicadores (37), e então
+- Bloco 35 (feito, na 0.32): cronograma físico-financeiro, Curva S e importação de valores. Depois, as medições (36) e os indicadores (37), e então
   recursos (32), composições e orçamento (33) e uso de recursos (34).
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

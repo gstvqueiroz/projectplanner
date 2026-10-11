@@ -19,6 +19,7 @@ namespace ProjectPlanner.Core;
 /// <item>Percentual concluído: média das tarefas-folha abaixo do resumo (em qualquer nível), ponderada
 /// pela duração — dias concluídos ÷ dias totais, como no MS Project. Marcos pesam 0; se só houver
 /// marcos, vale a média simples. Arredondado para o inteiro mais próximo.</item>
+/// <item>Valor (Bloco 35): a soma dos valores das subtarefas; nulo se nenhuma tem valor.</item>
 /// </list>
 /// <para>
 /// Os instantes são contados em meios-dias úteis a partir do início do projeto (o começo do dia d é
@@ -52,7 +53,7 @@ internal static class CalculadoraResumos
 
     private static void Aplicar(Tarefa resumo, Agregado agregado, DateTime inicioDoProjeto)
     {
-        DateTime Data(long instante) => DiasUteis.Adicionar(inicioDoProjeto, (int)(instante / 2))!.Value;
+        DateTime Data(long instante) => DiasUteis.Adicionar(inicioDoProjeto, (int)(instante >> 1))!.Value;
 
         var inicio = Data(agregado.InicioCedo);
         var termino = Data(agregado.TerminoCedo);
@@ -62,12 +63,13 @@ internal static class CalculadoraResumos
             : Arredondar((double)agregado.SomaDosPercentuais / agregado.Folhas);
 
         resumo.DefinirValoresDoResumo(inicio, termino, duracao, percentual);
+        resumo.DefinirValorDoResumo(agregado.TemValor ? agregado.Valor : null);
         resumo.DefinirDatasCalculadas(inicio, termino, Data(agregado.InicioTarde), Data(agregado.TerminoTarde),
             agregado.Folga);
     }
 
     // A fronteira entre dias úteis em que o instante está: o começo do dia d e o fim do dia d − 1 são a fronteira d.
-    private static long Fronteira(long instante) => (instante + 1) / 2;
+    private static long Fronteira(long instante) => (instante + 1) >> 1;
 
     private static int Arredondar(double valor) => (int)Math.Round(valor, MidpointRounding.AwayFromZero);
 
@@ -80,26 +82,29 @@ internal static class CalculadoraResumos
         long DiasDeTrabalho,
         long DiasConcluidos,
         long SomaDosPercentuais,
-        int Folhas)
+        int Folhas,
+        decimal Valor,
+        bool TemValor)
     {
         public static Agregado DaFolha(Tarefa tarefa, DateTime inicioDoProjeto)
         {
             if (tarefa is not { InicioMaisCedo: { } inicioCedo, InicioMaisTarde: { } inicioTarde, Folga: { } folga })
                 throw new InvalidOperationException("Calcule as tarefas antes dos resumos.");
 
-            long Dia(DateTime data) => DiasUteis.ContarInclusivo(inicioDoProjeto, data) - 1;
+            // Com prazo vencido, as datas tarde podem ficar antes do início do projeto (dia negativo).
+            long Dia(DateTime data) => DiasUteis.Indice(inicioDoProjeto, data);
             var percentual = tarefa.PercentualConcluido;
             if (tarefa.Duracao == 0)
             {
                 var cedo = 2 * Dia(inicioCedo) + (tarefa.MarcoNoFimDoDia ? 1 : 0);
                 var tarde = 2 * Dia(inicioTarde) + (tarefa.MarcoTardeNoFimDoDia ? 1 : 0);
-                return new Agregado(cedo, cedo, tarde, tarde, folga, 0, 0, percentual, 1);
+                return new Agregado(cedo, cedo, tarde, tarde, folga, 0, 0, percentual, 1, tarefa.Valor ?? 0, tarefa.Valor is not null);
             }
 
             return new Agregado(
                 2 * Dia(inicioCedo), 2 * Dia(tarefa.TerminoMaisCedo!.Value) + 1,
                 2 * Dia(inicioTarde), 2 * Dia(tarefa.TerminoMaisTarde!.Value) + 1,
-                folga, tarefa.Duracao, (long)tarefa.Duracao * percentual, percentual, 1);
+                folga, tarefa.Duracao, (long)tarefa.Duracao * percentual, percentual, 1, tarefa.Valor ?? 0, tarefa.Valor is not null);
         }
 
         public static Agregado Juntar(Agregado a, Agregado b) => new(
@@ -111,6 +116,8 @@ internal static class CalculadoraResumos
             a.DiasDeTrabalho + b.DiasDeTrabalho,
             a.DiasConcluidos + b.DiasConcluidos,
             a.SomaDosPercentuais + b.SomaDosPercentuais,
-            a.Folhas + b.Folhas);
+            a.Folhas + b.Folhas,
+            a.Valor + b.Valor,
+            a.TemValor || b.TemValor);
     }
 }

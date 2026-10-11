@@ -63,7 +63,11 @@ public static class CalculadoraLayoutGantt
             throw new InvalidOperationException("Calcule o cronograma antes de montar o Gantt.");
 
         var inicioEixo = SomarDias(cronograma.DataInicio, -DiasAntesDoInicio);
-        var fimEixo = DomingoEmOuDepois(SomarDias(resultado.DataTermino, DiasDepoisDoFim));
+        // Bloco 31: o eixo vai até o fim da linha de base em uso, se ela termina depois do cronograma atual.
+        var fimDasBarras = cronograma.LinhaDeBaseEmUso?.Termino is { } fimDaLinha && fimDaLinha > resultado.DataTermino
+            ? fimDaLinha
+            : resultado.DataTermino;
+        var fimEixo = DomingoEmOuDepois(SomarDias(fimDasBarras, DiasDepoisDoFim));
         var fimVisivel = SomarDias(inicioEixo, DiasParaPreencher(opcoes.LarguraVisivel, opcoes.PixelsPorDia) - 1);
         if (fimVisivel > fimEixo)
             fimEixo = fimVisivel;
@@ -71,8 +75,10 @@ public static class CalculadoraLayoutGantt
 
         var extensao = Extensoes(cronograma, eixo);
         var ocultas = opcoes.TarefasOcultas;
+        var linhaDeBase = cronograma.LinhaDeBaseEmUso;
         var barras = cronograma.Tarefas.Where(t => !ocultas.Contains(t.Id))
-            .Select((tarefa, linha) => Barra(tarefa, linha, extensao[tarefa.Id], eixo, opcoes)).ToList();
+            .Select((tarefa, linha) => ComLinhaDeBaseEPrazo(Barra(tarefa, linha, extensao[tarefa.Id], eixo, opcoes), tarefa, linhaDeBase, eixo))
+            .ToList();
         var barraPorTarefa = barras.ToDictionary(b => b.TarefaId);
         var vinculosCriticos = resultado.CaminhosCriticos
             .SelectMany(caminho => caminho.Zip(caminho.Skip(1), (a, b) => (a.Id, b.Id)))
@@ -170,6 +176,24 @@ public static class CalculadoraLayoutGantt
                     tarefa.Fotos.Count);
             }
         }
+    }
+
+    // Bloco 31: onde fica a barra da linha de base em uso (do começo do início ao fim do término previsto; num marco,
+    // um ponto no começo do dia) e a marca do prazo (no fim do dia do prazo).
+    private static BarraGantt ComLinhaDeBaseEPrazo(BarraGantt barra, Tarefa tarefa, Planejamento.LinhaDeBase? linhaDeBase, Eixo eixo)
+    {
+        if (linhaDeBase?.Tarefas.GetValueOrDefault(tarefa.Id) is { } prevista)
+        {
+            var x = eixo.InicioDoDia(prevista.Inicio.Date);
+            barra = barra with
+            {
+                XLinhaDeBase = x,
+                LarguraLinhaDeBase = prevista.Duracao == 0 && !tarefa.EhResumo ? 0 : eixo.FimDoDia(prevista.Termino.Date) - x,
+            };
+        }
+        return tarefa.Prazo is { } prazo
+            ? barra with { XDoPrazo = eixo.FimDoDia(prazo), ForaDoPrazo = tarefa.ForaDoPrazo }
+            : barra;
     }
 
     private static SetaGantt Seta(Predecessora vinculo, BarraGantt origem, BarraGantt destino, bool critica, OpcoesGantt opcoes)

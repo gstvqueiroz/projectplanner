@@ -66,6 +66,9 @@ public interface IDialogosService
 
     /// <summary>Abre o endereço no navegador (o ponto do GPS no mapa, Bloco 28).</summary>
     Task AbrirEnderecoAsync(Uri endereco);
+
+    /// <summary>Mostra Projeto > Linhas de base… (Bloco 31) e espera ser fechada.</summary>
+    Task MostrarLinhasDeBaseAsync(ViewModels.LinhasDeBaseViewModel linhas);
 }
 
 public enum RespostaAlteracoesPendentes

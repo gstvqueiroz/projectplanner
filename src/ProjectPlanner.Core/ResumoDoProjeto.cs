@@ -28,6 +28,15 @@ public sealed record ResumoDoProjeto(
     IReadOnlyList<TarefaNoResumo> ListaDeAtrasadas,
     IReadOnlyList<TarefaNoResumo> ProximosMarcos)
 {
+    /// <summary>Bloco 31: as tarefas (e resumos) que terminam depois do prazo, na ordem da EDT; a data é o prazo.</summary>
+    public IReadOnlyList<TarefaNoResumo> ForaDoPrazo { get; init; } = [];
+
+    /// <summary>Bloco 31: o término do projeto na linha de base em uso; nulo sem linha de base.</summary>
+    public DateTime? TerminoDaLinhaDeBase { get; init; }
+
+    /// <summary>Bloco 31: dias úteis do término previsto (linha de base) ao término atual; positivo: atrasou.</summary>
+    public int? DesvioDoTermino { get; init; }
+
     /// <summary>Bloco 28 (FT5): as tarefas em andamento sem foto recente, na ordem da EDT.</summary>
     public IReadOnlyList<TarefaSemFotoRecente> SemFotoRecente { get; init; } = [];
 
@@ -81,6 +90,13 @@ public sealed record ResumoDoProjeto(
             proximos)
         {
             SemFotoRecente = AlertaDeFotos.Calcular(cronograma, hoje),
+            ForaDoPrazo = [.. cronograma.Tarefas.Where(t => t.ForaDoPrazo)
+                .Select(t => new TarefaNoResumo(edt[t.Id], t.Nome, t.Prazo!.Value, t.PercentualConcluido,
+                    andamento.TryGetValue(t.Id, out var a) ? a.PercentualPrevisto : 0))],
+            TerminoDaLinhaDeBase = cronograma.LinhaDeBaseEmUso?.Termino,
+            DesvioDoTermino = cronograma.LinhaDeBaseEmUso?.Termino is { } previsto && termino is { } atual
+                ? (int)Core.DiasUteis.Indice(Core.DiasUteis.ProximoOuMesmo(previsto.Date), Core.DiasUteis.ProximoOuMesmo(atual.Date))
+                : null,
         };
     }
 }

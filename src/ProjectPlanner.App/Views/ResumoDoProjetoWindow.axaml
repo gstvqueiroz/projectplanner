@@ -18,6 +18,15 @@
                     <TextBlock Text="{Binding Resumo.Nome}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
                     <TextBlock x:Name="Periodo" Text="{Binding Periodo}" Opacity="0.75" />
                     <TextBlock Text="{Binding Situacao}" Opacity="0.6" FontSize="12" />
+                    <!-- Bloco 31 -->
+                    <TextBlock x:Name="LinhaDeBase" Text="{Binding LinhaDeBase}" FontSize="12" Classes.atrasou="{Binding AtrasouNaLinhaDeBase}"
+                               IsVisible="{Binding LinhaDeBase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock.Styles>
+                            <Style Selector="TextBlock.atrasou">
+                                <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+                            </Style>
+                        </TextBlock.Styles>
+                    </TextBlock>
                 </StackPanel>
 
                 <StackPanel Spacing="4">
@@ -63,6 +72,18 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="x:String">
                                 <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Bloco 31 -->
+                <StackPanel Spacing="4" IsVisible="{Binding TemForaDoPrazo}">
+                    <TextBlock Text="Fora do prazo" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="ListaForaDoPrazo" ItemsSource="{Binding ForaDoPrazo}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1" Foreground="{DynamicResource TextoDeErro}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

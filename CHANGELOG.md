@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.31.0
+
+Bloco 31: linha de base e datas.
+
+- As colunas Início e Término mostram as datas calculadas (as mesmas do Gantt). Digitar um Início cria a restrição
+  "não iniciar antes de" (📌 na célula): a tarefa começa nessa data ou depois, se as predecessoras exigirem (aí um aviso
+  explica). Digitar um Término muda a duração, mantendo o início; num marco, move o marco.
+- Prazo ("não terminar depois de") por tarefa ou resumo: não move nada; se a tarefa passa dele, a folga fica negativa
+  (também nas tarefas que a empurram), o Gantt mostra a seta do prazo em vermelho, e ela aparece no Resumo do projeto.
+- Projeto > Salvar linha de base…: guarda o cronograma de agora (datas, durações e valores) como LB0, LB1…, com nome.
+  Projeto > Linhas de base…: qual comparar, ou nenhuma, e remover. No Gantt, a barra cinza da linha de base fica sob a
+  barra atual (Exibir > Linha de base); na grid, as colunas de linha de base e de desvio em dias úteis; no Resumo do
+  projeto, o término previsto e o atraso.
+- Colunas novas, ocultas por padrão (Exibir > Colunas): Não iniciar antes de, Prazo, Início e Término da linha de base,
+  Desvio do início e do término, e Valor (R$), que o cronograma físico-financeiro vai usar.
+- Arquivos de versões anteriores abrem com as mesmas datas (sem restrições nem prazos).
+
 ## 0.30.0
 
 Bloco 29 (depois do 30, que saiu na 0.29).
@@ -167,6 +184,8 @@ começar):
 - Bloco 29 (feito, na 0.30): IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
 - Bloco 30 (feito, na 0.29): desfazer e refazer em vários níveis (também o do assistente e as fotos), copiar, colar e
   duplicar.
-- Depois: localizar e filtrar; linha de base e prazos; datas de tarefa e restrições (corrige as colunas Início e Término,
-  que hoje mostram a data digitada mas o cálculo usa só o início do projeto e as predecessoras); feriados; entregas
+- Bloco 31 (feito, na 0.31): linha de base, prazos, restrição de início e as colunas Início e Término calculadas.
+- Bloco 35 (sai na 0.32): cronograma físico-financeiro e Curva S. Depois, as medições (36) e os indicadores (37), e então
+  recursos (32), composições e orçamento (33) e uso de recursos (34).
+- Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

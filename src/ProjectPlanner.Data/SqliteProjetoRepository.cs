@@ -231,6 +231,9 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Notas = t.Notas,
             Tipo = t.Tipo,
             TarefaPaiId = t.TarefaPaiId,
+            NaoIniciarAntesDe = t.NaoIniciarAntesDe,
+            Prazo = t.Prazo,
+            Valor = t.EhResumo ? null : t.Valor,
         }));
 
         var fotos = cronograma.Tarefas.SelectMany(t => t.FotosNaOrdemDeCadastro).ToList();
@@ -272,6 +275,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Tipo = p.Tipo,
             Lag = p.Lag,
         }));
+
+        if (cronograma.LinhasDeBase.Count > 0)
+            contexto.LinhasDeBase.Add(new LinhasDeBaseRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDasLinhasDeBase.Versao,
+                Dados = FormatoDasLinhasDeBase.Serializar(cronograma),
+            });
 
         if (FormatoDoRelatorio.TemDados(cronograma))
             contexto.Relatorio.Add(new RelatorioRegistro
@@ -329,6 +340,13 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, duracao);
             tarefa.AtualizarPercentualConcluido(registro.PercentualConcluido);
             tarefa.AlterarNotas(registro.Notas);
+            // Bloco 31 e 35: a restrição e o valor de um resumo não existem (o arquivo não os grava); o prazo vale nele também.
+            if (registro.Tipo != TipoTarefa.Resumo)
+            {
+                tarefa.DefinirRestricaoDeInicio(registro.NaoIniciarAntesDe);
+                tarefa.DefinirValor(registro.Valor);
+            }
+            tarefa.DefinirPrazo(registro.Prazo);
             cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);
         }
 
@@ -357,6 +375,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
         foreach (var registro in contexto.Predecessoras.AsNoTracking().OrderBy(p => p.Ordem))
             cronograma.AdicionarPredecessora(new Predecessora(
                 registro.TarefaOrigemId, registro.TarefaDestinoId, registro.Tipo, registro.Lag));
+
+        // Linhas de base (Bloco 31); um JSON que não dá para ler é recusado como os outros dados.
+        if (contexto.LinhasDeBase.AsNoTracking().FirstOrDefault() is { } linhas)
+        {
+            if (linhas.Versao != FormatoDasLinhasDeBase.Versao)
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem as linhas de base num formato desconhecido.");
+            FormatoDasLinhasDeBase.Ler(linhas.Dados, cronograma);
+        }
 
         // Dados da obra e histórico dos relatórios (Bloco 27); um JSON que não dá para ler é recusado como os outros dados.
         if (contexto.Relatorio.AsNoTracking().FirstOrDefault() is { } relatorio)

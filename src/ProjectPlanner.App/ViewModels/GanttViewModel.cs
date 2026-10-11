@@ -86,6 +86,13 @@ public sealed partial class GanttViewModel : ViewModelBase
     public partial bool MostrarFolga { get; set; }
 
     /// <summary>
+    /// Bloco 31: opção de exibição (só da sessão, ligada por padrão): a barra cinza da linha de base em uso, logo abaixo
+    /// da barra atual. Sem linha de base salva, não há o que mostrar.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool MostrarLinhaDeBase { get; set; } = true;
+
+    /// <summary>
     /// Opção de exibição (só da sessão, ligada por padrão; Bloco 25, C1): a linha tracejada no dia de <see cref="Hoje"/>.
     /// </summary>
     [ObservableProperty]

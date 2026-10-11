@@ -10,17 +10,19 @@ namespace ProjectPlanner.Core;
 /// O cálculo usa números de dia útil contados a partir de <see cref="Cronograma.DataInicio"/>
 /// (dia 0) e as datas inclusivas da <see cref="Tarefa"/>: uma tarefa de duração d que começa no dia
 /// s termina no dia s + d − 1. Cada vínculo aplica a regra do seu <see cref="TipoDependencia"/>,
-/// com o lag em dias úteis. As datas planejadas das tarefas não entram no cálculo.
+/// com o lag em dias úteis. As datas informadas das tarefas não entram no cálculo; desde o Bloco 31, entram a
+/// restrição "não iniciar antes de" (<see cref="Tarefa.NaoIniciarAntesDe"/>) e o prazo
+/// (<see cref="Tarefa.Prazo"/>, o da tarefa e o dos resumos em que ela está).
 /// </para>
 /// <list type="number">
 /// <item>Ordenação topológica. Entre tarefas liberadas ao mesmo tempo, vale a ordem do cronograma.</item>
-/// <item>Ida (forward pass): ES é o maior valor entre o dia 0 e o que cada predecessora exige, e
-/// EF = ES + duração − 1. Nenhuma tarefa começa antes do início do projeto, nem com lead.</item>
+/// <item>Ida (forward pass): ES é o maior valor entre o dia 0, o dia da restrição de início e o que cada
+/// predecessora exige, e EF = ES + duração − 1. Nenhuma tarefa começa antes do início do projeto, nem com lead.</item>
 /// <item>Fim do projeto: o maior EF entre todas as tarefas.</item>
-/// <item>Volta (backward pass): LF é o menor valor entre o fim do projeto e o que cada sucessora
-/// permite, e LS = LF − duração + 1.</item>
-/// <item>Folga = LS − ES, e a tarefa é crítica quando a folga é zero. Como não há outras restrições
-/// de data além do início do projeto, a folga nunca é negativa.</item>
+/// <item>Volta (backward pass): LF é o menor valor entre o fim do projeto, o dia do prazo (o mais cedo entre o da
+/// tarefa e o dos resumos acima dela) e o que cada sucessora permite, e LS = LF − duração + 1.</item>
+/// <item>Folga = LS − ES, e a tarefa é crítica quando a folga é zero ou negativa. A folga só fica negativa por causa
+/// de um prazo que não cabe: na própria tarefa e nas que a empurram.</item>
 /// </list>
 /// <para>
 /// Só as tarefas comuns e os marcos (as folhas da estrutura) entram no cálculo. Os resumos não têm
@@ -61,10 +63,13 @@ public static class CalculadoraCronograma
         var predecessorasDe = cronograma.Predecessoras.ToLookup(p => p.TarefaDestinoId);
         var sucessorasDe = cronograma.Predecessoras.ToLookup(p => p.TarefaOrigemId);
 
+        long DiaDaRestricao(Tarefa tarefa) => tarefa.NaoIniciarAntesDe is { } data
+            ? Math.Max(0, DiasUteis.Indice(cronograma.DataInicio, DiasUteis.ProximoOuMesmo(data.Date)))
+            : 0;
         var cedo = new Dictionary<Guid, Periodo>();
         foreach (var tarefa in ordem)
         {
-            var inicio = 0L;
+            var inicio = DiaDaRestricao(tarefa);
             foreach (var vinculo in predecessorasDe[tarefa.Id])
                 inicio = Math.Max(inicio, InicioMinimo(vinculo, cedo[vinculo.TarefaOrigemId], tarefa.Duracao));
             cedo[tarefa.Id] = Periodo.ComInicio(inicio, tarefa.Duracao);
@@ -73,30 +78,42 @@ public static class CalculadoraCronograma
         var porId = ordem.ToDictionary(t => t.Id);
         var marcoNoFimDoDia = new Dictionary<Guid, bool>();
         foreach (var marco in ordem.Where(t => t.Duracao == 0))
-            marcoNoFimDoDia[marco.Id] = FicaNoFimDoDia(marco, predecessorasDe[marco.Id], cedo, marcoNoFimDoDia, porId);
+            marcoNoFimDoDia[marco.Id] = DiaDaRestricao(marco) is var restricao && restricao > 0 && restricao == cedo[marco.Id].Inicio
+                ? false // a restrição põe o marco no começo do dia
+                : FicaNoFimDoDia(marco, predecessorasDe[marco.Id], cedo, marcoNoFimDoDia, porId);
 
         // Instantes em meios-dias: o começo do dia útil d é 2d, e o fim dele é 2d + 1.
         long InstanteDoTermino(Tarefa tarefa) => tarefa.Duracao > 0
             ? 2 * cedo[tarefa.Id].Termino + 1
             : Instante(cedo[tarefa.Id].Inicio, marcoNoFimDoDia[tarefa.Id]);
         var fimDoProjeto = ordem.Max(InstanteDoTermino);
-        var diaDoFim = fimDoProjeto / 2;
+        var diaDoFim = fimDoProjeto >> 1;
         if (diaDoFim > int.MaxValue || DiasUteis.Adicionar(cronograma.DataInicio, (int)diaDoFim) is null)
             throw new DomainValidationException(nameof(Tarefa.TerminoMaisCedo),
                 "O término calculado do projeto ultrapassa a maior data suportada (31/12/9999).");
 
         var ultimoDia = cedo.Values.Max(p => p.Termino);
+        var prazos = Prazos(cronograma);
         var tarde = new Dictionary<Guid, Periodo>();
         foreach (var tarefa in Enumerable.Reverse(ordem))
         {
             var termino = ultimoDia;
+            if (prazos.TryGetValue(tarefa.Id, out var prazo))
+            {
+                // O último dia útil até o prazo. Um marco no começo do dia ocupa a fronteira do dia: para a data dele
+                // não passar do prazo, a fronteira fica até o dia do prazo (o "término" do marco é a fronteira − 1).
+                var diaDoPrazo = DiasUteis.Indice(cronograma.DataInicio, DiasUteis.AnteriorOuMesmo(prazo));
+                termino = Math.Min(termino, tarefa.Duracao == 0 && !marcoNoFimDoDia[tarefa.Id] ? diaDoPrazo - 1 : diaDoPrazo);
+            }
             foreach (var vinculo in sucessorasDe[tarefa.Id])
                 termino = Math.Min(termino, TerminoMaximo(vinculo, tarde[vinculo.TarefaDestinoId], tarefa.Duracao));
             tarde[tarefa.Id] = Periodo.ComTermino(termino, tarefa.Duracao);
         }
 
-        // Todo dia mostrado fica entre 0 e o dia do fim do projeto, que já cabe numa data.
-        DateTime Data(long dia) => DiasUteis.Adicionar(cronograma.DataInicio, (int)dia)!.Value;
+        // Todo dia cedo fica entre 0 e o dia do fim do projeto, que já cabe numa data; um dia tarde pode ficar antes do
+        // início do projeto (prazo que não cabe), e um prazo absurdo (antes do ano 1) é recusado.
+        DateTime Data(long dia) => DiasUteis.Adicionar(cronograma.DataInicio, (int)Math.Max(dia, int.MinValue))
+            ?? throw new DomainValidationException(nameof(Tarefa.Prazo), "Um prazo está antes da menor data suportada.");
         foreach (var tarefa in ordem)
         {
             var (c, t) = (cedo[tarefa.Id], tarde[tarefa.Id]);
@@ -110,14 +127,32 @@ public static class CalculadoraCronograma
             var noFim = marcoNoFimDoDia[tarefa.Id];
             var instanteCedo = Instante(c.Inicio, noFim);
             var instanteTarde = Math.Min(Instante(t.Inicio, noFim), fimDoProjeto);
-            tarefa.DefinirDatasCalculadas(Data(instanteCedo / 2), Data(instanteCedo / 2),
-                Data(instanteTarde / 2), Data(instanteTarde / 2), folga, noFim, instanteTarde % 2 == 1);
+            // ">> 1" e "& 1": o dia e o lado do dia também num instante negativo (prazo antes do início do projeto).
+            tarefa.DefinirDatasCalculadas(Data(instanteCedo >> 1), Data(instanteCedo >> 1),
+                Data(instanteTarde >> 1), Data(instanteTarde >> 1), folga, noFim, (instanteTarde & 1) == 1);
         }
 
         CalculadoraResumos.Atualizar(cronograma);
 
         var criticas = ordem.Where(t => t.EhCritica).ToList();
         return new ResultadoCronograma(Data(diaDoFim), criticas, CaminhosCriticos(criticas, sucessorasDe, cedo));
+    }
+
+    // O prazo que vale para cada tarefa-folha: o mais cedo entre o dela e o dos resumos acima dela (Bloco 31).
+    private static Dictionary<Guid, DateTime> Prazos(Cronograma cronograma)
+    {
+        var porId = cronograma.Tarefas.ToDictionary(t => t.Id);
+        var prazos = new Dictionary<Guid, DateTime>();
+        foreach (var tarefa in cronograma.Tarefas.Where(t => !t.EhResumo))
+        {
+            DateTime? menor = tarefa.Prazo;
+            for (var pai = tarefa.TarefaPaiId; pai is { } id; pai = porId[id].TarefaPaiId)
+                if (porId[id].Prazo is { } doResumo && (menor is null || doResumo < menor))
+                    menor = doResumo;
+            if (menor is { } prazo)
+                prazos[tarefa.Id] = prazo;
+        }
+        return prazos;
     }
 
     // Instante de um marco na fronteira p (em meios-dias): o fim do dia p − 1 ou o começo do dia p.

@@ -101,13 +101,13 @@ public partial class MenuPrincipalTests
         var a = Abrir();
 
         a.Janela.MenuPrincipal.Items.OfType<MenuItem>().Select(m => m.Header)
-            .Should().Equal("Arquivo", "Editar", "Exibir", "Inserir", "Tarefa", "Ajuda");
+            .Should().Equal("Arquivo", "Editar", "Exibir", "Inserir", "Tarefa", "Projeto", "Ajuda");
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…",
             "Abrir a pasta de cópias de segurança");
         Titulos(a.Item("Editar")).Should().Equal("Desfazer", "Refazer", Linha, "Copiar tarefa", "Colar tarefa", "Duplicar tarefa");
-        Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha Hoje", Linha,
+        Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha de base", "Linha Hoje", Linha,
             "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
@@ -115,6 +115,7 @@ public partial class MenuPrincipalTests
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…");
+        Titulos(a.Item("Projeto")).Should().Equal("Salvar linha de base…", "Linhas de base…");
         Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Sobre o ProjectPlanner…");
     });
 
@@ -477,8 +478,10 @@ public partial class MenuPrincipalTests
 
         itens.Should().HaveCount(colunas.Count + 2);
         itens.Take(colunas.Count).Cast<MenuItem>().Select(i => i.Header).Should().Equal(colunas.Select(c => c.Titulo));
+        // Bloco 31: as caixas das colunas ocultas por padrão começam desmarcadas.
         itens.Take(colunas.Count).Cast<MenuItem>().Should().OnlyContain(i =>
-            i.ToggleType == MenuItemToggleType.CheckBox && i.StaysOpenOnClick && i.IsChecked);
+            i.ToggleType == MenuItemToggleType.CheckBox && i.StaysOpenOnClick
+            && i.IsChecked == !ColunasViewModel.OcultasPorPadrao.Contains(colunas.Single(c => c.Titulo == (string)i.Header!).Id));
         itens[colunas.Count].Should().BeOfType<Separator>();
         ((MenuItem)itens[^1]!).Header.Should().Be("Restaurar layout padrão de colunas");
     });

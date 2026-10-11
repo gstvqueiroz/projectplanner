@@ -842,6 +842,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
     void IEdicaoCronograma.AlteracaoRecusada(string mensagem) => Mensagem = mensagem;
 
+    void IEdicaoCronograma.Avisar(string mensagem) => Mensagem = mensagem;
+
+    Core.Planejamento.LinhaDeBase? IEdicaoCronograma.LinhaDeBase => _cronograma.LinhaDeBaseEmUso;
+
     void IEdicaoCronograma.EdicaoCancelada() => Mensagem = "";
 
     // Uma alteração do cronograma (ou das fotos): entra no histórico do Desfazer, marca o projeto e recalcula.

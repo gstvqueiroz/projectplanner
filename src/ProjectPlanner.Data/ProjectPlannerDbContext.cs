@@ -18,6 +18,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<FotoMiniaturaRegistro> Miniaturas => Set<FotoMiniaturaRegistro>();
     public DbSet<AssistenteRegistro> Assistente => Set<AssistenteRegistro>();
     public DbSet<RelatorioRegistro> Relatorio => Set<RelatorioRegistro>();
+    public DbSet<LinhasDeBaseRegistro> LinhasDeBase => Set<LinhasDeBaseRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,6 +93,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
         });
 
         // Os dados da obra e o histórico dos relatórios fotográficos (Bloco 27).
+        // As linhas de base (Bloco 31), em JSON.
+        modelBuilder.Entity<LinhasDeBaseRegistro>(linhas =>
+        {
+            linhas.ToTable("LinhasDeBaseDoProjeto");
+            linhas.HasKey(l => l.ProjetoId);
+            linhas.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<LinhasDeBaseRegistro>(l => l.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<RelatorioRegistro>(relatorio =>
         {
             relatorio.ToTable("RelatorioDoProjeto");

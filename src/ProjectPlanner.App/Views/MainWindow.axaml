@@ -112,6 +112,9 @@
                               ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
                     <MenuItem Header="Folga" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFolga, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar a linha cinza da folga total, abaixo da barra de cada tarefa" />
+                    <!-- Bloco 31 -->
+                    <MenuItem Header="Linha de base" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarLinhaDeBase, Mode=TwoWay}"
+                              ToolTip.Tip="Mostrar no Gantt a barra cinza da linha de base em uso, abaixo da barra atual" />
                     <!-- Bloco 25 (C1) -->
                     <MenuItem Header="Linha Hoje" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarHoje, Mode=TwoWay}"
                               ToolTip.Tip="A linha tracejada do dia de hoje no Gantt" />
@@ -195,6 +198,13 @@
                               ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
                 </MenuItem>
                 <!-- Bloco 25 -->
+                <!-- Bloco 31: linha de base; Bloco 35: o cronograma físico-financeiro e os valores. -->
+                <MenuItem Header="Projeto">
+                    <MenuItem Header="Salvar linha de base…" Command="{Binding SalvarLinhaDeBaseCommand}"
+                              ToolTip.Tip="Guardar o cronograma de agora (datas, durações e valores) para comparar o previsto com o atual" />
+                    <MenuItem Header="Linhas de base…" Command="{Binding GerenciarLinhasDeBaseCommand}"
+                              ToolTip.Tip="Escolher com qual linha de base comparar e remover as antigas" />
+                </MenuItem>
                 <MenuItem Header="Ajuda">
                     <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"
                               ToolTip.Tip="Os erros inesperados ficam registrados ali, um arquivo por mês" />
@@ -411,7 +421,12 @@
                 <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Inicio" Header="Início" Width="104">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="vm:TarefaViewModel">
-                            <TextBlock Text="{Binding DataInicio, StringFormat={}{0:d}}" VerticalAlignment="Center" Margin="12,0" />
+                            <!-- Bloco 31: a data calculada; o 📌 indica a restrição "não iniciar antes de". -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,4,0" Spacing="3"
+                                        ToolTip.Tip="{Binding DicaDoInicio}">
+                                <TextBlock Text="{Binding DataInicio, StringFormat={}{0:d}}" />
+                                <TextBlock Text="📌" FontSize="9" VerticalAlignment="Center" IsVisible="{Binding TemRestricao}" />
+                            </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellEditingTemplate>
@@ -462,6 +477,49 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Notas" Header="Notas" Binding="{Binding Notas}" Width="200" />
+                <!-- Bloco 31: restrição de início e prazo (editáveis; vazio tira), linha de base em uso e desvios. -->
+                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="NaoIniciarAntesDe" Header="Não iniciar&#x0a;antes de" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:TarefaViewModel">
+                            <TextBlock Text="{Binding NaoIniciarAntesDe, StringFormat={}{0:d}}" VerticalAlignment="Center" Margin="12,0" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate x:DataType="vm:TarefaViewModel">
+                            <CalendarDatePicker SelectedDate="{Binding NaoIniciarAntesDe}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Prazo" Header="Prazo" Width="104">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:TarefaViewModel">
+                            <TextBlock Text="{Binding Prazo, StringFormat={}{0:d}}" VerticalAlignment="Center" Margin="12,0"
+                                       ToolTip.Tip="{Binding DicaDoPrazo}" Classes.foraDoPrazo="{Binding ForaDoPrazo}">
+                                <TextBlock.Styles>
+                                    <Style Selector="TextBlock.foraDoPrazo">
+                                        <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                    </Style>
+                                </TextBlock.Styles>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate x:DataType="vm:TarefaViewModel">
+                            <CalendarDatePicker SelectedDate="{Binding Prazo}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="InicioLinhaDeBase" Header="Início&#x0a;(linha de base)" Width="110"
+                                    Binding="{Binding InicioLinhaDeBase, StringFormat={}{0:d}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="TerminoLinhaDeBase" Header="Término&#x0a;(linha de base)" Width="110"
+                                    Binding="{Binding TerminoLinhaDeBase, StringFormat={}{0:d}}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="DesvioDoInicio" Header="Desvio do&#x0a;início (dias)" Width="95"
+                                    Binding="{Binding DesvioDoInicio}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="DesvioDoTermino" Header="Desvio do&#x0a;término (dias)" Width="95"
+                                    Binding="{Binding DesvioDoTermino}" IsReadOnly="True" />
+                <!-- Bloco 35: o valor em reais (num resumo, a soma). -->
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Valor" Header="Valor (R$)" Width="120" Binding="{Binding Valor}" />
             </DataGrid.Columns>
         </DataGrid>
         <!-- Linhas vazias abaixo das tarefas, até o fim da área visível: só desenho, sem receber o mouse. -->

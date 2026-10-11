@@ -409,6 +409,73 @@ public class Cronograma
 
     private readonly List<RelatorioGerado> _relatorios = [];
 
+    // ---- Bloco 31: linhas de base ----
+
+    /// <summary>Quantas linhas de base um projeto guarda (como no MS Project, que guarda 11).</summary>
+    public const int LinhasDeBaseMaximas = 20;
+
+    private readonly List<Planejamento.LinhaDeBase> _linhasDeBase = [];
+
+    /// <summary>As linhas de base salvas, da mais antiga (LB0) para a mais recente.</summary>
+    public IReadOnlyList<Planejamento.LinhaDeBase> LinhasDeBase => _linhasDeBase.AsReadOnly();
+
+    /// <summary>A linha de base com que a grid, o Gantt e a Curva S comparam; nula sem nenhuma.</summary>
+    public Planejamento.LinhaDeBase? LinhaDeBaseEmUso { get; private set; }
+
+    /// <summary>
+    /// Salva o cronograma calculado como uma linha de base nova (LB0, LB1…), que passa a ser a em uso.
+    /// </summary>
+    /// <exception cref="DomainValidationException">Sem tarefas, não calculado, ou com o máximo de linhas de base.</exception>
+    public Planejamento.LinhaDeBase SalvarLinhaDeBase(string? nome, DateTime agora)
+    {
+        if (_tarefas.Count == 0)
+            throw new DomainValidationException(nameof(LinhasDeBase), "O projeto ainda não tem tarefas para guardar na linha de base.");
+        if (_tarefas.Exists(t => t.InicioMaisCedo is null))
+            throw new DomainValidationException(nameof(LinhasDeBase), "Calcule o cronograma antes de salvar a linha de base.");
+        if (_linhasDeBase.Count >= LinhasDeBaseMaximas)
+            throw new DomainValidationException(nameof(LinhasDeBase),
+                $"O projeto já tem {LinhasDeBaseMaximas} linhas de base; remova uma antiga antes de salvar outra.");
+        var numero = _linhasDeBase.Count == 0 ? 0 : _linhasDeBase.Max(l => l.Numero) + 1;
+        var linha = new Planejamento.LinhaDeBase(numero, nome, agora, _tarefas.ToDictionary(t => t.Id,
+            t => new Planejamento.TarefaNaLinhaDeBase(t.InicioMaisCedo!.Value, t.TerminoMaisCedo!.Value, t.Duracao, t.Valor)));
+        _linhasDeBase.Add(linha);
+        LinhaDeBaseEmUso = linha;
+        return linha;
+    }
+
+    /// <summary>Põe uma linha de base guardada (ao abrir o arquivo) e diz se ela é a em uso.</summary>
+    /// <exception cref="DomainValidationException">Número repetido.</exception>
+    public void AdicionarLinhaDeBase(Planejamento.LinhaDeBase linha, bool emUso)
+    {
+        ArgumentNullException.ThrowIfNull(linha);
+        if (_linhasDeBase.Exists(l => l.Numero == linha.Numero))
+            throw new DomainValidationException(nameof(LinhasDeBase), $"Já existe a linha de base LB{linha.Numero}.");
+        _linhasDeBase.Add(linha);
+        _linhasDeBase.Sort((a, b) => a.Numero.CompareTo(b.Numero));
+        if (emUso)
+            LinhaDeBaseEmUso = linha;
+    }
+
+    /// <summary>Escolhe a linha de base em uso (nula: comparar com nenhuma).</summary>
+    /// <exception cref="DomainValidationException">A linha de base não é deste projeto.</exception>
+    public void UsarLinhaDeBase(int? numero)
+    {
+        LinhaDeBaseEmUso = numero is { } n
+            ? _linhasDeBase.Find(l => l.Numero == n) ?? throw new DomainValidationException(nameof(LinhasDeBase), $"Não existe a linha de base LB{n}.")
+            : null;
+    }
+
+    /// <summary>Remove uma linha de base; se era a em uso, passa a ser a mais recente que sobrou.</summary>
+    /// <exception cref="DomainValidationException">A linha de base não é deste projeto.</exception>
+    public void RemoverLinhaDeBase(int numero)
+    {
+        var linha = _linhasDeBase.Find(l => l.Numero == numero)
+                    ?? throw new DomainValidationException(nameof(LinhasDeBase), $"Não existe a linha de base LB{numero}.");
+        _linhasDeBase.Remove(linha);
+        if (LinhaDeBaseEmUso == linha)
+            LinhaDeBaseEmUso = _linhasDeBase.LastOrDefault();
+    }
+
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
     public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
 
@@ -440,7 +507,9 @@ public class Cronograma
             ConversaDescartadaAoAbrir = ConversaDescartadaAoAbrir,
             Obra = Obra,
             ConfiguracaoDasFotos = ConfiguracaoDasFotos,
+            LinhaDeBaseEmUso = LinhaDeBaseEmUso, // as linhas de base são imutáveis: a cópia usa as mesmas
         };
+        copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));
         copia._predecessoras.AddRange(_predecessoras); // vínculos são registros imutáveis

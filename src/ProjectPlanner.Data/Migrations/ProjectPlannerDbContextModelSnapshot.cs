@@ -139,6 +139,23 @@ namespace ProjectPlanner.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.LinhasDeBaseRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("LinhasDeBaseDoProjeto", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.PredecessoraRegistro", b =>
                 {
                     b.Property<int>("Id")
@@ -231,6 +248,9 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<int>("Duracao")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("NaoIniciarAntesDe")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -244,6 +264,9 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<int>("PercentualConcluido")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("Prazo")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ProjetoId")
                         .HasColumnType("TEXT");
 
@@ -252,6 +275,9 @@ namespace ProjectPlanner.Data.Migrations
 
                     b.Property<int>("Tipo")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Valor")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -304,6 +330,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
                         .WithMany()
                         .HasForeignKey("TarefaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.LinhasDeBaseRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.LinhasDeBaseRegistro", "ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

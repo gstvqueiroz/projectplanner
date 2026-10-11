@@ -63,6 +63,25 @@ public sealed class ResumoDoProjetoViewModel : ViewModelBase
 
     public bool TemProximosMarcos => Resumo.ProximosMarcos.Count > 0;
 
+    /// <summary>Bloco 31: "4 Laje — prazo 15/10/2026".</summary>
+    public IReadOnlyList<string> ForaDoPrazo => Resumo.ForaDoPrazo.Select(t => $"{t.Edt} {t.Nome} — prazo {Data(t.Data)}").ToList();
+
+    public bool TemForaDoPrazo => Resumo.ForaDoPrazo.Count > 0;
+
+    /// <summary>Bloco 31: "Linha de base: término 30/11/2026 · 5 dias úteis de atraso"; vazio sem linha de base.</summary>
+    public string LinhaDeBase => Resumo is { TerminoDaLinhaDeBase: { } previsto, DesvioDoTermino: { } desvio }
+        ? $"Linha de base: término {Data(previsto)} · " + desvio switch
+        {
+            0 => "no prazo previsto",
+            1 => "1 dia útil de atraso",
+            > 1 => $"{desvio} dias úteis de atraso",
+            -1 => "1 dia útil adiantado",
+            _ => $"{-desvio} dias úteis adiantado",
+        }
+        : "";
+
+    public bool AtrasouNaLinhaDeBase => Resumo.DesvioDoTermino > 0;
+
     /// <summary>Bloco 28: "5 Alvenaria — Sem foto há 9 dias (a última é de 02/10/2026)".</summary>
     public IReadOnlyList<string> SemFotoRecente => Resumo.SemFotoRecente.Select(t => $"{t.Edt} {t.Tarefa.Nome} — {t.Descricao}").ToList();
 

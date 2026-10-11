@@ -25,22 +25,32 @@ internal static class DiasUteis
         };
 
     /// <summary>
-    /// Avança <paramref name="quantidade"/> dias úteis a partir de <paramref name="diaUtil"/>.
-    /// Retorna <c>null</c> se o resultado ultrapassar <see cref="DateTime.MaxValue"/>.
+    /// Avança <paramref name="quantidade"/> dias úteis a partir de <paramref name="diaUtil"/> (com uma quantidade
+    /// negativa, volta: Bloco 31, datas tarde antes do início do projeto quando há prazo vencido).
+    /// Retorna <c>null</c> se o resultado sair do intervalo de <see cref="DateTime"/>.
     /// </summary>
     public static DateTime? Adicionar(DateTime diaUtil, int quantidade)
     {
         var semanas = quantidade / 5;
         var resto = quantidade % 5;
         var diasCorridos = semanas * 7L + resto;
-        // Se o resto passa da sexta-feira, atravessa um fim de semana.
+        // Se o resto passa da sexta-feira (ou, voltando, da segunda), atravessa um fim de semana.
         if (IndiceNaSemana(diaUtil) + resto > 4)
             diasCorridos += 2;
+        else if (IndiceNaSemana(diaUtil) + resto < 0)
+            diasCorridos -= 2;
 
-        if (diasCorridos > (DateTime.MaxValue.Date - diaUtil).Days)
+        if (diasCorridos > (DateTime.MaxValue.Date - diaUtil).Days || diasCorridos < -(diaUtil - DateTime.MinValue).Days)
             return null;
         return diaUtil.AddDays(diasCorridos);
     }
+
+    /// <summary>
+    /// Bloco 31: quantos dias úteis <paramref name="data"/> está depois de <paramref name="inicio"/> (0 no mesmo dia;
+    /// negativo antes). Os dois devem ser dias úteis.
+    /// </summary>
+    public static long Indice(DateTime inicio, DateTime data) =>
+        data >= inicio ? ContarInclusivo(inicio, data) - 1 : -(ContarInclusivo(data, inicio) - 1);
 
     /// <summary>
     /// Conta os dias úteis de <paramref name="inicio"/> a <paramref name="termino"/>, incluindo ambos.

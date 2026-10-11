@@ -176,4 +176,7 @@ public sealed class DialogosAvalonia : IDialogosService
         new FotosDoProjetoWindow(fotos).ShowDialog(JanelaPrincipal);
 
     public Task AbrirEnderecoAsync(Uri endereco) => JanelaAtiva.Launcher.LaunchUriAsync(endereco);
+
+    public Task MostrarLinhasDeBaseAsync(ViewModels.LinhasDeBaseViewModel linhas) =>
+        new LinhasDeBaseWindow(linhas).ShowDialog(JanelaPrincipal);
 }

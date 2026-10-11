@@ -55,6 +55,9 @@ public partial class GanttChartView : UserControl
     private static readonly IBrush NaoCritica = new SolidColorBrush(Color.Parse("#1E88E5"));
     private static readonly IBrush Concluida = new SolidColorBrush(Color.FromArgb(0x80, 0, 0, 0));
     private static readonly IBrush LinhaDeFolga = new SolidColorBrush(Color.Parse("#9E9E9E"));
+    // Bloco 31: a barra da linha de base (cinza, sob a barra atual) e a marca do prazo (verde; vermelha se passou).
+    private static readonly IBrush BarraDaLinhaDeBase = new SolidColorBrush(Color.Parse("#90A4AE"));
+    private static readonly IBrush PrazoEmDia = new SolidColorBrush(Color.Parse("#2E7D32"));
     private static readonly IBrush SetaNaoCritica = new SolidColorBrush(Color.Parse("#607D8B"));
     // Seleção: o mesmo cinza-azulado do contorno da linha selecionada na grid (MainWindow.axaml).
     private static readonly IBrush ContornoDaLinha = new SolidColorBrush(Color.Parse("#6A8CAF"));
@@ -195,7 +198,7 @@ public partial class GanttChartView : UserControl
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(GanttViewModel.Layout) or nameof(GanttViewModel.MostrarCaminhoCritico)
-            or nameof(GanttViewModel.MostrarFotos) or nameof(GanttViewModel.MostrarFolga))
+            or nameof(GanttViewModel.MostrarFotos) or nameof(GanttViewModel.MostrarFolga) or nameof(GanttViewModel.MostrarLinhaDeBase))
             Desenhar();
         else if (e.PropertyName == nameof(GanttViewModel.TarefaDestacada))
             AtualizarDestaque();
@@ -404,6 +407,20 @@ public partial class GanttChartView : UserControl
         // A folga (só com Exibir > Folga ligado) corre logo abaixo da barra, como no MS Project, para não
         // cruzar o nome da tarefa.
         var yFolga = barra.Y + barra.Altura + 2;
+        if (viewModel.MostrarLinhaDeBase && barra is { XLinhaDeBase: { } xBase, LarguraLinhaDeBase: { } larguraBase })
+        {
+            // Uma faixa fina logo abaixo da barra (num marco da linha de base, um ponto); a folga vem logo abaixo dela.
+            Posicionar(Corpo, new Rectangle
+            {
+                Width = Math.Max(larguraBase, 3),
+                Height = 3,
+                Fill = BarraDaLinhaDeBase,
+                IsHitTestVisible = false,
+            }, larguraBase > 0 ? xBase : xBase - 1.5, barra.Y + barra.Altura + 1);
+            yFolga += 4;
+        }
+        if (barra.XDoPrazo is { } xPrazo)
+            DesenharPrazo(barra, xPrazo);
         if (viewModel.MostrarFolga && barra.FimDaFolga is { } fimDaFolga && fimDaFolga > barra.Direita)
             Corpo.Children.Add(new Line
             {
@@ -460,6 +477,29 @@ public partial class GanttChartView : UserControl
             FontSize = 11,
             IsHitTestVisible = false,
         }, xDoNome, barra.CentroY - 8);
+    }
+
+    // Bloco 31: o prazo é uma seta para baixo no fim do dia do prazo, acima da barra (vermelha quando a tarefa passou dele).
+    private void DesenharPrazo(BarraGantt barra, double x)
+    {
+        var cor = barra.ForaDoPrazo ? Critica : PrazoEmDia;
+        var topo = barra.Y - 5;
+        var seta = new Polygon
+        {
+            Points = [new Point(x - 4, topo), new Point(x + 4, topo), new Point(x, topo + 5)],
+            Fill = cor,
+            IsHitTestVisible = false,
+        };
+        Corpo.Children.Add(seta);
+        Corpo.Children.Add(new Line
+        {
+            StartPoint = new Point(x, topo + 5),
+            EndPoint = new Point(x, barra.Y + barra.Altura),
+            Stroke = cor,
+            StrokeThickness = 1,
+            StrokeDashArray = [2, 2],
+            IsHitTestVisible = false,
+        });
     }
 
     // Uma câmera pequena: corpo arredondado, visor em cima e a lente no meio.

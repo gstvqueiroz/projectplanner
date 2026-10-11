@@ -102,11 +102,36 @@ public class Tarefa
     /// <summary>Término mais tarde (LF), do último cálculo do cronograma.</summary>
     public DateTime? TerminoMaisTarde { get; private set; }
 
-    /// <summary>Folga total em dias úteis: LS − ES (igual a LF − EF). Nunca é negativa.</summary>
+    /// <summary>
+    /// Folga total em dias úteis: LS − ES (igual a LF − EF). Negativa quando a tarefa (ou uma sucessora, ou o resumo em
+    /// que ela está) não cabe no <see cref="Prazo"/> (Bloco 31).
+    /// </summary>
     public int? Folga { get; private set; }
 
-    /// <summary>Se a tarefa é crítica (folga zero). Falso antes do primeiro cálculo.</summary>
-    public bool EhCritica => Folga == 0;
+    /// <summary>Se a tarefa é crítica (folga zero ou negativa). Falso antes do primeiro cálculo.</summary>
+    public bool EhCritica => Folga <= 0;
+
+    /// <summary>
+    /// Bloco 31: "não iniciar antes de". O cálculo não começa a tarefa antes desta data (um dia útil); as predecessoras
+    /// podem empurrá-la para depois. Nula: o mais cedo possível. Num resumo, sempre nula.
+    /// </summary>
+    public DateTime? NaoIniciarAntesDe { get; private set; }
+
+    /// <summary>
+    /// Bloco 31: "não terminar depois de". Não move a tarefa: se o término calculado passa dele, a folga fica negativa
+    /// (também nas predecessoras que a empurram) e a tarefa aparece como fora do prazo. Num resumo, vale para todas as
+    /// tarefas dentro dele.
+    /// </summary>
+    public DateTime? Prazo { get; private set; }
+
+    /// <summary>Bloco 31: o término calculado passa do <see cref="Prazo"/>.</summary>
+    public bool ForaDoPrazo => Prazo is { } prazo && (TerminoMaisCedo ?? DataTermino).Date > prazo;
+
+    /// <summary>
+    /// Bloco 35: o valor da tarefa em reais (orçamento), para o cronograma físico-financeiro. Num resumo, a soma das
+    /// tarefas dentro dele (calculada). Nulo: sem valor.
+    /// </summary>
+    public decimal? Valor { get; private set; }
 
     /// <summary>
     /// Num marco, se ele fica no fim do dia de <see cref="InicioMaisCedo"/> (determinado pelo término de
@@ -226,6 +251,70 @@ public class Tarefa
 
     public void AlterarNotas(string? notas) => Notas = string.IsNullOrWhiteSpace(notas) ? null : notas;
 
+    /// <summary>
+    /// Bloco 31: a data digitada no Início vira "não iniciar antes de" (um sábado ou domingo vai para a segunda). Nula
+    /// tira a restrição. A <see cref="DataInicio"/> acompanha, para quem ainda lê a data informada.
+    /// </summary>
+    /// <exception cref="DomainValidationException">A tarefa é um resumo (o início dele vem das subtarefas).</exception>
+    public void DefinirRestricaoDeInicio(DateTime? naoIniciarAntesDe)
+    {
+        RecusarSeResumo(nameof(NaoIniciarAntesDe), "O início de um resumo é calculado");
+        if (naoIniciarAntesDe is not { } data)
+        {
+            NaoIniciarAntesDe = null;
+            return;
+        }
+        var inicio = NormalizarInicio(data);
+        DataTermino = CalcularTermino(inicio, Duracao);
+        (NaoIniciarAntesDe, DataInicio) = (inicio, inicio);
+    }
+
+    /// <summary>Bloco 31: o prazo ("não terminar depois de"); nulo tira o prazo. Vale também num resumo.</summary>
+    public void DefinirPrazo(DateTime? prazo) => Prazo = prazo?.Date;
+
+    /// <summary>
+    /// Bloco 31: a data digitada no Término muda a duração, mantendo o início calculado (o do último cálculo; sem
+    /// cálculo, o informado). Num marco, move o marco: vira "não iniciar antes de" nessa data.
+    /// </summary>
+    /// <exception cref="DomainValidationException">Resumo, ou término antes do início.</exception>
+    public void AlterarTerminoMantendoOInicio(DateTime termino)
+    {
+        RecusarSeResumo(nameof(DataTermino), "O término de um resumo é calculado");
+        if (EhMarco)
+        {
+            DefinirRestricaoDeInicio(DiasUteis.AnteriorOuMesmo(termino.Date));
+            return;
+        }
+        var inicio = InicioMaisCedo ?? DataInicio;
+        var fim = DiasUteis.AnteriorOuMesmo(termino.Date);
+        if (fim < inicio)
+            throw new DomainValidationException(nameof(DataTermino),
+                $"A data de término ({termino:d}) não pode ser anterior à data de início ({inicio:d}).");
+        Duracao = DiasUteis.ContarInclusivo(inicio, fim);
+        DataTermino = CalcularTermino(DataInicio, Duracao);
+    }
+
+    /// <summary>Bloco 35: o valor da tarefa em reais; nulo tira o valor.</summary>
+    /// <exception cref="DomainValidationException">Resumo (o valor dele é a soma), valor negativo ou grande demais.</exception>
+    public void DefinirValor(decimal? valor)
+    {
+        RecusarSeResumo(nameof(Valor), "O valor de um resumo é a soma");
+        if (valor is < 0)
+            throw new DomainValidationException(nameof(Valor), "O valor não pode ser negativo.");
+        if (valor > ValorMaximo)
+            throw new DomainValidationException(nameof(Valor), "O valor passa do máximo aceito (R$ 999 bilhões).");
+        Valor = valor is { } v ? Math.Round(v, 2, MidpointRounding.AwayFromZero) : null;
+    }
+
+    /// <summary>O maior valor aceito numa tarefa.</summary>
+    public const decimal ValorMaximo = 999_999_999_999.99m;
+
+    /// <summary>Bloco 35: o valor de um resumo, a soma das tarefas dentro dele (ver <see cref="CalculadoraResumos"/>).</summary>
+    internal void DefinirValorDoResumo(decimal? valor) => Valor = valor;
+
+    /// <summary>Uma tarefa deixou de ser resumo: o valor somado não vale mais.</summary>
+    internal void EsquecerValorDoResumo() => Valor = null;
+
     public void AtualizarPercentualConcluido(int percentual)
     {
         RecusarSeResumo(nameof(PercentualConcluido), "O percentual concluído de um resumo é calculado");
@@ -277,12 +366,24 @@ public class Tarefa
             Folga = Folga,
             MarcoNoFimDoDia = MarcoNoFimDoDia,
             MarcoTardeNoFimDoDia = MarcoTardeNoFimDoDia,
+            NaoIniciarAntesDe = NaoIniciarAntesDe,
+            Prazo = Prazo,
+            Valor = Valor,
         };
         copia._fotos.AddRange(_fotos);
         return copia;
     }
 
-    internal void DefinirSeEhResumo(bool ehResumo) => EhResumo = ehResumo;
+    // Bloco 31: um resumo não tem restrição de início (vem das subtarefas); ao virar resumo, ela sai. O valor dele
+    // passa a ser a soma das subtarefas (Bloco 35).
+    internal void DefinirSeEhResumo(bool ehResumo)
+    {
+        if (ehResumo && !EhResumo)
+            (NaoIniciarAntesDe, Valor) = (null, null);
+        else if (!ehResumo && EhResumo)
+            Valor = null;
+        EhResumo = ehResumo;
+    }
 
     private void RecusarSeResumo(string propriedade, string oQueECalculado)
     {

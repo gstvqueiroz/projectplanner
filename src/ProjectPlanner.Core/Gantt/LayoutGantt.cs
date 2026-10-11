@@ -130,7 +130,11 @@ public sealed record BarraGantt(
     double? FimDaFolga,
     bool EhCritica,
     TipoTarefa Tipo,
-    int QuantidadeDeFotos = 0)
+    int QuantidadeDeFotos = 0,
+    double? XLinhaDeBase = null,
+    double? LarguraLinhaDeBase = null,
+    double? XDoPrazo = null,
+    bool ForaDoPrazo = false)
 {
     public double Direita => X + Largura;
 

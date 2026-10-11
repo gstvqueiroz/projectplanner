@@ -30,7 +30,7 @@ public partial class MainWindow : Window
 
     // Num resumo, estas colunas vêm das subtarefas (ver AvisarValorCalculadoNoResumo).
     private static readonly HashSet<string> CalculadasNoResumo =
-        ["Duracao", "Inicio", "Termino", "PercentualConcluido", "Predecessoras"];
+        ["Duracao", "Inicio", "Termino", "PercentualConcluido", "Predecessoras", "NaoIniciarAntesDe", "Valor"];
 
     public MainWindow()
     {

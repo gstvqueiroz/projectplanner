@@ -19,7 +19,10 @@ public class ColunasTests
         var colunas = Colunas();
 
         Ordem(colunas).Should().Equal(ColunasViewModel.Padrao.Select(p => p.Id));
-        colunas.Colunas.Should().OnlyContain(c => c.Visivel);
+        // Bloco 31: as colunas de restrição, prazo, linha de base, desvios e valor começam ocultas; as demais, visíveis.
+        colunas.Colunas.Where(c => !c.Visivel).Select(c => c.Id).Should().BeEquivalentTo(
+            ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor"]);
+        colunas.Colunas.Where(c => !ColunasViewModel.OcultasPorPadrao.Contains(c.Id)).Should().OnlyContain(c => c.Visivel);
         colunas["Nome"].Largura.Should().Be(220);
         colunas["Notas"].Largura.Should().Be(200);
         _preferencias.Gravacoes.Should().Be(0);
@@ -32,7 +35,9 @@ public class ColunasTests
 
         ids.IndexOf("Edt").Should().Be(ids.IndexOf("Numero") + 1);
         ids.IndexOf("Sucessoras").Should().Be(ids.IndexOf("Predecessoras") + 1);
-        ids[^1].Should().Be("Notas");
+        // As do Bloco 31 e 35 vêm depois das Notas, na ordem em que entraram.
+        ids.Skip(ids.IndexOf("Notas") + 1).Should().Equal(
+            "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor");
         ids.Should().Contain(["Folga", "Critica"]);
     }
 
@@ -154,10 +159,10 @@ public class ColunasTests
         colunas.RestaurarPadraoCommand.Execute(null);
 
         Ordem(colunas).Should().Equal(ColunasViewModel.Padrao.Select(p => p.Id));
-        colunas.Colunas.Should().OnlyContain(c => c.Visivel);
+        colunas.Colunas.Should().OnlyContain(c => c.Visivel != ColunasViewModel.OcultasPorPadrao.Contains(c.Id));
         colunas["Notas"].Largura.Should().Be(200);
         avisou.Should().BeTrue();
-        _preferencias.Salvo!.Colunas.Should().OnlyContain(c => c.Visivel);
+        _preferencias.Salvo!.Colunas.Should().OnlyContain(c => c.Visivel != ColunasViewModel.OcultasPorPadrao.Contains(c.Id));
     }
 
     [Fact]

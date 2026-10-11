@@ -43,6 +43,12 @@ public interface IEdicaoCronograma
     /// <summary>Uma alteração foi recusada: mostra a mensagem ao usuário.</summary>
     void AlteracaoRecusada(string mensagem);
 
+    /// <summary>Bloco 31: uma alteração valeu, mas com um aviso (a restrição que as predecessoras seguram, o prazo vencido).</summary>
+    void Avisar(string mensagem);
+
+    /// <summary>Bloco 31: a linha de base em uso, para as colunas de comparação; nula sem nenhuma.</summary>
+    Core.Planejamento.LinhaDeBase? LinhaDeBase => null;
+
     /// <summary>O usuário desistiu de uma edição recusada (Esc ou voltou ao valor em vigor): some com a mensagem.</summary>
     void EdicaoCancelada();
 
@@ -68,6 +74,8 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         nameof(TerminoMaisTarde), nameof(Folga), nameof(EhCritica), nameof(Sucessoras), nameof(Notas),
         nameof(DestacarComoCritica), nameof(Edt), nameof(Nivel), nameof(EhResumo), nameof(EhMarco),
         nameof(Situacao), nameof(EstaAtrasada),
+        nameof(NaoIniciarAntesDe), nameof(TemRestricao), nameof(DicaDoInicio), nameof(Prazo), nameof(ForaDoPrazo), nameof(DicaDoPrazo),
+        nameof(InicioLinhaDeBase), nameof(TerminoLinhaDeBase), nameof(DesvioDoInicio), nameof(DesvioDoTermino), nameof(Valor),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -160,18 +168,111 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         set => Alterar(nameof(Duracao), "Duração", value, value == Tarefa.Duracao, () => Tarefa.AlterarDuracao(value));
     }
 
+    // Bloco 31: Início e Término mostram as datas calculadas (as do Gantt); antes do primeiro cálculo, as informadas.
+    private DateTime InicioExibido => Tarefa.InicioMaisCedo ?? Tarefa.DataInicio;
+    private DateTime TerminoExibido => Tarefa.TerminoMaisCedo ?? Tarefa.DataTermino;
+
+    /// <summary>O início calculado. Digitar outra data cria a restrição "não iniciar antes de" (Bloco 31).</summary>
     public DateTime? DataInicio
     {
-        get => ValorExibido<DateTime?>(nameof(DataInicio), Tarefa.DataInicio);
-        set => Alterar(nameof(DataInicio), "Início", value, value == Tarefa.DataInicio,
-            () => Tarefa.AlterarDataInicio(value ?? throw DataObrigatoria(nameof(DataInicio), "início")));
+        get => ValorExibido<DateTime?>(nameof(DataInicio), InicioExibido);
+        set
+        {
+            if (Alterar(nameof(DataInicio), "Início", value, value?.Date == InicioExibido.Date,
+                    () => Tarefa.DefinirRestricaoDeInicio(value ?? throw DataObrigatoria(nameof(DataInicio), "início"))))
+                AvisarSeAsPredecessorasSeguram();
+        }
     }
 
+    /// <summary>O término calculado. Digitar outra data muda a duração, mantendo o início (num marco, move o marco).</summary>
     public DateTime? DataTermino
     {
-        get => ValorExibido<DateTime?>(nameof(DataTermino), Tarefa.DataTermino);
-        set => Alterar(nameof(DataTermino), "Término", value, value == Tarefa.DataTermino,
-            () => Tarefa.AlterarDataTermino(value ?? throw DataObrigatoria(nameof(DataTermino), "término")));
+        get => ValorExibido<DateTime?>(nameof(DataTermino), TerminoExibido);
+        set
+        {
+            if (Alterar(nameof(DataTermino), "Término", value, value?.Date == TerminoExibido.Date,
+                    () => Tarefa.AlterarTerminoMantendoOInicio(value ?? throw DataObrigatoria(nameof(DataTermino), "término")))
+                && Tarefa.EhMarco)
+                AvisarSeAsPredecessorasSeguram();
+        }
+    }
+
+    /// <summary>Bloco 31: "não iniciar antes de" (vazio tira a restrição).</summary>
+    public DateTime? NaoIniciarAntesDe
+    {
+        get => ValorExibido(nameof(NaoIniciarAntesDe), Tarefa.NaoIniciarAntesDe);
+        set
+        {
+            if (Alterar(nameof(NaoIniciarAntesDe), "Não iniciar antes de", value, value?.Date == Tarefa.NaoIniciarAntesDe,
+                    () => Tarefa.DefinirRestricaoDeInicio(value)))
+                AvisarSeAsPredecessorasSeguram();
+        }
+    }
+
+    public bool TemRestricao => Tarefa.NaoIniciarAntesDe is not null;
+
+    /// <summary>A dica da célula Início: a restrição, quando há.</summary>
+    public string? DicaDoInicio => Tarefa.NaoIniciarAntesDe is { } data ? $"Não iniciar antes de {data:dd/MM/yyyy}" : null;
+
+    // A restrição foi guardada, mas as predecessoras empurram a tarefa para depois dela: avisa, para a data não parecer ignorada.
+    private void AvisarSeAsPredecessorasSeguram()
+    {
+        if (Tarefa is { NaoIniciarAntesDe: { } restricao, InicioMaisCedo: { } inicio } && inicio.Date > restricao)
+            _edicao.Avisar($"\"{Tarefa.Nome}\" não pode começar em {restricao:dd/MM/yyyy}: as predecessoras a levam para {inicio:dd/MM/yyyy}. " +
+                           "A restrição \"não iniciar antes de\" ficou guardada.");
+    }
+
+    /// <summary>Bloco 31: "não terminar depois de" (vazio tira o prazo). Vale também num resumo.</summary>
+    public DateTime? Prazo
+    {
+        get => ValorExibido(nameof(Prazo), Tarefa.Prazo);
+        set
+        {
+            if (Alterar(nameof(Prazo), "Prazo", value, value?.Date == Tarefa.Prazo, () => Tarefa.DefinirPrazo(value)) && Tarefa.ForaDoPrazo)
+                _edicao.Avisar($"\"{Tarefa.Nome}\" termina em {TerminoExibido:dd/MM/yyyy}, depois do prazo ({Tarefa.Prazo:dd/MM/yyyy}): " +
+                               "a folga ficou negativa.");
+        }
+    }
+
+    public bool ForaDoPrazo => Tarefa.ForaDoPrazo;
+
+    public string? DicaDoPrazo => Tarefa.ForaDoPrazo
+        ? $"Fora do prazo: termina em {TerminoExibido:dd/MM/yyyy}, e o prazo é {Tarefa.Prazo:dd/MM/yyyy}"
+        : null;
+
+    // ---- Bloco 31: linha de base em uso ----
+
+    private Core.Planejamento.TarefaNaLinhaDeBase? NaLinhaDeBase => _edicao.LinhaDeBase?.Tarefas.GetValueOrDefault(Tarefa.Id);
+
+    public DateTime? InicioLinhaDeBase => NaLinhaDeBase?.Inicio;
+
+    public DateTime? TerminoLinhaDeBase => NaLinhaDeBase?.Termino;
+
+    /// <summary>Dias úteis de atraso do início (negativo: adiantou); vazio sem linha de base.</summary>
+    public int? DesvioDoInicio => Core.Planejamento.DesvioDaLinhaDeBase.DoInicio(Tarefa, _edicao.LinhaDeBase);
+
+    public int? DesvioDoTermino => Core.Planejamento.DesvioDaLinhaDeBase.DoTermino(Tarefa, _edicao.LinhaDeBase);
+
+    // ---- Bloco 35: valor ----
+
+    /// <summary>O valor em reais ("1.234,56"); num resumo, a soma (só leitura). Vazio tira o valor.</summary>
+    public string Valor
+    {
+        get => ValorExibido(nameof(Valor), Tarefa.Valor is { } v ? Core.Planejamento.Moeda.Formatar(v) : "");
+        set => Alterar(nameof(Valor), "Valor", value, LerValor(value) is var (lido, ok) && ok && lido == Tarefa.Valor,
+            () => Tarefa.DefinirValor(Core.Planejamento.Moeda.Ler(value)));
+    }
+
+    private static (decimal? Valor, bool Ok) LerValor(string? texto)
+    {
+        try
+        {
+            return (Core.Planejamento.Moeda.Ler(texto), true);
+        }
+        catch (FormatException)
+        {
+            return (null, false);
+        }
     }
 
     public int PercentualConcluido
@@ -241,15 +342,20 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         _edicao.EdicaoCancelada();
     }
 
-    private void Alterar<T>(string propriedade, string rotulo, T valor, bool igualAoAtual, Action alteracao)
+    /// <returns>Se a tarefa mudou.</returns>
+    private bool Alterar<T>(string propriedade, string rotulo, T valor, bool igualAoAtual, Action alteracao)
     {
         var estavaRecusado = ErroDe(propriedade) is not null;
         if (AlterarDominio(propriedade, valor, igualAoAtual, alteracao))
+        {
             _edicao.TarefaAlterada($"{rotulo} de \"{Tarefa.Nome}\"");
-        else if (ErroDe(propriedade) is { } erro)
+            return true;
+        }
+        if (ErroDe(propriedade) is { } erro)
             _edicao.AlteracaoRecusada($"Linha {Numero}, {rotulo}: {erro} Corrija o valor ou tecle Esc para desfazer.");
         else if (estavaRecusado)
             _edicao.EdicaoCancelada(); // voltou ao valor em vigor (é o que o DataGrid faz no Esc)
+        return false;
     }
 
     private static DomainValidationException DataObrigatoria(string propriedade, string qual) =>

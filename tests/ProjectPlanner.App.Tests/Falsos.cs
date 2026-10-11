@@ -74,9 +74,11 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
 
         var (id, nome, inicio) = (cronograma.Id, cronograma.Nome, cronograma.DataInicio);
         var tarefas = cronograma.Tarefas
-            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo, Fotos: t.FotosNaOrdemDeCadastro.ToList()))
+            .Select(t => (t.Id, t.Nome, t.DataInicio, t.Duracao, t.PercentualConcluido, t.Notas, t.TarefaPaiId, t.EhResumo, Fotos: t.FotosNaOrdemDeCadastro.ToList(),
+                t.NaoIniciarAntesDe, t.Prazo, t.Valor))
             .ToList();
         var vinculos = cronograma.Predecessoras.ToList();
+        var (linhasDeBase, emUso) = (cronograma.LinhasDeBase.ToList(), cronograma.LinhaDeBaseEmUso);
         _arquivos[caminhoArquivo] = () =>
         {
             var reconstruido = new Cronograma(id, nome, inicio);
@@ -86,12 +88,20 @@ public sealed class RepositorioEmMemoria : IProjetoRepository
                 var tarefa = new Tarefa(t.Id, t.Nome, t.DataInicio, t.EhResumo ? Math.Max(t.Duracao, 1) : t.Duracao);
                 tarefa.AtualizarPercentualConcluido(t.PercentualConcluido);
                 tarefa.AlterarNotas(t.Notas);
+                if (!t.EhResumo)
+                {
+                    tarefa.DefinirRestricaoDeInicio(t.NaoIniciarAntesDe);
+                    tarefa.DefinirValor(t.Valor);
+                }
+                tarefa.DefinirPrazo(t.Prazo);
                 foreach (var foto in t.Fotos)
                     tarefa.AdicionarFoto(foto);
                 reconstruido.AdicionarTarefa(tarefa, t.TarefaPaiId);
             }
             foreach (var vinculo in vinculos)
                 reconstruido.AdicionarPredecessora(vinculo);
+            foreach (var linha in linhasDeBase)
+                reconstruido.AdicionarLinhaDeBase(linha, linha == emUso);
             return reconstruido;
         };
     }
@@ -265,6 +275,19 @@ public sealed class DialogosFalsos : IDialogosService
     public Task AbrirEnderecoAsync(Uri endereco)
     {
         EnderecosAbertos.Add(endereco);
+        return Task.CompletedTask;
+    }
+
+    // ---- Bloco 31 ----
+
+    public List<LinhasDeBaseViewModel> LinhasDeBase { get; } = [];
+
+    public Action<LinhasDeBaseViewModel>? AoMostrarLinhasDeBase { get; set; }
+
+    public Task MostrarLinhasDeBaseAsync(LinhasDeBaseViewModel linhas)
+    {
+        LinhasDeBase.Add(linhas);
+        AoMostrarLinhasDeBase?.Invoke(linhas);
         return Task.CompletedTask;
     }
 

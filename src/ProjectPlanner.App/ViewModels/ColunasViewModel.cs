@@ -52,6 +52,8 @@ public sealed partial class ColunasViewModel : ViewModelBase
     /// O layout padrão, na ordem padrão: as colunas do Bloco 5, com as larguras de lá, e as do Bloco 10
     /// (EDT ao lado do Nº, Sucessoras ao lado das Predecessoras e Notas no fim), todas visíveis. O Nome
     /// ficou mais largo no Bloco 11, para caber o recuo das subtarefas. A Situação (Bloco 25) entra antes das Notas.
+    /// As do Bloco 31 (restrição, prazo, linha de base e desvios) e a do Bloco 35 (valor) vêm ocultas
+    /// (<see cref="OcultasPorPadrao"/>): só quem usa liga, em Exibir > Colunas.
     /// </summary>
     public static readonly IReadOnlyList<(string Id, string Titulo, double Largura)> Padrao =
     [
@@ -72,7 +74,18 @@ public sealed partial class ColunasViewModel : ViewModelBase
         ("Critica", "Crítica", 90),
         ("Situacao", "Situação", 110),
         ("Notas", "Notas", 200),
+        ("NaoIniciarAntesDe", "Não iniciar antes de", 110),
+        ("Prazo", "Prazo", 104),
+        ("InicioLinhaDeBase", "Início (linha de base)", 110),
+        ("TerminoLinhaDeBase", "Término (linha de base)", 110),
+        ("DesvioDoInicio", "Desvio do início (dias)", 95),
+        ("DesvioDoTermino", "Desvio do término (dias)", 95),
+        ("Valor", "Valor (R$)", 120),
     ];
+
+    /// <summary>As colunas que começam ocultas (as que só servem a quem usa linha de base, prazos e valores).</summary>
+    public static readonly IReadOnlySet<string> OcultasPorPadrao = new HashSet<string>
+        { "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor" };
 
     private readonly IPreferenciasColunas _preferencias;
     private bool _aplicando;
@@ -122,7 +135,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
             Salvar();
     }
 
-    /// <summary>Volta tudo ao layout padrão: todas visíveis, ordem e larguras originais.</summary>
+    /// <summary>Volta tudo ao layout padrão: as de sempre visíveis (as <see cref="OcultasPorPadrao"/> ocultas), ordem e larguras originais.</summary>
     [RelayCommand]
     private void RestaurarPadrao()
     {
@@ -154,7 +167,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
                 }
                 else
                 {
-                    coluna.Visivel = true;
+                    coluna.Visivel = !OcultasPorPadrao.Contains(coluna.Id);
                     coluna.Largura = padrao.Largura;
                     // Sem posição salva: fica logo depois da coluna que a antecede no padrão.
                     coluna.Posicao = i == 0 ? -1 : Colunas[i - 1].Posicao;

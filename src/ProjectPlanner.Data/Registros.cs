@@ -31,6 +31,15 @@ internal sealed class TarefaRegistro
 
     /// <summary>O resumo em que a tarefa está; nulo no primeiro nível.</summary>
     public Guid? TarefaPaiId { get; set; }
+
+    /// <summary>Bloco 31: "não iniciar antes de"; nulo sem restrição.</summary>
+    public DateTime? NaoIniciarAntesDe { get; set; }
+
+    /// <summary>Bloco 31: "não terminar depois de"; nulo sem prazo.</summary>
+    public DateTime? Prazo { get; set; }
+
+    /// <summary>Bloco 35: o valor em reais (só nas tarefas que não são resumo; o do resumo é a soma).</summary>
+    public decimal? Valor { get; set; }
 }
 
 internal sealed class PredecessoraRegistro
@@ -108,6 +117,16 @@ internal sealed class AssistenteRegistro
 /// Os dados da obra para a capa e o histórico dos relatórios fotográficos (Bloco 27), em JSON (ver
 /// <see cref="FormatoDoRelatorio"/>): uma linha por projeto, nenhuma quando não há nada.
 /// </summary>
+/// <summary>Bloco 31: as linhas de base do projeto, em JSON (ver <see cref="FormatoDasLinhasDeBase"/>); nenhuma linha sem linha de base.</summary>
+internal sealed class LinhasDeBaseRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
 internal sealed class RelatorioRegistro
 {
     public Guid ProjetoId { get; set; }

@@ -3,8 +3,12 @@ namespace ProjectPlanner.Core.Edicao;
 /// <summary>Uma tarefa copiada: o que vai para a tarefa nova ao colar (sem Id, sem fotos).</summary>
 /// <param name="Original">O Id da tarefa de onde veio (para refazer a estrutura e os vínculos entre as copiadas).</param>
 /// <param name="PaiOriginal">O pai dela entre as copiadas; nulo nas que estão no topo do trecho.</param>
+/// <param name="NaoIniciarAntesDe">Bloco 31: a restrição de início.</param>
+/// <param name="Prazo">Bloco 31: o prazo.</param>
+/// <param name="Valor">Bloco 35: o valor (só nas tarefas que não são resumo).</param>
 public sealed record TarefaCopiada(
-    Guid Original, Guid? PaiOriginal, string Nome, DateTime DataInicio, int Duracao, int PercentualConcluido, string? Notas, bool EhResumo);
+    Guid Original, Guid? PaiOriginal, string Nome, DateTime DataInicio, int Duracao, int PercentualConcluido, string? Notas, bool EhResumo,
+    DateTime? NaoIniciarAntesDe = null, DateTime? Prazo = null, decimal? Valor = null);
 
 /// <summary>
 /// Bloco 30: tarefas copiadas, com as subtarefas e os vínculos entre elas (os vínculos com tarefas de fora ficam de
@@ -70,7 +74,8 @@ public static class CopiaDeTarefas
                 continue;
             incluidas.Add(tarefa.Id);
             copiadas.Add(new TarefaCopiada(tarefa.Id, ehRaiz ? null : tarefa.TarefaPaiId, tarefa.Nome, tarefa.DataInicio, tarefa.Duracao,
-                tarefa.PercentualConcluido, tarefa.Notas, tarefa.EhResumo));
+                tarefa.PercentualConcluido, tarefa.Notas, tarefa.EhResumo, tarefa.NaoIniciarAntesDe, tarefa.Prazo,
+                tarefa.EhResumo ? null : tarefa.Valor));
         }
         var vinculos = cronograma.Predecessoras
             .Where(p => incluidas.Contains(p.TarefaOrigemId) && incluidas.Contains(p.TarefaDestinoId))
@@ -113,8 +118,16 @@ public static class CopiaDeTarefas
                 novas[copiada.Original] = tarefa;
                 criadas.Add(tarefa);
             }
-            foreach (var copiada in trecho.Tarefas.Where(c => !c.EhResumo))
-                novas[copiada.Original].AtualizarPercentualConcluido(copiada.PercentualConcluido);
+            foreach (var copiada in trecho.Tarefas)
+            {
+                var nova = novas[copiada.Original];
+                nova.DefinirPrazo(copiada.Prazo);
+                if (copiada.EhResumo)
+                    continue;
+                nova.AtualizarPercentualConcluido(copiada.PercentualConcluido);
+                nova.DefinirRestricaoDeInicio(copiada.NaoIniciarAntesDe);
+                nova.DefinirValor(copiada.Valor);
+            }
             foreach (var vinculo in trecho.Vinculos)
                 cronograma.AdicionarPredecessora(new Predecessora(novas[vinculo.TarefaOrigemId].Id, novas[vinculo.TarefaDestinoId].Id,
                     vinculo.Tipo, vinculo.Lag));

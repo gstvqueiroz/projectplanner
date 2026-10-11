@@ -10,6 +10,8 @@ A cada mensagem, o assistente recebe:
 - um **retrato só de leitura do cronograma aberto**: projeto, datas, e por tarefa Nº, EDT, nome, tipo, duração,
   início/término calculados, % concluído, predecessoras, folga, se é crítica, quantidade de fotos e notas;
 - a **conversa inteira** (as APIs de chat não guardam nada entre as chamadas), sem os avisos locais;
+- desde o Bloco 26, a **condução da conversa**: o modo (montar agora ou estudar antes), a ficha do projeto e o andamento
+  do estudo (ver "Dois modos, ficha do projeto e conversa salva", abaixo);
 - os **anexos da conversa inteira**: PDF e imagens (PNG, JPG, WebP, HEIC) como arquivo, texto (TXT, MD, CSV, JSON)
   lido como parte da mensagem. Word, Excel e outros formatos são recusados ao anexar, com a orientação de exportar
   como PDF. A soma dos anexos da conversa vai até 14 MB (o Gemini aceita 20 MB por pedido, e os arquivos vão em
@@ -125,9 +127,65 @@ deu a ela (`ref`, como "n1").
    aplicação pode ser desfeita, e só enquanto o mesmo projeto estiver aberto; se o cronograma mudou depois dela (à mão),
    o programa pergunta antes.
 
+## Dois modos, ficha do projeto e conversa salva (Bloco 26)
+
+**A escolha do modo.** Num pedido para criar ou refazer o cronograma inteiro, o assistente não monta nada de cara: responde
+com o cartão "Como você prefere?":
+- **Montar o cronograma agora:** com o que já tem e premissas comuns de obra, que ele registra na ficha;
+- **Estudar e conversar antes:** ele lê os documentos, pergunta e mostra o plano antes de montar.
+
+Quem reconhece o pedido de cronograma é o próprio assistente (pelas instruções), não uma lista de palavras no programa;
+ajustes pontuais ("a laje leva 8 dias"), perguntas e análises são atendidos direto, como antes. A escolha vale para a
+conversa (Limpar conversa recomeça). Em **Configurações do assistente > Ao pedir um cronograma** dá para deixar sempre
+perguntar (padrão), sempre montar direto ou sempre estudar antes; fica no `assistente.json`, como o campo `"modo"`.
+
+**O estudo**, com a etapa à vista no topo do painel ("Estudo · perguntas (2 de 4)"):
+
+1. **Leitura:** o assistente conta o que entendeu dos documentos e preenche a ficha.
+2. **Perguntas:** de 1 a 5 por rodada, só sobre o que falta e importa para o cronograma (início, prazo, dias de trabalho,
+   equipe, etapas incluídas ou excluídas, nível de detalhe). Cada uma tem respostas para clicar (mais "Não sei (use o
+   comum)") e um campo para escrever outra; o texto da caixa embaixo vai junto como observação. No máximo 4 rodadas;
+   **Pular para o plano** encerra antes.
+3. **Plano:** as etapas com as durações, o término estimado e as premissas, com **Aprovar e montar** e **Ajustar…**
+   (que começa a mensagem "Ajuste no plano: " na caixa). Um plano novo precisa de aprovação nova.
+4. **Montagem:** aprovado o plano, o assistente monta o cronograma completo pelas alterações, aplicadas como sempre (com
+   Desfazer). Montado o cronograma, a conversa passa ao modo direto, para os ajustes seguintes.
+
+Os botões do cartão, das perguntas e do plano só valem na última mensagem e não durante a espera.
+
+**A ficha do projeto** (no topo do painel, recolhida) é o que já foi definido sobre a obra: o assistente acrescenta e
+corrige campos a cada resposta, e você edita, apaga (valor vazio ou ×) e acrescenta campos. Ela vai em cada pedido, e o
+assistente é instruído a não perguntar de novo o que já está nela. Limites: 60 campos, nome até 80 e valor até 1.000
+caracteres.
+
+**O formato.** Além de `mensagem` e `alteracoes`, a resposta pode ter `tipo` (`resposta`, `modo`, `perguntas`, `plano`),
+`ficha` ([{campo, valor}], valor vazio apaga), `perguntas` ([{pergunta, opcoes}]) e `plano` ({etapas: [{nome, duracao,
+observacao}], termino, premissas}). Os campos novos são opcionais no esquema do Gemini (os obrigatórios continuam os de
+antes). Respostas dos tipos modo, perguntas e plano nunca alteram o cronograma (alterações nelas são ignoradas); perguntas
+ou plano vazios viram uma resposta comum. O pedido leva a condução (`ConducaoDaConversa`: modo, preferência, ficha,
+rodadas, plano aprovado, "apresentar o plano agora"), e as instruções mudam com ela (`InstrucoesDoAssistente.Conducao`).
+No histórico, uma resposta estruturada volta como o JSON que ela foi (sem as alterações, que já estão no retrato).
+
+**A conversa no .pplan.** A conversa e a ficha ficam na tabela `AssistenteDoProjeto` (migration aditiva, uma linha por
+projeto, JSON versionado; nenhuma linha com a conversa vazia). Ao reabrir, as mensagens, as perguntas, o plano e a ficha
+voltam, e o estudo continua de onde parou. Os avisos locais ("Resposta cancelada") não são guardados; as alterações de
+sessões anteriores aparecem como texto, sem Desfazer. Os anexos ficam como referência ao arquivo (caminho e tamanho):
+voltam a ser enviados enquanto o arquivo existir no computador; em outro computador viram uma nota. Uma conversa que não
+dá para ler fica de fora com aviso, e o projeto abre normalmente.
+
+As mensagens sozinhas não marcam o projeto como alterado (vão junto quando ele for salvo); a ficha, o modo e a aprovação
+do plano marcam, então um estudo em andamento não se perde sem a pergunta de salvar.
+
+| O quê | Onde |
+|---|---|
+| Conversa, ficha, modo (domínio) | `src/ProjectPlanner.Core/Assistente/ConversaDoProjeto.cs` |
+| Gravação no .pplan | `src/ProjectPlanner.Data/FormatoDaConversa.cs`, migration `AssistenteDoProjeto` |
+| Condução, tipos de resposta, ficha e plano no protocolo | `src/ProjectPlanner.IA/ConducaoDaConversa.cs`, `FormatoDaResposta`, `InstrucoesDoAssistente` |
+| Painel: cartão, perguntas, plano, ficha | `AssistenteViewModel`, `ConversaNaTela.cs`, `AssistenteView.axaml` |
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".
 - **Desfazer em vários níveis**: só a última resposta pode ser desfeita.
 - **Respostas em partes (streaming)** e anexos maiores que 14 MB (pela API de arquivos do Gemini).
-- **Guardar a conversa**: o histórico continua só em memória, na sessão, e recomeça quando outro projeto é aberto.
+- **Ler Word e Excel direto** (hoje, exportar como PDF).

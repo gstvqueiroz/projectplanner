@@ -302,6 +302,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             Carregar(aberto, caminho);
             _caminhoNaMensagem = caminho;
             Mensagem = $"Projeto aberto: {caminho}";
+            if (aberto.ConversaDescartadaAoAbrir)
+                Mensagem += " A conversa com o assistente guardada no arquivo não pôde ser lida e ficou de fora.";
             if (aberto.FotosDescartadasAoAbrir > 0)
                 Mensagem += aberto.FotosDescartadasAoAbrir == 1
                     ? " 1 registro de exemplo de foto (sem imagem) foi descartado; ele some do arquivo ao salvar."

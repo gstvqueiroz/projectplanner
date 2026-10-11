@@ -39,4 +39,13 @@ public interface ICronogramaDoAssistente
 
     /// <summary>A aplicação que pode ser desfeita mudou (outra aplicação, desfazer, outro projeto).</summary>
     event Action? DesfazerMudou;
+
+    /// <summary>A conversa e a ficha do projeto aberto (Bloco 26), guardadas no .pplan.</summary>
+    Core.Assistente.ConversaDoProjeto Conversa { get; }
+
+    /// <summary>
+    /// A ficha, o modo ou a aprovação do plano mudaram: o projeto passa a ter alterações não salvas. As mensagens sozinhas
+    /// não marcam o projeto (vão junto quando ele for salvo).
+    /// </summary>
+    void ConversaMudou();
 }

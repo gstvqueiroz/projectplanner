@@ -43,6 +43,20 @@
             </DockPanel>
         </StackPanel>
 
+        <!-- Bloco 26 -->
+        <StackPanel Spacing="4">
+            <TextBlock Text="Ao pedir um cronograma" FontWeight="SemiBold" />
+            <ComboBox x:Name="ModoAoPedirCronograma" ItemsSource="{x:Static vm:ConfiguracaoAssistenteViewModel.OpcoesDeModo}"
+                      SelectedItem="{Binding ModoEscolhido}" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="Ao pedir um cronograma">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OpcaoDeModo">
+                        <TextBlock Text="{Binding Texto}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+
         <TextBlock Text="{x:Static vm:ConfiguracaoAssistenteViewModel.AvisoDePrivacidade}" TextWrapping="Wrap" FontSize="12"
                    Foreground="{DynamicResource TextoDeAviso}" />
 

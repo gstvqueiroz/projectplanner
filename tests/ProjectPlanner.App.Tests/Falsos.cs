@@ -430,6 +430,10 @@ public sealed class ConfiguracaoAssistenteFalsa : IConfiguracaoAssistente
     public void RemoverChave() => Chave = null;
     public void SalvarModelo(string modelo) => Modelo = modelo;
     public Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento) => Task.CompletedTask;
+
+    // Bloco 26
+    public PreferenciaDeModo PreferenciaDeModo { get; set; } = PreferenciaDeModo.Perguntar;
+    public void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia) => PreferenciaDeModo = preferencia;
 }
 
 /// <summary>Um cofre em memória (Bloco 23); <see cref="Falha"/> faz toda operação falhar como um cofre bloqueado.</summary>

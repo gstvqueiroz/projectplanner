@@ -29,11 +29,24 @@ public partial class AssistenteView : UserControl
     protected override void OnDataContextChanged(EventArgs e)
     {
         if (_viewModel is not null)
+        {
             _viewModel.Mensagens.CollectionChanged -= MensagensMudaram;
+            _viewModel.FocoNaEntradaPedido -= FocarNaEntrada;
+        }
         base.OnDataContextChanged(e);
         _viewModel = DataContext as AssistenteViewModel;
         if (_viewModel is not null)
+        {
             _viewModel.Mensagens.CollectionChanged += MensagensMudaram;
+            _viewModel.FocoNaEntradaPedido += FocarNaEntrada;
+        }
+    }
+
+    // Bloco 26 (Ajustar o plano): o cursor vai para o fim do texto começado na caixa.
+    private void FocarNaEntrada()
+    {
+        Entrada.Focus();
+        Entrada.CaretIndex = Entrada.Text?.Length ?? 0;
     }
 
     // A conversa desce sozinha a cada mensagem nova.

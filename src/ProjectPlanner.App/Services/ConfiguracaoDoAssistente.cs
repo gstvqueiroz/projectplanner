@@ -43,6 +43,12 @@ public interface IConfiguracaoAssistente
     /// <exception cref="ArgumentException">Nome de modelo inválido.</exception>
     void SalvarModelo(string modelo);
 
+    /// <summary>O que fazer num pedido de cronograma (Bloco 26): perguntar (padrão), montar direto ou estudar antes.</summary>
+    PreferenciaDeModo PreferenciaDeModo { get; }
+
+    /// <exception cref="ArgumentOutOfRangeException">Preferência desconhecida.</exception>
+    void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia);
+
     /// <summary>Testa a chave digitada (ou, sem ela, a que está em uso) com o modelo.</summary>
     /// <exception cref="ArgumentException">Sem chave, ou chave ou modelo inválidos.</exception>
     /// <exception cref="ErroDoAssistenteException">A chave não vale, o modelo não existe ou não há conexão.</exception>
@@ -125,8 +131,17 @@ public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfigu
     public void SalvarModelo(string modelo)
     {
         var nome = _provedor.NormalizarModelo(modelo);
-        _preferencias.Salvar(new PreferenciasAssistente(nome));
+        _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasAssistente(nome)) with { Modelo = nome });
         _modelo = nome;
+    }
+
+    public PreferenciaDeModo PreferenciaDeModo => _preferencias.Carregar()?.Modo ?? PreferenciaDeModo.Perguntar;
+
+    public void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia)
+    {
+        if (!Enum.IsDefined(preferencia))
+            throw new ArgumentOutOfRangeException(nameof(preferencia), preferencia, "Preferência desconhecida.");
+        _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasAssistente(Modelo)) with { Modo = preferencia });
     }
 
     public Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento)

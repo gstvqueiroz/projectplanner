@@ -25,6 +25,36 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="6,2" />
         </Style>
+        <!-- Bloco 26: o balão com botões (modo, perguntas, plano) usa a largura do painel. -->
+        <Style Selector="Border.balao.interativo">
+            <Setter Property="MaxWidth" Value="10000" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Border.cartao">
+            <Setter Property="Background" Value="{DynamicResource FundoSutil}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+        </Style>
+        <!-- Respostas sugeridas: "pílulas" para clicar, uma escolhida por pergunta. -->
+        <Style Selector="ListBox.opcoes">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.opcoes ListBoxItem">
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="Margin" Value="0,2,4,2" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="ListBox.opcoes ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
     </UserControl.Styles>
 
     <Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
@@ -59,6 +89,57 @@
                             Content="Configurar a chave do Gemini…" Command="{Binding ConfigurarCommand}" />
                 </StackPanel>
             </Border>
+
+            <!-- Bloco 26: em que pé está o estudo, com o atalho para o plano. -->
+            <Border x:Name="BarraDoEstudo" DockPanel.Dock="Top" Padding="10,4" BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" IsVisible="{Binding TemEtapaDoEstudo}">
+                <DockPanel>
+                    <Button x:Name="PularParaOPlano" DockPanel.Dock="Right" Classes="plano" FontSize="12" Padding="4,0"
+                            Foreground="{DynamicResource TextoDeLink}" Content="Pular para o plano"
+                            Command="{Binding PularParaOPlanoCommand}" IsVisible="{Binding MostrarPularParaOPlano}"
+                            ToolTip.Tip="Parar as perguntas: o assistente apresenta o plano com o que já tem" />
+                    <TextBlock x:Name="EtapaDoEstudo" Text="{Binding EtapaDoEstudo}" FontSize="12" Opacity="0.75"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+            </Border>
+
+            <!-- Bloco 26: a ficha do projeto, o que já foi definido; vai com cada pedido e fica no .pplan. Sempre à mão
+                 (recolhida), para o usuário poder adiantar dados antes de pedir o cronograma. -->
+            <Expander x:Name="FichaDoProjeto" DockPanel.Dock="Top" Header="{Binding TituloDaFicha}"
+                      HorizontalAlignment="Stretch" Margin="6,4" Padding="8,4" MaxHeight="300">
+                <ScrollViewer>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="O que já foi definido sobre a obra. O assistente preenche ao estudar; você pode corrigir."
+                                   FontSize="11" Opacity="0.65" TextWrapping="Wrap" />
+                        <ItemsControl x:Name="CamposDaFicha" ItemsSource="{Binding Ficha}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CampoDaFichaNaTela">
+                                    <DockPanel Margin="0,1">
+                                        <Button DockPanel.Dock="Right" Classes="plano" Content="×" Padding="4,0" FontSize="13"
+                                                Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).RemoverCampoCommand}"
+                                                CommandParameter="{Binding}" ToolTip.Tip="Tirar da ficha"
+                                                AutomationProperties.Name="Tirar o campo da ficha" />
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Campo}" FontSize="12" FontWeight="SemiBold"
+                                                   Width="110" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBox Text="{Binding Valor, UpdateSourceTrigger=LostFocus}" FontSize="12" MinHeight="24"
+                                                 Padding="6,2" TextWrapping="Wrap" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <DockPanel Margin="0,2,0,0">
+                            <Button x:Name="AdicionarCampo" DockPanel.Dock="Right" Content="+" Padding="8,2" Margin="4,0,0,0"
+                                    Command="{Binding AdicionarCampoCommand}" ToolTip.Tip="Acrescentar à ficha"
+                                    AutomationProperties.Name="Acrescentar o campo à ficha" />
+                            <TextBox DockPanel.Dock="Left" Text="{Binding NovoCampo}" PlaceholderText="Campo" Width="110" FontSize="12"
+                                     MinHeight="24" Padding="6,2" Margin="0,0,6,0" />
+                            <TextBox Text="{Binding NovoValor}" PlaceholderText="Valor" FontSize="12" MinHeight="24" Padding="6,2" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding AvisoDaFicha}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextoDeErro}"
+                                   IsVisible="{Binding AvisoDaFicha, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Expander>
 
             <!-- Entrada: anexar, texto (Enter envia, Shift+Enter quebra a linha) e Enviar/Cancelar. -->
             <DockPanel DockPanel.Dock="Bottom" Margin="8">
@@ -123,7 +204,8 @@
                                 <Border Classes="balao"
                                         Classes.doUsuario="{Binding DoUsuario}"
                                         Classes.doAssistente="{Binding !DoUsuario}"
-                                        Classes.erro="{Binding EhErro}">
+                                        Classes.erro="{Binding EhErro}"
+                                        Classes.interativo="{Binding Interativa}">
                                     <StackPanel Spacing="3">
                                         <SelectableTextBlock Text="{Binding Texto}" TextWrapping="Wrap" FontSize="13"
                                                              IsVisible="{Binding TemTexto}" />
@@ -141,6 +223,100 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        <!-- Bloco 26: como trabalhar (vale para a conversa). Os botões só valem na última mensagem. -->
+                                        <Border Classes="cartao" IsVisible="{Binding EscolheModo}">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock Text="Como você prefere?" FontWeight="SemiBold" FontSize="12" />
+                                                <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                        Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).EscolherModoCommand}"
+                                                        CommandParameter="direto" AutomationProperties.Name="Montar o cronograma agora">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Montar o cronograma agora" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Text="Com o que já tem e premissas comuns; as premissas vão para a ficha."
+                                                                   FontSize="11" TextWrapping="Wrap" Opacity="0.85" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                        Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).EscolherModoCommand}"
+                                                        CommandParameter="estudo" AutomationProperties.Name="Estudar e conversar antes">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Estudar e conversar antes" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Text="O assistente lê os documentos, faz algumas perguntas e mostra o plano para você aprovar."
+                                                                   FontSize="11" TextWrapping="Wrap" Opacity="0.85" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
+                                        <!-- Bloco 26: perguntas com respostas para clicar (ou escrever). -->
+                                        <StackPanel IsVisible="{Binding TemPerguntas}" Spacing="2">
+                                            <ItemsControl ItemsSource="{Binding Perguntas}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:PerguntaNaTela">
+                                                        <Border Classes="cartao">
+                                                            <StackPanel Spacing="2">
+                                                                <TextBlock Text="{Binding Texto}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
+                                                                <ListBox Classes="opcoes" ItemsSource="{Binding Opcoes}" SelectedItem="{Binding Escolhida}"
+                                                                         SelectionMode="Single,Toggle">
+                                                                    <ListBox.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <WrapPanel />
+                                                                        </ItemsPanelTemplate>
+                                                                    </ListBox.ItemsPanel>
+                                                                </ListBox>
+                                                                <TextBox Text="{Binding Outra}" PlaceholderText="Outra resposta…" FontSize="12"
+                                                                         MinHeight="24" Padding="6,2" TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Button Content="Responder" Classes="accent" FontSize="12" HorizontalAlignment="Right" Margin="0,4,0,0"
+                                                    Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).ResponderPerguntasCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="Mandar as respostas (o texto da caixa embaixo vai junto, como observação)"
+                                                    AutomationProperties.Name="Responder as perguntas" />
+                                        </StackPanel>
+                                        <!-- Bloco 26: o plano para aprovar antes de montar. -->
+                                        <Border Classes="cartao" IsVisible="{Binding TemPlano}">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="Plano do cronograma" FontWeight="SemiBold" FontSize="12" />
+                                                <ItemsControl ItemsSource="{Binding Plano.Etapas, FallbackValue={x:Null}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:EtapaNaTela">
+                                                            <StackPanel Margin="0,1">
+                                                                <DockPanel>
+                                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Duracao}" FontSize="12" Opacity="0.75" />
+                                                                    <TextBlock Text="{Binding Nome}" FontSize="12" TextWrapping="Wrap" />
+                                                                </DockPanel>
+                                                                <TextBlock Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}" FontSize="11"
+                                                                           Opacity="0.65" TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="{Binding Plano.Termino, FallbackValue=''}" FontWeight="SemiBold" FontSize="12"
+                                                           IsVisible="{Binding Plano.TemTermino, FallbackValue=False}" />
+                                                <TextBlock Text="Premissas" FontSize="11" Opacity="0.65" Margin="0,2,0,0"
+                                                           IsVisible="{Binding Plano.TemPremissas, FallbackValue=False}" />
+                                                <ItemsControl ItemsSource="{Binding Plano.Premissas, FallbackValue={x:Null}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <TextBlock Text="{Binding StringFormat='– {0}'}" FontSize="11" TextWrapping="Wrap" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" Margin="0,4,0,0">
+                                                    <Button Content="Ajustar…" FontSize="12"
+                                                            Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).AjustarPlanoCommand}"
+                                                            CommandParameter="{Binding}" ToolTip.Tip="Escrever o que mudar no plano"
+                                                            AutomationProperties.Name="Ajustar o plano" />
+                                                    <Button Content="Aprovar e montar" Classes="accent" FontSize="12"
+                                                            Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).AprovarPlanoCommand}"
+                                                            CommandParameter="{Binding}" ToolTip.Tip="O assistente monta o cronograma completo seguindo este plano"
+                                                            AutomationProperties.Name="Aprovar o plano e montar" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
                                         <!-- Bloco 24: o que a resposta fez no cronograma, com Desfazer na última aplicação. -->
                                         <Border Classes="alteracoes" Classes.aplicadas="{Binding Alteracoes.Aplicadas, FallbackValue=False}"
                                                 IsVisible="{Binding TemAlteracoes}" CornerRadius="6" Padding="8,5" Margin="0,3,0,0">
@@ -174,6 +350,9 @@
                             <Style Selector="Border.balao.doAssistente">
                                 <Setter Property="Background" Value="{DynamicResource FundoDoBalaoDoAssistente}" />
                                 <Setter Property="HorizontalAlignment" Value="Left" />
+                            </Style>
+                            <Style Selector="Border.balao.doAssistente.interativo">
+                                <Setter Property="HorizontalAlignment" Value="Stretch" />
                             </Style>
                             <Style Selector="Border.balao.erro">
                                 <Setter Property="Background" Value="{DynamicResource FundoDoBalaoDeErro}" />

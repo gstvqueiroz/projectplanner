@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.26.0
+
+- Assistente em dois modos: ao pedir um cronograma, o assistente pergunta se você prefere montar agora (com premissas
+  comuns) ou estudar e conversar antes. A escolha vale para a conversa; em Configurações do assistente dá para deixar
+  sempre perguntar (padrão), sempre montar direto ou sempre estudar antes.
+- Modo de estudo: o assistente lê os documentos, conta o que entendeu e faz perguntas em rodadas (até 4), com respostas
+  para clicar e um campo para escrever outra; depois apresenta o plano (etapas, durações, término estimado e premissas)
+  para você aprovar ou ajustar, e só então monta o cronograma completo. "Pular para o plano" encerra as perguntas.
+- Ficha do projeto no painel do assistente: o que já foi definido sobre a obra (tipo, área, prazo, premissas), preenchida
+  pelo assistente e editável por você; vai junto de cada pedido.
+- A conversa com o assistente e a ficha ficam salvas no .pplan: ao reabrir o projeto, o estudo continua de onde parou.
+  Os anexos ficam só como referência ao arquivo (não são copiados para dentro do projeto).
+
 ## 0.25.0
 
 - Ajuda > Sobre o ProjectPlanner: versão, novidades desta versão e os componentes de terceiros com as licenças.
@@ -85,16 +98,16 @@ versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
 ## Roteiro dos próximos blocos
 
-Combinado no Bloco 25 (cada bloco ainda passa pela aprovação dos itens antes de começar):
+Revisto no Bloco 26, a partir do planejamento de fotos e IA (cada bloco ainda passa pela aprovação dos itens antes de
+começar):
 
-- Bloco 26: desfazer e refazer na grid e no Gantt (vários níveis, também o do assistente), copiar, colar e duplicar
-  tarefas.
-- Bloco 27: localizar e filtrar tarefas, e um painel de fotos do projeto inteiro.
-- Bloco 28: linha de base (o planejado × o real) e prazos (data limite por tarefa).
-- Bloco 29: datas de tarefa e restrições ("não iniciar antes de"); corrige as colunas Início e Término, que hoje mostram
-  a data digitada mas o cálculo usa só o início do projeto e as predecessoras.
-- Bloco 30: feriados e calendário de trabalho configurável.
-- Bloco 31: entregas: o Gantt como imagem PNG (e PDF depois de avaliar as licenças), Excel nativo, importar CSV e
-  modelos de projeto (residência, galpão…).
-- Bloco 32: Gantt virtualizado, que desenha só a área visível (projetos com mais de 5.000 tarefas).
-- Bloco 33: salvamento automático, rótulos e cores nas barras.
+- Bloco 26 (feito): chat em dois modos, ficha do projeto e conversa salva no .pplan.
+- Bloco 27: relatório fotográfico em PDF e Word (capa, resumo do andamento, fotos numeradas com legenda automática,
+  modelos com os dados da empresa) e a curadoria das fotos para o relatório.
+- Bloco 28: fotos do projeto inteiro, importação em lote com a tarefa sugerida pela data, locais padronizados e alerta de
+  tarefa sem foto.
+- Bloco 29: IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
+- Bloco 30: desfazer e refazer na grid e no Gantt (vários níveis, também o do assistente), copiar, colar e duplicar.
+- Depois: localizar e filtrar; linha de base e prazos; datas de tarefa e restrições (corrige as colunas Início e Término,
+  que hoje mostram a data digitada mas o cálculo usa só o início do projeto e as predecessoras); feriados; entregas
+  (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

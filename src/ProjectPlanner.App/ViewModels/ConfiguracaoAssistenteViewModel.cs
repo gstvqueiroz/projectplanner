@@ -6,6 +6,9 @@ using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
 
+/// <summary>Uma escolha da preferência de modo (Bloco 26), como a lista da tela a mostra.</summary>
+public sealed record OpcaoDeModo(PreferenciaDeModo Valor, string Texto);
+
 /// <summary>
 /// A tela Configurações do assistente (Bloco 23): colar a chave de API (que vai para o cofre do sistema), escolher o
 /// modelo, testar a conexão e remover a chave. A chave digitada nunca é mostrada de volta: só o fim da que está em uso.
@@ -27,6 +30,30 @@ public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(dialogos);
         (_configuracao, _dialogos) = (configuracao, dialogos);
         Modelo = configuracao.Modelo;
+        ModoEscolhido = OpcoesDeModo.FirstOrDefault(o => o.Valor == configuracao.PreferenciaDeModo) ?? OpcoesDeModo[0];
+        _pronta = true;
+    }
+
+    private readonly bool _pronta;
+
+    /// <summary>O que fazer num pedido de cronograma (Bloco 26).</summary>
+    public static IReadOnlyList<OpcaoDeModo> OpcoesDeModo { get; } =
+    [
+        new(PreferenciaDeModo.Perguntar, "Perguntar: montar agora ou estudar antes"),
+        new(PreferenciaDeModo.Direto, "Montar o cronograma direto"),
+        new(PreferenciaDeModo.Estudo, "Estudar os documentos e conversar antes"),
+    ];
+
+    /// <summary>A preferência de modo; muda na hora (não precisa de Salvar).</summary>
+    [ObservableProperty]
+    public partial OpcaoDeModo ModoEscolhido { get; set; }
+
+    partial void OnModoEscolhidoChanged(OpcaoDeModo value)
+    {
+        if (!_pronta || value is null)
+            return;
+        _configuracao.SalvarPreferenciaDeModo(value.Valor);
+        Mostrar($"Ao pedir um cronograma: {value.Texto.ToLowerInvariant()}.", erro: false);
     }
 
     public string NomeDoProvedor => _configuracao.NomeDoProvedor;

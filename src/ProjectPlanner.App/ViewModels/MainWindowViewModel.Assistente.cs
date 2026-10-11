@@ -20,6 +20,15 @@ public sealed partial class MainWindowViewModel : ICronogramaDoAssistente
 
     ContextoDoProjeto ICronogramaDoAssistente.Retrato() => RetratoParaOAssistente();
 
+    public Core.Assistente.ConversaDoProjeto Conversa => _cronograma.Assistente;
+
+    // Bloco 26: a conversa não é uma mudança do cronograma (não conta para o "mudou depois" do Desfazer nem recalcula).
+    public void ConversaMudou()
+    {
+        PossuiAlteracoesNaoSalvas = true;
+        OnPropertyChanged(nameof(Titulo));
+    }
+
     public async Task<ResultadoDaAplicacao> AplicarAsync(IReadOnlyList<AlteracaoDoCronograma> alteracoes, ContextoDoProjeto retrato)
     {
         ArgumentNullException.ThrowIfNull(alteracoes);

@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.CustosWindow"
+        x:DataType="vm:CustosViewModel"
+        Title="{Binding Titulo}"
+        Width="1100" Height="680" MinWidth="860" MinHeight="480"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 37: os custos realizados (lançar, alterar, remover e importar) e os totais. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="Importar" Content="Importar planilha…" Command="{Binding ImportarPlanilhaCommand}"
+                        ToolTip.Tip="Uma planilha (.xlsx ou .csv) com as colunas Data e Valor e, se houver, Descrição, EDT, Categoria e Documento" />
+                <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+            </StackPanel>
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <!-- O formulário -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="70,140,14,Auto,8,*,14,Auto,8,200">
+                    <TextBlock Classes="rotulo" Text="Data" />
+                    <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding Data}" HorizontalAlignment="Stretch" />
+                    <TextBlock Grid.Column="3" Classes="rotulo" Text="Tarefa" />
+                    <ComboBox Grid.Column="5" x:Name="Tarefa" ItemsSource="{Binding Tarefas}" SelectedItem="{Binding TarefaEscolhida}" HorizontalAlignment="Stretch" />
+                    <TextBlock Grid.Column="7" Classes="rotulo" Text="Categoria" />
+                    <ComboBox Grid.Column="9" ItemsSource="{Binding Categorias}" SelectedItem="{Binding CategoriaEscolhida}" HorizontalAlignment="Stretch" />
+                </Grid>
+                <Grid ColumnDefinitions="70,*,8,150,8,130,8,Auto,6,Auto">
+                    <TextBlock Classes="rotulo" Text="Descrição" />
+                    <TextBox Grid.Column="1" x:Name="Descricao" Text="{Binding Descricao}" PlaceholderText="Ex.: Cimento CP-II (40 sacos)" />
+                    <TextBox Grid.Column="3" Text="{Binding Documento}" PlaceholderText="Documento (NF 1234)" />
+                    <TextBox Grid.Column="5" x:Name="Valor" Text="{Binding Valor}" PlaceholderText="Valor (R$)" />
+                    <Button Grid.Column="7" x:Name="Salvar" Classes="accent" Content="{Binding TextoDoSalvar}" Command="{Binding SalvarCommand}" IsDefault="True" />
+                    <Button Grid.Column="9" Content="Novo" Command="{Binding NovoCommand}" ToolTip.Tip="Limpar o formulário para outro custo" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Os totais -->
+        <StackPanel DockPanel.Dock="Right" Width="260" Margin="14,0,0,0" Spacing="4">
+            <TextBlock Classes="secao" Text="{Binding Total, StringFormat='Total: {0}'}" FontSize="14" />
+            <TextBlock Classes="secao" Text="Por categoria" Margin="0,8,0,2" />
+            <ItemsControl ItemsSource="{Binding PorCategoria}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                        <DockPanel Margin="0,1">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding Valor}" FontSize="12" />
+                            <TextBlock Text="{Binding Rotulo}" FontSize="12" />
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="secao" Text="Por mês" Margin="0,8,0,2" />
+            <ScrollViewer MaxHeight="220">
+                <ItemsControl ItemsSource="{Binding PorMes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                            <DockPanel Margin="0,1">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Valor}" FontSize="12" />
+                                <TextBlock Text="{Binding Rotulo}" FontSize="12" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </StackPanel>
+
+        <!-- A lista -->
+        <Panel>
+            <TextBlock Text="{x:Static vm:CustosViewModel.TextoSemCustos}" IsVisible="{Binding SemCustos}" TextWrapping="Wrap" Opacity="0.6"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" MaxWidth="460" />
+            <DockPanel IsVisible="{Binding !SemCustos}">
+                <Button DockPanel.Dock="Bottom" HorizontalAlignment="Left" Content="Remover…" Command="{Binding RemoverCommand}" Margin="0,8,0,0" />
+                <DataGrid x:Name="Lista" ItemsSource="{Binding Lista}" SelectedItem="{Binding Selecionado}" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserSortColumns="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Data" Width="104" Binding="{Binding Data}" x:DataType="vm:CustoNaLista" />
+                        <DataGridTextColumn Header="Tarefa" Width="*" MinWidth="150" Binding="{Binding Tarefa}" x:DataType="vm:CustoNaLista" />
+                        <DataGridTextColumn Header="Categoria" Width="140" Binding="{Binding Categoria}" x:DataType="vm:CustoNaLista" />
+                        <DataGridTextColumn Header="Descrição" Width="*" MinWidth="160" Binding="{Binding Descricao}" x:DataType="vm:CustoNaLista" />
+                        <DataGridTextColumn Header="Documento" Width="110" Binding="{Binding Documento}" x:DataType="vm:CustoNaLista" />
+                        <DataGridTextColumn Header="Valor (R$)" Width="110" Binding="{Binding Valor}" x:DataType="vm:CustoNaLista" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Panel>
+    </DockPanel>
+</Window>

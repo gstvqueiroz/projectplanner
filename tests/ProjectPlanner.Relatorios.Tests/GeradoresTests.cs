@@ -33,7 +33,7 @@ public class GeradoresTests
 
     // Uma obra com duas tarefas e <paramref name="fotos"/> fotos, metade em cada; a primeira de destaque.
     private static (RelatorioFotografico Relatorio, Dictionary<Guid, byte[]> Imagens) Obra(int fotos, int porPagina = 2, bool logo = true,
-        bool comIndice = true, bool comAssinaturas = true)
+        bool comIndice = true, bool comAssinaturas = true, bool comIndicadores = false)
     {
         var cronograma = new Cronograma("Residência Silva — Casa 1", Seg);
         var escavacao = new Tarefa("Escavação", Seg, 3);
@@ -60,7 +60,7 @@ public class GeradoresTests
         cronograma.DefinirObra(new DadosDaObra("Sr. João Silva", "C-2026-014", "Rua das Flores, 100 — Campinas/SP"));
         var cabecalho = new CabecalhoDoRelatorio(cronograma.Nome, cronograma.Obra, "Eng. Ana Souza", "CREA-SP 123456", logo ? Png(300, 100) : null);
         var opcoes = new OpcoesDoRelatorio(new DateOnly(2026, 9, 1), new DateOnly(2026, 10, 31))
-            { FotosPorPagina = porPagina, ComIndice = comIndice, ComAssinaturas = comAssinaturas };
+            { FotosPorPagina = porPagina, ComIndice = comIndice, ComAssinaturas = comAssinaturas, ComIndicadores = comIndicadores };
         return (MontadorDoRelatorio.Montar(cronograma, opcoes, cabecalho, new DateTime(2026, 10, 11, 10, 0, 0)), imagens);
     }
 
@@ -74,6 +74,23 @@ public class GeradoresTests
     private static int Paginas(byte[] pdf) => Regex.Matches(Encoding.Latin1.GetString(pdf), @"/Type\s*/Page\b").Count;
 
     private static int Imagens(byte[] pdf) => Regex.Matches(Encoding.Latin1.GetString(pdf), @"/Subtype\s*/Image").Count;
+
+    // ---- Bloco 37: a página de indicadores ----
+
+    [Fact]
+    public void ComIndicadores_UmaPaginaAMais_NoPdfENoWord()
+    {
+        var (sem, imagens) = Obra(fotos: 2);
+        var (com, _) = Obra(fotos: 2, comIndicadores: true);
+
+        com.Indicadores.Should().NotBeNull();
+        com.Indicadores!.Data.Should().Be(new DateOnly(2026, 10, 31), "na data do fim do período");
+        com.TotalDePaginas.Should().Be(sem.TotalDePaginas + 1);
+        Paginas(Gerar(new GeradorPdf(), com, id => imagens.GetValueOrDefault(id))).Should().Be(Paginas(Gerar(new GeradorPdf(), sem, id => imagens.GetValueOrDefault(id))) + 1);
+        using var word = WordprocessingDocument.Open(new MemoryStream(Gerar(new GeradorWord(), com, id => imagens.GetValueOrDefault(id))), false);
+        word.MainDocumentPart!.Document!.Body!.InnerText.Should().Contain("Indicadores em 31/10/2026").And.Contain("Curva S física e financeira");
+        new OpenXmlValidator().Validate(word).Should().BeEmpty("o documento com os indicadores continua válido");
+    }
 
     // ---- PDF ----
 

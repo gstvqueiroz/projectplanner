@@ -79,6 +79,9 @@
                         <!-- Bloco 29 -->
                         <CheckBox x:Name="ComAntesEDepois" Content="Antes e depois por local" IsChecked="{Binding ComAntesEDepois}"
                                   ToolTip.Tip="Uma página por local: a primeira foto dele e a última do período, lado a lado" />
+                        <!-- Bloco 37 -->
+                        <CheckBox x:Name="ComIndicadores" Content="Página de indicadores" IsChecked="{Binding ComIndicadores}"
+                                  ToolTip.Tip="O valor agregado (IDP e IDC), a Curva S física e financeira, as etapas e as tarefas mais atrasadas no fim do período" />
                     </WrapPanel>
                 </Grid>
 

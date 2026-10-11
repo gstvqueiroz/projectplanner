@@ -22,9 +22,9 @@ public sealed class GeradorBoletimWord
 
     private uint _proximoDesenho;
 
-    /// <param name="paginasExtras">Bloco 37: o que vai depois do boletim (os indicadores), cada um numa página.</param>
+    /// <param name="indicadores">Bloco 37: o painel de indicadores, numa página no fim; nulo sem ela.</param>
     public void Gerar(BoletimDeMedicao boletim, CabecalhoDoRelatorio cabecalho, DateTime geradoEm, Stream destino,
-        IReadOnlyList<Action<Body, MainDocumentPart>>? paginasExtras = null)
+        Core.Indicadores.PainelDeIndicadores? indicadores = null)
     {
         ArgumentNullException.ThrowIfNull(boletim);
         ArgumentNullException.ThrowIfNull(cabecalho);
@@ -55,10 +55,10 @@ public sealed class GeradorBoletimWord
         corpo.Append(Paragrafo("", 6));
         Fim(corpo, boletim);
 
-        foreach (var pagina in paginasExtras ?? [])
+        if (indicadores is not null)
         {
             corpo.Append(new Paragraph(new Run(new Break { Type = BreakValues.Page })));
-            pagina(corpo, principal);
+            IndicadoresNoWord.Adicionar(corpo, principal, indicadores, LarguraUtil, () => _proximoDesenho++);
         }
         corpo.Append(Secao(principal, boletim));
         principal.Document.Save();

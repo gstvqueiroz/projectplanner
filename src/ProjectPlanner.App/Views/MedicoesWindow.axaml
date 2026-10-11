@@ -146,6 +146,9 @@
                                     <Button Content="Excel…" Command="{Binding ExportarExcelCommand}" ToolTip.Tip="O boletim em Excel, com os números" />
                                     <Button Content="Fotos do período…" Command="{Binding RelatorioFotograficoDoPeriodoCommand}"
                                             ToolTip.Tip="O relatório fotográfico do período da medição, para anexar ao boletim" />
+                                    <!-- Bloco 37 -->
+                                    <CheckBox x:Name="ComIndicadores" Content="Com indicadores" IsChecked="{Binding ComIndicadores}"
+                                              ToolTip.Tip="O PDF e o Word levam uma página de indicadores (valor agregado, Curva S, etapas e atrasos) no fim da medição" />
                                 </WrapPanel>
                                 <ScrollViewer>
                                     <ItemsControl x:Name="Resumo" ItemsSource="{Binding Resumo}">

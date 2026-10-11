@@ -143,6 +143,16 @@ internal sealed class ContratoRegistro
     public required string Dados { get; set; }
 }
 
+/// <summary>Bloco 37: os custos realizados, em JSON (ver <see cref="FormatoDosCustos"/>); nenhuma linha sem custos.</summary>
+internal sealed class CustosRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
 internal sealed class RelatorioRegistro
 {
     public Guid ProjetoId { get; set; }

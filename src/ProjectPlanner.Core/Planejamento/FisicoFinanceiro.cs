@@ -296,16 +296,40 @@ public static class CalculadoraFisicoFinanceira
     }
 }
 
-/// <summary>Uma série da Curva S: o % acumulado e o valor acumulado no fim de cada período.</summary>
-public sealed record SerieDaCurvaS(string Nome, IReadOnlyList<double> PercentualAcumulado, IReadOnlyList<decimal> ValorAcumulado);
+/// <summary>Bloco 37: o que uma série da Curva S mostra (define a cor e o traço).</summary>
+public enum TipoDaSerie
+{
+    /// <summary>A linha de base (tracejada).</summary>
+    Prevista,
+
+    /// <summary>O cronograma atual.</summary>
+    Atual,
+
+    /// <summary>O medido pelas medições aprovadas (% do valor do contrato).</summary>
+    Medida,
+
+    /// <summary>O custo realizado (% do orçamento).</summary>
+    CustoReal,
+}
+
+/// <summary>
+/// Uma série da Curva S: o % acumulado e o valor acumulado no fim de cada período. Uma série medida ou de custo pode ter
+/// menos pontos que os períodos (para no último período com dado).
+/// </summary>
+public sealed record SerieDaCurvaS(string Nome, IReadOnlyList<double> PercentualAcumulado, IReadOnlyList<decimal> ValorAcumulado,
+    TipoDaSerie Tipo = TipoDaSerie.Atual);
 
 /// <summary>
 /// Bloco 35: a Curva S do projeto nos períodos: a prevista (linha de base em uso, se houver), a do cronograma atual, e o
-/// realizado na data de status (um ponto: ainda não há histórico de medições).
+/// realizado na data de status. Bloco 37: com medições aprovadas, a medida (% do contrato); com custos realizados, a do
+/// custo real (% do orçamento); e o histórico do realizado (o avanço físico guardado em cada medição aprovada).
 /// </summary>
 public sealed record CurvaS(IReadOnlyList<PeriodoFinanceiro> Periodos, IReadOnlyList<SerieDaCurvaS> Series, RealizadoNaData? Realizado,
     bool PorValor)
 {
+    /// <summary>Bloco 37: o avanço físico no fim de cada medição aprovada (a linha do realizado passa por eles até hoje).</summary>
+    public IReadOnlyList<RealizadoNaData> Historico { get; init; } = [];
+
     /// <summary>
     /// Onde a data fica no eixo dos períodos: 0 é o começo do primeiro, e i + 1 o fim do período i; dentro de um período,
     /// a fração dos dias corridos. Fora do intervalo, nulo.
@@ -331,12 +355,47 @@ public sealed record CurvaS(IReadOnlyList<PeriodoFinanceiro> Periodos, IReadOnly
         if (cronograma.LinhaDeBaseEmUso is { } linha)
         {
             var prevista = CalculadoraFisicoFinanceira.Calcular(cronograma, BaseDoFisicoFinanceiro.LinhaDeBase, periodos, LinhasDoFisicoFinanceiro.Etapas);
-            series.Add(new SerieDaCurvaS($"Linha de base (LB{linha.Numero})", prevista.PercentualAcumulado, prevista.ValorAcumulado));
+            series.Add(new SerieDaCurvaS($"Linha de base (LB{linha.Numero})", prevista.PercentualAcumulado, prevista.ValorAcumulado, TipoDaSerie.Prevista));
             porValor = prevista.PorValor;
         }
         var atual = CalculadoraFisicoFinanceira.Calcular(cronograma, BaseDoFisicoFinanceiro.Atual, periodos, LinhasDoFisicoFinanceiro.Etapas);
         series.Add(new SerieDaCurvaS("Cronograma atual", atual.PercentualAcumulado, atual.ValorAcumulado));
+        var orcamento = series[0].ValorAcumulado.LastOrDefault();
+        if (Medida(cronograma, periodos, hoje) is { } medida)
+            series.Add(medida);
+        if (CustoReal(cronograma, periodos, hoje, orcamento) is { } custo)
+            series.Add(custo);
         var dentro = periodos.Count > 0 && hoje >= periodos[0].Inicio && hoje <= periodos[^1].Fim;
-        return new CurvaS(periodos, series, dentro ? CalculadoraFisicoFinanceira.Realizado(cronograma, hoje) : null, porValor || atual.PorValor);
+        var historico = cronograma.Contrato.Medicoes
+            .Where(m => m.Travada && m.Resumo!.Fisico is not null && m.Ate >= periodos[0].Inicio && m.Ate <= periodos[^1].Fim && m.Ate < hoje)
+            .Select(m => new RealizadoNaData(m.Ate, m.Resumo!.Fisico!.Value, 0)).ToList();
+        return new CurvaS(periodos, series, dentro ? CalculadoraFisicoFinanceira.Realizado(cronograma, hoje) : null, porValor || atual.PorValor)
+        {
+            Historico = historico,
+        };
+    }
+
+    // O medido acumulado pelas aprovadas que terminam até hoje (cada uma no período em que termina), em % do valor atual do
+    // contrato, até o período da última; nula sem medição aprovada.
+    private static SerieDaCurvaS? Medida(Cronograma cronograma, IReadOnlyList<PeriodoFinanceiro> periodos, DateOnly hoje)
+    {
+        var aprovadas = cronograma.Contrato.Medicoes.Where(m => m.Travada && m.Ate <= hoje).ToList();
+        var contratado = cronograma.Contrato.ValorContratado;
+        if (aprovadas.Count == 0 || contratado <= 0 || periodos.Count == 0)
+            return null;
+        var ultima = periodos.ToList().FindLastIndex(p => p.Inicio <= aprovadas[^1].Ate);
+        var valores = new List<decimal>();
+        for (var i = 0; i <= ultima; i++)
+            valores.Add(aprovadas.Where(m => m.Ate <= periodos[i].Fim).Sum(m => m.Resumo!.MedidoNoPeriodo));
+        return new SerieDaCurvaS("Medido", [.. valores.Select(v => (double)(v / contratado) * 100)], valores, TipoDaSerie.Medida);
+    }
+
+    // O custo realizado acumulado até o fim de cada período (o último, até hoje), em % do orçamento; nula sem custos.
+    private static SerieDaCurvaS? CustoReal(Cronograma cronograma, IReadOnlyList<PeriodoFinanceiro> periodos, DateOnly hoje, decimal orcamento)
+    {
+        if (cronograma.Custos.Vazio || orcamento <= 0 || periodos.Count == 0 || hoje < periodos[0].Inicio)
+            return null;
+        var valores = periodos.TakeWhile(p => p.Inicio <= hoje).Select(p => cronograma.Custos.Ate(p.Fim < hoje ? p.Fim : hoje)).ToList();
+        return new SerieDaCurvaS("Custo real", [.. valores.Select(v => (double)(v / orcamento) * 100)], valores, TipoDaSerie.CustoReal);
     }
 }

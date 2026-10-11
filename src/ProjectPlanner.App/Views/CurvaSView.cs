@@ -7,14 +7,21 @@ namespace ProjectPlanner.App.Views;
 
 /// <summary>
 /// Bloco 35: a Curva S desenhada (% acumulado por período): a linha de base tracejada, o cronograma atual e o ponto do
-/// realizado na data de hoje. O mesmo desenho do PDF (GeradorFisicoFinanceiroPdf), em Avalonia.
+/// realizado na data de hoje. Bloco 37: o medido (verde), o custo real (roxo, pontilhado) e a linha do realizado pelas
+/// medições aprovadas. O mesmo desenho do PDF (GeradorFisicoFinanceiroPdf), em Avalonia.
 /// </summary>
 public sealed class CurvaSView : Control
 {
     public static readonly StyledProperty<CurvaS?> CurvaProperty = AvaloniaProperty.Register<CurvaSView, CurvaS?>(nameof(Curva));
 
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x40, 0x90, 0xA4, 0xAE));
-    private static readonly IBrush[] CoresDasSeries = [new SolidColorBrush(Color.Parse("#90A4AE")), new SolidColorBrush(Color.Parse("#1E88E5"))];
+    private static IBrush CorDa(TipoDaSerie tipo) => tipo switch
+    {
+        TipoDaSerie.Prevista => new SolidColorBrush(Color.Parse("#90A4AE")),
+        TipoDaSerie.Medida => new SolidColorBrush(Color.Parse("#43A047")),
+        TipoDaSerie.CustoReal => new SolidColorBrush(Color.Parse("#AB47BC")),
+        _ => new SolidColorBrush(Color.Parse("#1E88E5")),
+    };
     private static readonly IBrush Realizado = new SolidColorBrush(Color.Parse("#E65100"));
 
     static CurvaSView() => AffectsRender<CurvaSView>(CurvaProperty);
@@ -52,11 +59,25 @@ public sealed class CurvaSView : Control
 
         var xLegenda = area.Left;
         var yLegenda = area.Bottom + 28;
-        for (var s = 0; s < curva.Series.Count; s++)
+        void Legenda(string rotulo, Action<Point> marca)
         {
-            var serie = curva.Series[s];
-            var cor = CoresDasSeries[curva.Series.Count == 1 ? 1 : Math.Min(s, 1)];
-            var linha = new Pen(cor, 2.2, s == 0 && curva.Series.Count > 1 ? new DashStyle([3, 2], 0) : null);
+            var formatado = new FormattedText(rotulo, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 11, texto);
+            if (xLegenda + 44 + formatado.Width > area.Right && xLegenda > area.Left)
+                (xLegenda, yLegenda) = (area.Left, yLegenda + 16);
+            marca(new Point(xLegenda, yLegenda + 8));
+            contexto.DrawText(formatado, new Point(xLegenda + 28, yLegenda));
+            xLegenda += 44 + formatado.Width;
+        }
+
+        foreach (var serie in curva.Series)
+        {
+            var traco = serie.Tipo switch
+            {
+                TipoDaSerie.Prevista => new DashStyle([3, 2], 0),
+                TipoDaSerie.CustoReal => new DashStyle([1, 1.5], 0),
+                _ => null,
+            };
+            var linha = new Pen(CorDa(serie.Tipo), 2.2, traco);
             var anterior = new Point(X(0), Y(0));
             for (var i = 0; i < serie.PercentualAcumulado.Count; i++)
             {
@@ -64,15 +85,19 @@ public sealed class CurvaSView : Control
                 contexto.DrawLine(linha, anterior, ponto);
                 anterior = ponto;
             }
-            contexto.DrawLine(linha, new Point(xLegenda, yLegenda + 8), new Point(xLegenda + 22, yLegenda + 8));
-            var largura = Escrever(contexto, serie.Nome, new Point(xLegenda + 28, yLegenda), texto, 11);
-            xLegenda += 44 + largura;
+            Legenda(serie.Nome, p => contexto.DrawLine(linha, p, p + new Point(22, 0)));
         }
         if (curva.Realizado is { } realizado && curva.PosicaoDe(realizado.Data) is { } posicao)
         {
-            contexto.DrawEllipse(Realizado, null, new Point(X(posicao), Y(realizado.Percentual)), 5, 5);
-            contexto.DrawEllipse(Realizado, null, new Point(xLegenda + 5, yLegenda + 8), 5, 5);
-            Escrever(contexto, $"Realizado em {realizado.Data:dd/MM/yyyy}: {realizado.Percentual:0.0}%", new Point(xLegenda + 16, yLegenda), texto, 11);
+            var pontos = curva.Historico.Select(h => (Posicao: curva.PosicaoDe(h.Data), h.Percentual)).Where(h => h.Posicao is not null)
+                .Select(h => new Point(X(h.Posicao!.Value), Y(h.Percentual))).Append(new Point(X(posicao), Y(realizado.Percentual))).ToList();
+            var linhaDoRealizado = new Pen(Realizado, 1.6);
+            for (var i = 1; i < pontos.Count; i++)
+                contexto.DrawLine(linhaDoRealizado, pontos[i - 1], pontos[i]);
+            foreach (var p in pontos.SkipLast(1))
+                contexto.DrawEllipse(Realizado, null, p, 3, 3);
+            contexto.DrawEllipse(Realizado, null, pontos[^1], 5, 5);
+            Legenda($"Realizado em {realizado.Data:dd/MM/yyyy}: {realizado.Percentual:0.0}%", p => contexto.DrawEllipse(Realizado, null, p + new Point(11, 0), 5, 5));
         }
     }
 

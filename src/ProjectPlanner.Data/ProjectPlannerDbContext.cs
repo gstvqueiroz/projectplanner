@@ -20,6 +20,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<RelatorioRegistro> Relatorio => Set<RelatorioRegistro>();
     public DbSet<LinhasDeBaseRegistro> LinhasDeBase => Set<LinhasDeBaseRegistro>();
     public DbSet<ContratoRegistro> Contrato => Set<ContratoRegistro>();
+    public DbSet<CustosRegistro> Custos => Set<CustosRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +111,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             contrato.HasKey(c => c.ProjetoId);
             contrato.HasOne<ProjetoRegistro>().WithOne()
                 .HasForeignKey<ContratoRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Os custos realizados (Bloco 37), em JSON.
+        modelBuilder.Entity<CustosRegistro>(custos =>
+        {
+            custos.ToTable("CustosDoProjeto");
+            custos.HasKey(c => c.ProjetoId);
+            custos.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<CustosRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RelatorioRegistro>(relatorio =>

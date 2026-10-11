@@ -318,6 +318,22 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Task<string?> EscolherPlanilhaAsync() => Task.FromResult(PlanilhaEscolhida);
 
+    public List<CustosViewModel> Custos { get; } = [];
+
+    public Task MostrarCustosAsync(CustosViewModel custos)
+    {
+        Custos.Add(custos);
+        return Task.CompletedTask;
+    }
+
+    public List<IndicadoresViewModel> Indicadores { get; } = [];
+
+    public Task MostrarIndicadoresAsync(IndicadoresViewModel indicadores)
+    {
+        Indicadores.Add(indicadores);
+        return Task.CompletedTask;
+    }
+
     public List<MedicoesViewModel> Medicoes { get; } = [];
 
     public Func<MedicoesViewModel, Task>? AoMostrarMedicoes { get; set; }

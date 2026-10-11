@@ -76,6 +76,12 @@ public interface IDialogosService
     /// <summary>Bloco 36: mostra Projeto > Medições… e espera ser fechada.</summary>
     Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes);
 
+    /// <summary>Bloco 37: mostra Projeto > Custos realizados… e espera ser fechada.</summary>
+    Task MostrarCustosAsync(ViewModels.CustosViewModel custos);
+
+    /// <summary>Bloco 37: mostra Projeto > Indicadores… e espera ser fechada.</summary>
+    Task MostrarIndicadoresAsync(ViewModels.IndicadoresViewModel indicadores);
+
     /// <summary>Bloco 35: onde salvar um arquivo exportado ("pdf", "csv", "docx" ou "xlsx"); nulo se cancelar.</summary>
     Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao);
 

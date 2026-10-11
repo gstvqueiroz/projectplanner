@@ -22,7 +22,6 @@ public sealed class GeradorFisicoFinanceiroPdf
     private static readonly SKColor Cinza = new(0x6B, 0x6B, 0x6B);
     private static readonly SKColor Linha = new(0xCF, 0xD8, 0xDC);
     private static readonly SKColor Faixa = new(0xF4, 0xF6, 0xF8);
-    private static readonly SKColor[] CoresDasSeries = [new(0x90, 0xA4, 0xAE), new(0x15, 0x65, 0xC0)];
     private static readonly SKColor CorDoRealizado = new(0xE6, 0x51, 0x00);
 
     /// <summary>Quantos períodos cabem numa página.</summary>
@@ -151,10 +150,23 @@ public sealed class GeradorFisicoFinanceiroPdf
 
     // ---- Curva S ----
 
-    /// <summary>Desenha a Curva S na área (usada também nas imagens dos relatórios, no Bloco 37).</summary>
-    internal static void DesenharCurvaS(SKCanvas c, CurvaS curva, SKRect area, Fontes f)
+    /// <summary>A cor de cada tipo de série (a mesma na tela, no PDF e no Word).</summary>
+    internal static SKColor CorDa(TipoDaSerie tipo) => tipo switch
     {
-        Escrever(c, "Curva S (% acumulado)", area.Left - 40, area.Top - 24, f.Negrito(12), Texto);
+        TipoDaSerie.Prevista => new SKColor(0x90, 0xA4, 0xAE),
+        TipoDaSerie.Medida => new SKColor(0x2E, 0x7D, 0x32),
+        TipoDaSerie.CustoReal => new SKColor(0x8E, 0x24, 0xAA),
+        _ => new SKColor(0x15, 0x65, 0xC0),
+    };
+
+    /// <summary>
+    /// Desenha a Curva S na área (também nas páginas de indicadores do Bloco 37): as séries (a prevista tracejada, a do custo
+    /// pontilhada), o realizado (a linha laranja pelo avanço guardado em cada medição até o ponto de hoje) e a legenda.
+    /// </summary>
+    internal static void DesenharCurvaS(SKCanvas c, CurvaS curva, SKRect area, Fontes f, bool titulo = true)
+    {
+        if (titulo)
+            Escrever(c, "Curva S (% acumulado)", area.Left - 40, area.Top - 24, f.Negrito(12), Texto);
         using var grade = new SKPaint { Color = Linha, StrokeWidth = 0.5f };
         var n = Math.Max(1, curva.Periodos.Count);
         float X(double posicao) => area.Left + (float)(posicao / n) * area.Width;
@@ -164,7 +176,7 @@ public sealed class GeradorFisicoFinanceiroPdf
             c.DrawLine(area.Left, Y(p), area.Right, Y(p), grade);
             Direita(c, $"{p}%", area.Left - 6, Y(p) + 3, f.Normal(8), Cinza);
         }
-        var passo = Math.Max(1, (int)Math.Ceiling(curva.Periodos.Count / 18.0));
+        var passo = Math.Max(1, (int)Math.Ceiling(curva.Periodos.Count / Math.Max(1, area.Width / 44.0)));
         for (var i = 0; i < curva.Periodos.Count; i += passo)
         {
             var rotulo = curva.Periodos[i].Rotulo;
@@ -173,30 +185,44 @@ public sealed class GeradorFisicoFinanceiroPdf
 
         var legenda = area.Bottom + 34;
         var xLegenda = area.Left;
-        for (var s = 0; s < curva.Series.Count; s++)
+        void Legenda(string texto, Action<float, float> marca)
         {
-            var serie = curva.Series[s];
-            var cor = CoresDasSeries[Math.Min(s + (curva.Series.Count == 1 ? 1 : 0), CoresDasSeries.Length - 1)];
-            using var tinta = new SKPaint { Color = cor, StrokeWidth = 2.2f, IsAntialias = true, Style = SKPaintStyle.Stroke };
-            if (s == 0 && curva.Series.Count > 1)
+            var largura = 40 + f.Normal(9).MeasureText(texto);
+            if (xLegenda + largura > area.Right && xLegenda > area.Left)
+                (xLegenda, legenda) = (area.Left, legenda + 14);
+            marca(xLegenda, legenda - 3);
+            Escrever(c, texto, xLegenda + 28, legenda, f.Normal(9), Texto);
+            xLegenda += largura;
+        }
+
+        foreach (var serie in curva.Series)
+        {
+            using var tinta = new SKPaint { Color = CorDa(serie.Tipo), StrokeWidth = 2.2f, IsAntialias = true, Style = SKPaintStyle.Stroke };
+            if (serie.Tipo == TipoDaSerie.Prevista)
                 tinta.PathEffect = SKPathEffect.CreateDash([6, 4], 0);
+            else if (serie.Tipo == TipoDaSerie.CustoReal)
+                tinta.PathEffect = SKPathEffect.CreateDash([2, 3], 0);
             using var caminho = new SKPath();
             caminho.MoveTo(X(0), Y(0));
             for (var i = 0; i < serie.PercentualAcumulado.Count; i++)
                 caminho.LineTo(X(i + 1), Y(serie.PercentualAcumulado[i]));
             c.DrawPath(caminho, tinta);
-            c.DrawLine(xLegenda, legenda - 3, xLegenda + 22, legenda - 3, tinta);
-            Escrever(c, serie.Nome, xLegenda + 28, legenda, f.Normal(9), Texto);
-            xLegenda += 40 + f.Normal(9).MeasureText(serie.Nome);
+            Legenda(serie.Nome, (x, y) => c.DrawLine(x, y, x + 22, y, tinta));
         }
         if (curva.Realizado is { } realizado && curva.PosicaoDe(realizado.Data) is { } posicao)
         {
             using var ponto = new SKPaint { Color = CorDoRealizado, IsAntialias = true };
-            c.DrawCircle(X(posicao), Y(realizado.Percentual), 4.5f, ponto);
+            using var linha = new SKPaint { Color = CorDoRealizado, StrokeWidth = 1.6f, IsAntialias = true, Style = SKPaintStyle.Stroke };
+            var pontos = curva.Historico.Select(h => (Posicao: curva.PosicaoDe(h.Data), h.Percentual)).Where(h => h.Posicao is not null)
+                .Select(h => new SKPoint(X(h.Posicao!.Value), Y(h.Percentual))).Append(new SKPoint(X(posicao), Y(realizado.Percentual))).ToList();
+            for (var i = 1; i < pontos.Count; i++)
+                c.DrawLine(pontos[i - 1], pontos[i], linha);
+            foreach (var p in pontos.SkipLast(1))
+                c.DrawCircle(p, 2.8f, ponto);
+            c.DrawCircle(pontos[^1], 4.5f, ponto);
             var texto = $"Realizado em {realizado.Data:dd/MM/yyyy}: {realizado.Percentual:0.0}%" +
                         (curva.PorValor ? $" (R$ {Moeda.Formatar(realizado.Valor)})" : "");
-            c.DrawCircle(xLegenda + 4, legenda - 3, 4.5f, ponto);
-            Escrever(c, texto, xLegenda + 14, legenda, f.Normal(9), Texto);
+            Legenda(texto, (x, y) => c.DrawCircle(x + 11, y, 4.5f, ponto));
         }
     }
 

@@ -116,6 +116,9 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
     [ObservableProperty] public partial Escolha<int> FotosPorPaginaEscolhida { get; set; }
 
     [ObservableProperty] public partial bool ComResumo { get; set; } = true;
+
+    /// <summary>Bloco 37: uma página de indicadores (valor agregado, Curva S, etapas e atrasos) no fim do período.</summary>
+    [ObservableProperty] public partial bool ComIndicadores { get; set; }
     [ObservableProperty] public partial bool ComIndice { get; set; } = true;
     [ObservableProperty] public partial bool ComAssinaturas { get; set; } = true;
 
@@ -281,6 +284,7 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
             ComIndice = ComIndice,
             ComAssinaturas = ComAssinaturas,
             ComAntesEDepois = ComAntesEDepois,
+            ComIndicadores = ComIndicadores,
             Texto = new TextoDoRelatorio(TextoDoAndamento, TextoDoRelatorio.LerPontos(TextoDosPontos)),
         };
         var cabecalho = new CabecalhoDoRelatorio(_cronograma.Nome, new DadosDaObra(Contratante, Contrato, Endereco),

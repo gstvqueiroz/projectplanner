@@ -46,6 +46,19 @@ public sealed class RelatorioFotograficoTests : TesteDeFotos, IDisposable
         return Ambiente.Dialogos.Relatorios.Last();
     }
 
+    // Bloco 37: a página de indicadores no fim do período.
+    [Fact]
+    public async Task ComIndicadores_UmaPaginaAMais()
+    {
+        await Obra();
+        var tela = Abrir();
+        tela.Previa.Should().Be("Relatório nº 1 · 3 fotos · 4 páginas", "capa, uma página por tarefa e o índice");
+
+        tela.ComIndicadores = true;
+
+        (tela.Previa, tela.Erro).Should().Be(("Relatório nº 1 · 3 fotos · 5 páginas", ""));
+    }
+
     [Fact]
     public async Task Abrir_PeriodoDesdeOInicio_EPrevia()
     {

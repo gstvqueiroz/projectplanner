@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.34.0
+
+Bloco 37: indicadores (a versão segue a ordem de entrega).
+
+- Projeto > Custos realizados…: as notas, as folhas e as locações da obra (data, tarefa ou custo geral, categoria,
+  descrição, documento e valor), com os totais por categoria e por mês, e a importação de uma planilha (.xlsx ou .csv)
+  com as colunas Data e Valor (e Descrição, EDT, Categoria e Documento). Tudo entra no Desfazer e fica no .pplan.
+- Projeto > Indicadores…: numa data de status, o valor agregado — o planejado (VP, pela linha de base em uso ou, sem ela,
+  pelo cronograma atual), o agregado (VA, o orçamento de cada tarefa × % concluído) e o custo real (CR) — com o IDP, o
+  IDC, a estimativa no término e o término pela tendência; o físico previsto × realizado × o financeiro medido; as
+  etapas (orçamento, previsto, realizado, medido, custo real e VA − VP) e as tarefas mais atrasadas. Exporta em PDF e Word.
+- Curva S física e financeira (também no cronograma físico-financeiro): prevista, atual, medida (pelas medições
+  aprovadas, em % do contrato), custo real (em % do orçamento) e a linha do realizado pelo avanço guardado em cada
+  medição aprovada até o ponto de hoje.
+- A página de indicadores no relatório fotográfico (opção "Página de indicadores", no fim do período) e no boletim de
+  medição (opção "Com indicadores", no fim da medição), em PDF e Word.
+
 ## 0.33.0
 
 Bloco 36: medições (a versão segue a ordem de entrega).
@@ -221,7 +238,8 @@ começar):
   duplicar.
 - Bloco 31 (feito, na 0.31): linha de base, prazos, restrição de início e as colunas Início e Término calculadas.
 - Bloco 35 (feito, na 0.32): cronograma físico-financeiro, Curva S e importação de valores.
-- Bloco 36 (feito, na 0.33): medições (boletins, retenção, reajuste, glosas, aditivos e plano de medições). Depois, os
-  indicadores (37), e então recursos (32), composições e orçamento (33) e uso de recursos (34).
+- Bloco 36 (feito, na 0.33): medições (boletins, retenção, reajuste, glosas, aditivos e plano de medições).
+- Bloco 37 (feito, na 0.34): custos realizados, valor agregado, painel de indicadores e a página de indicadores nos
+  relatórios. Depois, recursos (32), composições e orçamento (33) e uso de recursos (34).
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

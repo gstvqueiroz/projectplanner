@@ -4,7 +4,9 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using W = DocumentFormat.OpenXml.Wordprocessing;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Indicadores;
 using ProjectPlanner.Core.Medicoes;
+using ProjectPlanner.Core.Planejamento;
 using ProjectPlanner.Core.Relatorios;
 
 namespace ProjectPlanner.Relatorios.Tests;
@@ -18,10 +20,12 @@ public sealed class BoletimDeMedicaoTests
     private static readonly CabecalhoDoRelatorio Cabecalho = new("Residência Silva",
         new DadosDaObra("Maria Silva", "Contrato 12/2026", "Rua A, 10"), "Eng. João", "CREA 1234", null);
 
+    private Cronograma? _cronograma;
+
     // Uma etapa com "itens" itens (R$ 1.000 e 10 m² cada), todos medidos pela metade, com retenção, reajuste, glosa e observações.
-    private static BoletimDeMedicao Boletim(int itens = 3)
+    private BoletimDeMedicao Boletim(int itens = 3)
     {
-        var c = new Cronograma("Residência Silva", Seg);
+        var c = _cronograma = new Cronograma("Residência Silva", Seg);
         var etapa = new Tarefa("Alvenaria", Seg, 1);
         c.AdicionarTarefa(etapa);
         for (var i = 0; i < itens; i++)
@@ -58,17 +62,31 @@ public sealed class BoletimDeMedicaoTests
     }
 
     [Fact]
-    public void Pdf_MuitosItens_ContinuaNasPaginasSeguintes_ComPaginasExtras()
+    public void Pdf_MuitosItens_ContinuaNasPaginasSeguintes_ComOsIndicadores()
     {
         // Com o grupo e o total, 3 páginas de tabela, a última com 20 linhas: o resumo e as assinaturas não cabem nela.
         var itens = GeradorBoletimPdf.LinhasNaPrimeira + GeradorBoletimPdf.LinhasNasOutras + 18;
-        var extras = 0;
+        var (boletim, cronograma) = (Boletim(itens), _cronograma!);
         using var destino = new MemoryStream();
 
-        new GeradorBoletimPdf().Gerar(Boletim(itens), Cabecalho, Agora, destino, [(_, area) => extras += area.Width > 0 ? 1 : 0]);
+        new GeradorBoletimPdf().Gerar(boletim, Cabecalho, Agora, destino,
+            PainelDeIndicadores.Montar(cronograma, new DateOnly(2026, 10, 16), Periodicidade.Mensal));
 
-        Paginas(destino.ToArray()).Should().Be(3 + 1 + 1, "3 de tabela, uma do resumo (não coube) e a extra");
-        extras.Should().Be(1);
+        Paginas(destino.ToArray()).Should().Be(3 + 1 + 1, "3 de tabela, uma do resumo (não coube) e a dos indicadores");
+    }
+
+    [Fact]
+    public void Word_ComOsIndicadores_TemACurvaEAsEtapas()
+    {
+        var boletim = Boletim();
+        using var destino = new MemoryStream();
+        new GeradorBoletimWord().Gerar(boletim, Cabecalho, Agora, destino, PainelDeIndicadores.Montar(_cronograma!, new DateOnly(2026, 10, 16), Periodicidade.Mensal));
+
+        destino.Position = 0;
+        using var documento = WordprocessingDocument.Open(destino, false);
+        documento.MainDocumentPart!.Document!.Body!.InnerText.Should().Contain("Indicadores em 16/10/2026").And.Contain("IDP (prazo)").And.Contain("1 Alvenaria");
+        documento.MainDocumentPart.ImageParts.Should().ContainSingle("a Curva S vai como imagem");
+        new DocumentFormat.OpenXml.Validation.OpenXmlValidator().Validate(documento).Should().BeEmpty();
     }
 
     [Fact]
@@ -88,6 +106,7 @@ public sealed class BoletimDeMedicaoTests
         var itens = corpo.Elements<W.Table>().Single(t => t.InnerText.Contains("Qtd. contratada"));
         itens.Elements<W.TableRow>().Should().HaveCount(1 + 4 + 1, "cabeçalho, o grupo e 3 itens, e o total");
         itens.Elements<W.TableRow>().First().TableRowProperties!.GetFirstChild<W.TableHeader>().Should().NotBeNull("o cabeçalho se repete nas páginas");
+        new DocumentFormat.OpenXml.Validation.OpenXmlValidator().Validate(documento).Should().BeEmpty();
     }
 
     [Fact]
@@ -101,6 +120,7 @@ public sealed class BoletimDeMedicaoTests
         using var documento = SpreadsheetDocument.Open(destino, false);
         var livro = documento.WorkbookPart!;
         livro.Workbook!.Descendants<Sheet>().Single().Name!.Value.Should().Be("BM 01");
+        new DocumentFormat.OpenXml.Validation.OpenXmlValidator().Validate(documento).Should().BeEmpty();
         var celulas = livro.WorksheetParts.Single().Worksheet!.Descendants<Cell>().ToList();
         string Texto(Cell c) => c.InlineString?.InnerText ?? c.CellValue?.Text ?? "";
         var parede = celulas.Single(c => Texto(c) == "  Parede 1").CellReference!.Value![1..];

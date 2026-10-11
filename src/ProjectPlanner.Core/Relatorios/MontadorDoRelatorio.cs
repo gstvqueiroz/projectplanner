@@ -51,6 +51,9 @@ public sealed record OpcoesDoRelatorio(DateOnly De, DateOnly Ate)
     /// <summary>Bloco 29: páginas de antes e depois por local (a primeira foto do local até o fim do período e a última do período).</summary>
     public bool ComAntesEDepois { get; init; }
 
+    /// <summary>Bloco 37: uma página de indicadores (valor agregado, Curva S, etapas e atrasos) na data do fim do período.</summary>
+    public bool ComIndicadores { get; init; }
+
     /// <summary>Bloco 29: o texto do andamento do período e os pontos de atenção (escritos ou sugeridos pela IA); nulo sem texto.</summary>
     public TextoDoRelatorio? Texto { get; init; }
 
@@ -154,13 +157,17 @@ public sealed record RelatorioFotografico(
     /// <summary>Bloco 29: o texto do andamento e os pontos de atenção (nulo sem texto).</summary>
     public TextoDoRelatorio? Texto => Opcoes.Texto is { Vazio: false } texto ? texto : null;
 
+    /// <summary>Bloco 37: o painel de indicadores no fim do período (com <see cref="OpcoesDoRelatorio.ComIndicadores"/>); nulo sem ele.</summary>
+    public Indicadores.PainelDeIndicadores? Indicadores { get; init; }
+
     public int TotalDeFotos => Grupos.Sum(g => g.Fotos.Count);
 
     /// <summary>
-    /// Capa (com o resumo), o texto do andamento, as páginas de fotos, as de antes e depois e o índice com as assinaturas.
-    /// Um texto ou um índice muito longo pode ocupar mais de uma página: o desenho conta as páginas de verdade.
+    /// Capa (com o resumo), o texto do andamento, os indicadores, as páginas de fotos, as de antes e depois e o índice com as
+    /// assinaturas. Um texto ou um índice muito longo pode ocupar mais de uma página: o desenho conta as páginas de verdade.
     /// </summary>
-    public int TotalDePaginas => 1 + (Texto is null ? 0 : 1) + Paginas.Count + AntesEDepois.Count + (Opcoes.ComIndice || Opcoes.ComAssinaturas ? 1 : 0);
+    public int TotalDePaginas => 1 + (Texto is null ? 0 : 1) + (Indicadores is null ? 0 : 1) + Paginas.Count + AntesEDepois.Count +
+                                 (Opcoes.ComIndice || Opcoes.ComAssinaturas ? 1 : 0);
 
     /// <summary>"Relatório fotográfico nº 3 · 01/10/2026 a 31/10/2026".</summary>
     public string Titulo => $"Relatório fotográfico nº {Numero} · {Opcoes.De:dd/MM/yyyy} a {Opcoes.Ate:dd/MM/yyyy}";
@@ -235,6 +242,9 @@ public static class MontadorDoRelatorio
             Paginar(montados, opcoes), Parecidas(montados))
         {
             AntesEDepois = opcoes.ComAntesEDepois ? MontarAntesEDepois(tarefas, opcoes, nomeDaTarefa) : [],
+            Indicadores = opcoes.ComIndicadores
+                ? Indicadores.PainelDeIndicadores.Montar(cronograma, opcoes.Ate, Planejamento.Periodicidade.Mensal)
+                : null,
         };
     }
 

@@ -47,6 +47,11 @@ public sealed class GeradorWord : IGeradorDeRelatorio
             corpo.Append(QuebraDePagina());
             TextoDoAndamento(corpo, relatorio, texto);
         }
+        if (relatorio.Indicadores is { } painel)
+        {
+            corpo.Append(QuebraDePagina());
+            IndicadoresNoWord.Adicionar(corpo, principal, painel, 10200, () => _proximoDesenho++);
+        }
         foreach (var pagina in relatorio.Paginas)
         {
             corpo.Append(QuebraDePagina());

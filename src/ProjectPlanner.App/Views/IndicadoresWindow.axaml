@@ -1,0 +1,117 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        xmlns:r="using:ProjectPlanner.Relatorios"
+        x:Class="ProjectPlanner.App.Views.IndicadoresWindow"
+        x:DataType="vm:IndicadoresViewModel"
+        Title="{Binding Titulo}"
+        Width="1280" Height="800" MinWidth="980" MinHeight="600"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 37: o painel de indicadores numa data de status. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="TextBlock.alerta">
+            <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="ExportarWord" Content="Word…" Command="{Binding ExportarWordCommand}" ToolTip.Tip="O painel em Word" />
+                <Button x:Name="ExportarPdf" Classes="accent" Content="PDF…" Command="{Binding ExportarPdfCommand}" ToolTip.Tip="O painel em PDF (uma página, paisagem)" />
+            </StackPanel>
+            <WrapPanel ItemSpacing="8" LineSpacing="6">
+                <TextBlock Text="Data de status" VerticalAlignment="Center" />
+                <CalendarDatePicker x:Name="DataDeStatus" SelectedDate="{Binding DataDeStatus}" />
+                <Button Content="Hoje" Command="{Binding HojeCommand}" />
+                <TextBlock Text="Curva S" VerticalAlignment="Center" Margin="12,0,0,0" />
+                <ComboBox ItemsSource="{Binding Periodicidades}" SelectedItem="{Binding PeriodicidadeEscolhida}" MinWidth="130" />
+            </WrapPanel>
+        </DockPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button DockPanel.Dock="Right" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" />
+        </DockPanel>
+
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,8">
+            <TextBlock x:Name="Cabecalho" Text="{Binding Cabecalho}" FontSize="17" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Subtitulo}" FontSize="12" Opacity="0.7" />
+            <TextBlock Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap"
+                       IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <Border Background="{DynamicResource FundoDeAviso}" CornerRadius="4" Padding="10,6" Margin="0,4,0,0" IsVisible="{Binding SemValores}">
+                <TextBlock Text="{Binding AvisoSemValores}" TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
+            </Border>
+        </StackPanel>
+
+        <!-- Os oito indicadores -->
+        <ItemsControl DockPanel.Dock="Top" x:Name="Cartoes" ItemsSource="{Binding Cartoes}" Margin="0,0,0,10">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="r:CartaoDeIndicador">
+                    <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10,8" Margin="0,0,8,8">
+                        <StackPanel Spacing="1">
+                            <TextBlock Text="{Binding Rotulo}" FontSize="12" Opacity="0.75" />
+                            <TextBlock Text="{Binding Valor}" FontSize="20" FontWeight="SemiBold" Classes.alerta="{Binding Alerta}" />
+                            <TextBlock Text="{Binding Detalhe}" FontSize="11" Opacity="0.7" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detalhe}" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Grid ColumnDefinitions="5*,16,6*">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Curva S física e financeira (% acumulado)" />
+                <v:CurvaSView x:Name="CurvaS" Curva="{Binding Curva}" />
+            </DockPanel>
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,10,0,0">
+                    <TextBlock Classes="secao" Text="{Binding TituloDosAtrasos}" />
+                    <TextBlock Text="Nenhuma tarefa atrasada na data." FontSize="12" Opacity="0.7" IsVisible="{Binding SemAtrasos}" />
+                    <ItemsControl x:Name="Atrasos" ItemsSource="{Binding Atrasos}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Etapas" />
+                <DataGrid x:Name="Etapas" ItemsSource="{Binding Etapas}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Etapa" Width="*" MinWidth="130" Binding="{Binding Nome}" x:DataType="vm:EtapaDoPainelNaTela" />
+                        <DataGridTextColumn Header="Orçamento" Width="96" Binding="{Binding Orcamento}" x:DataType="vm:EtapaDoPainelNaTela" />
+                        <DataGridTextColumn Header="Previsto" Width="78" Binding="{Binding Previsto}" x:DataType="vm:EtapaDoPainelNaTela" />
+                        <DataGridTextColumn Header="Realizado" Width="80" Binding="{Binding Realizado}" x:DataType="vm:EtapaDoPainelNaTela" />
+                        <DataGridTextColumn Header="Medido" Width="78" Binding="{Binding Medido}" x:DataType="vm:EtapaDoPainelNaTela" />
+                        <DataGridTextColumn Header="Custo real" Width="94" Binding="{Binding CustoReal}" x:DataType="vm:EtapaDoPainelNaTela" />
+                        <DataGridTemplateColumn Header="VA − VP" Width="94">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:EtapaDoPainelNaTela">
+                                    <TextBlock Text="{Binding Desvio}" Classes.alerta="{Binding Atrasada}" VerticalAlignment="Center" Margin="12,0"
+                                               ToolTip.Tip="Valor agregado menos o planejado: negativo, a etapa está atrás do planejado" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

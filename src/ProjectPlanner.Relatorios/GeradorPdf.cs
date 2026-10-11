@@ -31,7 +31,7 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
         using var fontes = new Fontes();
         var indice = PaginasDoIndice(relatorio);
         var texto = PaginasDoTexto(relatorio, fontes);
-        var total = 1 + texto.Count + relatorio.Paginas.Count + relatorio.AntesEDepois.Count + indice.Count;
+        var total = 1 + texto.Count + (relatorio.Indicadores is null ? 0 : 1) + relatorio.Paginas.Count + relatorio.AntesEDepois.Count + indice.Count;
         var metadados = new SKDocumentPdfMetadata
         {
             Title = relatorio.Titulo,
@@ -51,6 +51,14 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
         foreach (var linhas in texto)
         {
             PaginaDeTexto(Pagina(documento), relatorio, linhas, fontes, pagina++, total);
+            documento.EndPage();
+        }
+        if (relatorio.Indicadores is { } painel)
+        {
+            var c = Pagina(documento);
+            Escrever(c, TextosDoRelatorio.Cabecalho(relatorio), Margem, Margem, f: fontes);
+            PaginaDeIndicadoresPdf.Desenhar(c, painel, new SKRect(Margem, Margem + 14, Largura - Margem, Altura - Margem - 14), fontes);
+            Rodape(c, relatorio, fontes, pagina++, total);
             documento.EndPage();
         }
         foreach (var fotos in relatorio.Paginas)
@@ -405,6 +413,8 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
     }
 
     // ---- Texto e imagem ----
+
+    private static void Escrever(SKCanvas c, string texto, float x, float y, Fontes f) => Escrever(c, texto, x, y, f.Normal(8), Cinza);
 
     private static void Escrever(SKCanvas c, string texto, float x, float y, SKFont fonte, SKColor cor)
     {

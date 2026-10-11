@@ -483,6 +483,9 @@ public class Cronograma
     /// </summary>
     public Medicoes.ContratoDoProjeto Contrato { get; private set; }
 
+    /// <summary>Bloco 37: os custos realizados da obra. Voltam no Desfazer, como as tarefas.</summary>
+    public Indicadores.CustosRealizados Custos { get; private set; } = new();
+
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
     public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
 
@@ -517,6 +520,7 @@ public class Cronograma
             LinhaDeBaseEmUso = LinhaDeBaseEmUso, // as linhas de base são imutáveis: a cópia usa as mesmas
         };
         copia.Contrato = Contrato.CopiarPara(copia);
+        copia.Custos = Custos.Copiar();
         copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

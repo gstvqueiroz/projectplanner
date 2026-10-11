@@ -519,11 +519,31 @@ public sealed partial class MedicoesViewModel : ViewModelBase
 
     // ---- Exportar o boletim ----
 
-    [RelayCommand(CanExecute = nameof(TemSelecionada))]
-    private Task ExportarPdf() => Exportar("pdf", "PDF", (b, c, agora, destino) => new GeradorBoletimPdf().Gerar(b, c, agora, destino));
+    /// <summary>Bloco 37: o boletim em PDF e em Word leva uma página de indicadores na data do fim da medição.</summary>
+    [ObservableProperty] public partial bool ComIndicadores { get; set; }
 
     [RelayCommand(CanExecute = nameof(TemSelecionada))]
-    private Task ExportarWord() => Exportar("docx", "Word", (b, c, agora, destino) => new GeradorBoletimWord().Gerar(b, c, agora, destino));
+    private Task ExportarPdf() => Exportar("pdf", "PDF", (b, c, agora, destino) => new GeradorBoletimPdf().Gerar(b, c, agora, destino, Indicadores(b)));
+
+    [RelayCommand(CanExecute = nameof(TemSelecionada))]
+    private Task ExportarWord() => Exportar("docx", "Word", (b, c, agora, destino) => new GeradorBoletimWord().Gerar(b, c, agora, destino, Indicadores(b)));
+
+    // Os indicadores no fim da medição (sem cálculo do cronograma, o boletim sai sem eles).
+    private Core.Indicadores.PainelDeIndicadores? Indicadores(BoletimDeMedicao boletim)
+    {
+        if (!ComIndicadores)
+            return null;
+        try
+        {
+            return Core.Indicadores.PainelDeIndicadores.Montar(_cronograma, boletim.Medicao.Ate, Contrato.Configuracao.Periodicidade == Periodicidade.DatasDeCorte
+                ? Periodicidade.Mensal
+                : Contrato.Configuracao.Periodicidade);
+        }
+        catch (DomainValidationException)
+        {
+            return null;
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(TemSelecionada))]
     private Task ExportarExcel() => Exportar("xlsx", "Excel", (b, c, agora, destino) => new GeradorBoletimExcel().Gerar(b, c, agora, destino));

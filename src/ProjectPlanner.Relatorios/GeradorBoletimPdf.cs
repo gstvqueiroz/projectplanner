@@ -33,15 +33,15 @@ public sealed class GeradorBoletimPdf
 
     internal static int LinhasNasOutras => (int)((Altura - TopoDasOutras - AlturaDoCabecalhoDaTabela - Rodape - Margem) / AlturaDaLinha);
 
-    /// <param name="paginasExtras">Bloco 37: páginas desenhadas no fim (os indicadores), na área útil de cada uma.</param>
+    /// <param name="indicadores">Bloco 37: o painel de indicadores, numa página no fim; nulo sem ela.</param>
     public void Gerar(BoletimDeMedicao boletim, CabecalhoDoRelatorio cabecalho, DateTime geradoEm, Stream destino,
-        IReadOnlyList<Action<SKCanvas, SKRect>>? paginasExtras = null)
+        Core.Indicadores.PainelDeIndicadores? indicadores = null)
     {
         ArgumentNullException.ThrowIfNull(boletim);
         ArgumentNullException.ThrowIfNull(cabecalho);
         ArgumentNullException.ThrowIfNull(destino);
-        var extras = paginasExtras ?? [];
         using var fontes = new Fontes();
+        IReadOnlyList<Action<SKCanvas, SKRect>> extras = indicadores is null ? [] : [(c, area) => PaginaDeIndicadoresPdf.Desenhar(c, indicadores, area, fontes)];
 
         // As linhas da tabela (com a de total) divididas em páginas; o fim vai junto da última se couber.
         var linhas = boletim.Linhas.Select(l => (Celulas: TextosDoBoletim.Celulas(l), Grupo: l.EhGrupo, Total: false))

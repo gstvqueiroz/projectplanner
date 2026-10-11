@@ -51,8 +51,69 @@ public static class InstrucoesDoAssistente
         "realistas em dias úteis, predecessoras coerentes (inclusive entre etapas, ligando subtarefas) e marcos nas " +
         "entregas importantes. Na mensagem, resuma o que fez e as premissas que usou (área, padrão, equipe, etapas).";
 
-    public static string Montar(ContextoDoProjeto? contexto) =>
-        contexto is null
-            ? Base + "\n\nNenhum projeto está aberto no momento."
-            : Base + "\n\nCRONOGRAMA ABERTO:\n" + contexto.ComoTexto();
+    public static string Montar(ContextoDoProjeto? contexto) => Montar(contexto, null);
+
+    /// <summary>As instruções com a condução da conversa (Bloco 26) entre a base e o retrato do cronograma.</summary>
+    public static string Montar(ContextoDoProjeto? contexto, ConducaoDaConversa? conducao) =>
+        Base
+        + (conducao is null ? "" : "\n\n" + Conducao(conducao))
+        + (contexto is null ? "\n\nNenhum projeto está aberto no momento." : "\n\nCRONOGRAMA ABERTO:\n" + contexto.ComoTexto());
+
+    /// <summary>Os campos opcionais da resposta (Bloco 26): tipo, ficha, perguntas e plano.</summary>
+    public const string RespostasEstruturadas =
+        "RESPOSTAS ESTRUTURADAS. Além de \"mensagem\" e \"alteracoes\", a resposta pode ter:\n" +
+        "- \"tipo\": \"resposta\" (o normal), \"modo\", \"perguntas\" ou \"plano\". Respostas dos tipos modo, perguntas e " +
+        "plano não alteram o cronograma: mande \"alteracoes\" vazia nelas.\n" +
+        "- \"ficha\": itens {campo, valor} com o que você entendeu do projeto (dos documentos e das respostas do usuário), só os " +
+        "novos ou corrigidos; valor vazio apaga o campo. Use campos curtos e padronizados, como Tipo de obra, Área construída, " +
+        "Pavimentos, Sistema estrutural, Local, Início, Prazo desejado, Dias de trabalho, Equipe, Etapas incluídas, Etapas " +
+        "excluídas, Nível de detalhe e Restrições.\n" +
+        "- \"perguntas\" (tipo perguntas): de 1 a 5 perguntas objetivas por vez, cada uma {pergunta, opcoes} com 2 a 5 respostas " +
+        "curtas para o usuário clicar, quando fizer sentido (o programa já oferece \"Não sei\" e um campo para escrever outra " +
+        "resposta).\n" +
+        "- \"plano\" (tipo plano): {etapas: [{nome, duracao (dias úteis), observacao}], termino (data estimada, AAAA-MM-DD), " +
+        "premissas: [...]}: as etapas principais, em ordem, para o usuário aprovar antes de você montar o cronograma.";
+
+    /// <summary>A parte das instruções que muda com o modo e o andamento da conversa.</summary>
+    public static string Conducao(ConducaoDaConversa conducao)
+    {
+        ArgumentNullException.ThrowIfNull(conducao);
+        var texto = new System.Text.StringBuilder(RespostasEstruturadas);
+        texto.Append("\n\nFICHA DO PROJETO (o que já foi definido; respeite e não pergunte de novo):");
+        if (conducao.Ficha.Count == 0)
+            texto.Append("\n(vazia)");
+        foreach (var item in conducao.Ficha)
+            texto.Append($"\n- {item.Campo}: {item.Valor}");
+
+        texto.Append("\n\nMODO DE TRABALHO: ");
+        texto.Append(conducao.ModoEfetivo switch
+        {
+            ModoDeTrabalho.Direto =>
+                "montar agora. Quando o usuário pedir para criar, montar ou refazer o cronograma, faça direto, pelas alterações, " +
+                "usando a ficha, os documentos e premissas comuns de obra para o que faltar. Preencha a \"ficha\" com as " +
+                "premissas que usou e liste-as na mensagem.",
+            ModoDeTrabalho.Estudo when conducao.PlanoAprovado =>
+                "estudar antes, e o usuário APROVOU o plano. Monte agora o cronograma completo pelas alterações (tipo resposta), " +
+                "seguindo o plano aprovado, a ficha e o nível de detalhe combinado; para um cronograma novo no lugar do atual, " +
+                "comece com \"limpar\". Na mensagem, resuma o que montou.",
+            ModoDeTrabalho.Estudo =>
+                "estudar e conversar antes de montar. Quando o usuário quiser criar ou refazer o cronograma, não crie nada ainda: " +
+                "(1) se há documentos, leia-os e conte na mensagem o que entendeu da obra, preenchendo a ficha; (2) faça " +
+                "perguntas (tipo perguntas) só sobre o que falta e importa para o cronograma, como data de início, prazo, dias de " +
+                "trabalho, equipe, etapas incluídas ou excluídas e nível de detalhe, uma rodada por vez; (3) quando tiver " +
+                "clareza, apresente o plano (tipo plano) para aprovação. Se o usuário pedir para parar de perguntar, vá direto ao " +
+                "plano, com premissas comuns para o que faltar. Perguntas e análises sobre o cronograma atual são respondidas " +
+                "normalmente. " +
+                $"Rodadas de perguntas já feitas neste estudo: {conducao.RodadasDePerguntas} de no máximo {ConducaoDaConversa.MaximoDeRodadas}." +
+                (conducao.ApresentarPlanoAgora || conducao.RodadasDePerguntas >= ConducaoDaConversa.MaximoDeRodadas
+                    ? " NÃO faça mais perguntas: apresente o plano agora (tipo plano), com premissas comuns para o que faltar."
+                    : ""),
+            _ =>
+                "ainda não escolhido. Se o usuário pedir para criar, montar ou refazer o cronograma inteiro (ou o de uma obra " +
+                "nova), não crie nada ainda: responda com tipo \"modo\", numa mensagem curta que diga o que você já entendeu e " +
+                "que você pode montar agora, com premissas comuns, ou estudar os documentos e fazer algumas perguntas antes. " +
+                "Ajustes pontuais, perguntas e análises são atendidos normalmente.",
+        });
+        return texto.ToString();
+    }
 }

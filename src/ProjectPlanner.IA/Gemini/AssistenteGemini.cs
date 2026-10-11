@@ -77,16 +77,43 @@ public sealed class AssistenteGemini : IAssistenteIA
             ["required"] = new JsonArray("acao"),
             ["propertyOrdering"] = new JsonArray([.. campos.Select(c => (JsonNode)c)]),
         };
+        static JsonObject Lista(JsonObject item) => new() { ["type"] = "ARRAY", ["items"] = item };
+        static JsonObject Objeto(JsonObject propriedades, params string[] obrigatorios) => new()
+        {
+            ["type"] = "OBJECT",
+            ["properties"] = propriedades,
+            ["required"] = new JsonArray([.. obrigatorios.Select(o => (JsonNode)o)]),
+        };
+
+        // Bloco 26: tipo, ficha, perguntas e plano, todos opcionais (as respostas comuns continuam iguais).
         return new JsonObject
         {
             ["type"] = "OBJECT",
             ["properties"] = new JsonObject
             {
+                ["tipo"] = Tipo("STRING", "resposta", "modo", "perguntas", "plano"),
                 ["mensagem"] = Tipo("STRING"),
+                ["ficha"] = Lista(Objeto(new JsonObject { ["campo"] = Tipo("STRING"), ["valor"] = Tipo("STRING") }, "campo", "valor")),
+                ["perguntas"] = Lista(Objeto(new JsonObject
+                {
+                    ["pergunta"] = Tipo("STRING"),
+                    ["opcoes"] = Lista(Tipo("STRING")),
+                }, "pergunta")),
+                ["plano"] = Objeto(new JsonObject
+                {
+                    ["etapas"] = Lista(Objeto(new JsonObject
+                    {
+                        ["nome"] = Tipo("STRING"),
+                        ["duracao"] = Tipo("INTEGER"),
+                        ["observacao"] = Tipo("STRING"),
+                    }, "nome", "duracao")),
+                    ["termino"] = Tipo("STRING"),
+                    ["premissas"] = Lista(Tipo("STRING")),
+                }, "etapas"),
                 ["alteracoes"] = new JsonObject { ["type"] = "ARRAY", ["items"] = alteracao },
             },
             ["required"] = new JsonArray("mensagem", "alteracoes"),
-            ["propertyOrdering"] = new JsonArray("mensagem", "alteracoes"),
+            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes"),
         };
     }
 
@@ -96,7 +123,8 @@ public sealed class AssistenteGemini : IAssistenteIA
     {
         var turnos = pedido.Historico
             .Where(m => !m.EhErro)
-            .Select(m => (m.Autor, m.Texto, m.Anexos, Atual: false))
+            // Bloco 26: uma resposta estruturada volta como o JSON que ela foi, com as perguntas ou o plano.
+            .Select(m => (m.Autor, Texto: m.Resposta is { Estruturada: true } r ? FormatoDaResposta.ComoJson(r) : m.Texto, m.Anexos, Atual: false))
             .Append((Autor: AutorMensagem.Usuario, Texto: pedido.Mensagem, pedido.Anexos, Atual: true));
 
         var conteudos = new JsonArray();
@@ -144,7 +172,7 @@ public sealed class AssistenteGemini : IAssistenteIA
         {
             ["systemInstruction"] = new JsonObject
             {
-                ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucoesDoAssistente.Montar(pedido.Contexto) }),
+                ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucoesDoAssistente.Montar(pedido.Contexto, pedido.Conducao) }),
             },
             ["contents"] = conteudos,
             ["generationConfig"] = new JsonObject

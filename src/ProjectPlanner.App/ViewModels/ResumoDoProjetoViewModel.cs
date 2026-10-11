@@ -63,5 +63,10 @@ public sealed class ResumoDoProjetoViewModel : ViewModelBase
 
     public bool TemProximosMarcos => Resumo.ProximosMarcos.Count > 0;
 
+    /// <summary>Bloco 28: "5 Alvenaria — Sem foto há 9 dias (a última é de 02/10/2026)".</summary>
+    public IReadOnlyList<string> SemFotoRecente => Resumo.SemFotoRecente.Select(t => $"{t.Edt} {t.Tarefa.Nome} — {t.Descricao}").ToList();
+
+    public bool TemSemFotoRecente => Resumo.SemFotoRecente.Count > 0;
+
     private static string Data(DateTime data) => data.ToString("dd/MM/yyyy", Cultura);
 }

@@ -58,9 +58,12 @@ public sealed class ColunaNomeDaTarefa : DataGridTextColumn
         DockPanel.SetDock(losango, Dock.Left);
         var fotos = IndicadorDeFotos();
         DockPanel.SetDock(fotos, Dock.Right);
+        var alerta = AlertaDeFoto();
+        DockPanel.SetDock(alerta, Dock.Right);
         celula.Children.Add(expandir);
         celula.Children.Add(losango);
         celula.Children.Add(fotos);
+        celula.Children.Add(alerta);
         celula.Children.Add(nome);
         celula.Bind(Layoutable.MarginProperty,
             new Binding(nameof(TarefaViewModel.Nivel)) { Converter = Conversores.RecuoDoNivel });
@@ -100,6 +103,30 @@ public sealed class ColunaNomeDaTarefa : DataGridTextColumn
         Avalonia.Automation.AutomationProperties.SetName(botao, "Fotos da tarefa");
         botao.Bind(ToolTip.TipProperty, new Binding(nameof(TarefaViewModel.DicaDasFotos)));
         botao.Bind(Visual.IsVisibleProperty, new Binding(nameof(TarefaViewModel.TemFotos)));
+        botao.Bind(Button.CommandProperty, new Binding(nameof(TarefaViewModel.GerenciarFotosCommand)));
+        return botao;
+    }
+
+    // Bloco 28 (FT5): tarefa em andamento sem foto recente. Um aviso antes da câmera; clicar abre a galeria.
+    private static Button AlertaDeFoto()
+    {
+        var simbolo = new TextBlock { Text = "⚠", FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        simbolo.Bind(TextBlock.ForegroundProperty, simbolo.GetResourceObservable("TextoDeAviso"));
+        var botao = new Button
+        {
+            Content = simbolo,
+            Padding = new Thickness(3, 0),
+            Margin = new Thickness(4, 0, 0, 0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Focusable = false,
+            Cursor = new Cursor(StandardCursorType.Hand),
+        };
+        botao.Classes.Add("alertaDeFoto");
+        Avalonia.Automation.AutomationProperties.SetName(botao, "Tarefa sem foto recente");
+        botao.Bind(ToolTip.TipProperty, new Binding(nameof(TarefaViewModel.DicaDoAlertaDeFoto)));
+        botao.Bind(Visual.IsVisibleProperty, new Binding(nameof(TarefaViewModel.TemAlertaDeFoto)));
         botao.Bind(Button.CommandProperty, new Binding(nameof(TarefaViewModel.GerenciarFotosCommand)));
         return botao;
     }

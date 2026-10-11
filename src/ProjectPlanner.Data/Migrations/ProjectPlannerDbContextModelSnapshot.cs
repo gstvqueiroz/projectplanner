@@ -93,8 +93,14 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<int>("Largura")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("Local")
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
 
                     b.Property<bool>("NoRelatorio")
                         .ValueGeneratedOnAdd()

@@ -171,4 +171,9 @@ public sealed class DialogosAvalonia : IDialogosService
         if (File.Exists(caminho))
             await JanelaAtiva.Launcher.LaunchFileInfoAsync(new FileInfo(caminho));
     }
+
+    public Task MostrarFotosDoProjetoAsync(ViewModels.FotosDoProjetoViewModel fotos) =>
+        new FotosDoProjetoWindow(fotos).ShowDialog(JanelaPrincipal);
+
+    public Task AbrirEnderecoAsync(Uri endereco) => JanelaAtiva.Launcher.LaunchUriAsync(endereco);
 }

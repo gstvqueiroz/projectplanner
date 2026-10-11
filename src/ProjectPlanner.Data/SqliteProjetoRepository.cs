@@ -180,6 +180,21 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
 
     // Nenhuma foto pode ficar sem imagem: se o arquivo de origem sumiu ou mudou, nada é salvo (o temporário é
     // apagado e o destino fica como estava).
+    // Bloco 28: um GPS incompleto ou impossível (arquivo mexido por fora) não impede de abrir: a foto fica sem ele.
+    private static Coordenadas? Gps(FotoRegistro registro)
+    {
+        if (registro is not { Latitude: { } latitude, Longitude: { } longitude })
+            return null;
+        try
+        {
+            return new Coordenadas(latitude, longitude);
+        }
+        catch (DomainValidationException)
+        {
+            return null;
+        }
+    }
+
     private static void VerificarQueTodasAsFotosTemImagem(ProjectPlannerDbContext contexto, string? origem)
     {
         var semImagem = contexto.Fotos.Count(f => !contexto.Imagens.Any(i => i.FotoId == f.Id)
@@ -239,6 +254,8 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Tags = f.Tags.Count == 0 ? null : JsonSerializer.Serialize(f.Tags, OpcoesDasTags),
             NoRelatorio = f.NoRelatorio,
             Destaque = f.Destaque,
+            Latitude = f.Gps?.Latitude,
+            Longitude = f.Gps?.Longitude,
         }));
         foreach (var foto in fotos)
             if (novas.TryGetValue(foto.Id, out var conteudo))
@@ -256,7 +273,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Lag = p.Lag,
         }));
 
-        if (!cronograma.Obra.Vazio || cronograma.Relatorios.Count > 0)
+        if (FormatoDoRelatorio.TemDados(cronograma))
             contexto.Relatorio.Add(new RelatorioRegistro
             {
                 ProjetoId = cronograma.Id,
@@ -333,7 +350,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 new MetadadosFoto(registro.DataFoto, registro.Titulo, registro.Descricao, registro.Autor, registro.Local,
                     registro.PercentualConcluidoNaData,
                     registro.Tags is null ? null : JsonSerializer.Deserialize<List<string>>(registro.Tags, OpcoesDasTags)),
-                registro.DataCadastro).ComCuradoria(registro.NoRelatorio, registro.Destaque));
+                registro.DataCadastro).ComCuradoria(registro.NoRelatorio, registro.Destaque) with { Gps = Gps(registro) });
         }
         cronograma.RegistrarFotosDescartadas(descartadas);
 

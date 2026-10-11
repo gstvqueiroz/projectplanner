@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.28.0
+
+- Exibir > Fotos do projeto…: todas as fotos do projeto numa linha do tempo, por dia, com a tarefa de cada foto e
+  filtros por período, tarefa, local, tag e texto; dali dá para ampliar, ver no mapa e abrir a galeria da tarefa.
+- Importação em lote: escolha (ou solte na janela) fotos de vários dias e cada uma vem com a tarefa prevista na data em
+  que foi tirada (a mais curta, se houver mais de uma), numa tabela para conferir e trocar antes de importar. Fotos
+  repetidas, já anexadas ou recusadas aparecem com o motivo; um local pode ir para todas de uma vez.
+- Locais da obra: uma lista por projeto, sugerida no campo Local da galeria e da importação (junto com os locais já
+  usados), para todos escreverem igual; e o filtro por local.
+- GPS: a posição gravada pelo celular na foto é guardada com ela, mostrada na galeria e aberta no mapa (OpenStreetMap).
+- Alerta de tarefa sem foto: uma tarefa em andamento sem foto há 7 dias ou mais (configurável; 0 desliga) ganha um ⚠
+  ao lado do nome na grid, que abre a galeria, e aparece no Resumo do projeto e na tela Fotos do projeto.
+
 ## 0.27.0
 
 - Arquivo > Relatório fotográfico…: as fotos do período em PDF ou Word, com capa (logotipo, obra, contratante,
@@ -118,8 +131,8 @@ começar):
 
 - Bloco 26 (feito): chat em dois modos, ficha do projeto e conversa salva no .pplan.
 - Bloco 27 (feito): relatório fotográfico em PDF e Word e a curadoria das fotos para o relatório.
-- Bloco 28: fotos do projeto inteiro, importação em lote com a tarefa sugerida pela data, locais padronizados e alerta de
-  tarefa sem foto.
+- Bloco 28 (feito): fotos do projeto inteiro, importação em lote com a tarefa sugerida pela data, locais padronizados,
+  GPS e alerta de tarefa sem foto.
 - Bloco 29: IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
 - Bloco 30: desfazer e refazer na grid e no Gantt (vários níveis, também o do assistente), copiar, colar e duplicar.
 - Depois: localizar e filtrar; linha de base e prazos; datas de tarefa e restrições (corrige as colunas Início e Término,

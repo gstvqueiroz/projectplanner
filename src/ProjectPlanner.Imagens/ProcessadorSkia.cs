@@ -43,9 +43,10 @@ public sealed class ProcessadorSkia : IProcessadorDeImagens
         using var final = Orientar(reduzida, orientacao);
         var conteudo = Conteudo(final);
 
-        var (exifOriginal, exifDigitalizacao, exifImagem) = DatasExif(bytes);
+        var diretorios = Metadados(bytes);
+        var (exifOriginal, exifDigitalizacao, exifImagem) = DatasExif(diretorios);
         var (data, origem) = DataDaFoto.Escolher(exifOriginal, exifDigitalizacao, exifImagem, arquivo.LastWriteTime);
-        return new ImagemImportada(conteudo, nome, Convert.ToHexStringLower(SHA256.HashData(bytes)), data, origem);
+        return new ImagemImportada(conteudo, nome, Convert.ToHexStringLower(SHA256.HashData(bytes)), data, origem, Gps(diretorios));
     }
 
     public ConteudoDeFoto Girar(byte[] imagem, bool sentidoHorario)
@@ -141,19 +142,39 @@ public sealed class ProcessadorSkia : IProcessadorDeImagens
         return dados.ToArray();
     }
 
-    private static (DateTime? Original, DateTime? Digitalizacao, DateTime? Imagem) DatasExif(byte[] bytes)
+    private static IReadOnlyList<MetadataExtractor.Directory> Metadados(byte[] bytes)
     {
         try
         {
-            var diretorios = ImageMetadataReader.ReadMetadata(new MemoryStream(bytes));
-            var sub = diretorios.OfType<ExifSubIfdDirectory>().FirstOrDefault();
-            var ifd0 = diretorios.OfType<ExifIfd0Directory>().FirstOrDefault();
-            return (Data(sub, ExifDirectoryBase.TagDateTimeOriginal), Data(sub, ExifDirectoryBase.TagDateTimeDigitized),
-                Data(ifd0, ExifDirectoryBase.TagDateTime));
+            return ImageMetadataReader.ReadMetadata(new MemoryStream(bytes));
         }
         catch (Exception ex) when (ex is ImageProcessingException or IOException or FormatException or ArgumentException)
         {
-            return (null, null, null); // sem EXIF legível: fica a data do arquivo
+            return []; // sem EXIF legível: fica a data do arquivo, e sem GPS
+        }
+    }
+
+    private static (DateTime? Original, DateTime? Digitalizacao, DateTime? Imagem) DatasExif(IReadOnlyList<MetadataExtractor.Directory> diretorios)
+    {
+        var sub = diretorios.OfType<ExifSubIfdDirectory>().FirstOrDefault();
+        var ifd0 = diretorios.OfType<ExifIfd0Directory>().FirstOrDefault();
+        return (Data(sub, ExifDirectoryBase.TagDateTimeOriginal), Data(sub, ExifDirectoryBase.TagDateTimeDigitized),
+            Data(ifd0, ExifDirectoryBase.TagDateTime));
+    }
+
+    // Bloco 28: o GPS do EXIF; câmeras sem sinal gravam 0,0 ou valores impossíveis, que valem como "sem GPS".
+    internal static Coordenadas? Gps(IReadOnlyList<MetadataExtractor.Directory> diretorios)
+    {
+        try
+        {
+            if (diretorios.OfType<GpsDirectory>().FirstOrDefault()?.GetGeoLocation() is not { } local
+                || (local.Latitude == 0 && local.Longitude == 0))
+                return null;
+            return new Coordenadas(local.Latitude, local.Longitude);
+        }
+        catch (Exception ex) when (ex is MetadataException or FormatException or ArgumentException or ProjectPlanner.Core.DomainValidationException)
+        {
+            return null;
         }
     }
 

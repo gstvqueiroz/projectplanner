@@ -1,0 +1,47 @@
+using CommunityToolkit.Mvvm.Input;
+using ProjectPlanner.Core.Fotos;
+
+namespace ProjectPlanner.App.ViewModels;
+
+// Bloco 28: Exibir > Fotos do projeto… e o alerta de tarefa em andamento sem foto recente na grid.
+public sealed partial class MainWindowViewModel
+{
+    /// <summary>Os locais padronizados e o alerta de foto do projeto aberto.</summary>
+    public ConfiguracaoDasFotos ConfiguracaoDasFotos => _cronograma.ConfiguracaoDasFotos;
+
+    [RelayCommand]
+    private Task FotosDoProjeto()
+    {
+        Recalcular(); // a tarefa sugerida pela data e o alerta usam as datas calculadas
+        return _dialogos.MostrarFotosDoProjetoAsync(new FotosDoProjetoViewModel(_cronograma, _fotos, _dialogos, _relogio,
+            FotosEntraram, ConfiguracaoDasFotosMudou, MostrarFotosAsync));
+    }
+
+    private void FotosEntraram(IReadOnlyCollection<Guid> tarefas)
+    {
+        foreach (var linha in Tarefas.Where(l => tarefas.Contains(l.Tarefa.Id)))
+            linha.FotosMudaram();
+        OnPropertyChanged(nameof(FotosDaSelecionada));
+        OnPropertyChanged(nameof(DicaFotosDaSelecionada));
+        MarcarAlteracao();
+    }
+
+    private void ConfiguracaoDasFotosMudou()
+    {
+        MarcarSemRecalcular();
+        OnPropertyChanged(nameof(ConfiguracaoDasFotos));
+        AtualizarAlertasDeFotos();
+    }
+
+    /// <summary>Os locais sugeridos na galeria: os padronizados e os já usados nas fotos do projeto.</summary>
+    private IReadOnlyList<string> SugestoesDeLocal() =>
+        _cronograma.ConfiguracaoDasFotos.Sugestoes(_cronograma.Tarefas.SelectMany(t => t.FotosNaOrdemDeCadastro));
+
+    /// <summary>Põe (ou tira) o aviso de "sem foto há N dias" em cada linha da grid, na data de hoje.</summary>
+    private void AtualizarAlertasDeFotos()
+    {
+        var alertas = AlertaDeFotos.Calcular(_cronograma, _relogio.GetLocalNow().DateTime).ToDictionary(a => a.Tarefa.Id);
+        foreach (var linha in Tarefas)
+            linha.AlertaDeFoto = alertas.TryGetValue(linha.Tarefa.Id, out var alerta) ? alerta.Descricao : null;
+    }
+}

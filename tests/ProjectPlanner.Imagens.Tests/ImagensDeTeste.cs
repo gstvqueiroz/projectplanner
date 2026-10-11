@@ -91,6 +91,46 @@ public static class ImagensDeTeste
         return dados;
     }
 
+    /// <summary>Bloco 28: o JPEG com um EXIF só de GPS (graus decimais; negativos são Sul e Oeste).</summary>
+    public static byte[] ComGps(byte[] jpeg, double latitude, double longitude)
+    {
+        // IFD0 com o ponteiro do GPS IFD (0x8825); o GPS IFD com LatitudeRef, Latitude, LongitudeRef e Longitude,
+        // cada coordenada em três RATIONAL (graus, minutos, segundos × 1000).
+        const int inicioIfd0 = 8, tamanhoIfd0 = 2 + 12 + 4, inicioGps = inicioIfd0 + tamanhoIfd0, tamanhoGps = 2 + 4 * 12 + 4;
+        const int inicioLat = inicioGps + tamanhoGps, inicioLon = inicioLat + 24;
+        var dados = new byte[inicioLon + 24];
+        "MM"u8.CopyTo(dados);
+        BinaryPrimitives.WriteUInt16BigEndian(dados.AsSpan(2), 42);
+        BinaryPrimitives.WriteUInt32BigEndian(dados.AsSpan(4), inicioIfd0);
+        BinaryPrimitives.WriteUInt16BigEndian(dados.AsSpan(inicioIfd0), 1);
+        Entrada(dados, inicioIfd0 + 2, 0x8825, 4, 1, inicioGps);
+        BinaryPrimitives.WriteUInt16BigEndian(dados.AsSpan(inicioGps), 4);
+        Entrada(dados, inicioGps + 2, 0x0001, 2, 2, (uint)(latitude < 0 ? 'S' : 'N') << 24);
+        Entrada(dados, inicioGps + 14, 0x0002, 5, 3, inicioLat);
+        Entrada(dados, inicioGps + 26, 0x0003, 2, 2, (uint)(longitude < 0 ? 'W' : 'E') << 24);
+        Entrada(dados, inicioGps + 38, 0x0004, 5, 3, inicioLon);
+        Graus(dados, inicioLat, Math.Abs(latitude));
+        Graus(dados, inicioLon, Math.Abs(longitude));
+
+        var app1 = new List<byte> { 0xFF, 0xE1, (byte)((8 + dados.Length) >> 8), (byte)(8 + dados.Length) };
+        app1.AddRange("Exif\0\0"u8.ToArray());
+        app1.AddRange(dados);
+        return [.. jpeg.Take(2), .. app1, .. jpeg.Skip(2)];
+    }
+
+    private static void Graus(byte[] dados, int p, double valor)
+    {
+        var graus = (uint)Math.Floor(valor);
+        var minutos = (uint)Math.Floor((valor - graus) * 60);
+        var segundos = (uint)Math.Round(((valor - graus) * 60 - minutos) * 60 * 1000);
+        foreach (var (numerador, denominador) in new[] { (graus, 1u), (minutos, 1u), (segundos, 1000u) })
+        {
+            BinaryPrimitives.WriteUInt32BigEndian(dados.AsSpan(p), numerador);
+            BinaryPrimitives.WriteUInt32BigEndian(dados.AsSpan(p + 4), denominador);
+            p += 8;
+        }
+    }
+
     private static void Entrada(byte[] dados, int p, ushort tag, ushort tipo, uint quantidade, uint valor)
     {
         BinaryPrimitives.WriteUInt16BigEndian(dados.AsSpan(p), tag);

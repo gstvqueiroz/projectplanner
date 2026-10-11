@@ -69,6 +69,11 @@ internal sealed class FotoRegistro
 
     /// <summary>Bloco 27: destaque no relatório.</summary>
     public bool Destaque { get; set; }
+
+    /// <summary>Bloco 28: o GPS do EXIF, em graus decimais (os dois nulos quando a foto não tinha).</summary>
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
 }
 
 /// <summary>A imagem (versão reduzida, JPEG) de uma foto, separada dos metadados para listar fotos sem lê-la.</summary>

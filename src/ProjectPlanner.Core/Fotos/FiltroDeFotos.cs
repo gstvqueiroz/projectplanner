@@ -34,8 +34,11 @@ public sealed record CriteriosDeFotos
     /// <summary>Só as fotos com esta tag (sem diferenciar maiúsculas).</summary>
     public string? Tag { get; init; }
 
-    /// <summary>Só as fotos desta tarefa (para a futura visão de todas as fotos do projeto).</summary>
+    /// <summary>Só as fotos desta tarefa (a visão de todas as fotos do projeto, Bloco 28).</summary>
     public Guid? TarefaId { get; init; }
+
+    /// <summary>Bloco 28: só as fotos deste local (o mesmo nome, sem diferenciar maiúsculas nem acentos).</summary>
+    public string? Local { get; init; }
 
     public bool MaisRecentesPrimeiro { get; init; }
 
@@ -74,6 +77,7 @@ public static class FiltroDeFotos
         var (inicioAtalho, fimAtalho) = Periodo(criterios.Atalho, hoje);
         var texto = Normalizar(criterios.Texto);
         var tag = criterios.Tag?.Trim();
+        var local = Normalizar(criterios.Local);
 
         var filtradas = fotos.Select((foto, ordem) => (foto, ordem)).Where(x =>
         {
@@ -84,7 +88,8 @@ public static class FiltroDeFotos
                 && (criterios.Ate is not { } fim || dia <= fim)
                 && dia >= inicioAtalho && dia <= fimAtalho
                 && (texto.Length == 0 || ContemTexto(x.foto, texto))
-                && (string.IsNullOrEmpty(tag) || x.foto.Tags.Contains(tag, StringComparer.CurrentCultureIgnoreCase));
+                && (string.IsNullOrEmpty(tag) || x.foto.Tags.Contains(tag, StringComparer.CurrentCultureIgnoreCase))
+                && (local.Length == 0 || Normalizar(x.foto.Local) == local);
         });
 
         var ordenadas = criterios.MaisRecentesPrimeiro

@@ -124,6 +124,9 @@
                     <!-- Bloco 25 (C7) -->
                     <MenuItem Header="Resumo do projeto…" Command="{Binding ResumoDoProjetoCommand}"
                               ToolTip.Tip="O andamento do projeto hoje: % concluído, atrasadas, críticas e próximos marcos" />
+                    <!-- Bloco 28 -->
+                    <MenuItem Header="Fotos do projeto…" Command="{Binding FotosDoProjetoCommand}"
+                              ToolTip.Tip="Todas as fotos numa linha do tempo, importação em lote, locais da obra e alerta de tarefa sem foto" />
                     <!-- Painel do assistente de IA (Bloco 19); fica salvo entre as sessões. -->
                     <MenuItem x:Name="ItemAssistente" Header="Assistente (IA)" ToggleType="CheckBox" IsChecked="{Binding Assistente.Visivel, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar ou ocultar o painel do assistente, à direita" />

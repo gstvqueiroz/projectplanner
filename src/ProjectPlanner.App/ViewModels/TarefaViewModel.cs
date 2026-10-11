@@ -124,6 +124,18 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     /// <summary>"1 foto", "3 fotos": a dica da câmera.</summary>
     public string DicaDasFotos => QuantidadeDeFotos == 1 ? "1 foto — abrir a galeria" : $"{QuantidadeDeFotos} fotos — abrir a galeria";
 
+    /// <summary>
+    /// Bloco 28 (FT5): "Sem foto há 9 dias (…)" quando a tarefa está em andamento sem foto recente; nulo sem alerta.
+    /// Calculado pela tela principal na data de hoje.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemAlertaDeFoto), nameof(DicaDoAlertaDeFoto))]
+    public partial string? AlertaDeFoto { get; set; }
+
+    public bool TemAlertaDeFoto => AlertaDeFoto is not null;
+
+    public string DicaDoAlertaDeFoto => $"{AlertaDeFoto} — abrir a galeria";
+
     /// <summary>A câmera da coluna Nome: abre a galeria desta tarefa.</summary>
     [RelayCommand]
     private void GerenciarFotos() => _edicao.GerenciarFotos(this);

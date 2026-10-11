@@ -27,9 +27,10 @@ public enum OrigemDaData
     ArquivoModificado,
 }
 
-/// <summary>Uma foto lida de um arquivo e já preparada para guardar.</summary>
+/// <summary>Uma foto lida de um arquivo e já preparada para guardar (com o GPS do EXIF, se houver: Bloco 28).</summary>
 public sealed record ImagemImportada(
-    ConteudoDeFoto Conteudo, string NomeArquivoOriginal, string HashOriginal, DateTime DataFoto, OrigemDaData OrigemDaData);
+    ConteudoDeFoto Conteudo, string NomeArquivoOriginal, string HashOriginal, DateTime DataFoto, OrigemDaData OrigemDaData,
+    Coordenadas? Gps = null);
 
 /// <summary>
 /// Lê fotos de arquivos e as prepara para guardar no projeto (Bloco 22): valida formato e tamanho, aplica a

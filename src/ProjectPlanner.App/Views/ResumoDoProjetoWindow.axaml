@@ -68,6 +68,18 @@
                     </ItemsControl>
                 </StackPanel>
 
+                <!-- Bloco 28 (FT5) -->
+                <StackPanel Spacing="4" IsVisible="{Binding TemSemFotoRecente}">
+                    <TextBlock Text="Em andamento sem foto recente" FontWeight="SemiBold" />
+                    <ItemsControl x:Name="ListaSemFotoRecente" ItemsSource="{Binding SemFotoRecente}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1" Foreground="{DynamicResource TextoDeAviso}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
                 <StackPanel Spacing="4">
                     <TextBlock Text="Próximos marcos" FontWeight="SemiBold" />
                     <ItemsControl x:Name="ProximosMarcos" ItemsSource="{Binding ProximosMarcos}" IsVisible="{Binding TemProximosMarcos}">

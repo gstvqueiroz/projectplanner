@@ -1,3 +1,5 @@
+using ProjectPlanner.Core.Fotos;
+
 namespace ProjectPlanner.Core;
 
 /// <summary>Uma tarefa citada no resumo do projeto (atrasada ou próximo marco).</summary>
@@ -26,6 +28,9 @@ public sealed record ResumoDoProjeto(
     IReadOnlyList<TarefaNoResumo> ListaDeAtrasadas,
     IReadOnlyList<TarefaNoResumo> ProximosMarcos)
 {
+    /// <summary>Bloco 28 (FT5): as tarefas em andamento sem foto recente, na ordem da EDT.</summary>
+    public IReadOnlyList<TarefaSemFotoRecente> SemFotoRecente { get; init; } = [];
+
     /// <summary>Até quantos dias à frente entram os próximos marcos.</summary>
     public const int DiasDosProximosMarcos = 30;
 
@@ -73,6 +78,9 @@ public sealed record ResumoDoProjeto(
             folhas.Count(t => t.EhCritica && t.PercentualConcluido < 100),
             cronograma.Tarefas.Sum(t => t.Fotos.Count),
             atrasadas.OrderBy(t => (t.EhMarco ? t.InicioMaisCedo : t.TerminoMaisCedo) ?? DateTime.MaxValue).Select(Citada).ToList(),
-            proximos);
+            proximos)
+        {
+            SemFotoRecente = AlertaDeFotos.Calcular(cronograma, hoje),
+        };
     }
 }

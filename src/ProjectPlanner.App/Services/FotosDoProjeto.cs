@@ -24,6 +24,9 @@ public sealed record ResultadoDaImportacao(IReadOnlyList<FotoTarefa> Adicionadas
     }
 }
 
+/// <summary>Bloco 28: um arquivo lido para a importação em lote: a foto preparada, ou o motivo da recusa.</summary>
+public sealed record FotoLida(string Caminho, ImagemImportada? Importada, string? Erro);
+
 /// <summary>
 /// As imagens das fotos do projeto aberto (Bloco 22, D7). As fotos (metadados) ficam nas tarefas; as imagens ficam
 /// no .pplan e são lidas sob demanda: as miniaturas com cache da sessão, a imagem completa só quando pedida. Fotos
@@ -106,43 +109,67 @@ public sealed class FotosDoProjeto(IProjetoRepository repositorio, IProcessadorD
     {
         ArgumentNullException.ThrowIfNull(tarefa);
         var (adicionadas, repetidas, recusadas) = (new List<FotoTarefa>(), new List<string>(), new List<string>());
+        foreach (var lida in await LerAsync(caminhos, progresso))
+        {
+            if (lida.Importada is not { } importada)
+                recusadas.Add(lida.Erro!);
+            else if (Adicionar(tarefa, importada) is { } foto)
+                adicionadas.Add(foto);
+            else
+                repetidas.Add(importada.NomeArquivoOriginal);
+        }
+        return new ResultadoDaImportacao(adicionadas, repetidas, recusadas);
+    }
+
+    /// <summary>
+    /// Bloco 28: lê e prepara as fotos dos arquivos (fora da thread da tela), sem pôr em nenhuma tarefa: a
+    /// importação em lote mostra o resultado numa tabela antes. As recusadas vêm com o motivo.
+    /// </summary>
+    public async Task<IReadOnlyList<FotoLida>> LerAsync(IReadOnlyList<string> caminhos, IProgress<int>? progresso = null)
+    {
+        ArgumentNullException.ThrowIfNull(caminhos);
+        var lidas = new List<FotoLida>();
         for (var i = 0; i < caminhos.Count; i++)
         {
             progresso?.Report(i);
             var caminho = caminhos[i];
-            ImagemImportada importada;
             try
             {
-                importada = await Task.Run(() => processador.Importar(caminho));
+                lidas.Add(new FotoLida(caminho, await Task.Run(() => processador.Importar(caminho)), null));
             }
             catch (ImagemRecusadaException ex)
             {
-                recusadas.Add(ex.Message);
-                continue;
+                lidas.Add(new FotoLida(caminho, null, ex.Message));
             }
             catch (Exception ex)
             {
-                recusadas.Add($"{Path.GetFileName(caminho)}: não foi possível ler a imagem ({ex.Message}).");
-                continue;
+                lidas.Add(new FotoLida(caminho, null, $"{Path.GetFileName(caminho)}: não foi possível ler a imagem ({ex.Message})."));
             }
-
-            if (tarefa.TemFotoDaMesmaImagem(importada.HashOriginal))
-            {
-                repetidas.Add(importada.NomeArquivoOriginal);
-                continue;
-            }
-            var conteudo = importada.Conteudo;
-            var foto = new FotoTarefa(Guid.NewGuid(), tarefa.Id,
-                new DadosDaImagem(importada.NomeArquivoOriginal, conteudo.Largura, conteudo.Altura, conteudo.Imagem.Length, importada.HashOriginal),
-                new MetadadosFoto(importada.DataFoto, percentualConcluidoNaData: tarefa.PercentualConcluido),
-                relogio.GetLocalNow().DateTime);
-            tarefa.AdicionarFoto(foto);
-            _novas[foto.Id] = conteudo;
-            _miniaturas[foto.Id] = conteudo.Miniatura;
-            adicionadas.Add(foto);
         }
         progresso?.Report(caminhos.Count);
-        return new ResultadoDaImportacao(adicionadas, repetidas, recusadas);
+        return lidas;
+    }
+
+    /// <summary>
+    /// Põe na tarefa uma foto já lida, com o % atual da tarefa, o GPS do EXIF e, se informado, o local.
+    /// </summary>
+    /// <returns>A foto, ou nula se a mesma imagem já está na tarefa.</returns>
+    /// <exception cref="DomainValidationException">Local longo demais.</exception>
+    public FotoTarefa? Adicionar(Tarefa tarefa, ImagemImportada importada, string? local = null)
+    {
+        ArgumentNullException.ThrowIfNull(tarefa);
+        ArgumentNullException.ThrowIfNull(importada);
+        if (tarefa.TemFotoDaMesmaImagem(importada.HashOriginal))
+            return null;
+        var conteudo = importada.Conteudo;
+        var foto = new FotoTarefa(Guid.NewGuid(), tarefa.Id,
+            new DadosDaImagem(importada.NomeArquivoOriginal, conteudo.Largura, conteudo.Altura, conteudo.Imagem.Length, importada.HashOriginal),
+            new MetadadosFoto(importada.DataFoto, local: local, percentualConcluidoNaData: tarefa.PercentualConcluido),
+            relogio.GetLocalNow().DateTime) { Gps = importada.Gps };
+        tarefa.AdicionarFoto(foto);
+        _novas[foto.Id] = conteudo;
+        _miniaturas[foto.Id] = conteudo.Miniatura;
+        return foto;
     }
 
     /// <summary>Troca as informações editáveis da foto.</summary>

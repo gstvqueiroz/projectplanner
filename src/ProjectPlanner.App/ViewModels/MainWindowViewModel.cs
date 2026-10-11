@@ -536,7 +536,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             OnPropertyChanged(nameof(FotosDaSelecionada));
             OnPropertyChanged(nameof(DicaFotosDaSelecionada));
             MarcarAlteracao();
-        }));
+        }, SugestoesDeLocal));
     }
 
     /// <summary>
@@ -866,6 +866,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
 
         foreach (var linha in Tarefas)
             linha.AtualizarTela();
+        AtualizarAlertasDeFotos();
         AtualizarBarraDeStatus();
         return calculou;
     }

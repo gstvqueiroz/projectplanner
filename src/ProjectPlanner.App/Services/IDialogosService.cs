@@ -60,6 +60,12 @@ public interface IDialogosService
 
     /// <summary>Abre o arquivo no programa padrão do sistema (o relatório gerado, Bloco 27).</summary>
     Task AbrirArquivoAsync(string caminho);
+
+    /// <summary>Mostra Exibir > Fotos do projeto (Bloco 28) e espera ser fechada.</summary>
+    Task MostrarFotosDoProjetoAsync(ViewModels.FotosDoProjetoViewModel fotos);
+
+    /// <summary>Abre o endereço no navegador (o ponto do GPS no mapa, Bloco 28).</summary>
+    Task AbrirEnderecoAsync(Uri endereco);
 }
 
 public enum RespostaAlteracoesPendentes

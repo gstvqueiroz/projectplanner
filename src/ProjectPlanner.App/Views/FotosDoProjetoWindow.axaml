@@ -1,0 +1,255 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:fotos="using:ProjectPlanner.Core.Fotos"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        x:Class="ProjectPlanner.App.Views.FotosDoProjetoWindow"
+        x:DataType="vm:FotosDoProjetoViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="760" MinWidth="860" MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Exibir > Fotos do projeto (Bloco 28): linha do tempo de todas as fotos, importação em lote com a tarefa
+         sugerida pela data, locais padronizados e alerta de tarefa sem foto. Soltar fotos na janela leva ao lote. -->
+    <Window.Styles>
+        <Style Selector="Border.miniatura">
+            <Setter Property="Width" Value="176" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Background" Value="{DynamicResource FundoDaMiniatura}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.miniatura.selecionada">
+            <Setter Property="BorderBrush" Value="#6A8CAF" />
+            <Setter Property="Background" Value="{DynamicResource FundoDaMiniaturaSelecionada}" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="14">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button Content="Fechar" DockPanel.Dock="Right" Click="Fechar" IsCancel="True" />
+            <TextBlock x:Name="Contador" Text="{Binding Contador}" VerticalAlignment="Center" FontWeight="SemiBold" />
+        </DockPanel>
+
+        <TabControl x:Name="Abas" SelectedIndex="{Binding AbaEscolhida}">
+            <!-- ======== FT1: linha do tempo ======== -->
+            <TabItem Header="Linha do tempo">
+                <DockPanel Margin="0,8,0,0">
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="8" Margin="0,0,0,8">
+                        <WrapPanel ItemSpacing="8" LineSpacing="6">
+                            <ComboBox ItemsSource="{Binding Atalhos}" SelectedItem="{Binding AtalhoEscolhido}" MinWidth="150" />
+                            <TextBlock Text="De" VerticalAlignment="Center" />
+                            <CalendarDatePicker SelectedDate="{Binding DeFiltro}" PlaceholderText="início" Width="130" />
+                            <TextBlock Text="Até" VerticalAlignment="Center" />
+                            <CalendarDatePicker SelectedDate="{Binding AteFiltro}" PlaceholderText="fim" Width="130" />
+                            <ComboBox x:Name="FiltroTarefa" ItemsSource="{Binding TarefasComFotos}" SelectedItem="{Binding TarefaFiltro}" MinWidth="200" MaxWidth="320" />
+                            <ComboBox x:Name="FiltroLocal" ItemsSource="{Binding LocaisDoFiltro}" SelectedItem="{Binding LocalFiltro}" MinWidth="160" MaxWidth="260" />
+                            <ComboBox ItemsSource="{Binding TagsDoFiltro}" SelectedItem="{Binding TagFiltro}" MinWidth="140" />
+                            <TextBox Text="{Binding TextoFiltro}" PlaceholderText="Buscar em título, legenda, local, autor" Width="250" />
+                            <CheckBox Content="Mais recentes primeiro" IsChecked="{Binding MaisRecentesPrimeiro}" />
+                            <Button Content="Limpar filtros" Command="{Binding LimparFiltrosCommand}" />
+                        </WrapPanel>
+                    </Border>
+
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                            <Button Content="Ampliar" Command="{Binding AmpliarCommand}" CommandParameter="{x:Null}"
+                                    ToolTip.Tip="Ver a foto ampliada (ou dê dois cliques nela)" />
+                            <Button x:Name="VerNoMapa" Content="Ver no mapa" Command="{Binding VerNoMapaCommand}"
+                                    ToolTip.Tip="Abrir no navegador o ponto do GPS da foto" ToolTip.ShowOnDisabled="True" />
+                            <Button x:Name="AbrirGaleria" Content="Abrir a galeria da tarefa…" Command="{Binding AbrirGaleriaDaFotoCommand}"
+                                    ToolTip.Tip="Editar, girar ou excluir as fotos da tarefa desta foto" />
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock x:Name="DetalheDaAtual" Text="{Binding DetalheDaAtual}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding ErroDeFiltro}" Foreground="{DynamicResource TextoDeErro}" FontSize="12"
+                                       IsVisible="{Binding ErroDeFiltro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Panel>
+                        <TextBlock x:Name="MensagemVazia" Text="{x:Static vm:FotosDoProjetoViewModel.SemFotos}" IsVisible="{Binding Vazia}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                                   Opacity="0.6" FontSize="15" MaxWidth="460" />
+                        <TextBlock Text="{x:Static vm:FotosDoProjetoViewModel.SemResultado}" IsVisible="{Binding NadaComOsFiltros}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" FontSize="15" />
+                        <ScrollViewer>
+                            <ItemsControl x:Name="Grupos" ItemsSource="{Binding Grupos}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GrupoNoProjeto">
+                                        <StackPanel Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding Cabecalho}" FontWeight="SemiBold" Margin="0,4,0,8" />
+                                            <ItemsControl ItemsSource="{Binding Fotos}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:FotoNoProjeto">
+                                                        <Border Classes="miniatura" Classes.selecionada="{Binding Selecionada}"
+                                                                PointerPressed="MiniaturaApertada" DoubleTapped="MiniaturaDuploClique"
+                                                                ToolTip.Tip="{Binding Foto.Imagem.NomeArquivoOriginal}">
+                                                            <StackPanel Spacing="3">
+                                                                <Border Height="124" Background="{DynamicResource FundoDaImagemDaMiniatura}" CornerRadius="4" ClipToBounds="True">
+                                                                    <Panel>
+                                                                        <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Stretch="UniformToFill" />
+                                                                        <Border Background="{StaticResource FundoDoSeloDaFoto}" CornerRadius="3" Padding="4,0" Margin="4"
+                                                                                HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding TemGps}"
+                                                                                ToolTip.Tip="A foto tem a posição do GPS">
+                                                                            <TextBlock Text="GPS" Foreground="White" FontSize="10" />
+                                                                        </Border>
+                                                                    </Panel>
+                                                                </Border>
+                                                                <TextBlock Text="{Binding Tarefa}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Rotulo}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Hora}" FontSize="11" Opacity="0.6" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Panel>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ======== FT2: importação em lote ======== -->
+            <TabItem Header="Importar em lote">
+                <DockPanel Margin="0,8,0,0">
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap" Opacity="0.75"
+                                   Text="Escolha (ou solte aqui) as fotos de vários dias. Cada uma vai para a tarefa prevista na data em que foi tirada; confira a tabela, troque o que precisar e clique em Importar." />
+                        <WrapPanel ItemSpacing="8" LineSpacing="6">
+                            <Button x:Name="EscolherFotos" Classes="accent" Content="Escolher fotos…" Command="{Binding EscolherFotosCommand}" />
+                            <TextBlock Text="Local para todas" VerticalAlignment="Center" />
+                            <AutoCompleteBox x:Name="LocalDoLote" Text="{Binding LocalDoLote}" ItemsSource="{Binding SugestoesDeLocal}"
+                                             FilterMode="Contains" MinimumPrefixLength="0" Width="260" MaxLength="200"
+                                             PlaceholderText="(opcional)" />
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                            <Button Content="Descartar a lista" Command="{Binding DescartarLoteCommand}" />
+                            <Button x:Name="Importar" Classes="accent" Content="Importar" Command="{Binding ImportarLoteCommand}" />
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock x:Name="ResumoDoLote" Text="{Binding ResumoDoLote}" />
+                            <TextBlock x:Name="AvisoDoLote" Text="{Binding AvisoDoLote}" TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Panel>
+                        <TextBlock Text="Nenhuma foto escolhida." Opacity="0.6" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   IsVisible="{Binding !TemLote}" />
+                        <DataGrid x:Name="TabelaDoLote" ItemsSource="{Binding Lote}" IsVisible="{Binding TemLote}" AutoGenerateColumns="False"
+                                  CanUserReorderColumns="False" CanUserSortColumns="False" HeadersVisibility="Column" RowHeight="64"
+                                  GridLinesVisibility="Horizontal">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="" Width="84" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:LinhaDaImportacao">
+                                            <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Width="76" Height="56" Stretch="Uniform" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Arquivo" Binding="{Binding Arquivo}" Width="170" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Data da foto" Binding="{Binding Data}" Width="260" IsReadOnly="True" />
+                                <DataGridTemplateColumn Header="Tarefa" Width="280">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:LinhaDaImportacao">
+                                            <ComboBox ItemsSource="{Binding Tarefas}" SelectedItem="{Binding TarefaEscolhida}" IsEnabled="{Binding PodeEscolher}"
+                                                      HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="4,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Situação" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:LinhaDaImportacao">
+                                            <TextBlock Text="{Binding Situacao}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="6,0" FontSize="12"
+                                                       Classes.recusada="{Binding Recusada}">
+                                                <TextBlock.Styles>
+                                                    <Style Selector="TextBlock.recusada">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+                                                    </Style>
+                                                </TextBlock.Styles>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Border Background="{DynamicResource FundoDeOcupado}" IsVisible="{Binding Ocupado}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                                <ProgressBar IsIndeterminate="True" Width="220" />
+                                <TextBlock Text="{Binding Progresso}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Panel>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ======== FT4 e FT5: locais padronizados e alerta ======== -->
+            <TabItem Header="Locais e alerta">
+                <Grid ColumnDefinitions="*,24,*" Margin="0,8,0,0">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+                            <TextBlock Text="Locais da obra" FontWeight="SemiBold" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.75" FontSize="12"
+                                       Text="Um por linha (ex.: Bloco A — Térreo). Aparecem como sugestão ao preencher o local de uma foto, para todos escreverem igual." />
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="Alertar tarefa em andamento sem foto há" VerticalAlignment="Center" />
+                                <NumericUpDown x:Name="DiasSemFoto" Value="{Binding DiasSemFoto}" Minimum="0" Maximum="365" Increment="1"
+                                               FormatString="0" Width="120" />
+                                <TextBlock Text="dias (0 desliga)" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button x:Name="AplicarConfiguracao" Classes="accent" Content="Aplicar" Command="{Binding AplicarConfiguracaoCommand}" />
+                                <Button Content="Trazer os locais usados nas fotos" Command="{Binding TrazerLocaisUsadosCommand}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding ErroDaConfiguracao}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap" FontSize="12"
+                                       IsVisible="{Binding ErroDaConfiguracao, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <TextBlock x:Name="AvisoDaConfiguracao" Text="{Binding AvisoDaConfiguracao}" TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
+                        <TextBox x:Name="TextoDosLocais" Text="{Binding TextoDosLocais}" AcceptsReturn="True" TextWrapping="NoWrap" />
+                    </DockPanel>
+
+                    <DockPanel Grid.Column="2">
+                        <TextBlock x:Name="TituloDoAlerta" DockPanel.Dock="Top" Text="{Binding TituloDoAlerta}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                   Margin="0,0,0,6" />
+                        <ScrollViewer>
+                            <ItemsControl x:Name="ListaSemFoto" ItemsSource="{Binding SemFotoRecente}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="fotos:TarefaSemFotoRecente">
+                                        <DockPanel Margin="0,2">
+                                            <Button DockPanel.Dock="Right" Content="Fotos…" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Command="{Binding $parent[Window].((vm:FotosDoProjetoViewModel)DataContext).AbrirGaleriaDaTarefaCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <StackPanel>
+                                                <TextBlock TextWrapping="Wrap">
+                                                    <Run Text="{Binding Edt}" />
+                                                    <Run Text="{Binding Tarefa.Nome}" />
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Descricao}" FontSize="12" Foreground="{DynamicResource TextoDeAviso}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

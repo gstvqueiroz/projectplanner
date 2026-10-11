@@ -107,7 +107,7 @@ public partial class MenuPrincipalTests
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…",
             "Abrir a pasta de cópias de segurança");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha Hoje", Linha,
-            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Resumo do projeto…", "Assistente (IA)", Linha, "Tema");
+            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
             "Adicionar marco", "Adicionar resumo", Linha,

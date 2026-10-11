@@ -95,6 +95,12 @@
                         </Border>
                         <TextBlock Text="{Binding DetalheDoArquivo}" FontSize="11" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding DetalheDoCadastro}" FontSize="11" Opacity="0.7" />
+                        <!-- Bloco 28: GPS do EXIF -->
+                        <StackPanel Orientation="Horizontal" Spacing="6"
+                                    IsVisible="{Binding DetalheDoGps, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock x:Name="DetalheDoGps" Text="{Binding DetalheDoGps}" FontSize="11" Opacity="0.7" VerticalAlignment="Center" />
+                            <Button Content="Ver no mapa" Command="{Binding VerNoMapaCommand}" FontSize="11" Padding="6,1" />
+                        </StackPanel>
 
                         <!-- Bloco 27: curadoria para o relatório fotográfico (vale na hora). -->
                         <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,6,0,0">
@@ -115,7 +121,9 @@
                         <TextBlock Classes="rotulo" Text="Autor / responsável" />
                         <TextBox Text="{Binding EdicaoAutor}" MaxLength="120" />
                         <TextBlock Classes="rotulo" Text="Local / trecho da obra" />
-                        <TextBox Text="{Binding EdicaoLocal}" MaxLength="200" />
+                        <!-- Bloco 28: sugere os locais padronizados do projeto e os já usados -->
+                        <AutoCompleteBox x:Name="EdicaoLocal" Text="{Binding EdicaoLocal}" ItemsSource="{Binding LocaisSugeridos}"
+                                         FilterMode="Contains" MinimumPrefixLength="0" MaxLength="200" />
                         <TextBlock Classes="rotulo" Text="% concluído da tarefa na data" />
                         <NumericUpDown Value="{Binding EdicaoPercentual}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
                         <TextBlock Classes="rotulo" Text="Tags (separadas por vírgula)" />

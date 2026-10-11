@@ -247,6 +247,27 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    // ---- Bloco 28 ----
+
+    /// <summary>As telas Fotos do projeto abertas; <see cref="AoMostrarFotosDoProjeto"/> faz o papel do usuário.</summary>
+    public List<FotosDoProjetoViewModel> FotosDoProjeto { get; } = [];
+
+    public Func<FotosDoProjetoViewModel, Task>? AoMostrarFotosDoProjeto { get; set; }
+
+    public List<Uri> EnderecosAbertos { get; } = [];
+
+    public Task MostrarFotosDoProjetoAsync(FotosDoProjetoViewModel fotos)
+    {
+        FotosDoProjeto.Add(fotos);
+        return AoMostrarFotosDoProjeto?.Invoke(fotos) ?? Task.CompletedTask;
+    }
+
+    public Task AbrirEnderecoAsync(Uri endereco)
+    {
+        EnderecosAbertos.Add(endereco);
+        return Task.CompletedTask;
+    }
+
     public Task MostrarConfiguracaoAssistenteAsync(ConfiguracaoAssistenteViewModel configuracao)
     {
         ConfiguracoesDoAssistente.Add(configuracao);
@@ -254,10 +275,13 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    /// <summary>Bloco 28: o que o usuário faz na galeria antes de fechá-la (nulo: só fecha).</summary>
+    public Func<GaleriaFotosViewModel, Task>? AoMostrarGaleria { get; set; }
+
     public Task MostrarFotosAsync(GaleriaFotosViewModel galeria)
     {
         Galerias.Add(galeria);
-        return Task.CompletedTask;
+        return AoMostrarGaleria?.Invoke(galeria) ?? Task.CompletedTask;
     }
 }
 
@@ -415,6 +439,9 @@ public sealed class ProcessadorFalso : IProcessadorDeImagens
     /// <summary>Data da foto por nome de arquivo; sem entrada, 29/09/2026 10:00.</summary>
     public Dictionary<string, DateTime> Datas { get; } = [];
 
+    /// <summary>Bloco 28: o GPS do EXIF por nome de arquivo; sem entrada, sem GPS.</summary>
+    public Dictionary<string, Coordenadas> Gps { get; } = [];
+
     public int Importacoes { get; private set; }
 
     public ImagemImportada Importar(string caminhoArquivo)
@@ -426,7 +453,8 @@ public sealed class ProcessadorFalso : IProcessadorDeImagens
             throw new ImagemRecusadaException($"{nome}: o arquivo não é uma imagem válida (está corrompido ou não é uma foto).");
         var data = Datas.GetValueOrDefault(nome, new DateTime(2026, 9, 29, 10, 0, 0));
         return new ImagemImportada(Conteudo(nome, 1600, 1200), nome,
-            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(nome))), data, OrigemDaData.ExifOriginal);
+            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(nome))), data,
+            nome.StartsWith("semexif", StringComparison.Ordinal) ? OrigemDaData.ArquivoModificado : OrigemDaData.ExifOriginal, Gps.GetValueOrDefault(nome));
     }
 
     public ConteudoDeFoto Girar(byte[] imagem, bool sentidoHorario)

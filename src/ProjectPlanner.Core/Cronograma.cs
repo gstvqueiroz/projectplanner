@@ -401,6 +401,12 @@ public class Cronograma
 
     public void DefinirObra(DadosDaObra obra) => Obra = obra ?? throw new ArgumentNullException(nameof(obra));
 
+    /// <summary>Bloco 28: os locais padronizados das fotos e o alerta de tarefa sem foto recente.</summary>
+    public Fotos.ConfiguracaoDasFotos ConfiguracaoDasFotos { get; private set; } = Fotos.ConfiguracaoDasFotos.Padrao;
+
+    public void DefinirConfiguracaoDasFotos(Fotos.ConfiguracaoDasFotos configuracao) =>
+        ConfiguracaoDasFotos = configuracao ?? throw new ArgumentNullException(nameof(configuracao));
+
     private readonly List<RelatorioGerado> _relatorios = [];
 
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
@@ -433,6 +439,7 @@ public class Cronograma
             Assistente = Assistente, // a mesma conversa: ela é do projeto, não desta versão do cronograma
             ConversaDescartadaAoAbrir = ConversaDescartadaAoAbrir,
             Obra = Obra,
+            ConfiguracaoDasFotos = ConfiguracaoDasFotos,
         };
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

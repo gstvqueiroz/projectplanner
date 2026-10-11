@@ -68,10 +68,13 @@ public sealed partial class GaleriaFotosViewModel : ViewModelBase
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
     private readonly Action _aoMudar;
+    private readonly Func<IReadOnlyList<string>> _locais;
     private IReadOnlyList<FotoTarefa> _filtradas = [];
     private bool _carregandoEdicao;
 
-    public GaleriaFotosViewModel(TarefaViewModel linha, FotosDoProjeto fotos, IDialogosService dialogos, TimeProvider relogio, Action aoMudar)
+    /// <param name="locais">Bloco 28: os locais para sugerir no campo Local (os padronizados do projeto e os já usados).</param>
+    public GaleriaFotosViewModel(TarefaViewModel linha, FotosDoProjeto fotos, IDialogosService dialogos, TimeProvider relogio, Action aoMudar,
+        Func<IReadOnlyList<string>>? locais = null)
     {
         ArgumentNullException.ThrowIfNull(linha);
         ArgumentNullException.ThrowIfNull(fotos);
@@ -79,6 +82,7 @@ public sealed partial class GaleriaFotosViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(relogio);
         ArgumentNullException.ThrowIfNull(aoMudar);
         (_linha, _fotos, _dialogos, _relogio, _aoMudar) = (linha, fotos, dialogos, relogio, aoMudar);
+        _locais = locais ?? (() => []);
         AtalhoEscolhido = Atalhos[0];
         TagEscolhida = TodasAsTags;
         Atualizar();
@@ -403,6 +407,19 @@ public sealed partial class GaleriaFotosViewModel : ViewModelBase
     /// <summary>"Cadastrada em 01/10/2026 09:00".</summary>
     [ObservableProperty] public partial string DetalheDoCadastro { get; private set; } = "";
 
+    /// <summary>Bloco 28: "GPS -22.905810, -47.062630", vazio sem GPS.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(VerNoMapaCommand))]
+    public partial string DetalheDoGps { get; private set; } = "";
+
+    /// <summary>Bloco 28: os locais sugeridos no campo Local.</summary>
+    [ObservableProperty] public partial IReadOnlyList<string> LocaisSugeridos { get; private set; } = [];
+
+    [RelayCommand(CanExecute = nameof(TemGps))]
+    private Task VerNoMapa() => _dialogos.AbrirEnderecoAsync(FotoAtual!.Foto.Gps!.Mapa());
+
+    private bool TemGps() => FotoAtual?.Foto.Gps is not null;
+
     partial void OnEdicaoDataChanged(DateTime? value) => EdicaoMudou();
     partial void OnEdicaoHoraChanged(TimeSpan? value) => EdicaoMudou();
     partial void OnEdicaoTituloChanged(string? value) => EdicaoMudou();
@@ -440,6 +457,8 @@ public sealed partial class GaleriaFotosViewModel : ViewModelBase
         DetalheDoArquivo = foto is null ? ""
             : $"{foto.Imagem.NomeArquivoOriginal} · {foto.Imagem.Largura} × {foto.Imagem.Altura} · {Math.Max(1, foto.Imagem.TamanhoBytes / 1024)} KB";
         DetalheDoCadastro = foto is null ? "" : $"Cadastrada em {foto.DataCadastro:dd/MM/yyyy HH:mm}";
+        DetalheDoGps = foto?.Gps is { } gps ? $"GPS {gps}" : "";
+        LocaisSugeridos = _locais();
         ErroDeEdicao = "";
         _carregandoEdicao = false;
         EdicaoAlterada = false;

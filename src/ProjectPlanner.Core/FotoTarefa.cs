@@ -49,17 +49,20 @@ public sealed record FotoTarefa
     /// <summary>Bloco 27: foto de destaque no relatório (vem primeiro no grupo e maior).</summary>
     public bool Destaque { get; init; }
 
+    /// <summary>Bloco 28: onde a foto foi tirada, quando o EXIF trazia o GPS.</summary>
+    public Fotos.Coordenadas? Gps { get; init; }
+
     /// <summary>A mesma foto com outras informações (edição pelo usuário).</summary>
     public FotoTarefa ComMetadados(MetadadosFoto metadados) =>
-        new(Id, TarefaId, Imagem, metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque };
+        new(Id, TarefaId, Imagem, metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque, Gps = Gps };
 
     /// <summary>A mesma foto com outra imagem guardada (girada), mantendo o hash do original.</summary>
     public FotoTarefa ComImagem(DadosDaImagem imagem) =>
-        new(Id, TarefaId, imagem, Metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque };
+        new(Id, TarefaId, imagem, Metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque, Gps = Gps };
 
     /// <summary>A mesma foto com outra escolha para o relatório (Bloco 27). Fora do relatório, não há destaque.</summary>
     public FotoTarefa ComCuradoria(bool noRelatorio, bool destaque) =>
-        new(Id, TarefaId, Imagem, Metadados, DataCadastro) { NoRelatorio = noRelatorio, Destaque = noRelatorio && destaque };
+        new(Id, TarefaId, Imagem, Metadados, DataCadastro) { NoRelatorio = noRelatorio, Destaque = noRelatorio && destaque, Gps = Gps };
 }
 
 /// <summary>Os dados técnicos da imagem guardada no projeto.</summary>

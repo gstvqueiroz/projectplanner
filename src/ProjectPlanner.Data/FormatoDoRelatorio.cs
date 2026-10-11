@@ -1,10 +1,15 @@
 using System.Text.Json;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Fotos;
 using ProjectPlanner.Core.Relatorios;
 
 namespace ProjectPlanner.Data;
 
-/// <summary>Os dados da obra e o histórico dos relatórios fotográficos em JSON, na tabela RelatorioDoProjeto (Bloco 27).</summary>
+/// <summary>
+/// Os dados da obra e o histórico dos relatórios fotográficos em JSON, na tabela RelatorioDoProjeto (Bloco 27). O
+/// Bloco 28 acrescentou os locais padronizados e os dias do alerta de foto: campos novos e opcionais, sem mudar a
+/// versão (um arquivo da 0.27, sem eles, abre com os valores padrão).
+/// </summary>
 internal static class FormatoDoRelatorio
 {
     public const int Versao = 1;
@@ -13,7 +18,12 @@ internal static class FormatoDoRelatorio
 
     public static string Serializar(Cronograma cronograma) => JsonSerializer.Serialize(new Dados(
         cronograma.Obra.Contratante, cronograma.Obra.Contrato, cronograma.Obra.Endereco,
-        [.. cronograma.Relatorios.Select(r => new Relatorio(r.Numero, r.GeradoEm, r.De, r.Ate, r.Fotos))]), Opcoes);
+        [.. cronograma.Relatorios.Select(r => new Relatorio(r.Numero, r.GeradoEm, r.De, r.Ate, r.Fotos))],
+        [.. cronograma.ConfiguracaoDasFotos.Locais], cronograma.ConfiguracaoDasFotos.DiasSemFotoParaAlerta), Opcoes);
+
+    /// <summary>Há algo para gravar (sem nada, o arquivo fica sem a linha).</summary>
+    public static bool TemDados(Cronograma cronograma) =>
+        !cronograma.Obra.Vazio || cronograma.Relatorios.Count > 0 || !cronograma.ConfiguracaoDasFotos.EhPadrao;
 
     /// <exception cref="InvalidDataException">JSON com defeito ou valores que o domínio recusa.</exception>
     public static void Ler(string json, Cronograma cronograma)
@@ -24,6 +34,8 @@ internal static class FormatoDoRelatorio
             cronograma.DefinirObra(new DadosDaObra(dados.Contratante, dados.Contrato, dados.Endereco));
             foreach (var r in dados.Relatorios ?? [])
                 cronograma.RegistrarRelatorio(new RelatorioGerado(r.Numero, r.GeradoEm, r.De, r.Ate, r.Fotos));
+            cronograma.DefinirConfiguracaoDasFotos(new ConfiguracaoDasFotos(dados.Locais ?? [],
+                dados.DiasSemFoto ?? ConfiguracaoDasFotos.DiasPadrao));
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or DomainValidationException)
         {
@@ -31,7 +43,8 @@ internal static class FormatoDoRelatorio
         }
     }
 
-    private sealed record Dados(string? Contratante, string? Contrato, string? Endereco, List<Relatorio>? Relatorios);
+    private sealed record Dados(string? Contratante, string? Contrato, string? Endereco, List<Relatorio>? Relatorios,
+        List<string>? Locais = null, int? DiasSemFoto = null);
 
     private sealed record Relatorio(int Numero, DateTime GeradoEm, DateOnly De, DateOnly Ate, int Fotos);
 }

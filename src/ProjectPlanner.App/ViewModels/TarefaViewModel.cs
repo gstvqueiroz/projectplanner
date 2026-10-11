@@ -49,6 +49,14 @@ public interface IEdicaoCronograma
     /// <summary>Bloco 31: a linha de base em uso, para as colunas de comparação; nula sem nenhuma.</summary>
     Core.Planejamento.LinhaDeBase? LinhaDeBase => null;
 
+    /// <summary>
+    /// Bloco 36: recusa mudar o valor, a quantidade ou a unidade de um item com o contrato travado (há medição aprovada).
+    /// </summary>
+    /// <exception cref="DomainValidationException">O contrato está travado.</exception>
+    void VerificarContrato(Tarefa tarefa, bool soAUnidade = false)
+    {
+    }
+
     /// <summary>O usuário desistiu de uma edição recusada (Esc ou voltou ao valor em vigor): some com a mensagem.</summary>
     void EdicaoCancelada();
 
@@ -76,6 +84,7 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         nameof(Situacao), nameof(EstaAtrasada),
         nameof(NaoIniciarAntesDe), nameof(TemRestricao), nameof(DicaDoInicio), nameof(Prazo), nameof(ForaDoPrazo), nameof(DicaDoPrazo),
         nameof(InicioLinhaDeBase), nameof(TerminoLinhaDeBase), nameof(DesvioDoInicio), nameof(DesvioDoTermino), nameof(Valor),
+        nameof(Unidade), nameof(Quantidade), nameof(PrecoUnitario),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -259,9 +268,41 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     public string Valor
     {
         get => ValorExibido(nameof(Valor), Tarefa.Valor is { } v ? Core.Planejamento.Moeda.Formatar(v) : "");
-        set => Alterar(nameof(Valor), "Valor", value, LerValor(value) is var (lido, ok) && ok && lido == Tarefa.Valor,
-            () => Tarefa.DefinirValor(Core.Planejamento.Moeda.Ler(value)));
+        set => Alterar(nameof(Valor), "Valor", value, LerValor(value) is var (lido, ok) && ok && lido == Tarefa.Valor, () =>
+        {
+            _edicao.VerificarContrato(Tarefa);
+            Tarefa.DefinirValor(Core.Planejamento.Moeda.Ler(value));
+        });
     }
+
+    // ---- Bloco 36: unidade e quantidade (para medir por quantidade) ----
+
+    /// <summary>A unidade do item ("m²"); vazia tira a unidade.</summary>
+    public string Unidade
+    {
+        get => ValorExibido(nameof(Unidade), Tarefa.Unidade ?? "");
+        set => Alterar(nameof(Unidade), "Unidade", value, (string.IsNullOrWhiteSpace(value) ? null : value.Trim()) == Tarefa.Unidade, () =>
+        {
+            _edicao.VerificarContrato(Tarefa, soAUnidade: true);
+            Tarefa.DefinirUnidade(value);
+        });
+    }
+
+    /// <summary>A quantidade contratada ("120,50"); vazia tira a quantidade (a medição passa a ser em %).</summary>
+    public string Quantidade
+    {
+        get => ValorExibido(nameof(Quantidade), Tarefa.Quantidade is { } q ? Core.Planejamento.Moeda.FormatarQuantidade(q) : "");
+        set => Alterar(nameof(Quantidade), "Quantidade", value, LerValor(value) is var (lido, ok) && ok && lido == Tarefa.Quantidade, () =>
+        {
+            _edicao.VerificarContrato(Tarefa);
+            Tarefa.DefinirQuantidade(Core.Planejamento.Moeda.LerNumero(value));
+        });
+    }
+
+    /// <summary>O valor ÷ a quantidade, em reais (só leitura); vazio sem os dois.</summary>
+    public string PrecoUnitario => Tarefa.PrecoUnitario is { } preco
+        ? Core.Planejamento.Moeda.Formatar(Math.Round(preco, 2, MidpointRounding.AwayFromZero))
+        : "";
 
     private static (decimal? Valor, bool Ok) LerValor(string? texto)
     {

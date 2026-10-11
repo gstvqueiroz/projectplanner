@@ -53,6 +53,8 @@ public sealed partial class MainWindowViewModel
         {
             MarcarAlteracao($"Importar valores de {Path.GetFileName(caminho)}");
             Colunas["Valor"].Visivel = true;
+            if (resultado.ComQuantidades)
+                Colunas["Unidade"].Visivel = Colunas["Quantidade"].Visivel = true;
         }
         Mensagem = resultado.Resumo;
     }

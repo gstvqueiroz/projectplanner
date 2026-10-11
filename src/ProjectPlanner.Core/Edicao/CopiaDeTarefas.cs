@@ -6,9 +6,11 @@ namespace ProjectPlanner.Core.Edicao;
 /// <param name="NaoIniciarAntesDe">Bloco 31: a restrição de início.</param>
 /// <param name="Prazo">Bloco 31: o prazo.</param>
 /// <param name="Valor">Bloco 35: o valor (só nas tarefas que não são resumo).</param>
+/// <param name="Unidade">Bloco 36: a unidade (só nas tarefas que não são resumo).</param>
+/// <param name="Quantidade">Bloco 36: a quantidade (só nas tarefas que não são resumo).</param>
 public sealed record TarefaCopiada(
     Guid Original, Guid? PaiOriginal, string Nome, DateTime DataInicio, int Duracao, int PercentualConcluido, string? Notas, bool EhResumo,
-    DateTime? NaoIniciarAntesDe = null, DateTime? Prazo = null, decimal? Valor = null);
+    DateTime? NaoIniciarAntesDe = null, DateTime? Prazo = null, decimal? Valor = null, string? Unidade = null, decimal? Quantidade = null);
 
 /// <summary>
 /// Bloco 30: tarefas copiadas, com as subtarefas e os vínculos entre elas (os vínculos com tarefas de fora ficam de
@@ -75,7 +77,7 @@ public static class CopiaDeTarefas
             incluidas.Add(tarefa.Id);
             copiadas.Add(new TarefaCopiada(tarefa.Id, ehRaiz ? null : tarefa.TarefaPaiId, tarefa.Nome, tarefa.DataInicio, tarefa.Duracao,
                 tarefa.PercentualConcluido, tarefa.Notas, tarefa.EhResumo, tarefa.NaoIniciarAntesDe, tarefa.Prazo,
-                tarefa.EhResumo ? null : tarefa.Valor));
+                tarefa.EhResumo ? null : tarefa.Valor, tarefa.EhResumo ? null : tarefa.Unidade, tarefa.EhResumo ? null : tarefa.Quantidade));
         }
         var vinculos = cronograma.Predecessoras
             .Where(p => incluidas.Contains(p.TarefaOrigemId) && incluidas.Contains(p.TarefaDestinoId))
@@ -86,7 +88,8 @@ public static class CopiaDeTarefas
     /// <summary>
     /// Cola o trecho como irmãs das tarefas de <paramref name="paiId"/> (nulo = primeiro nível), a partir da posição
     /// <paramref name="posicao"/> entre elas (a contagem de <see cref="Cronograma.InserirTarefaNaPosicao"/>), em tarefas
-    /// novas (Ids novos), com as subtarefas e os vínculos entre elas. Se algo for recusado, o cronograma não muda.
+    /// novas (Ids novos), com as subtarefas e os vínculos entre elas. Se algo for recusado, o cronograma não muda. Com o
+    /// contrato travado (Bloco 36: há medição aprovada), as cópias vêm sem valor e sem quantidade (itens novos só por aditivo).
     /// </summary>
     /// <returns>As tarefas novas, na ordem do trecho (a primeira é a primeira do topo).</returns>
     /// <exception cref="DomainValidationException">A posição não existe, ou <paramref name="paiId"/> não pode ter subtarefas.</exception>
@@ -126,7 +129,11 @@ public static class CopiaDeTarefas
                     continue;
                 nova.AtualizarPercentualConcluido(copiada.PercentualConcluido);
                 nova.DefinirRestricaoDeInicio(copiada.NaoIniciarAntesDe);
+                nova.DefinirUnidade(copiada.Unidade);
+                if (cronograma.Contrato.Travado)
+                    continue;
                 nova.DefinirValor(copiada.Valor);
+                nova.DefinirQuantidade(copiada.Quantidade);
             }
             foreach (var vinculo in trecho.Vinculos)
                 cronograma.AdicionarPredecessora(new Predecessora(novas[vinculo.TarefaOrigemId].Id, novas[vinculo.TarefaDestinoId].Id,

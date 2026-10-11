@@ -43,6 +43,7 @@ public class Cronograma
         Id = id;
         Nome = ValidarNome(nome);
         DataInicio = NormalizarInicio(dataInicio);
+        Contrato = new Medicoes.ContratoDoProjeto(this);
     }
 
     public Guid Id { get; }
@@ -476,6 +477,12 @@ public class Cronograma
             LinhaDeBaseEmUso = _linhasDeBase.LastOrDefault();
     }
 
+    /// <summary>
+    /// Bloco 36: o contrato (retenção, reajuste e plano de medições), os aditivos e as medições. Volta no Desfazer, como as
+    /// tarefas.
+    /// </summary>
+    public Medicoes.ContratoDoProjeto Contrato { get; private set; }
+
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
     public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
 
@@ -509,6 +516,7 @@ public class Cronograma
             ConfiguracaoDasFotos = ConfiguracaoDasFotos,
             LinhaDeBaseEmUso = LinhaDeBaseEmUso, // as linhas de base são imutáveis: a cópia usa as mesmas
         };
+        copia.Contrato = Contrato.CopiarPara(copia);
         copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

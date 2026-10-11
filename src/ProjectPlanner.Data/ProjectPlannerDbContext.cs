@@ -19,6 +19,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<AssistenteRegistro> Assistente => Set<AssistenteRegistro>();
     public DbSet<RelatorioRegistro> Relatorio => Set<RelatorioRegistro>();
     public DbSet<LinhasDeBaseRegistro> LinhasDeBase => Set<LinhasDeBaseRegistro>();
+    public DbSet<ContratoRegistro> Contrato => Set<ContratoRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -100,6 +101,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             linhas.HasKey(l => l.ProjetoId);
             linhas.HasOne<ProjetoRegistro>().WithOne()
                 .HasForeignKey<LinhasDeBaseRegistro>(l => l.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // O contrato, os aditivos e as medições (Bloco 36), em JSON.
+        modelBuilder.Entity<ContratoRegistro>(contrato =>
+        {
+            contrato.ToTable("ContratoDoProjeto");
+            contrato.HasKey(c => c.ProjetoId);
+            contrato.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<ContratoRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RelatorioRegistro>(relatorio =>

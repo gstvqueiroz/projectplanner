@@ -3,6 +3,28 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.33.0
+
+Bloco 36: medições (a versão segue a ordem de entrega).
+
+- Tarefas com unidade e quantidade (colunas Unidade, Quantidade e Preço unitário, ocultas por padrão; Projeto > Importar
+  valores… também lê as colunas Unid. e Quant. da planilha). Com quantidade, o item é medido nela; sem, em % do valor.
+- Projeto > Medições…: os boletins de medição nº 01, 02, 03…, com o período sugerido pelo plano (semanal, quinzenal,
+  mensal ou datas de corte). Em cada item, o contratado, o anterior, o medido no período, o acumulado e o saldo, em
+  quantidade e em R$; o medido pode ser sugerido pelo % concluído das tarefas. Glosas, reajuste pelo índice do período
+  (sobre o índice na data-base), retenção (caução) e a devolução dela, e o valor líquido a faturar.
+- Aprovar trava o boletim como está (mudar o contrato depois não muda uma medição aprovada) e marca o contrato: a partir
+  daí, o valor e a quantidade dos itens só mudam por aditivo. Só a última medição volta a rascunho, se não estiver paga.
+  Situação: rascunho, aprovada e paga (com a data).
+- Aditivos registrados: número, data, motivo e o acréscimo ou a supressão de cada item (ou um item novo). O boletim
+  mostra o valor original, os aditivos e o valor atual do contrato. Uma supressão abaixo do já medido é recusada.
+- O plano de medições: o previsto em cada período (físico-financeiro da linha de base ou do cronograma atual) × o medido
+  pelas medições aprovadas.
+- O boletim em PDF (A4 paisagem, com as assinaturas), Word e Excel (com os números de verdade), e o relatório fotográfico
+  do período da medição. Tudo entra no Desfazer e fica no .pplan.
+- Exibir > Colunas: as colunas de linha de base e prazos e as de valores e medição ficaram em dois submenus (a lista
+  passava da altura da tela).
+
 ## 0.32.0
 
 Bloco 35 (a versão segue a ordem de entrega: os Blocos 32 a 34, de recursos, vêm depois das medições).
@@ -198,7 +220,8 @@ começar):
 - Bloco 30 (feito, na 0.29): desfazer e refazer em vários níveis (também o do assistente e as fotos), copiar, colar e
   duplicar.
 - Bloco 31 (feito, na 0.31): linha de base, prazos, restrição de início e as colunas Início e Término calculadas.
-- Bloco 35 (feito, na 0.32): cronograma físico-financeiro, Curva S e importação de valores. Depois, as medições (36) e os indicadores (37), e então
-  recursos (32), composições e orçamento (33) e uso de recursos (34).
+- Bloco 35 (feito, na 0.32): cronograma físico-financeiro, Curva S e importação de valores.
+- Bloco 36 (feito, na 0.33): medições (boletins, retenção, reajuste, glosas, aditivos e plano de medições). Depois, os
+  indicadores (37), e então recursos (32), composições e orçamento (33) e uso de recursos (34).
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

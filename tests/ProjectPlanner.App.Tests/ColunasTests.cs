@@ -19,9 +19,11 @@ public class ColunasTests
         var colunas = Colunas();
 
         Ordem(colunas).Should().Equal(ColunasViewModel.Padrao.Select(p => p.Id));
-        // Bloco 31: as colunas de restrição, prazo, linha de base, desvios e valor começam ocultas; as demais, visíveis.
+        // Bloco 31: as colunas de restrição, prazo, linha de base, desvios e valor começam ocultas (e as de unidade, quantidade
+        // e preço unitário, do Bloco 36); as demais, visíveis.
         colunas.Colunas.Where(c => !c.Visivel).Select(c => c.Id).Should().BeEquivalentTo(
-            ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor"]);
+            ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor",
+             "Unidade", "Quantidade", "PrecoUnitario"]);
         colunas.Colunas.Where(c => !ColunasViewModel.OcultasPorPadrao.Contains(c.Id)).Should().OnlyContain(c => c.Visivel);
         colunas["Nome"].Largura.Should().Be(220);
         colunas["Notas"].Largura.Should().Be(200);
@@ -35,9 +37,10 @@ public class ColunasTests
 
         ids.IndexOf("Edt").Should().Be(ids.IndexOf("Numero") + 1);
         ids.IndexOf("Sucessoras").Should().Be(ids.IndexOf("Predecessoras") + 1);
-        // As do Bloco 31 e 35 vêm depois das Notas, na ordem em que entraram.
+        // As dos Blocos 31, 35 e 36 vêm depois das Notas, na ordem em que entraram.
         ids.Skip(ids.IndexOf("Notas") + 1).Should().Equal(
-            "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor");
+            "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor",
+            "Unidade", "Quantidade", "PrecoUnitario");
         ids.Should().Contain(["Folga", "Critica"]);
     }
 

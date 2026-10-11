@@ -73,7 +73,10 @@ public interface IDialogosService
     /// <summary>Mostra Projeto > Cronograma físico-financeiro… (Bloco 35) e espera ser fechada.</summary>
     Task MostrarFisicoFinanceiroAsync(ViewModels.FisicoFinanceiroViewModel fisicoFinanceiro);
 
-    /// <summary>Bloco 35: onde salvar um arquivo exportado ("pdf" ou "csv"); nulo se cancelar.</summary>
+    /// <summary>Bloco 36: mostra Projeto > Medições… e espera ser fechada.</summary>
+    Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes);
+
+    /// <summary>Bloco 35: onde salvar um arquivo exportado ("pdf", "csv", "docx" ou "xlsx"); nulo se cancelar.</summary>
     Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao);
 
     /// <summary>Bloco 35: uma planilha (.xlsx ou .csv) para importar valores; nula se cancelar.</summary>

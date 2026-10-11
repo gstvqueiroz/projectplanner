@@ -116,7 +116,7 @@ public partial class MenuPrincipalTests
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…");
         Titulos(a.Item("Projeto")).Should().Equal("Salvar linha de base…", "Linhas de base…", Linha,
-            "Cronograma físico-financeiro…", "Importar valores…");
+            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Medições…");
         Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Sobre o ProjectPlanner…");
     });
 
@@ -470,21 +470,40 @@ public partial class MenuPrincipalTests
         a.Item("Exibir", "Fotos").IsChecked.Should().BeTrue();
     });
 
+    // Bloco 36: as colunas de linha de base e prazos e as de valores e medição ficam em submenus (a lista inteira passava
+    // da altura da tela); as demais continuam uma caixa por coluna.
     [Fact]
-    public Task Exibir_Colunas_UmaCaixaPorColunaMaisRestaurar() => Tela.Executar(() =>
+    public Task Exibir_Colunas_UmaCaixaPorColuna_DoisGruposERestaurar() => Tela.Executar(() =>
     {
         var a = Abrir();
         var colunas = a.Vm.Colunas.Colunas;
+        var agrupadas = MainWindow.GruposDeColunas.SelectMany(g => g.Colunas).ToHashSet();
+        var soltas = colunas.Where(c => !agrupadas.Contains(c.Id)).ToList();
         var itens = a.Item("Exibir", "Colunas").Items.ToList();
 
-        itens.Should().HaveCount(colunas.Count + 2);
-        itens.Take(colunas.Count).Cast<MenuItem>().Select(i => i.Header).Should().Equal(colunas.Select(c => c.Titulo));
+        itens.Should().HaveCount(soltas.Count + 1 + MainWindow.GruposDeColunas.Count + 2);
+        itens.Take(soltas.Count).Cast<MenuItem>().Select(i => i.Header).Should().Equal(soltas.Select(c => c.Titulo));
+        itens[soltas.Count].Should().BeOfType<Separator>();
+        var grupos = itens.Skip(soltas.Count + 1).Take(MainWindow.GruposDeColunas.Count).Cast<MenuItem>().ToList();
+        grupos.Select(g => g.Header).Should().Equal("Linha de base e prazos", "Valores e medição");
+        grupos[1].Items.Cast<MenuItem>().Select(i => i.Header).Should().Equal("Valor (R$)", "Unidade", "Quantidade", "Preço unitário (R$)");
         // Bloco 31: as caixas das colunas ocultas por padrão começam desmarcadas.
-        itens.Take(colunas.Count).Cast<MenuItem>().Should().OnlyContain(i =>
+        itens.Take(soltas.Count).Concat(grupos.SelectMany(g => g.Items)).Cast<MenuItem>().Should().HaveCount(colunas.Count).And.OnlyContain(i =>
             i.ToggleType == MenuItemToggleType.CheckBox && i.StaysOpenOnClick
             && i.IsChecked == !ColunasViewModel.OcultasPorPadrao.Contains(colunas.Single(c => c.Titulo == (string)i.Header!).Id));
-        itens[colunas.Count].Should().BeOfType<Separator>();
+        itens[^2].Should().BeOfType<Separator>();
         ((MenuItem)itens[^1]!).Header.Should().Be("Restaurar layout padrão de colunas");
+    });
+
+    [Fact]
+    public Task Exibir_Colunas_NoGrupo_LigaAColunaDaGrid() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var quantidade = a.Item("Exibir", "Colunas", "Valores e medição", "Quantidade");
+
+        a.Clicar(quantidade);
+
+        (a.Vm.Colunas["Quantidade"].Visivel, a.Janela.Grade.Columns.Single(c => Equals(c.Tag, "Quantidade")).IsVisible).Should().Be((true, true));
     });
 
     [Fact]

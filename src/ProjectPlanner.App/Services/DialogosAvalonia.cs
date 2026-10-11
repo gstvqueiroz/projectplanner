@@ -136,8 +136,9 @@ public sealed class DialogosAvalonia : IDialogosService
 
     // ---- Bloco 27: relatório fotográfico ----
 
+    // A janela ativa: o relatório também abre por cima da tela de medições (Bloco 36).
     public Task MostrarRelatorioFotograficoAsync(ViewModels.RelatorioFotograficoViewModel relatorio) =>
-        new RelatorioFotograficoWindow(relatorio).ShowDialog(JanelaPrincipal);
+        new RelatorioFotograficoWindow(relatorio).ShowDialog(JanelaAtiva);
 
     public async Task<string?> EscolherArquivoDoRelatorioAsync(string nomeSugerido, string extensao)
     {
@@ -185,11 +186,17 @@ public sealed class DialogosAvalonia : IDialogosService
     public Task MostrarFisicoFinanceiroAsync(ViewModels.FisicoFinanceiroViewModel fisicoFinanceiro) =>
         new FisicoFinanceiroWindow(fisicoFinanceiro).ShowDialog(JanelaPrincipal);
 
+    public Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes) => new MedicoesWindow(medicoes).ShowDialog(JanelaPrincipal);
+
     public async Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao)
     {
-        var tipo = extensao == "pdf"
-            ? new FilePickerFileType("Documento PDF") { Patterns = ["*.pdf"] }
-            : new FilePickerFileType("Planilha CSV (Excel)") { Patterns = ["*.csv"] };
+        var tipo = extensao switch
+        {
+            "pdf" => new FilePickerFileType("Documento PDF") { Patterns = ["*.pdf"] },
+            "docx" => new FilePickerFileType("Documento do Word") { Patterns = ["*.docx"] },
+            "xlsx" => new FilePickerFileType("Planilha do Excel") { Patterns = ["*.xlsx"] },
+            _ => new FilePickerFileType("Planilha CSV (Excel)") { Patterns = ["*.csv"] },
+        };
         var arquivo = await JanelaAtiva.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = titulo,

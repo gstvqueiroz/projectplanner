@@ -198,7 +198,7 @@
                               ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
                 </MenuItem>
                 <!-- Bloco 25 -->
-                <!-- Bloco 31: linha de base; Bloco 35: o cronograma físico-financeiro e os valores. -->
+                <!-- Bloco 31: linha de base; Bloco 35: o cronograma físico-financeiro e os valores; Bloco 36: as medições. -->
                 <MenuItem Header="Projeto">
                     <MenuItem Header="Salvar linha de base…" Command="{Binding SalvarLinhaDeBaseCommand}"
                               ToolTip.Tip="Guardar o cronograma de agora (datas, durações e valores) para comparar o previsto com o atual" />
@@ -208,7 +208,11 @@
                     <MenuItem Header="Cronograma físico-financeiro…" Command="{Binding FisicoFinanceiroCommand}"
                               ToolTip.Tip="O valor e o % de cada etapa por período (semanal, quinzenal, mensal ou datas de corte), e a Curva S" />
                     <MenuItem Header="Importar valores…" Command="{Binding ImportarValoresCommand}"
-                              ToolTip.Tip="Os valores das tarefas de uma planilha (.xlsx ou .csv) com a EDT e o valor de cada uma" />
+                              ToolTip.Tip="Os valores das tarefas de uma planilha (.xlsx ou .csv) com a EDT e o valor de cada uma (e, se houver, a unidade e a quantidade)" />
+                    <Separator />
+                    <!-- Bloco 36 -->
+                    <MenuItem Header="Medições…" Command="{Binding MedicoesCommand}"
+                              ToolTip.Tip="Os boletins de medição (por quantidade ou %), com retenção, reajuste e glosas, os aditivos e o plano de medições" />
                 </MenuItem>
                 <MenuItem Header="Ajuda">
                     <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"
@@ -525,6 +529,11 @@
                                     Binding="{Binding DesvioDoTermino}" IsReadOnly="True" />
                 <!-- Bloco 35: o valor em reais (num resumo, a soma). -->
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Valor" Header="Valor (R$)" Width="120" Binding="{Binding Valor}" />
+                <!-- Bloco 36: unidade e quantidade (para medir por quantidade) e o preço unitário (valor ÷ quantidade). -->
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Unidade" Header="Unidade" Width="70" Binding="{Binding Unidade}" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Quantidade" Header="Quantidade" Width="100" Binding="{Binding Quantidade}" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="PrecoUnitario" Header="Preço&#x0a;unitário (R$)" Width="110"
+                                    Binding="{Binding PrecoUnitario}" IsReadOnly="True" />
             </DataGrid.Columns>
         </DataGrid>
         <!-- Linhas vazias abaixo das tarefas, até o fim da área visível: só desenho, sem receber o mouse. -->

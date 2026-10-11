@@ -234,6 +234,8 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             NaoIniciarAntesDe = t.NaoIniciarAntesDe,
             Prazo = t.Prazo,
             Valor = t.EhResumo ? null : t.Valor,
+            Unidade = t.EhResumo ? null : t.Unidade,
+            Quantidade = t.EhResumo ? null : t.Quantidade,
         }));
 
         var fotos = cronograma.Tarefas.SelectMany(t => t.FotosNaOrdemDeCadastro).ToList();
@@ -282,6 +284,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 ProjetoId = cronograma.Id,
                 Versao = FormatoDasLinhasDeBase.Versao,
                 Dados = FormatoDasLinhasDeBase.Serializar(cronograma),
+            });
+
+        if (!cronograma.Contrato.Vazio)
+            contexto.Contrato.Add(new ContratoRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDoContrato.Versao,
+                Dados = FormatoDoContrato.Serializar(cronograma),
             });
 
         if (FormatoDoRelatorio.TemDados(cronograma))
@@ -340,11 +350,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, duracao);
             tarefa.AtualizarPercentualConcluido(registro.PercentualConcluido);
             tarefa.AlterarNotas(registro.Notas);
-            // Bloco 31 e 35: a restrição e o valor de um resumo não existem (o arquivo não os grava); o prazo vale nele também.
+            // Blocos 31, 35 e 36: a restrição, o valor, a unidade e a quantidade de um resumo não existem (o arquivo não os
+            // grava); o prazo vale nele também.
             if (registro.Tipo != TipoTarefa.Resumo)
             {
                 tarefa.DefinirRestricaoDeInicio(registro.NaoIniciarAntesDe);
                 tarefa.DefinirValor(registro.Valor);
+                tarefa.DefinirUnidade(registro.Unidade);
+                tarefa.DefinirQuantidade(registro.Quantidade);
             }
             tarefa.DefinirPrazo(registro.Prazo);
             cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);
@@ -382,6 +395,15 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             if (linhas.Versao != FormatoDasLinhasDeBase.Versao)
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem as linhas de base num formato desconhecido.");
             FormatoDasLinhasDeBase.Ler(linhas.Dados, cronograma);
+        }
+
+        // O contrato e as medições (Bloco 36), depois das tarefas (os itens são as tarefas); um JSON que não dá para ler é
+        // recusado como os outros dados.
+        if (contexto.Contrato.AsNoTracking().FirstOrDefault() is { } contrato)
+        {
+            if (contrato.Versao != FormatoDoContrato.Versao)
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o contrato num formato desconhecido.");
+            FormatoDoContrato.Ler(contrato.Dados, cronograma);
         }
 
         // Dados da obra e histórico dos relatórios (Bloco 27); um JSON que não dá para ler é recusado como os outros dados.

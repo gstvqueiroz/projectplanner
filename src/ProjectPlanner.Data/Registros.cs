@@ -40,6 +40,12 @@ internal sealed class TarefaRegistro
 
     /// <summary>Bloco 35: o valor em reais (só nas tarefas que não são resumo; o do resumo é a soma).</summary>
     public decimal? Valor { get; set; }
+
+    /// <summary>Bloco 36: a unidade do item (m², m³…); nula sem unidade e nos resumos.</summary>
+    public string? Unidade { get; set; }
+
+    /// <summary>Bloco 36: a quantidade contratada; nula sem quantidade (medida em %) e nos resumos.</summary>
+    public decimal? Quantidade { get; set; }
 }
 
 internal sealed class PredecessoraRegistro
@@ -119,6 +125,16 @@ internal sealed class AssistenteRegistro
 /// </summary>
 /// <summary>Bloco 31: as linhas de base do projeto, em JSON (ver <see cref="FormatoDasLinhasDeBase"/>); nenhuma linha sem linha de base.</summary>
 internal sealed class LinhasDeBaseRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
+/// <summary>Bloco 36: o contrato, os aditivos e as medições, em JSON (ver <see cref="FormatoDoContrato"/>); nenhuma linha sem contrato.</summary>
+internal sealed class ContratoRegistro
 {
     public Guid ProjetoId { get; set; }
 

@@ -34,6 +34,23 @@ namespace ProjectPlanner.Data.Migrations
                     b.ToTable("AssistenteDoProjeto", (string)null);
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.ContratoRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("ContratoDoProjeto", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.FotoImagemRegistro", b =>
                 {
                     b.Property<Guid>("FotoId")
@@ -270,11 +287,17 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<Guid>("ProjetoId")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("Quantidade")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("TarefaPaiId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Tipo")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Unidade")
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal?>("Valor")
                         .HasColumnType("TEXT");
@@ -303,6 +326,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
                         .WithOne()
                         .HasForeignKey("ProjectPlanner.Data.AssistenteRegistro", "ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.ContratoRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.ContratoRegistro", "ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

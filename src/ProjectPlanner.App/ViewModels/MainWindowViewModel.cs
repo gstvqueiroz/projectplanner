@@ -632,6 +632,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     public void AvisarValorCalculadoNoResumo() =>
         Mensagem = "Num resumo, esse valor é calculado a partir das subtarefas.";
 
+    /// <summary>Bloco 36: tentou editar a unidade ou a quantidade de um resumo.</summary>
+    public void AvisarSemUnidadeNoResumo() => Mensagem = Tarefa.SemUnidadeNoResumo;
+
     // Aplica uma mudança de estrutura no cronograma; se o domínio recusar, só mostra o motivo.
     private bool MudarEstrutura(Action mudanca)
     {
@@ -845,6 +848,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     void IEdicaoCronograma.Avisar(string mensagem) => Mensagem = mensagem;
 
     Core.Planejamento.LinhaDeBase? IEdicaoCronograma.LinhaDeBase => _cronograma.LinhaDeBaseEmUso;
+
+    void IEdicaoCronograma.VerificarContrato(Tarefa tarefa, bool soAUnidade) => _cronograma.Contrato.VerificarSePodeMudar(tarefa, soAUnidade);
 
     void IEdicaoCronograma.EdicaoCancelada() => Mensagem = "";
 

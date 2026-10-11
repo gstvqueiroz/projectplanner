@@ -237,11 +237,18 @@ public partial class MainWindow : Window
 
     // Exibir > Colunas: uma caixa por coluna (a do Nome fica marcada e desabilitada, porque não pode
     // sumir) e, depois de uma linha, "Restaurar layout padrão de colunas". Marcar uma coluna não fecha o
-    // menu, para dar para escolher várias de uma vez, como no painel "Colunas ▾" da barra antiga.
+    // menu, para dar para escolher várias de uma vez, como no painel "Colunas ▾" da barra antiga. Bloco 36: as
+    // colunas que só servem a quem usa linha de base e prazos, ou valores e medição, ficam em dois submenus (a lista
+    // inteira passava da altura da tela).
+    internal static readonly IReadOnlyList<(string Titulo, string[] Colunas)> GruposDeColunas =
+    [
+        ("Linha de base e prazos", ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino"]),
+        ("Valores e medição", ["Valor", "Unidade", "Quantidade", "PrecoUnitario"]),
+    ];
+
     private void MontarMenuDeColunas(ColunasViewModel colunas)
     {
-        MenuColunas.Items.Clear();
-        foreach (var coluna in colunas.Colunas)
+        static MenuItem Caixa(ColunaViewModel coluna)
         {
             var item = new MenuItem
             {
@@ -252,7 +259,20 @@ public partial class MainWindow : Window
                 DataContext = coluna,
             };
             item.Bind(MenuItem.IsCheckedProperty, new Binding(nameof(ColunaViewModel.Visivel)) { Mode = BindingMode.TwoWay });
-            MenuColunas.Items.Add(item);
+            return item;
+        }
+
+        MenuColunas.Items.Clear();
+        var agrupadas = GruposDeColunas.SelectMany(g => g.Colunas).ToHashSet();
+        foreach (var coluna in colunas.Colunas.Where(c => !agrupadas.Contains(c.Id)))
+            MenuColunas.Items.Add(Caixa(coluna));
+        MenuColunas.Items.Add(new Separator());
+        foreach (var (titulo, ids) in GruposDeColunas)
+        {
+            var grupo = new MenuItem { Header = titulo };
+            foreach (var id in ids)
+                grupo.Items.Add(Caixa(colunas[id]));
+            MenuColunas.Items.Add(grupo);
         }
         MenuColunas.Items.Add(new Separator());
         MenuColunas.Items.Add(new MenuItem
@@ -346,13 +366,22 @@ public partial class MainWindow : Window
         });
     }
 
+    // Bloco 36: num resumo, a unidade e a quantidade não existem (são das tarefas dentro dele).
+    private static readonly HashSet<string> SemUnidadeNoResumo = ["Unidade", "Quantidade"];
+
     private void GradeBeginningEdit(object? sender, DataGridBeginningEditEventArgs e)
     {
-        if (e.Row.DataContext is TarefaViewModel { EhResumo: true } && e.Column.Tag is string coluna
-            && CalculadasNoResumo.Contains(coluna) && DataContext is MainWindowViewModel vm)
+        if (e.Row.DataContext is not TarefaViewModel { EhResumo: true } || e.Column.Tag is not string coluna || DataContext is not MainWindowViewModel vm)
+            return;
+        if (CalculadasNoResumo.Contains(coluna))
         {
             e.Cancel = true;
             vm.AvisarValorCalculadoNoResumo();
+        }
+        else if (SemUnidadeNoResumo.Contains(coluna))
+        {
+            e.Cancel = true;
+            vm.AvisarSemUnidadeNoResumo();
         }
     }
 

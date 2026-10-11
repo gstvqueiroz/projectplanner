@@ -11,6 +11,9 @@ public static partial class Moeda
     /// <summary>"1.234,56" (sem o "R$").</summary>
     public static string Formatar(decimal valor) => valor.ToString("#,##0.00", Brasil);
 
+    /// <summary>Bloco 36: uma quantidade, com 2 a 4 casas ("1.234,50", "0,1235").</summary>
+    public static string FormatarQuantidade(decimal valor) => valor.ToString("#,##0.00##", Brasil);
+
     /// <summary>"R$ 1.234,56".</summary>
     public static string ComSimbolo(decimal valor) => "R$ " + Formatar(valor);
 
@@ -30,6 +33,20 @@ public static partial class Moeda
         if (!NumeroBrasileiro().IsMatch(limpo))
             throw new FormatException($"\"{texto?.Trim()}\" não é um valor em reais (use, por exemplo, 1.234,56).");
         return decimal.Parse(limpo.Replace(".", ""), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, Brasil);
+    }
+
+    /// <summary>Bloco 36: um número qualquer (quantidade, índice, %), com as mesmas regras de <see cref="Ler"/>.</summary>
+    /// <exception cref="FormatException">Não é um número.</exception>
+    public static decimal? LerNumero(string? texto)
+    {
+        try
+        {
+            return Ler(texto);
+        }
+        catch (FormatException)
+        {
+            throw new FormatException($"\"{texto?.Trim()}\" não é um número (use, por exemplo, 12,5).");
+        }
     }
 
     [GeneratedRegex(@"^-?\d+\.\d{1,2}$")]

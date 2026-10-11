@@ -1,0 +1,396 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.MedicoesWindow"
+        x:DataType="vm:MedicoesViewModel"
+        Title="{Binding Titulo}"
+        Width="1320" Height="780" MinWidth="980" MinHeight="600"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 36: as medições (boletins), os aditivos, as regras do contrato e o plano de medições. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.titulo">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="TextBlock.dica">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.celula">
+            <Setter Property="Margin" Value="6,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.numero">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        <Style Selector="TextBlock.grupo">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.negativo">
+            <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+        </Style>
+        <!-- Cabeçalhos de duas linhas e mais justos: as colunas de números cabem na janela. -->
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.forte">
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="14">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <Button DockPanel.Dock="Right" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <TabControl x:Name="Abas">
+            <!-- ================= Medições ================= -->
+            <TabItem Header="Medições">
+                <Grid ColumnDefinitions="206,12,*" Margin="0,8,0,0">
+                    <DockPanel Grid.Column="0">
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+                            <Button x:Name="NovaMedicao" Classes="accent" Content="Nova medição" Command="{Binding NovaMedicaoCommand}" />
+                            <Button Content="Remover…" Command="{Binding RemoverMedicaoCommand}" />
+                        </StackPanel>
+                        <Panel>
+                            <TextBlock Classes="dica" Text="{x:Static vm:MedicoesViewModel.TextoSemMedicoes}" IsVisible="{Binding SemMedicoes}" Margin="4" />
+                            <ListBox x:Name="Lista" ItemsSource="{Binding Lista}" SelectedItem="{Binding Selecionada}" IsVisible="{Binding !SemMedicoes}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MedicaoNaLista">
+                                        <StackPanel Spacing="1">
+                                            <TextBlock Text="{Binding Rotulo}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Periodo}" FontSize="12" Opacity="0.75" />
+                                            <TextBlock FontSize="12" TextWrapping="Wrap">
+                                                <Run Text="{Binding Situacao}" />
+                                                <Run Text=" · " />
+                                                <Run Text="{Binding Liquido}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Panel>
+                    </DockPanel>
+
+                    <DockPanel Grid.Column="2" IsVisible="{Binding TemSelecionada}">
+                        <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="6" Margin="0,0,0,8">
+                            <TextBlock x:Name="TituloDaMedicao" Classes="titulo" Text="{Binding TituloDaMedicao}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="De" VerticalAlignment="Center" />
+                            <CalendarDatePicker SelectedDate="{Binding De}" IsEnabled="{Binding EhRascunho}" />
+                            <TextBlock Text="até" VerticalAlignment="Center" />
+                            <CalendarDatePicker SelectedDate="{Binding Ate}" IsEnabled="{Binding EhRascunho}" />
+                            <Button Content="Sugerir pelo % concluído" Command="{Binding SugerirPeloPercentualConcluidoCommand}" IsVisible="{Binding EhRascunho}"
+                                    ToolTip.Tip="Mede de cada item o que falta para chegar ao % concluído da tarefa (que pode ter vindo das fotos)" />
+                            <Button x:Name="Aprovar" Classes="accent" Content="Aprovar…" Command="{Binding AprovarCommand}" IsVisible="{Binding EhRascunho}" />
+                            <Button Content="Reabrir…" Command="{Binding ReabrirCommand}" IsVisible="{Binding EhAprovada}" />
+                            <Button Content="Marcar como paga…" Command="{Binding MarcarPagaCommand}" IsVisible="{Binding EhAprovada}" />
+                            <Button Content="Desmarcar o pagamento" Command="{Binding DesmarcarPagaCommand}" IsVisible="{Binding EhPaga}" />
+                        </WrapPanel>
+
+                        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,14,*,14,360" Margin="0,10,0,0" Height="236">
+                            <!-- Glosas -->
+                            <DockPanel Grid.Column="0">
+                                <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Glosas (cortes do contratante)" />
+                                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,6,100,6,Auto" Margin="0,6,0,0" IsVisible="{Binding EhRascunho}">
+                                    <TextBox Grid.Column="0" Text="{Binding NovaGlosaDescricao}" PlaceholderText="Motivo" />
+                                    <TextBox Grid.Column="2" Text="{Binding NovaGlosaValor}" PlaceholderText="Valor (R$)" />
+                                    <Button Grid.Column="4" Content="Adicionar" Command="{Binding AdicionarGlosaCommand}" />
+                                </Grid>
+                                <ScrollViewer>
+                                    <ItemsControl x:Name="Glosas" ItemsSource="{Binding Glosas}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:GlosaNaTela">
+                                                <DockPanel Margin="0,2">
+                                                    <Button DockPanel.Dock="Right" Content="✕" Padding="6,0" Margin="6,0,0,0" ToolTip.Tip="Tirar a glosa"
+                                                            IsVisible="{Binding $parent[Window].((vm:MedicoesViewModel)DataContext).EhRascunho}"
+                                                            Command="{Binding $parent[Window].((vm:MedicoesViewModel)DataContext).RemoverGlosaCommand}" CommandParameter="{Binding}" />
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Valor}" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Descricao}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+
+                            <!-- Reajuste, retenção e observações -->
+                            <StackPanel Grid.Column="2" Spacing="6">
+                                <TextBlock Classes="secao" Text="Reajuste e retenção" />
+                                <StackPanel Spacing="4" IsVisible="{Binding TemReajuste}">
+                                    <TextBlock Text="{Binding RotuloDoIndice}" FontSize="12" />
+                                    <TextBox x:Name="Indice" Text="{Binding Indice, UpdateSourceTrigger=LostFocus}" Width="140" HorizontalAlignment="Left"
+                                             IsEnabled="{Binding EhRascunho}" PlaceholderText="Ex.: 1.032,5" />
+                                </StackPanel>
+                                <TextBlock Classes="dica" IsVisible="{Binding !TemReajuste}"
+                                           Text="Sem reajuste: para reajustar, informe o índice e o valor dele na data-base na aba Contrato." />
+                                <CheckBox Content="Devolver a retenção acumulada nesta medição" IsChecked="{Binding DevolverRetencao}" IsEnabled="{Binding EhRascunho}" />
+                                <TextBlock Classes="secao" Text="Observações" Margin="0,4,0,0" />
+                                <TextBox Text="{Binding Observacoes, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" TextWrapping="Wrap" Height="64"
+                                         IsEnabled="{Binding EhRascunho}" />
+                            </StackPanel>
+
+                            <!-- Resumo e exportações -->
+                            <DockPanel Grid.Column="4">
+                                <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Resumo financeiro" />
+                                <WrapPanel DockPanel.Dock="Bottom" ItemSpacing="6" LineSpacing="6" Margin="0,6,0,0">
+                                    <Button x:Name="ExportarPdf" Content="PDF…" Command="{Binding ExportarPdfCommand}" ToolTip.Tip="O boletim em PDF" />
+                                    <Button Content="Word…" Command="{Binding ExportarWordCommand}" ToolTip.Tip="O boletim em Word, para ajustar antes de enviar" />
+                                    <Button Content="Excel…" Command="{Binding ExportarExcelCommand}" ToolTip.Tip="O boletim em Excel, com os números" />
+                                    <Button Content="Fotos do período…" Command="{Binding RelatorioFotograficoDoPeriodoCommand}"
+                                            ToolTip.Tip="O relatório fotográfico do período da medição, para anexar ao boletim" />
+                                </WrapPanel>
+                                <ScrollViewer>
+                                    <ItemsControl x:Name="Resumo" ItemsSource="{Binding Resumo}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                                                <DockPanel Margin="0,1">
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Valor}" Classes.forte="{Binding Destaque}" FontSize="12" Margin="8,0,0,0" />
+                                                    <TextBlock Text="{Binding Rotulo}" Classes.forte="{Binding Destaque}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding Rotulo}" />
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Grid>
+
+                        <DataGrid x:Name="Itens" ItemsSource="{Binding Itens}" AutoGenerateColumns="False" CanUserSortColumns="False"
+                                  CanUserReorderColumns="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  BeginningEdit="ItensBeginningEdit">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="EDT" Width="52" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula" Classes.grupo="{Binding EhGrupo}" Text="{Binding Edt}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Descrição" Width="*" MinWidth="160" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula" Classes.grupo="{Binding EhGrupo}" Text="{Binding Descricao}" TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding Descricao}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Un." Width="44" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula" Text="{Binding Unidade}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Qtd.&#x0a;contratada" Width="80" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Text="{Binding Contratado}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Preço&#x0a;unit." Width="78" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Text="{Binding PrecoUnitario}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Valor&#x0a;contratado" Width="96" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Classes.grupo="{Binding EhGrupo}" Text="{Binding ValorContratado}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Qtd.&#x0a;anterior" Width="74" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Text="{Binding Anterior}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="No&#x0a;período" Width="82" Tag="NoPeriodo">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <Border Background="{DynamicResource FundoDosFiltros}" IsVisible="{Binding PodeMedir}" Margin="2,1" CornerRadius="3">
+                                                <TextBlock Classes="celula numero forte" Text="{Binding NoPeriodo}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBox Text="{Binding NoPeriodo, UpdateSourceTrigger=LostFocus}" HorizontalContentAlignment="Right" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Qtd.&#x0a;acumulada" Width="78" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Text="{Binding Acumulado}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Saldo&#x0a;(qtd.)" Width="72" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Classes.negativo="{Binding SaldoNegativo}" Text="{Binding Saldo}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="R$ no&#x0a;período" Width="92" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Classes.grupo="{Binding EhGrupo}" Text="{Binding ValorNoPeriodo}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="R$&#x0a;acumulado" Width="96" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Classes.grupo="{Binding EhGrupo}" Text="{Binding ValorAcumulado}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="%&#x0a;acum." Width="62" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:ItemDaMedicaoNaTela">
+                                            <TextBlock Classes="celula numero" Classes.grupo="{Binding EhGrupo}" Text="{Binding PercentualAcumulado}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ================= Aditivos ================= -->
+            <TabItem Header="Aditivos">
+                <Grid ColumnDefinitions="270,14,*" Margin="0,8,0,0">
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Aditivos registrados" />
+                        <Button DockPanel.Dock="Bottom" Content="Remover o último…" Command="{Binding RemoverUltimoAditivoCommand}" Margin="0,8,0,0" />
+                        <Panel>
+                            <TextBlock Classes="dica" Text="Nenhum aditivo: o contrato é o valor das tarefas." IsVisible="{Binding SemAditivos}" />
+                            <ScrollViewer>
+                                <ItemsControl x:Name="Aditivos" ItemsSource="{Binding Aditivos}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AditivoNaLista">
+                                            <Border Padding="8,6" Margin="0,0,0,6" CornerRadius="6" Background="{DynamicResource FundoDosFiltros}">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding Rotulo}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Detalhe}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Panel>
+                    </DockPanel>
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Novo aditivo" />
+                        <TextBlock DockPanel.Dock="Top" Classes="dica" Margin="0,0,0,6"
+                                   Text="Digite o acréscimo (+) ou a supressão (−) de cada item que muda. Sem o valor, ele vem da quantidade × o preço unitário. Uma tarefa sem valor vira um item novo do contrato." />
+                        <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="6" Margin="0,0,0,8">
+                            <TextBlock Text="Data" VerticalAlignment="Center" />
+                            <CalendarDatePicker SelectedDate="{Binding DataDoAditivo}" />
+                            <TextBlock Text="Motivo" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <TextBox x:Name="MotivoDoAditivo" Text="{Binding MotivoDoAditivo}" Width="420" PlaceholderText="Ex.: Ampliação da garagem" />
+                        </WrapPanel>
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                            <Button Classes="accent" Content="Registrar aditivo" Command="{Binding RegistrarAditivoCommand}" />
+                        </StackPanel>
+                        <DataGrid x:Name="ItensDoAditivo" ItemsSource="{Binding ItensDoAditivo}" AutoGenerateColumns="False" CanUserSortColumns="False"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" BeginningEdit="AditivoBeginningEdit">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="EDT" Width="52" Binding="{Binding Edt}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="Tarefa" Width="*" MinWidth="160" Binding="{Binding Nome}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="Un." Width="48" Binding="{Binding Unidade}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="Qtd.&#x0a;atual" Width="84" Binding="{Binding QuantidadeAtual}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="Valor&#x0a;atual" Width="100" Binding="{Binding ValorAtual}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="±&#x0a;Quantidade" Width="92" Tag="Quantidade" Binding="{Binding Quantidade}" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="±&#x0a;Valor (R$)" Width="100" Binding="{Binding Valor}" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="Nova&#x0a;qtd." Width="84" Binding="{Binding NovaQuantidade}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                                <DataGridTextColumn Header="Novo&#x0a;valor" Width="100" Binding="{Binding NovoValor}" IsReadOnly="True" x:DataType="vm:ItemDoAditivoNaTela" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ================= Contrato ================= -->
+            <TabItem Header="Contrato">
+                <Grid ColumnDefinitions="470,28,*" Margin="0,8,0,0">
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <TextBlock Classes="secao" Text="Regras do contrato" />
+                        <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                            <TextBlock Grid.Row="0" Text="Retenção (caução, %)" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="Retencao" Text="{Binding Retencao}" Width="90" HorizontalAlignment="Left" PlaceholderText="0" />
+                            <TextBlock Grid.Row="1" Text="Índice de reajuste" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NomeDoIndice}" Width="180" HorizontalAlignment="Left" PlaceholderText="Ex.: INCC-DI" />
+                            <TextBlock Grid.Row="2" Text="Índice na data-base" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding IndiceBase}" Width="140" HorizontalAlignment="Left" PlaceholderText="Sem reajuste" />
+                            <TextBlock Grid.Row="3" Text="Plano de medições" VerticalAlignment="Center" />
+                            <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding Periodicidades}" SelectedItem="{Binding PeriodicidadeEscolhida}" MinWidth="160" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding TextoDosCortes}" IsVisible="{Binding MostraCortes}"
+                                     PlaceholderText="Datas de corte: 31/10/2026, 30/11/2026…" />
+                        </Grid>
+                        <TextBlock Classes="dica"
+                                   Text="A retenção é descontada de cada medição e devolvida na que marcar a devolução. O reajuste de cada medição é o medido × (índice do período ÷ índice na data-base − 1). O plano sugere o período da próxima medição." />
+                        <Button Classes="accent" Content="Salvar as regras" Command="{Binding SalvarConfiguracaoCommand}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock Classes="secao" Text="O contrato hoje" />
+                        <ItemsControl x:Name="ResumoDoContrato" ItemsSource="{Binding ResumoDoContrato}" MaxWidth="520" HorizontalAlignment="Left">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                                    <DockPanel Margin="0,2">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Valor}" Classes.forte="{Binding Destaque}" Margin="16,0,0,0" />
+                                        <TextBlock Text="{Binding Rotulo}" Classes.forte="{Binding Destaque}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ================= Plano ================= -->
+            <TabItem Header="Plano">
+                <DockPanel Margin="0,8,0,0">
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding BaseDoPlano}" Margin="0,0,0,6" />
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding ErroDoPlano}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap"
+                               IsVisible="{Binding ErroDoPlano, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <DataGrid x:Name="Plano" ItemsSource="{Binding Plano}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Período" Width="130" Binding="{Binding Periodo}" x:DataType="vm:LinhaDoPlanoNaTela" />
+                            <DataGridTextColumn Header="Previsto (R$)" Width="140" Binding="{Binding Previsto}" x:DataType="vm:LinhaDoPlanoNaTela" />
+                            <DataGridTextColumn Header="Previsto acumulado" Width="150" Binding="{Binding PrevistoAcumulado}" x:DataType="vm:LinhaDoPlanoNaTela" />
+                            <DataGridTextColumn Header="Medições" Width="140" Binding="{Binding Medicoes}" x:DataType="vm:LinhaDoPlanoNaTela" />
+                            <DataGridTextColumn Header="Medido (R$)" Width="140" Binding="{Binding Medido}" x:DataType="vm:LinhaDoPlanoNaTela" />
+                            <DataGridTextColumn Header="Medido acumulado" Width="150" Binding="{Binding MedidoAcumulado}" x:DataType="vm:LinhaDoPlanoNaTela" />
+                            <DataGridTemplateColumn Header="Medido − previsto" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDoPlanoNaTela">
+                                        <TextBlock Classes="celula" Classes.negativo="{Binding Atrasado}" Text="{Binding Diferenca}"
+                                                   ToolTip.Tip="Negativo num período que já passou: medindo menos que o previsto" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

@@ -133,6 +133,18 @@ public class Tarefa
     /// </summary>
     public decimal? Valor { get; private set; }
 
+    /// <summary>Bloco 36: a unidade do item (m², m³, kg, un, vb…), para medir por quantidade. Nula: sem unidade.</summary>
+    public string? Unidade { get; private set; }
+
+    /// <summary>
+    /// Bloco 36: a quantidade contratada, na <see cref="Unidade"/>. Com ela, a medição é por quantidade (e o preço unitário
+    /// é o valor ÷ a quantidade); sem ela, a medição é em % do valor. Nula num resumo.
+    /// </summary>
+    public decimal? Quantidade { get; private set; }
+
+    /// <summary>Bloco 36: o valor ÷ a quantidade; nulo sem os dois.</summary>
+    public decimal? PrecoUnitario => Quantidade is > 0 && Valor is { } valor ? valor / Quantidade.Value : null;
+
     /// <summary>
     /// Num marco, se ele fica no fim do dia de <see cref="InicioMaisCedo"/> (determinado pelo término de
     /// outra tarefa) em vez de no começo. No Gantt, é a diferença entre a borda direita e a esquerda do
@@ -309,6 +321,40 @@ public class Tarefa
     /// <summary>O maior valor aceito numa tarefa.</summary>
     public const decimal ValorMaximo = 999_999_999_999.99m;
 
+    /// <summary>A maior quantidade aceita numa tarefa.</summary>
+    public const decimal QuantidadeMaxima = 999_999_999.9999m;
+
+    /// <summary>Bloco 36: a recusa de unidade ou quantidade num resumo.</summary>
+    public const string SemUnidadeNoResumo = "Um resumo não tem unidade nem quantidade: elas são das tarefas dentro dele.";
+
+    /// <summary>Quantos caracteres a unidade pode ter.</summary>
+    public const int TamanhoMaximoDaUnidade = 12;
+
+    /// <summary>Bloco 36: a unidade do item ("m²"); vazia tira a unidade.</summary>
+    /// <exception cref="DomainValidationException">Resumo, ou unidade longa demais.</exception>
+    public void DefinirUnidade(string? unidade)
+    {
+        if (EhResumo)
+            throw new DomainValidationException(nameof(Unidade), SemUnidadeNoResumo);
+        var limpa = string.IsNullOrWhiteSpace(unidade) ? null : unidade.Trim();
+        if (limpa?.Length > TamanhoMaximoDaUnidade)
+            throw new DomainValidationException(nameof(Unidade), $"A unidade tem {limpa.Length} caracteres; o máximo é {TamanhoMaximoDaUnidade}.");
+        Unidade = limpa;
+    }
+
+    /// <summary>Bloco 36: a quantidade contratada (até 4 casas decimais); nula tira a quantidade (a medição passa a ser em %).</summary>
+    /// <exception cref="DomainValidationException">Resumo, quantidade zero ou negativa, ou grande demais.</exception>
+    public void DefinirQuantidade(decimal? quantidade)
+    {
+        if (EhResumo)
+            throw new DomainValidationException(nameof(Quantidade), SemUnidadeNoResumo);
+        if (quantidade is <= 0)
+            throw new DomainValidationException(nameof(Quantidade), "A quantidade precisa ser maior que zero (deixe vazia para medir em %).");
+        if (quantidade > QuantidadeMaxima)
+            throw new DomainValidationException(nameof(Quantidade), "A quantidade passa do máximo aceito (999.999.999,9999).");
+        Quantidade = quantidade is { } q ? Math.Round(q, 4, MidpointRounding.AwayFromZero) : null;
+    }
+
     /// <summary>Bloco 35: o valor de um resumo, a soma das tarefas dentro dele (ver <see cref="CalculadoraResumos"/>).</summary>
     internal void DefinirValorDoResumo(decimal? valor) => Valor = valor;
 
@@ -369,17 +415,19 @@ public class Tarefa
             NaoIniciarAntesDe = NaoIniciarAntesDe,
             Prazo = Prazo,
             Valor = Valor,
+            Unidade = Unidade,
+            Quantidade = Quantidade,
         };
         copia._fotos.AddRange(_fotos);
         return copia;
     }
 
     // Bloco 31: um resumo não tem restrição de início (vem das subtarefas); ao virar resumo, ela sai. O valor dele
-    // passa a ser a soma das subtarefas (Bloco 35).
+    // passa a ser a soma das subtarefas (Bloco 35), e a unidade e a quantidade saem (Bloco 36).
     internal void DefinirSeEhResumo(bool ehResumo)
     {
         if (ehResumo && !EhResumo)
-            (NaoIniciarAntesDe, Valor) = (null, null);
+            (NaoIniciarAntesDe, Valor, Unidade, Quantidade) = (null, null, null, null);
         else if (!ehResumo && EhResumo)
             Valor = null;
         EhResumo = ehResumo;

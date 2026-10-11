@@ -1,4 +1,5 @@
 using ProjectPlanner.Core.Assistente;
+using ProjectPlanner.Core.Relatorios;
 
 namespace ProjectPlanner.Core;
 
@@ -395,6 +396,28 @@ public class Cronograma
 
     internal void RegistrarConversaDescartada() => ConversaDescartadaAoAbrir = true;
 
+    /// <summary>Bloco 27: contratante, contrato e endereço da obra, para a capa do relatório fotográfico.</summary>
+    public DadosDaObra Obra { get; private set; } = DadosDaObra.Vazios;
+
+    public void DefinirObra(DadosDaObra obra) => Obra = obra ?? throw new ArgumentNullException(nameof(obra));
+
+    private readonly List<RelatorioGerado> _relatorios = [];
+
+    /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
+    public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
+
+    /// <summary>O número do próximo relatório (1 no primeiro).</summary>
+    public int ProximoNumeroDeRelatorio => _relatorios.Count == 0 ? 1 : _relatorios.Max(r => r.Numero) + 1;
+
+    /// <exception cref="DomainValidationException">Número repetido.</exception>
+    public void RegistrarRelatorio(RelatorioGerado relatorio)
+    {
+        ArgumentNullException.ThrowIfNull(relatorio);
+        if (_relatorios.Exists(r => r.Numero == relatorio.Numero))
+            throw new DomainValidationException(nameof(Relatorios), $"Já existe o relatório nº {relatorio.Numero}.");
+        _relatorios.Add(relatorio);
+    }
+
     /// <summary>
     /// Um cronograma igual a este, com os mesmos Ids, a mesma estrutura e ordem, os mesmos vínculos e as mesmas fotos,
     /// mas independente: mudar a cópia não muda o original (Bloco 24: as alterações do assistente são feitas numa
@@ -409,7 +432,9 @@ public class Cronograma
             FotosDescartadasAoAbrir = FotosDescartadasAoAbrir,
             Assistente = Assistente, // a mesma conversa: ela é do projeto, não desta versão do cronograma
             ConversaDescartadaAoAbrir = ConversaDescartadaAoAbrir,
+            Obra = Obra,
         };
+        copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));
         copia._predecessoras.AddRange(_predecessoras); // vínculos são registros imutáveis
         return copia;

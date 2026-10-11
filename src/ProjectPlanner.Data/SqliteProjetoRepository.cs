@@ -237,6 +237,8 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             TamanhoBytes = f.Imagem.TamanhoBytes,
             HashOriginal = f.Imagem.HashOriginal,
             Tags = f.Tags.Count == 0 ? null : JsonSerializer.Serialize(f.Tags, OpcoesDasTags),
+            NoRelatorio = f.NoRelatorio,
+            Destaque = f.Destaque,
         }));
         foreach (var foto in fotos)
             if (novas.TryGetValue(foto.Id, out var conteudo))
@@ -253,6 +255,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Tipo = p.Tipo,
             Lag = p.Lag,
         }));
+
+        if (!cronograma.Obra.Vazio || cronograma.Relatorios.Count > 0)
+            contexto.Relatorio.Add(new RelatorioRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDoRelatorio.Versao,
+                Dados = FormatoDoRelatorio.Serializar(cronograma),
+            });
 
         if (!cronograma.Assistente.Vazia)
             contexto.Assistente.Add(new AssistenteRegistro
@@ -323,13 +333,21 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 new MetadadosFoto(registro.DataFoto, registro.Titulo, registro.Descricao, registro.Autor, registro.Local,
                     registro.PercentualConcluidoNaData,
                     registro.Tags is null ? null : JsonSerializer.Deserialize<List<string>>(registro.Tags, OpcoesDasTags)),
-                registro.DataCadastro));
+                registro.DataCadastro).ComCuradoria(registro.NoRelatorio, registro.Destaque));
         }
         cronograma.RegistrarFotosDescartadas(descartadas);
 
         foreach (var registro in contexto.Predecessoras.AsNoTracking().OrderBy(p => p.Ordem))
             cronograma.AdicionarPredecessora(new Predecessora(
                 registro.TarefaOrigemId, registro.TarefaDestinoId, registro.Tipo, registro.Lag));
+
+        // Dados da obra e histórico dos relatórios (Bloco 27); um JSON que não dá para ler é recusado como os outros dados.
+        if (contexto.Relatorio.AsNoTracking().FirstOrDefault() is { } relatorio)
+        {
+            if (relatorio.Versao != FormatoDoRelatorio.Versao)
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem os dados do relatório num formato desconhecido.");
+            FormatoDoRelatorio.Ler(relatorio.Dados, cronograma);
+        }
 
         // A conversa nunca impede de abrir o projeto: uma que não dá para ler fica de fora, com aviso (Bloco 26).
         if (contexto.Assistente.AsNoTracking().FirstOrDefault() is { } assistente)

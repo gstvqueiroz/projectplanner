@@ -5,6 +5,7 @@
     <Project Path="src/ProjectPlanner.Data/ProjectPlanner.Data.csproj" />
     <Project Path="src/ProjectPlanner.IA/ProjectPlanner.IA.csproj" />
     <Project Path="src/ProjectPlanner.Imagens/ProjectPlanner.Imagens.csproj" />
+    <Project Path="src/ProjectPlanner.Relatorios/ProjectPlanner.Relatorios.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ProjectPlanner.App.Tests/ProjectPlanner.App.Tests.csproj" />
@@ -12,5 +13,6 @@
     <Project Path="tests/ProjectPlanner.Data.Tests/ProjectPlanner.Data.Tests.csproj" />
     <Project Path="tests/ProjectPlanner.IA.Tests/ProjectPlanner.IA.Tests.csproj" />
     <Project Path="tests/ProjectPlanner.Imagens.Tests/ProjectPlanner.Imagens.Tests.csproj" />
+    <Project Path="tests/ProjectPlanner.Relatorios.Tests/ProjectPlanner.Relatorios.Tests.csproj" />
   </Folder>
 </Solution>

@@ -63,6 +63,12 @@ internal sealed class FotoRegistro
 
     /// <summary>As tags em JSON (["antes","problema"]); nulo sem tags.</summary>
     public string? Tags { get; set; }
+
+    /// <summary>Bloco 27: entra no relatório fotográfico (as fotos de antes dele entram).</summary>
+    public bool NoRelatorio { get; set; } = true;
+
+    /// <summary>Bloco 27: destaque no relatório.</summary>
+    public bool Destaque { get; set; }
 }
 
 /// <summary>A imagem (versão reduzida, JPEG) de uma foto, separada dos metadados para listar fotos sem lê-la.</summary>
@@ -88,6 +94,19 @@ internal sealed class AssistenteRegistro
     public Guid ProjetoId { get; set; }
 
     /// <summary>A versão do formato do JSON; uma que esta versão do programa não conhece é deixada de fora ao abrir.</summary>
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
+/// <summary>
+/// Os dados da obra para a capa e o histórico dos relatórios fotográficos (Bloco 27), em JSON (ver
+/// <see cref="FormatoDoRelatorio"/>): uma linha por projeto, nenhuma quando não há nada.
+/// </summary>
+internal sealed class RelatorioRegistro
+{
+    public Guid ProjetoId { get; set; }
+
     public int Versao { get; set; }
 
     public required string Dados { get; set; }

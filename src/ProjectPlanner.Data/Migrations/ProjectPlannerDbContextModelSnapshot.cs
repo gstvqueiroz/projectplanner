@@ -83,6 +83,9 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<string>("Descricao")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Destaque")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("HashOriginal")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -92,6 +95,11 @@ namespace ProjectPlanner.Data.Migrations
 
                     b.Property<string>("Local")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("NoRelatorio")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("NomeArquivoOriginal")
                         .IsRequired()
@@ -183,6 +191,23 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Projetos", (string)null);
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.RelatorioRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("RelatorioDoProjeto", (string)null);
                 });
 
             modelBuilder.Entity("ProjectPlanner.Data.TarefaRegistro", b =>
@@ -288,6 +313,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
                         .WithMany()
                         .HasForeignKey("TarefaOrigemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.RelatorioRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.RelatorioRegistro", "ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

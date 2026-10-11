@@ -43,11 +43,23 @@ public sealed record FotoTarefa
     public int? PercentualConcluidoNaData => Metadados.PercentualConcluidoNaData;
     public IReadOnlyList<string> Tags => Metadados.Tags;
 
+    /// <summary>Bloco 27: se a foto entra no relatório fotográfico (todas entram, até o usuário tirar).</summary>
+    public bool NoRelatorio { get; init; } = true;
+
+    /// <summary>Bloco 27: foto de destaque no relatório (vem primeiro no grupo e maior).</summary>
+    public bool Destaque { get; init; }
+
     /// <summary>A mesma foto com outras informações (edição pelo usuário).</summary>
-    public FotoTarefa ComMetadados(MetadadosFoto metadados) => new(Id, TarefaId, Imagem, metadados, DataCadastro);
+    public FotoTarefa ComMetadados(MetadadosFoto metadados) =>
+        new(Id, TarefaId, Imagem, metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque };
 
     /// <summary>A mesma foto com outra imagem guardada (girada), mantendo o hash do original.</summary>
-    public FotoTarefa ComImagem(DadosDaImagem imagem) => new(Id, TarefaId, imagem, Metadados, DataCadastro);
+    public FotoTarefa ComImagem(DadosDaImagem imagem) =>
+        new(Id, TarefaId, imagem, Metadados, DataCadastro) { NoRelatorio = NoRelatorio, Destaque = Destaque };
+
+    /// <summary>A mesma foto com outra escolha para o relatório (Bloco 27). Fora do relatório, não há destaque.</summary>
+    public FotoTarefa ComCuradoria(bool noRelatorio, bool destaque) =>
+        new(Id, TarefaId, Imagem, Metadados, DataCadastro) { NoRelatorio = noRelatorio, Destaque = noRelatorio && destaque };
 }
 
 /// <summary>Os dados técnicos da imagem guardada no projeto.</summary>

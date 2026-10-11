@@ -17,6 +17,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<FotoImagemRegistro> Imagens => Set<FotoImagemRegistro>();
     public DbSet<FotoMiniaturaRegistro> Miniaturas => Set<FotoMiniaturaRegistro>();
     public DbSet<AssistenteRegistro> Assistente => Set<AssistenteRegistro>();
+    public DbSet<RelatorioRegistro> Relatorio => Set<RelatorioRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -68,6 +69,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
                 t.HasCheckConstraint("CK_FotosTarefa_Percentual",
                     "PercentualConcluidoNaData IS NULL OR PercentualConcluidoNaData BETWEEN 0 AND 100"));
             foto.HasKey(f => f.Id);
+            foto.Property(f => f.NoRelatorio).HasDefaultValue(true).HasSentinel(true); // as fotos de antes do Bloco 27 entram no relatório
             foto.HasOne<TarefaRegistro>().WithMany()
                 .HasForeignKey(f => f.TarefaId).OnDelete(DeleteBehavior.Cascade);
             foto.HasIndex(f => f.TarefaId);
@@ -87,6 +89,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             miniatura.HasKey(m => m.FotoId);
             miniatura.HasOne<FotoRegistro>().WithOne()
                 .HasForeignKey<FotoMiniaturaRegistro>(m => m.FotoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Os dados da obra e o histórico dos relatórios fotográficos (Bloco 27).
+        modelBuilder.Entity<RelatorioRegistro>(relatorio =>
+        {
+            relatorio.ToTable("RelatorioDoProjeto");
+            relatorio.HasKey(r => r.ProjetoId);
+            relatorio.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<RelatorioRegistro>(r => r.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // A conversa com o assistente e a ficha do projeto (Bloco 26).

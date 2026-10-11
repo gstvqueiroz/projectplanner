@@ -30,7 +30,8 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
         ArgumentNullException.ThrowIfNull(destino);
         using var fontes = new Fontes();
         var indice = PaginasDoIndice(relatorio);
-        var total = 1 + relatorio.Paginas.Count + indice.Count;
+        var texto = PaginasDoTexto(relatorio, fontes);
+        var total = 1 + texto.Count + relatorio.Paginas.Count + relatorio.AntesEDepois.Count + indice.Count;
         var metadados = new SKDocumentPdfMetadata
         {
             Title = relatorio.Titulo,
@@ -47,9 +48,19 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
         var pagina = 1;
         Capa(Pagina(documento), relatorio, fontes, pagina++, total);
         documento.EndPage();
+        foreach (var linhas in texto)
+        {
+            PaginaDeTexto(Pagina(documento), relatorio, linhas, fontes, pagina++, total);
+            documento.EndPage();
+        }
         foreach (var fotos in relatorio.Paginas)
         {
             PaginaDeFotos(Pagina(documento), relatorio, fotos, imagem, fontes, pagina++, total);
+            documento.EndPage();
+        }
+        foreach (var comparacao in relatorio.AntesEDepois)
+        {
+            PaginaAntesEDepois(Pagina(documento), relatorio, comparacao, imagem, fontes, pagina++, total);
             documento.EndPage();
         }
         for (var i = 0; i < indice.Count; i++)
@@ -214,6 +225,112 @@ public sealed class GeradorPdf : IGeradorDeRelatorio
             Escrever(c, linha, caixa.Left, y, fonte, cor);
             y += 11;
         }
+    }
+
+    // ---- Bloco 29: texto do andamento ----
+
+    private sealed record LinhaDeTexto(string Texto, bool Titulo, bool Negrito, float Tamanho, float Antes);
+
+    // O texto em linhas já quebradas, distribuídas pelas páginas (um texto longo continua na seguinte).
+    private static List<List<LinhaDeTexto>> PaginasDoTexto(RelatorioFotografico r, Fontes f)
+    {
+        var paginas = new List<List<LinhaDeTexto>>();
+        if (r.Texto is not { } texto)
+            return paginas;
+        var largura = Largura - 2 * Margem;
+        var linhas = new List<LinhaDeTexto> { new(TextosDoRelatorio.TituloDoTexto, true, true, 14, 0) };
+        foreach (var paragrafo in texto.Paragrafos)
+            linhas.AddRange(Quebrar(paragrafo, f.Normal(10.5f), largura).Select((l, i) => new LinhaDeTexto(l, false, false, 10.5f, i == 0 ? 8 : 0)));
+        if (texto.PontosDeAtencao.Count > 0)
+        {
+            linhas.Add(new LinhaDeTexto(TextosDoRelatorio.TituloDosPontos, false, true, 11.5f, 16));
+            foreach (var ponto in texto.PontosDeAtencao)
+                linhas.AddRange(Quebrar(ponto, f.Normal(10), largura - 14)
+                    .Select((l, i) => new LinhaDeTexto((i == 0 ? "• " : "   ") + l, false, false, 10, i == 0 ? 4 : 0)));
+        }
+        var limite = Altura - Margem - 24;
+        var atual = new List<LinhaDeTexto>();
+        var y = Margem + 24f;
+        foreach (var linha in linhas)
+        {
+            var altura = linha.Antes + linha.Tamanho * 1.45f;
+            if (y + altura > limite && atual.Count > 0)
+            {
+                paginas.Add(atual);
+                (atual, y) = ([], Margem + 24f);
+            }
+            atual.Add(linha);
+            y += altura;
+        }
+        paginas.Add(atual);
+        return paginas;
+    }
+
+    private static void PaginaDeTexto(SKCanvas c, RelatorioFotografico r, List<LinhaDeTexto> linhas, Fontes f, int numero, int total)
+    {
+        Escrever(c, TextosDoRelatorio.Cabecalho(r), Margem, Margem, f.Normal(8), Cinza);
+        var y = Margem + 24f;
+        foreach (var linha in linhas)
+        {
+            y += linha.Antes;
+            Escrever(c, linha.Texto, Margem, y + linha.Tamanho, linha.Negrito ? f.Negrito(linha.Tamanho) : f.Normal(linha.Tamanho), Texto);
+            y += linha.Tamanho * 1.45f;
+        }
+        Rodape(c, r, f, numero, total);
+    }
+
+    // ---- Bloco 29: antes e depois ----
+
+    private static void PaginaAntesEDepois(SKCanvas c, RelatorioFotografico r, AntesEDepoisNoRelatorio comparacao, Func<Guid, byte[]?> imagem,
+        Fontes f, int numero, int total)
+    {
+        Escrever(c, TextosDoRelatorio.Cabecalho(r), Margem, Margem, f.Normal(8), Cinza);
+        var y = Margem + 24;
+        foreach (var linha in Quebrar(TextosDoRelatorio.TituloAntesEDepois(comparacao), f.Negrito(14), Largura - 2 * Margem).Take(2))
+        {
+            Escrever(c, linha, Margem, y, f.Negrito(14), Texto);
+            y += 18;
+        }
+        Escrever(c, comparacao.Evolucao, Margem, y, f.Normal(10), Cinza);
+        var largura = (Largura - 2 * Margem - Espaco) / 2;
+        var topo = y + 16;
+        var lados = new[] { (comparacao.Antes, comparacao.LegendaAntes), (comparacao.Depois, comparacao.LegendaDepois) };
+        for (var i = 0; i < lados.Length; i++)
+        {
+            var (foto, legenda) = lados[i];
+            var x = Margem + i * (largura + Espaco);
+            var area = new SKRect(x, topo, x + largura, topo + 420);
+            using var moldura = new SKPaint { Color = Linha, Style = SKPaintStyle.Stroke, StrokeWidth = 0.75f };
+            var desenho = area;
+            if (imagem(foto.Id) is { Length: > 0 } bytes && SKImage.FromEncodedData(bytes) is { } img)
+                using (img)
+                {
+                    desenho = Encaixar(img.Width, img.Height, area, centralizar: true);
+                    desenho.Offset(0, area.Top - desenho.Top);
+                    c.DrawImage(img, desenho);
+                    c.DrawRect(desenho, moldura);
+                }
+            else
+            {
+                using var vazio = new SKPaint { Color = new SKColor(0xEC, 0xEF, 0xF1) };
+                desenho = new SKRect(area.Left, area.Top, area.Right, area.Top + largura * 0.75f);
+                c.DrawRect(desenho, vazio);
+                Centralizado(c, "Imagem indisponível", desenho.MidY, f.Normal(9), Cinza, desenho.MidX);
+            }
+            var yLegenda = desenho.Bottom + 14;
+            foreach (var linha in Quebrar(legenda, f.Normal(8.5f), largura).Take(3))
+            {
+                Escrever(c, linha, x, yLegenda, f.Normal(8.5f), Texto);
+                yLegenda += 11;
+            }
+            if (foto.Titulo is { } titulo)
+                foreach (var linha in Quebrar(titulo, f.Negrito(9), largura).Take(2))
+                {
+                    Escrever(c, linha, x, yLegenda, f.Negrito(9), Texto);
+                    yLegenda += 11;
+                }
+        }
+        Rodape(c, r, f, numero, total);
     }
 
     // ---- Índice e assinaturas ----

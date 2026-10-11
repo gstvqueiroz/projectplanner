@@ -71,6 +71,14 @@ internal sealed class ProvedorDeTeste : IProvedorIA
         return new AssistenteDeTeste(chave, modelo);
     }
 
+    public List<(string Chave, string Modelo)> AnalistasCriados { get; } = [];
+
+    public IAnalistaDeFotos CriarAnalista(string chave, string modelo)
+    {
+        AnalistasCriados.Add((chave, modelo));
+        return new AnalistaIndisponivel();
+    }
+
     public Task TestarAsync(string chave, string modelo, CancellationToken cancelamento) => Task.CompletedTask;
 
     private sealed class AssistenteDeTeste(string chave, string modelo) : IAssistenteIA

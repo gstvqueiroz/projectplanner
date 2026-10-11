@@ -197,6 +197,143 @@
                 </DockPanel>
             </TabItem>
 
+            <!-- ======== Bloco 29 (RF3): antes e depois ======== -->
+            <TabItem Header="Antes e depois">
+                <DockPanel Margin="0,8,0,0">
+                    <Panel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock x:Name="SemComparacao" Text="{x:Static vm:FotosDoProjetoViewModel.SemAssuntos}" IsVisible="{Binding SemComparacao}"
+                                   TextWrapping="Wrap" Opacity="0.65" />
+                        <WrapPanel ItemSpacing="8" LineSpacing="6" IsVisible="{Binding !SemComparacao}">
+                            <TextBlock Text="Comparar" VerticalAlignment="Center" />
+                            <ComboBox x:Name="Assunto" ItemsSource="{Binding AssuntosDaComparacao}" SelectedItem="{Binding AssuntoEscolhido}" MinWidth="240" MaxWidth="360" />
+                            <TextBlock Text="Antes" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <ComboBox x:Name="FotoAntes" ItemsSource="{Binding FotosDoAssunto}" SelectedItem="{Binding FotoAntes}" MinWidth="240" MaxWidth="340" />
+                            <TextBlock Text="Depois" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <ComboBox x:Name="FotoDepois" ItemsSource="{Binding FotosDoAssunto}" SelectedItem="{Binding FotoDepois}" MinWidth="240" MaxWidth="340" />
+                        </WrapPanel>
+                    </Panel>
+                    <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding !SemComparacao}">
+                        <TextBlock x:Name="Evolucao" Text="{Binding Evolucao}" FontWeight="SemiBold" />
+                        <ItemsControl x:Name="Serie" ItemsSource="{Binding Serie}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FotoDaSerie">
+                                    <StackPanel Spacing="2">
+                                        <Border Width="96" Height="72" Background="{DynamicResource FundoDaImagemDaMiniatura}" CornerRadius="3" ClipToBounds="True">
+                                            <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Stretch="UniformToFill" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Data}" FontSize="11" HorizontalAlignment="Center" Opacity="0.7" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,12,*" IsVisible="{Binding !SemComparacao}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="{Binding FotoAntes, StringFormat='Antes · {0}'}" FontWeight="SemiBold" Margin="0,0,0,4" TextTrimming="CharacterEllipsis" />
+                            <Border Background="{DynamicResource FundoDaFotoNosDetalhes}" CornerRadius="4">
+                                <Image Source="{Binding ImagemAntes, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" />
+                            </Border>
+                        </DockPanel>
+                        <DockPanel Grid.Column="2">
+                            <TextBlock DockPanel.Dock="Top" Text="{Binding FotoDepois, StringFormat='Depois · {0}'}" FontWeight="SemiBold" Margin="0,0,0,4" TextTrimming="CharacterEllipsis" />
+                            <Border Background="{DynamicResource FundoDaFotoNosDetalhes}" CornerRadius="4">
+                                <Image Source="{Binding ImagemDepois, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" />
+                            </Border>
+                        </DockPanel>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ======== Bloco 29 (RF6, IA7): sugestões da IA, sempre para revisar ======== -->
+            <TabItem Header="Sugestões da IA">
+                <DockPanel Margin="0,8,0,0">
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap" Opacity="0.75"
+                                   Text="A IA olha as fotos e sugere. Nada muda sem você: revise, ajuste e aplique só o que estiver certo (dá para desfazer com Editar > Desfazer)." />
+                        <Border Background="{DynamicResource FundoDeAviso}" CornerRadius="4" Padding="8" IsVisible="{Binding !IaConfigurada}">
+                            <TextBlock x:Name="IaNaoConfigurada" Text="{Binding AvisoDeConfiguracao}" TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
+                        </Border>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding CancelarIaCommand}" IsVisible="{Binding IaOcupada}" />
+                            <TextBlock x:Name="AvisoDaIa" Text="{Binding AvisoDaIa}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </StackPanel>
+                    <Grid RowDefinitions="*,12,*">
+                        <!-- Legendas -->
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                                    <Button x:Name="SugerirLegendas" Content="{Binding TextoDeSugerirLegendas}" Command="{Binding SugerirLegendasCommand}"
+                                            ToolTip.Tip="As fotos sem legenda da linha do tempo (com os filtros de lá)" />
+                                    <Button x:Name="AplicarLegendas" Classes="accent" Content="Aplicar as marcadas" Command="{Binding AplicarLegendasCommand}" />
+                                </StackPanel>
+                                <TextBlock Text="Legendas das fotos" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <ScrollViewer>
+                                <ItemsControl x:Name="Legendas" ItemsSource="{Binding LegendasSugeridas}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:LegendaParaRevisar">
+                                            <DockPanel Margin="0,0,16,6">
+                                                <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Aplicar}" VerticalAlignment="Center" />
+                                                <Border DockPanel.Dock="Left" Width="88" Height="66" Margin="0,0,8,0" CornerRadius="3" ClipToBounds="True"
+                                                        Background="{DynamicResource FundoDaImagemDaMiniatura}">
+                                                    <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Stretch="UniformToFill" />
+                                                </Border>
+                                                <StackPanel Spacing="3">
+                                                    <TextBlock Text="{Binding Descricao}" FontSize="11" Opacity="0.7" />
+                                                    <TextBox Text="{Binding Legenda}" TextWrapping="Wrap" AcceptsReturn="False" MaxLength="2000" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                        <!-- % pelas fotos -->
+                        <DockPanel Grid.Row="2">
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                                    <Button x:Name="ConferirAvanco" Content="{Binding TextoDeConferirAvanco}" Command="{Binding ConferirAvancoCommand}"
+                                            ToolTip.Tip="As tarefas em andamento com fotos dos últimos 30 dias: a IA compara as fotos recentes com o % informado" />
+                                    <Button x:Name="AplicarAvanco" Classes="accent" Content="Aplicar os marcados" Command="{Binding AplicarAvancoCommand}" />
+                                </StackPanel>
+                                <TextBlock Text="% concluído pelas fotos" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <ScrollViewer>
+                                <ItemsControl x:Name="Avancos" ItemsSource="{Binding AvancosSugeridos}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AvancoParaRevisar">
+                                            <DockPanel Margin="0,0,16,6">
+                                                <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Aplicar}" VerticalAlignment="Center" />
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Atual, StringFormat='{}{0}% →'}" VerticalAlignment="Center" />
+                                                    <NumericUpDown Value="{Binding Sugerido}" Minimum="0" Maximum="100" Increment="5" FormatString="0" Width="110" />
+                                                </StackPanel>
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding Nome}" FontWeight="SemiBold" Classes.diverge="{Binding Diverge}">
+                                                        <TextBlock.Styles>
+                                                            <Style Selector="TextBlock.diverge">
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextoDeAviso}" />
+                                                            </Style>
+                                                        </TextBlock.Styles>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Justificativa}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
             <!-- ======== FT4 e FT5: locais padronizados e alerta ======== -->
             <TabItem Header="Locais e alerta">
                 <Grid ColumnDefinitions="*,24,*" Margin="0,8,0,0">

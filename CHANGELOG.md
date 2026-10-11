@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.30.0
+
+Bloco 29 (depois do 30, que saiu na 0.29).
+
+- Fotos do projeto > Sugestões da IA: legendas para as fotos sem legenda (a IA olha as imagens) e o % concluído
+  conferido pelas fotos recentes das tarefas em andamento, apontando as que não batem com o informado. Tudo vem numa
+  lista para revisar, editar e aplicar só o que estiver certo; cada aplicação pode ser desfeita.
+- Relatório fotográfico: o texto do andamento do período e os pontos de atenção, escritos à mão ou sugeridos pela IA
+  ("Sugerir com IA"), numa página logo depois da capa, no PDF e no Word.
+- Antes e depois: na tela Fotos do projeto, o mesmo local (ou a mesma tarefa) em dois dias, lado a lado, com a evolução
+  do % e a série das fotos dia a dia; no relatório, a opção "Antes e depois por local" acrescenta uma página por local.
+- A IA das fotos usa a mesma chave do assistente; sem chave, as telas avisam onde configurar.
+
 ## 0.29.0
 
 Bloco 30 (feito antes do 29, que precisa da chave do Gemini para calibrar; por isso a 0.29 é a do Bloco 30, e o Bloco 29
@@ -151,7 +164,7 @@ começar):
 - Bloco 27 (feito): relatório fotográfico em PDF e Word e a curadoria das fotos para o relatório.
 - Bloco 28 (feito): fotos do projeto inteiro, importação em lote com a tarefa sugerida pela data, locais padronizados,
   GPS e alerta de tarefa sem foto.
-- Bloco 29 (sai na 0.30): IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
+- Bloco 29 (feito, na 0.30): IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.
 - Bloco 30 (feito, na 0.29): desfazer e refazer em vários níveis (também o do assistente e as fotos), copiar, colar e
   duplicar.
 - Depois: localizar e filtrar; linha de base e prazos; datas de tarefa e restrições (corrige as colunas Início e Término,

@@ -119,7 +119,7 @@ public static class FiltroDeFotos
             .Any(campo => campo is not null && Normalizar(campo).Contains(texto, StringComparison.Ordinal));
 
     // Sem acentos e em minúsculas: "concretagem" encontra "Concretagem", e "fundacao" encontra "fundação".
-    private static string Normalizar(string? texto)
+    internal static string Normalizar(string? texto)
     {
         if (string.IsNullOrWhiteSpace(texto))
             return "";

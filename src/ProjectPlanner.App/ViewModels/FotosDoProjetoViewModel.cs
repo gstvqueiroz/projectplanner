@@ -92,7 +92,9 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
 
     public const int AbaLinhaDoTempo = 0;
     public const int AbaImportacao = 1;
-    public const int AbaLocaisEAlerta = 2;
+    public const int AbaAntesEDepois = 2;
+    public const int AbaSugestoesDaIa = 3;
+    public const int AbaLocaisEAlerta = 4;
 
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("pt-BR");
     private static readonly OpcaoDeTarefa OpcaoTodas = new(null, TodasAsTarefas);
@@ -102,19 +104,25 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
     private readonly FotosDoProjeto _fotos;
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
-    private readonly Action<IReadOnlyCollection<Guid>> _fotosMudaram;
+    private readonly Action<IReadOnlyCollection<Guid>, string> _fotosMudaram;
     private readonly Action _configuracaoMudou;
     private readonly Func<Guid, Task> _abrirGaleria;
     private IReadOnlyList<FotoTarefa> _filtradas = [];
     private IReadOnlyDictionary<Guid, string> _nomes = new Dictionary<Guid, string>();
     private bool _atualizando;
 
-    /// <param name="fotosMudaram">Fotos entraram nestas tarefas (a grid, o Gantt e o alerta se atualizam; o projeto fica alterado).</param>
+    /// <param name="fotosMudaram">
+    /// Estas tarefas mudaram (fotos importadas; Bloco 29: legendas ou % sugeridos pela IA aplicados), com o nome da
+    /// alteração para o Desfazer: a grid, o Gantt e o alerta se atualizam, e o projeto fica alterado.
+    /// </param>
     /// <param name="configuracaoMudou">Os locais ou os dias do alerta mudaram.</param>
     /// <param name="abrirGaleria">Abre a galeria da tarefa e espera ser fechada.</param>
+    /// <param name="analista">Bloco 29: a IA das sugestões (sem ela, a aba avisa que falta configurar).</param>
     public FotosDoProjetoViewModel(Cronograma cronograma, FotosDoProjeto fotos, IDialogosService dialogos, TimeProvider relogio,
-        Action<IReadOnlyCollection<Guid>> fotosMudaram, Action configuracaoMudou, Func<Guid, Task> abrirGaleria)
+        Action<IReadOnlyCollection<Guid>, string> fotosMudaram, Action configuracaoMudou, Func<Guid, Task> abrirGaleria,
+        ProjectPlanner.IA.IAnalistaDeFotos? analista = null)
     {
+        _analista = analista ?? new ProjectPlanner.IA.AnalistaIndisponivel();
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(fotos);
         ArgumentNullException.ThrowIfNull(dialogos);
@@ -257,6 +265,8 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
         NadaComOsFiltros = total > 0 && _filtradas.Count == 0 && ErroDeFiltro.Length == 0;
         Selecionar(Itens.FirstOrDefault(i => i.Foto.Id == atual));
         AtualizarAlerta();
+        AtualizarAntesEDepois();
+        AtualizarTextosDaIa();
     }
 
     private CriteriosDeFotos Criterios() => new()
@@ -455,7 +465,7 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
             }
         }
         if (mudaram.Count > 0)
-            _fotosMudaram(mudaram);
+            _fotosMudaram(mudaram, mudaram.Count == 1 ? "Importar fotos" : $"Importar fotos em {mudaram.Count} tarefas");
         Lote.Clear();
         LoteMudou();
         AvisoDoLote = (importadas == 1 ? "1 foto importada" : $"{importadas} fotos importadas") +

@@ -45,6 +45,8 @@ public sealed partial class ProvedorGemini : IProvedorIA
 
     public IAssistenteIA CriarAssistente(string chave, string modelo) => new AssistenteGemini(_http, chave, NormalizarModelo(modelo));
 
+    public IAnalistaDeFotos CriarAnalista(string chave, string modelo) => new AnalistaGemini(_http, chave, NormalizarModelo(modelo));
+
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
         ChamadaGemini.ValidarChave(chave);

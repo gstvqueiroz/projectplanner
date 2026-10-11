@@ -1,11 +1,15 @@
 using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.Core.Fotos;
+using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
 
 // Bloco 28: Exibir > Fotos do projeto… e o alerta de tarefa em andamento sem foto recente na grid.
 public sealed partial class MainWindowViewModel
 {
+    // Bloco 29: a IA que olha as fotos (legendas, % pelas fotos, texto do relatório).
+    private readonly IAnalistaDeFotos _analista;
+
     /// <summary>Os locais padronizados e o alerta de foto do projeto aberto.</summary>
     public ConfiguracaoDasFotos ConfiguracaoDasFotos => _cronograma.ConfiguracaoDasFotos;
 
@@ -14,16 +18,18 @@ public sealed partial class MainWindowViewModel
     {
         Recalcular(); // a tarefa sugerida pela data e o alerta usam as datas calculadas
         return _dialogos.MostrarFotosDoProjetoAsync(new FotosDoProjetoViewModel(_cronograma, _fotos, _dialogos, _relogio,
-            FotosEntraram, ConfiguracaoDasFotosMudou, MostrarFotosAsync));
+            ProjetoMudouNasFotos, ConfiguracaoDasFotosMudou, MostrarFotosAsync, _analista));
     }
 
-    private void FotosEntraram(IReadOnlyCollection<Guid> tarefas)
+    // Fotos importadas, legendas ou % sugeridos pela IA aplicados: as linhas dessas tarefas se atualizam, e é um passo do
+    // Desfazer com a descrição.
+    private void ProjetoMudouNasFotos(IReadOnlyCollection<Guid> tarefas, string descricao)
     {
         foreach (var linha in Tarefas.Where(l => tarefas.Contains(l.Tarefa.Id)))
             linha.FotosMudaram();
         OnPropertyChanged(nameof(FotosDaSelecionada));
         OnPropertyChanged(nameof(DicaFotosDaSelecionada));
-        MarcarAlteracao(tarefas.Count == 1 ? "Importar fotos" : $"Importar fotos em {tarefas.Count} tarefas");
+        MarcarAlteracao(descricao);
     }
 
     private void ConfiguracaoDasFotosMudou()

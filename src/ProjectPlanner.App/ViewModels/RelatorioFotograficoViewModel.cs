@@ -34,9 +34,11 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
 
     /// <param name="cronograma">O cronograma já calculado.</param>
     /// <param name="projetoMudou">Os dados da obra ou o histórico mudaram: o projeto tem alterações não salvas.</param>
+    /// <param name="analista">Bloco 29: a IA que sugere o texto do andamento (sem ela, o botão avisa que falta configurar).</param>
     public RelatorioFotograficoViewModel(Cronograma cronograma, FotosDoProjeto fotos, IPreferenciasRelatorio preferencias,
-        IDialogosService dialogos, TimeProvider relogio, Action projetoMudou)
+        IDialogosService dialogos, TimeProvider relogio, Action projetoMudou, ProjectPlanner.IA.IAnalistaDeFotos? analista = null)
     {
+        _analista = analista ?? new ProjectPlanner.IA.AnalistaIndisponivel();
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(fotos);
         ArgumentNullException.ThrowIfNull(preferencias);
@@ -203,7 +205,8 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
 
     private static readonly HashSet<string> NaoMudamAPrevia =
         [nameof(Previa), nameof(AvisoDeParecidas), nameof(Erro), nameof(Mensagem), nameof(Gerando), nameof(UltimoArquivo),
-         nameof(EscolheRamo), nameof(ImagemDoLogotipo), nameof(TemLogotipo), nameof(Logotipo)];
+         nameof(EscolheRamo), nameof(ImagemDoLogotipo), nameof(TemLogotipo), nameof(Logotipo),
+         nameof(IaOcupada), nameof(AvisoDaIa)];
 
     private void Mudou(object? sender, PropertyChangedEventArgs e)
     {
@@ -277,6 +280,8 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
             ComResumo = ComResumo,
             ComIndice = ComIndice,
             ComAssinaturas = ComAssinaturas,
+            ComAntesEDepois = ComAntesEDepois,
+            Texto = new TextoDoRelatorio(TextoDoAndamento, TextoDoRelatorio.LerPontos(TextoDosPontos)),
         };
         var cabecalho = new CabecalhoDoRelatorio(_cronograma.Nome, new DadosDaObra(Contratante, Contrato, Endereco),
             string.IsNullOrWhiteSpace(Responsavel) ? null : Responsavel.Trim(),

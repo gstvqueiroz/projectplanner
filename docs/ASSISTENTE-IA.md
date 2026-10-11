@@ -37,6 +37,9 @@ Desde o Bloco 24, o assistente **altera o cronograma pelo chat**: pedir "monte o
 | Tela Configurações do assistente | `ConfiguracaoAssistenteViewModel`, `ConfiguracaoAssistenteWindow` |
 | Montagem do retrato a partir da grid | `MainWindowViewModel.RetratoParaOAssistente` |
 | Registro no programa | `src/ProjectPlanner.App/Services/Servicos.cs` |
+| Bloco 29: a IA das fotos (`IAnalistaDeFotos`, pedidos e sugestões, `AnalistaConformeConfiguracao`) | `src/ProjectPlanner.IA/AnaliseDeFotos.cs` |
+| Bloco 29: o Gemini olhando as fotos (`AnalistaGemini`) | `src/ProjectPlanner.IA/Gemini/` |
+| Bloco 29: as telas (Sugestões da IA, texto do relatório) | `FotosDoProjetoViewModel.IA.cs`, `RelatorioFotograficoViewModel.Texto.cs` |
 
 `ProjectPlanner.IA` continua sem depender do domínio (Core): recebe o retrato já pronto. A rede (`System.Net.Http`)
 só aparece no namespace `ProjectPlanner.IA.Gemini`, e um teste garante isso.
@@ -183,9 +186,37 @@ do plano marcam, então um estudo em andamento não se perde sem a pergunta de s
 | Condução, tipos de resposta, ficha e plano no protocolo | `src/ProjectPlanner.IA/ConducaoDaConversa.cs`, `FormatoDaResposta`, `InstrucoesDoAssistente` |
 | Painel: cartão, perguntas, plano, ficha | `AssistenteViewModel`, `ConversaNaTela.cs`, `AssistenteView.axaml` |
 
+## Desfazer em vários níveis (Bloco 30)
+
+Cada resposta aplicada é um passo do histórico geral do Desfazer (Editar > Desfazer, ⌘Z). O Desfazer do chat vale para
+qualquer resposta ainda no histórico: as alterações feitas depois dela também são desfeitas (perguntando antes), e o
+Refazer traz tudo de volta. O chat mostra "Desfeito" também quando o Desfazer geral passa pela resposta.
+
+## A IA olhando as fotos (Bloco 29)
+
+`IAnalistaDeFotos` usa a mesma chave e o mesmo modelo do assistente, e faz três pedidos, cada um numa chamada só ao
+Gemini, com as imagens guardadas no projeto (JPEG em base64) e um formato de resposta obrigatório:
+
+| Pedido | Onde | Resposta | Limite |
+|---|---|---|---|
+| Legendas das fotos sem legenda (as da linha do tempo, com os filtros) | Fotos do projeto > Sugestões da IA | `{legendas: [{id, legenda}]}` | 12 fotos |
+| % concluído pelas fotos recentes (tarefas em andamento com fotos dos últimos 30 dias) | Fotos do projeto > Sugestões da IA | `{tarefas: [{id, percentual, justificativa, diverge}]}` | 10 tarefas, 4 fotos cada |
+| Texto do andamento do período e pontos de atenção | Arquivo > Relatório fotográfico… > Sugerir com IA | `{andamento, pontos: []}` | 8 fotos |
+
+Tudo é sugestão: as telas mostram para revisar e editar, e só o que o usuário marcar é aplicado (um passo do Desfazer:
+"Legendas sugeridas pela IA", "% sugerido pela IA"). O texto do relatório vai para os campos da tela, editáveis, antes
+de gerar. A resposta é conferida antes: ids que não foram pedidos, repetidos ou vazios ficam de fora, o % fica entre 0
+e 100, e as legendas são cortadas em 300 caracteres. As instruções pedem para descrever só o que aparece nas fotos e nos
+dados, sem inventar serviços ou problemas (`AnalistaGemini.Instrucoes*`).
+
+**Custo:** cada foto vai na versão guardada (até 1600 px), cerca de 1.500 tokens de entrada no Gemini; um pedido de 12
+fotos fica em torno de 20 mil tokens, alguns centavos de real com o `gemini-2.5-flash`. Os limites acima seguram o custo.
+
+**Calibrar:** os testes usam uma IA simulada. A qualidade das legendas, do % e do texto só se vê com a chave e fotos de
+obra de verdade; ajuste as instruções em `AnalistaGemini` depois de testar.
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".
-- **Desfazer em vários níveis**: só a última resposta pode ser desfeita.
 - **Respostas em partes (streaming)** e anexos maiores que 14 MB (pela API de arquivos do Gemini).
 - **Ler Word e Excel direto** (hoje, exportar como PDF).

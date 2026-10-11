@@ -64,7 +64,7 @@ public class FotosDoProjetoTests : TesteDeFotos
     {
         var c = new Cronograma("x", Ambiente.Segunda);
         var (d, r) = (Ambiente.Dialogos, Ambiente.Relogio);
-        Action<IReadOnlyCollection<Guid>> mudaram = _ => { };
+        Action<IReadOnlyCollection<Guid>, string> mudaram = (_, _) => { };
         Func<Guid, Task> galeria = _ => Task.CompletedTask;
         var acoes = new Func<FotosDoProjetoViewModel>[]
         {

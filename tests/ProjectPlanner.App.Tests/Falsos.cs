@@ -341,8 +341,12 @@ public sealed class Ambiente
 
     public ConfiguracaoAssistenteFalsa ConfiguracaoAssistente { get; } = new();
 
+    /// <summary>Bloco 29: a IA das fotos.</summary>
+    public AnalistaFalso Analista { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
-        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente);
+        new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
+            analistaDeFotos: Analista);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -551,6 +555,8 @@ public sealed class ProvedorFalso : IProvedorIA
         return new AssistenteFalso { EstaConfigurado = true, Responder = p => $"[{modelo}] {p.Mensagem}" };
     }
 
+    public IAnalistaDeFotos CriarAnalista(string chave, string modelo) => new AnalistaFalso();
+
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
         Testes.Add((chave, modelo));
@@ -558,5 +564,58 @@ public sealed class ProvedorFalso : IProvedorIA
             await segurado.Task.WaitAsync(cancelamento);
         if (ErroNoTeste is not null)
             throw ErroNoTeste;
+    }
+}
+
+/// <summary>Bloco 29: a IA das fotos nos testes: guarda os pedidos e responde o que o teste mandar (sem rede).</summary>
+public sealed class AnalistaFalso : IAnalistaDeFotos
+{
+    public bool EstaConfigurado { get; set; } = true;
+
+    public List<PedidoDeLegendas> PedidosDeLegendas { get; } = [];
+    public List<PedidoDeAvanco> PedidosDeAvanco { get; } = [];
+    public List<PedidoDeTextoDoRelatorio> PedidosDeTexto { get; } = [];
+
+    /// <summary>Uma falha para devolver em vez da resposta.</summary>
+    public Exception? Erro { get; set; }
+
+    /// <summary>Segura a resposta até o teste liberar (para ver a tela "trabalhando").</summary>
+    public TaskCompletionSource? Segurar { get; set; }
+
+    public Func<PedidoDeLegendas, IReadOnlyList<LegendaSugerida>> Legendas { get; set; } =
+        p => p.Fotos.Select(f => new LegendaSugerida(f.Id, $"Legenda da IA para {f.Tarefa}")).ToList();
+
+    public Func<PedidoDeAvanco, IReadOnlyList<AvancoSugerido>> Avanco { get; set; } =
+        p => p.Tarefas.Select(t => new AvancoSugerido(t.Id, Math.Min(100, t.Percentual + 20), "As fotos mostram mais avanço.", true)).ToList();
+
+    public Func<PedidoDeTextoDoRelatorio, TextoSugerido> Texto { get; set; } =
+        p => new TextoSugerido($"No período de {p.De:dd/MM} a {p.Ate:dd/MM}, a obra avançou.\nSegundo parágrafo.", ["Atenção à laje."]);
+
+    private async Task<T> Responder<T>(Func<T> resposta, CancellationToken cancelamento)
+    {
+        if (Segurar is { } segurar)
+            await segurar.Task.WaitAsync(cancelamento);
+        cancelamento.ThrowIfCancellationRequested();
+        if (Erro is not null)
+            throw Erro;
+        return resposta();
+    }
+
+    public Task<IReadOnlyList<LegendaSugerida>> SugerirLegendasAsync(PedidoDeLegendas pedido, CancellationToken cancelamento)
+    {
+        PedidosDeLegendas.Add(pedido);
+        return Responder(() => Legendas(pedido), cancelamento);
+    }
+
+    public Task<IReadOnlyList<AvancoSugerido>> SugerirAvancoAsync(PedidoDeAvanco pedido, CancellationToken cancelamento)
+    {
+        PedidosDeAvanco.Add(pedido);
+        return Responder(() => Avanco(pedido), cancelamento);
+    }
+
+    public Task<TextoSugerido> RedigirRelatorioAsync(PedidoDeTextoDoRelatorio pedido, CancellationToken cancelamento)
+    {
+        PedidosDeTexto.Add(pedido);
+        return Responder(() => Texto(pedido), cancelamento);
     }
 }

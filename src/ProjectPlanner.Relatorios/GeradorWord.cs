@@ -41,10 +41,20 @@ public sealed class GeradorWord : IGeradorDeRelatorio
         documento.PackageProperties.Subject = relatorio.Cabecalho.Obra;
 
         Capa(corpo, principal, relatorio);
+        if (relatorio.Texto is { } texto)
+        {
+            corpo.Append(QuebraDePagina());
+            TextoDoAndamento(corpo, relatorio, texto);
+        }
         foreach (var pagina in relatorio.Paginas)
         {
             corpo.Append(QuebraDePagina());
             Fotos(corpo, principal, relatorio, pagina, imagem);
+        }
+        foreach (var comparacao in relatorio.AntesEDepois)
+        {
+            corpo.Append(QuebraDePagina());
+            AntesEDepois(corpo, principal, relatorio, comparacao, imagem);
         }
         if (relatorio.Opcoes.ComIndice || relatorio.Opcoes.ComAssinaturas)
         {
@@ -153,6 +163,49 @@ public sealed class GeradorWord : IGeradorDeRelatorio
         yield return Paragrafo(foto.Legenda, 8, cor: Cinza);
         if (foto.Texto is { } texto)
             yield return Paragrafo(texto, 8.5, depois: 120);
+    }
+
+    // ---- Bloco 29: texto do andamento e antes e depois ----
+
+    private static void TextoDoAndamento(Body corpo, RelatorioFotografico r, TextoDoRelatorio texto)
+    {
+        corpo.Append(Paragrafo(TextosDoRelatorio.Cabecalho(r), 8, cor: Cinza));
+        corpo.Append(Paragrafo(TextosDoRelatorio.TituloDoTexto, 14, negrito: true, antes: 120, depois: 120));
+        foreach (var paragrafo in texto.Paragrafos)
+            corpo.Append(Paragrafo(paragrafo, 10.5, depois: 120));
+        if (texto.PontosDeAtencao.Count == 0)
+            return;
+        corpo.Append(Paragrafo(TextosDoRelatorio.TituloDosPontos, 11.5, negrito: true, antes: 240));
+        foreach (var ponto in texto.PontosDeAtencao)
+            corpo.Append(Paragrafo("• " + ponto, 10, depois: 60));
+    }
+
+    private void AntesEDepois(Body corpo, MainDocumentPart principal, RelatorioFotografico r, AntesEDepoisNoRelatorio comparacao,
+        Func<Guid, byte[]?> imagem)
+    {
+        corpo.Append(Paragrafo(TextosDoRelatorio.Cabecalho(r), 8, cor: Cinza));
+        corpo.Append(Paragrafo(TextosDoRelatorio.TituloAntesEDepois(comparacao), 14, negrito: true, antes: 120));
+        corpo.Append(Paragrafo(comparacao.Evolucao, 10, cor: Cinza, depois: 120));
+        var tabela = Tabela(bordas: false, larguras: [5100, 5100]);
+        var linha = new TableRow();
+        foreach (var (foto, legenda, nome) in new[] { (comparacao.Antes, comparacao.LegendaAntes, "Antes"), (comparacao.Depois, comparacao.LegendaDepois, "Depois") })
+        {
+            var paragrafos = new List<OpenXmlElement>();
+            if (imagem(foto.Id) is { Length: > 0 } bytes && Dimensoes(bytes) is { } tamanho)
+            {
+                var (l, a) = Encaixar(tamanho.Largura, tamanho.Altura, LarguraUtil / 2 - (long)(0.4 * EmuPorCm), (long)(14.5 * EmuPorCm));
+                paragrafos.Add(new Paragraph(new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
+                    new Run(Desenho(principal, bytes, l, a, nome))));
+            }
+            else
+                paragrafos.Add(Paragrafo("[Imagem indisponível]", 9, cor: Cinza, centro: true));
+            paragrafos.Add(Paragrafo(legenda, 8.5));
+            if (foto.Titulo is { } titulo)
+                paragrafos.Add(Paragrafo(titulo, 9, negrito: true));
+            linha.Append(Celula(5100, [.. paragrafos]));
+        }
+        tabela.Append(linha);
+        corpo.Append(tabela);
     }
 
     // ---- Índice e assinaturas ----

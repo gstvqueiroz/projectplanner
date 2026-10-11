@@ -86,4 +86,13 @@ public static class TextosDoRelatorio
     ];
 
     public static string Rodape(int pagina, int total) => $"Página {pagina} de {total}";
+
+    // ---- Bloco 29 ----
+
+    public const string TituloDoTexto = "Andamento do período";
+
+    public const string TituloDosPontos = "Pontos de atenção";
+
+    /// <summary>"Antes e depois — Bloco A".</summary>
+    public static string TituloAntesEDepois(AntesEDepoisNoRelatorio comparacao) => $"Antes e depois — {comparacao.Local}";
 }

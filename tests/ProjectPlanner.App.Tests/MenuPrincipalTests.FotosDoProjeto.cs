@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.App.Views;
 
 namespace ProjectPlanner.App.Tests;
@@ -27,7 +28,7 @@ public partial class MenuPrincipalTests
         var janela = new FotosDoProjetoWindow(fotos);
         janela.Show();
         Dispatcher.UIThread.RunJobs();
-        janela.FindControl<TabControl>("Abas")!.ItemCount.Should().Be(3);
+        janela.FindControl<TabControl>("Abas")!.ItemCount.Should().Be(5);
         janela.FindControl<TextBlock>("MensagemVazia")!.IsVisible.Should().BeTrue();
         janela.FindControl<TextBlock>("Contador")!.Text.Should().Be("0 fotos em 0 tarefas");
         janela.FindControl<ComboBox>("FiltroTarefa")!.SelectedItem!.ToString().Should().Be("(todas as tarefas)");
@@ -39,7 +40,7 @@ public partial class MenuPrincipalTests
         janela.FindControl<Button>("Importar")!.IsEffectivelyEnabled.Should().BeTrue("29/09 está no período da Fundação");
         janela.FindControl<TextBlock>("ResumoDoLote")!.Text.Should().Be("1 de 1 foto vai ser importada.");
 
-        fotos.AbaEscolhida = 2;
+        fotos.AbaEscolhida = FotosDoProjetoViewModel.AbaLocaisEAlerta;
         Dispatcher.UIThread.RunJobs();
         janela.FindControl<NumericUpDown>("DiasSemFoto")!.Value.Should().Be(7);
         janela.FindControl<TextBlock>("TituloDoAlerta")!.Text.Should().Be("Nenhuma tarefa em andamento está sem foto há 7 dias ou mais.");
@@ -115,6 +116,61 @@ public partial class MenuPrincipalTests
         Dispatcher.UIThread.RunJobs();
         janela.FindControl<ItemsControl>("ListaSemFotoRecente")!.Items.Cast<string>()
             .Should().Equal("1 Fundação — Sem nenhuma foto desde o início, há 14 dias");
+        janela.Close();
+    });
+
+    // Bloco 29: as abas Antes e depois e Sugestões da IA com a janela aberta (as listas trocam ao atualizar).
+    [Fact]
+    public Task FotosDoProjeto_AntesEDepoisESugestoes_NaJanela() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        var fundacao = Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        a.Ambiente.Processador.Datas["x.jpg"] = new DateTime(2026, 9, 28, 8, 0, 0);
+        a.Ambiente.Processador.Datas["y.jpg"] = new DateTime(2026, 9, 29, 8, 0, 0);
+        a.Vm.GerenciarFotosCommand.Execute(fundacao);
+        Esperar(a.Ambiente.Dialogos.Galerias.Last().AdicionarArquivosAsync(["/fotos/x.jpg", "/fotos/y.jpg"]));
+        a.Clicar("Exibir", "Fotos do projeto…");
+        var fotos = a.Ambiente.Dialogos.FotosDoProjeto.Last();
+        var janela = new FotosDoProjetoWindow(fotos);
+        janela.Show();
+
+        fotos.AbaEscolhida = FotosDoProjetoViewModel.AbaAntesEDepois;
+        Dispatcher.UIThread.RunJobs();
+        janela.FindControl<ComboBox>("Assunto")!.SelectedItem!.ToString().Should().Be("1 Fundação");
+        janela.FindControl<ComboBox>("FotoAntes")!.SelectedItem!.ToString().Should().Be("28/09/2026 08:00 · 1 Fundação");
+        janela.FindControl<TextBlock>("Evolucao")!.Text.Should().Be("De 0% para 0% concluído em 1 dia");
+        fotos.Atualizar();
+        Dispatcher.UIThread.RunJobs();
+        (fotos.AssuntoEscolhido!.Nome, fotos.FotoDepois!.Texto).Should().Be(("1 Fundação", "29/09/2026 08:00 · 1 Fundação"), "a escolha continua");
+        janela.FindControl<ItemsControl>("Serie")!.ItemCount.Should().Be(2);
+
+        fotos.AbaEscolhida = FotosDoProjetoViewModel.AbaSugestoesDaIa;
+        Dispatcher.UIThread.RunJobs();
+        janela.FindControl<Button>("SugerirLegendas")!.Content.Should().Be("Sugerir legendas (2 fotos sem legenda)");
+        janela.FindControl<TextBlock>("IaNaoConfigurada")!.IsEffectivelyVisible.Should().BeFalse("o analista falso está configurado");
+        Esperar(fotos.SugerirLegendasCommand.ExecuteAsync(null));
+        Dispatcher.UIThread.RunJobs();
+        janela.FindControl<ItemsControl>("Legendas")!.ItemCount.Should().Be(2);
+        janela.FindControl<Button>("AplicarLegendas")!.IsEffectivelyEnabled.Should().BeTrue();
+        janela.Close();
+    });
+
+    [Fact]
+    public Task Relatorio_TextoEAntesEDepois_NaJanela() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
+        a.Clicar("Arquivo", "Relatório fotográfico…");
+        var relatorio = a.Ambiente.Dialogos.Relatorios.Last();
+        var janela = new RelatorioFotograficoWindow(relatorio);
+        janela.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        janela.FindControl<Button>("SugerirTexto")!.IsEffectivelyEnabled.Should().BeTrue();
+        janela.FindControl<CheckBox>("ComAntesEDepois")!.IsChecked.Should().BeFalse();
+        relatorio.TextoDoAndamento = "Andamento.";
+        Dispatcher.UIThread.RunJobs();
+        janela.FindControl<TextBox>("TextoDoAndamento")!.Text.Should().Be("Andamento.");
         janela.Close();
     });
 }

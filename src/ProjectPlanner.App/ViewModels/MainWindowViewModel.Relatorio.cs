@@ -19,6 +19,6 @@ public sealed partial class MainWindowViewModel
     {
         Recalcular(); // as datas, a situação e o andamento do relatório vêm do cálculo
         return _dialogos.MostrarRelatorioFotograficoAsync(
-            new RelatorioFotograficoViewModel(_cronograma, _fotos, _preferenciasRelatorio, _dialogos, _relogio, MarcarSemRecalcular));
+            new RelatorioFotograficoViewModel(_cronograma, _fotos, _preferenciasRelatorio, _dialogos, _relogio, MarcarSemRecalcular, _analista));
     }
 }

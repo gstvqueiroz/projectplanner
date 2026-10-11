@@ -76,8 +76,29 @@
                         <CheckBox Content="Resumo do andamento na capa" IsChecked="{Binding ComResumo}" />
                         <CheckBox Content="Índice das fotos" IsChecked="{Binding ComIndice}" />
                         <CheckBox Content="Assinaturas" IsChecked="{Binding ComAssinaturas}" />
+                        <!-- Bloco 29 -->
+                        <CheckBox x:Name="ComAntesEDepois" Content="Antes e depois por local" IsChecked="{Binding ComAntesEDepois}"
+                                  ToolTip.Tip="Uma página por local: a primeira foto dele e a última do período, lado a lado" />
                     </WrapPanel>
                 </Grid>
+
+                <!-- Bloco 29: o texto do andamento, escrito ou sugerido pela IA (sempre editável). -->
+                <TextBlock Classes="secao" Text="Texto do relatório" />
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" Margin="8,0,0,0">
+                        <Button x:Name="SugerirTexto" Content="Sugerir com IA" Command="{Binding SugerirTextoCommand}"
+                                ToolTip.Tip="A IA escreve o andamento do período e os pontos de atenção a partir do cronograma e das fotos; revise antes de gerar" />
+                        <Button Content="Cancelar" Command="{Binding CancelarIaCommand}" IsVisible="{Binding IaOcupada}" />
+                    </StackPanel>
+                    <TextBlock FontSize="11" Opacity="0.65" TextWrapping="Wrap"
+                               Text="Vai numa página logo depois da capa. Deixe em branco para não ter texto. Uma linha em branco separa os parágrafos." />
+                </DockPanel>
+                <TextBox x:Name="TextoDoAndamento" Text="{Binding TextoDoAndamento}" AcceptsReturn="True" TextWrapping="Wrap" Height="120"
+                         PlaceholderText="Andamento do período" />
+                <TextBox x:Name="TextoDosPontos" Text="{Binding TextoDosPontos}" AcceptsReturn="True" TextWrapping="Wrap" Height="64"
+                         PlaceholderText="Pontos de atenção (um por linha)" />
+                <TextBlock x:Name="AvisoDaIa" Text="{Binding AvisoDaIa}" TextWrapping="Wrap" FontSize="12"
+                           IsVisible="{Binding AvisoDaIa, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                 <TextBlock Classes="secao" Text="Cabeçalho" />
                 <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">

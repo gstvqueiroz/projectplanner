@@ -39,6 +39,8 @@ public static class Servicos
         .AddSingleton<IConfiguracaoIA>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())
         .AddSingleton<IConfiguracaoAssistente>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())
         .AddSingleton(s => FabricaAssistenteIA.Criar(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
+        // Bloco 29: a IA que olha as fotos usa a mesma chave e o mesmo modelo do assistente.
+        .AddSingleton<IAnalistaDeFotos>(s => new AnalistaConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
         .AddTransient<MainWindowViewModel>()
         .BuildServiceProvider();
 }

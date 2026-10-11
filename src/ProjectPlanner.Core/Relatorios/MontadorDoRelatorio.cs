@@ -48,6 +48,12 @@ public sealed record OpcoesDoRelatorio(DateOnly De, DateOnly Ate)
 
     public bool ComAssinaturas { get; init; } = true;
 
+    /// <summary>Bloco 29: páginas de antes e depois por local (a primeira foto do local até o fim do período e a última do período).</summary>
+    public bool ComAntesEDepois { get; init; }
+
+    /// <summary>Bloco 29: o texto do andamento do período e os pontos de atenção (escritos ou sugeridos pela IA); nulo sem texto.</summary>
+    public TextoDoRelatorio? Texto { get; init; }
+
     /// <exception cref="DomainValidationException">Período invertido, fotos por página fora de 1/2/4/6 ou ramo faltando.</exception>
     public void Validar()
     {
@@ -68,6 +74,40 @@ public sealed record OpcoesDoRelatorio(DateOnly De, DateOnly Ate)
         _ => (2, 3),
     };
 }
+
+/// <summary>Bloco 29: o texto do relatório: um ou mais parágrafos do andamento e os pontos de atenção.</summary>
+public sealed record TextoDoRelatorio
+{
+    public const int TamanhoMaximo = 8000;
+
+    /// <exception cref="DomainValidationException">Texto longo demais.</exception>
+    public TextoDoRelatorio(string? andamento, IEnumerable<string>? pontosDeAtencao = null)
+    {
+        Andamento = string.IsNullOrWhiteSpace(andamento) ? null : andamento.Trim().ReplaceLineEndings("\n");
+        PontosDeAtencao = (pontosDeAtencao ?? []).Select(p => p?.Trim() ?? "").Where(p => p.Length > 0).ToList();
+        if ((Andamento?.Length ?? 0) + PontosDeAtencao.Sum(p => p.Length) > TamanhoMaximo)
+            throw new DomainValidationException(nameof(Andamento), $"O texto do relatório passa de {TamanhoMaximo} caracteres.");
+    }
+
+    public string? Andamento { get; }
+
+    public IReadOnlyList<string> PontosDeAtencao { get; }
+
+    public bool Vazio => Andamento is null && PontosDeAtencao.Count == 0;
+
+    /// <summary>Os parágrafos do andamento (separados por linha em branco ou quebra de linha).</summary>
+    public IReadOnlyList<string> Paragrafos =>
+        Andamento?.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
+
+    /// <summary>Os pontos de atenção de um texto com um por linha (marcadores "-", "•" e "*" no começo são tirados).</summary>
+    public static IReadOnlyList<string> LerPontos(string? texto) =>
+        (texto ?? "").Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.TrimStart('-', '•', '*', ' ').Trim()).Where(l => l.Length > 0).ToList();
+}
+
+/// <summary>Bloco 29: uma página de antes e depois no relatório.</summary>
+/// <param name="Local">O local comparado.</param>
+public sealed record AntesEDepoisNoRelatorio(string Local, FotoTarefa Antes, string LegendaAntes, FotoTarefa Depois, string LegendaDepois, string Evolucao);
 
 /// <summary>Os dados da capa: a obra (do projeto) e a empresa (das preferências).</summary>
 public sealed record CabecalhoDoRelatorio(
@@ -108,10 +148,19 @@ public sealed record RelatorioFotografico(
 {
     public IEnumerable<FotoNoRelatorio> Fotos => Grupos.SelectMany(g => g.Fotos);
 
+    /// <summary>Bloco 29: as páginas de antes e depois (com <see cref="OpcoesDoRelatorio.ComAntesEDepois"/>).</summary>
+    public IReadOnlyList<AntesEDepoisNoRelatorio> AntesEDepois { get; init; } = [];
+
+    /// <summary>Bloco 29: o texto do andamento e os pontos de atenção (nulo sem texto).</summary>
+    public TextoDoRelatorio? Texto => Opcoes.Texto is { Vazio: false } texto ? texto : null;
+
     public int TotalDeFotos => Grupos.Sum(g => g.Fotos.Count);
 
-    /// <summary>Capa (com o resumo), as páginas de fotos e o índice com as assinaturas.</summary>
-    public int TotalDePaginas => 1 + Paginas.Count + (Opcoes.ComIndice || Opcoes.ComAssinaturas ? 1 : 0);
+    /// <summary>
+    /// Capa (com o resumo), o texto do andamento, as páginas de fotos, as de antes e depois e o índice com as assinaturas.
+    /// Um texto ou um índice muito longo pode ocupar mais de uma página: o desenho conta as páginas de verdade.
+    /// </summary>
+    public int TotalDePaginas => 1 + (Texto is null ? 0 : 1) + Paginas.Count + AntesEDepois.Count + (Opcoes.ComIndice || Opcoes.ComAssinaturas ? 1 : 0);
 
     /// <summary>"Relatório fotográfico nº 3 · 01/10/2026 a 31/10/2026".</summary>
     public string Titulo => $"Relatório fotográfico nº {Numero} · {Opcoes.De:dd/MM/yyyy} a {Opcoes.Ate:dd/MM/yyyy}";
@@ -183,7 +232,39 @@ public static class MontadorDoRelatorio
 
         var resumo = opcoes.ComResumo ? ResumoDoProjeto.Calcular(cronograma, andamento, dataDeStatus) : null;
         return new RelatorioFotografico(numero ?? cronograma.ProximoNumeroDeRelatorio, opcoes, geradoEm, cabecalho, resumo, montados,
-            Paginar(montados, opcoes), Parecidas(montados));
+            Paginar(montados, opcoes), Parecidas(montados))
+        {
+            AntesEDepois = opcoes.ComAntesEDepois ? MontarAntesEDepois(tarefas, opcoes, nomeDaTarefa) : [],
+        };
+    }
+
+    // Por local (só fotos que podem ir ao relatório, das tarefas escolhidas): o antes é a primeira foto do local até o fim do
+    // período; o depois, a última do período. Locais sem foto no período, ou com tudo num dia só, ficam de fora.
+    private static List<AntesEDepoisNoRelatorio> MontarAntesEDepois(IReadOnlyList<Tarefa> tarefas, OpcoesDoRelatorio opcoes,
+        IReadOnlyDictionary<Guid, string> nomeDaTarefa)
+    {
+        var lista = new List<AntesEDepoisNoRelatorio>();
+        var fotos = tarefas.SelectMany(t => t.Fotos)
+            .Where(f => f.NoRelatorio && f.Local is not null && DateOnly.FromDateTime(f.DataFoto) <= opcoes.Ate)
+            .GroupBy(f => Fotos.FiltroDeFotos.Normalizar(f.Local));
+        foreach (var grupo in fotos)
+        {
+            var doLocal = grupo.OrderBy(f => f.DataFoto).ThenBy(f => f.DataCadastro).ToList();
+            var noPeriodo = doLocal.Where(f => DateOnly.FromDateTime(f.DataFoto) >= opcoes.De).ToList();
+            if (noPeriodo.Count == 0 || doLocal[0].DataFoto.Date == noPeriodo[^1].DataFoto.Date)
+                continue;
+            var assunto = Fotos.AssuntoDaComparacao.DoLocal(doLocal[0].Local!);
+            var comparacao = Fotos.AntesEDepois.Comparar(assunto, doLocal, doLocal[0], noPeriodo[^1])!;
+            string Legenda(string qual, FotoTarefa foto) =>
+                string.Join(" · ", new[]
+                {
+                    Fotos.ComparacaoAntesEDepois.Rotulo(qual, foto), nomeDaTarefa[foto.TarefaId],
+                    foto.PercentualConcluidoNaData is { } p ? $"{p}% concluído" : null,
+                }.OfType<string>());
+            lista.Add(new AntesEDepoisNoRelatorio(assunto.Nome, comparacao.Antes, Legenda("Antes", comparacao.Antes),
+                comparacao.Depois, Legenda("Depois", comparacao.Depois), comparacao.Evolucao));
+        }
+        return [.. lista.OrderBy(a => a.Local, StringComparer.Create(Brasil, ignoreCase: true))];
     }
 
     /// <summary>"Foto 12 · 29/09/2026 08:15 · 2.1 Escavação · 60% concluído · Bloco A · Gustavo" (só as partes que há).</summary>

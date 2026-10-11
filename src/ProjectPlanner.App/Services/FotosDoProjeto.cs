@@ -155,6 +155,16 @@ public sealed class FotosDoProjeto(IProjetoRepository repositorio, IProcessadorD
         return foto;
     }
 
+    /// <summary>Bloco 27: se a foto entra no relatório e se é destaque.</summary>
+    /// <exception cref="DomainValidationException">A foto não é da tarefa.</exception>
+    public FotoTarefa DefinirCuradoria(Tarefa tarefa, Guid fotoId, bool noRelatorio, bool destaque)
+    {
+        var foto = (tarefa.Foto(fotoId) ?? throw new DomainValidationException(nameof(Tarefa.Fotos), "A foto não é desta tarefa."))
+            .ComCuradoria(noRelatorio, destaque);
+        tarefa.SubstituirFoto(foto);
+        return foto;
+    }
+
     /// <summary>Gira a imagem guardada 90° (o resultado fica na memória até salvar).</summary>
     /// <exception cref="ImagemRecusadaException">A imagem não está disponível ou está corrompida.</exception>
     public async Task<FotoTarefa> GirarAsync(Tarefa tarefa, Guid fotoId, bool sentidoHorario)

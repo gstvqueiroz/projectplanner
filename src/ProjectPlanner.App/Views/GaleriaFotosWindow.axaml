@@ -96,6 +96,13 @@
                         <TextBlock Text="{Binding DetalheDoArquivo}" FontSize="11" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding DetalheDoCadastro}" FontSize="11" Opacity="0.7" />
 
+                        <!-- Bloco 27: curadoria para o relatório fotográfico (vale na hora). -->
+                        <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,6,0,0">
+                            <CheckBox x:Name="NoRelatorio" Content="Entra no relatório" IsChecked="{Binding NoRelatorio}"
+                                      ToolTip.Tip="Tire do relatório fotográfico as fotos repetidas ou sem interesse" />
+                            <CheckBox x:Name="DestaqueNoRelatorio" Content="Destaque" IsChecked="{Binding DestaqueNoRelatorio}"
+                                      ToolTip.Tip="No relatório, vem primeiro no grupo e ocupa a linha inteira" />
+                        </StackPanel>
                         <TextBlock Classes="rotulo" Text="Data e hora da foto" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <CalendarDatePicker x:Name="EdicaoData" SelectedDate="{Binding EdicaoData}" Width="140" />
@@ -150,7 +157,20 @@
                                                     ToolTip.Tip="{Binding Foto.Imagem.NomeArquivoOriginal}">
                                                 <StackPanel Spacing="4">
                                                     <Border Height="124" Background="{DynamicResource FundoDaImagemDaMiniatura}" CornerRadius="4" ClipToBounds="True">
-                                                        <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Stretch="UniformToFill" />
+                                                        <Panel>
+                                                            <Image Source="{Binding Miniatura, Converter={x:Static v:Conversores.Imagem}}" Stretch="UniformToFill"
+                                                                   Opacity="{Binding ForaDoRelatorio, Converter={x:Static v:Conversores.MeiaOpacidadeSeVerdadeiro}}" />
+                                                            <!-- Bloco 27: destaque e fora do relatório -->
+                                                            <Border Background="{StaticResource FundoDoSeloDaFoto}" CornerRadius="3" Padding="4,0" Margin="4"
+                                                                    HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding EhDestaque}"
+                                                                    ToolTip.Tip="Destaque no relatório">
+                                                                <TextBlock Text="★" Foreground="{StaticResource EstrelaDoDestaque}" FontSize="12" />
+                                                            </Border>
+                                                            <Border Background="{StaticResource FundoDoSeloDaFoto}" CornerRadius="3" Padding="4,0" Margin="4"
+                                                                    HorizontalAlignment="Left" VerticalAlignment="Bottom" IsVisible="{Binding ForaDoRelatorio}">
+                                                                <TextBlock Text="fora do relatório" Foreground="White" FontSize="10" />
+                                                            </Border>
+                                                        </Panel>
                                                     </Border>
                                                     <TextBlock Text="{Binding Rotulo}" FontSize="12" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding Hora}" FontSize="11" Opacity="0.6" />

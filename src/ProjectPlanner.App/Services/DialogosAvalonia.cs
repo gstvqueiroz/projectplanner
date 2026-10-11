@@ -133,4 +133,42 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task<string?> PedirTextoAsync(string titulo, string pergunta, string? valorInicial = null) =>
         new EntradaDeTextoWindow(titulo, pergunta, valorInicial).ShowDialog<string?>(JanelaAtiva);
+
+    // ---- Bloco 27: relatório fotográfico ----
+
+    public Task MostrarRelatorioFotograficoAsync(ViewModels.RelatorioFotograficoViewModel relatorio) =>
+        new RelatorioFotograficoWindow(relatorio).ShowDialog(JanelaPrincipal);
+
+    public async Task<string?> EscolherArquivoDoRelatorioAsync(string nomeSugerido, string extensao)
+    {
+        var tipo = extensao == "pdf"
+            ? new FilePickerFileType("Documento PDF") { Patterns = ["*.pdf"] }
+            : new FilePickerFileType("Documento do Word") { Patterns = ["*.docx"] };
+        var arquivo = await JanelaAtiva.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Salvar o relatório fotográfico",
+            SuggestedFileName = $"{nomeSugerido}.{extensao}",
+            DefaultExtension = extensao,
+            FileTypeChoices = [tipo],
+            ShowOverwritePrompt = true,
+        });
+        return arquivo?.TryGetLocalPath();
+    }
+
+    public async Task<string?> EscolherImagemAsync()
+    {
+        var arquivos = await JanelaAtiva.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Escolher o logotipo",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Imagem PNG ou JPG") { Patterns = ["*.png", "*.jpg", "*.jpeg"] }],
+        });
+        return arquivos.Select(a => a.TryGetLocalPath()).OfType<string>().FirstOrDefault();
+    }
+
+    public async Task AbrirArquivoAsync(string caminho)
+    {
+        if (File.Exists(caminho))
+            await JanelaAtiva.Launcher.LaunchFileInfoAsync(new FileInfo(caminho));
+    }
 }

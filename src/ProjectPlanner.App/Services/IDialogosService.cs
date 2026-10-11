@@ -48,6 +48,18 @@ public interface IDialogosService
 
     /// <summary>Mostra Ajuda > Sobre o ProjectPlanner (Bloco 25) e espera ser fechada.</summary>
     Task MostrarSobreAsync(ViewModels.SobreViewModel sobre);
+
+    /// <summary>Mostra Arquivo > Relatório fotográfico (Bloco 27) e espera ser fechada.</summary>
+    Task MostrarRelatorioFotograficoAsync(ViewModels.RelatorioFotograficoViewModel relatorio);
+
+    /// <summary>Onde salvar o relatório (Bloco 27), com a extensão "pdf" ou "docx"; nulo se cancelar.</summary>
+    Task<string?> EscolherArquivoDoRelatorioAsync(string nomeSugerido, string extensao);
+
+    /// <summary>Uma imagem PNG ou JPG (o logotipo do relatório, Bloco 27); nulo se cancelar.</summary>
+    Task<string?> EscolherImagemAsync();
+
+    /// <summary>Abre o arquivo no programa padrão do sistema (o relatório gerado, Bloco 27).</summary>
+    Task AbrirArquivoAsync(string caminho);
 }
 
 public enum RespostaAlteracoesPendentes

@@ -219,6 +219,34 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    // ---- Bloco 27 ----
+
+    public List<RelatorioFotograficoViewModel> Relatorios { get; } = [];
+    public string? ArquivoDoRelatorio { get; set; }
+    public List<(string Nome, string Extensao)> RelatoriosSugeridos { get; } = [];
+    public string? ImagemEscolhida { get; set; }
+    public List<string> ArquivosAbertos { get; } = [];
+
+    public Task MostrarRelatorioFotograficoAsync(RelatorioFotograficoViewModel relatorio)
+    {
+        Relatorios.Add(relatorio);
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> EscolherArquivoDoRelatorioAsync(string nomeSugerido, string extensao)
+    {
+        RelatoriosSugeridos.Add((nomeSugerido, extensao));
+        return Task.FromResult(ArquivoDoRelatorio is null ? null : Path.ChangeExtension(ArquivoDoRelatorio, extensao));
+    }
+
+    public Task<string?> EscolherImagemAsync() => Task.FromResult(ImagemEscolhida);
+
+    public Task AbrirArquivoAsync(string caminho)
+    {
+        ArquivosAbertos.Add(caminho);
+        return Task.CompletedTask;
+    }
+
     public Task MostrarConfiguracaoAssistenteAsync(ConfiguracaoAssistenteViewModel configuracao)
     {
         ConfiguracoesDoAssistente.Add(configuracao);

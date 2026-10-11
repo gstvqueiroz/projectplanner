@@ -17,7 +17,22 @@ public sealed record OpcaoDeAtalho(AtalhoDePeriodo Valor, string Nome)
 /// <summary>Uma miniatura da galeria.</summary>
 public sealed partial class FotoNaGaleria(FotoTarefa foto, byte[]? miniatura) : ObservableObject
 {
-    public FotoTarefa Foto { get; } = foto;
+    public FotoTarefa Foto { get; private set; } = foto;
+
+    /// <summary>Bloco 27: tirada do relatório fotográfico (a miniatura fica esmaecida).</summary>
+    public bool ForaDoRelatorio => !Foto.NoRelatorio;
+
+    /// <summary>Bloco 27: destaque no relatório (a miniatura ganha uma estrela).</summary>
+    public bool EhDestaque => Foto.Destaque;
+
+    /// <summary>A mesma foto com a curadoria nova, sem refazer a galeria (e sem perder uma edição em andamento).</summary>
+    internal void Trocar(FotoTarefa nova)
+    {
+        Foto = nova;
+        OnPropertyChanged(nameof(Foto));
+        OnPropertyChanged(nameof(ForaDoRelatorio));
+        OnPropertyChanged(nameof(EhDestaque));
+    }
 
     public byte[]? Miniatura { get; } = miniatura;
 
@@ -239,6 +254,34 @@ public sealed partial class GaleriaFotosViewModel : ViewModelBase
     {
         CarregarEdicao();
         ImagemAtual = value is null ? null : _fotos.Imagem(value.Foto.Id) ?? value.Miniatura;
+        OnPropertyChanged(nameof(NoRelatorio));
+        OnPropertyChanged(nameof(DestaqueNoRelatorio));
+    }
+
+    // ---- Bloco 27: curadoria para o relatório fotográfico (vale na hora, sem Aplicar) ----
+
+    /// <summary>A foto atual entra no relatório fotográfico.</summary>
+    public bool NoRelatorio
+    {
+        get => FotoAtual?.Foto.NoRelatorio ?? false;
+        set => Curar(value, value && DestaqueNoRelatorio);
+    }
+
+    /// <summary>A foto atual é destaque no relatório (marcar o destaque também a põe no relatório).</summary>
+    public bool DestaqueNoRelatorio
+    {
+        get => FotoAtual?.Foto.Destaque ?? false;
+        set => Curar(value || NoRelatorio, value);
+    }
+
+    private void Curar(bool noRelatorio, bool destaque)
+    {
+        if (FotoAtual is not { } item || (item.Foto.NoRelatorio == noRelatorio && item.Foto.Destaque == destaque))
+            return;
+        item.Trocar(_fotos.DefinirCuradoria(Tarefa, item.Foto.Id, noRelatorio, destaque));
+        _aoMudar();
+        OnPropertyChanged(nameof(NoRelatorio));
+        OnPropertyChanged(nameof(DestaqueNoRelatorio));
     }
 
     /// <summary>A imagem da foto atual para o painel de detalhes (a completa, ou a miniatura se não der para ler).</summary>

@@ -23,7 +23,10 @@ public sealed partial class MainWindowViewModel : ICronogramaDoAssistente
     public Core.Assistente.ConversaDoProjeto Conversa => _cronograma.Assistente;
 
     // Bloco 26: a conversa não é uma mudança do cronograma (não conta para o "mudou depois" do Desfazer nem recalcula).
-    public void ConversaMudou()
+    public void ConversaMudou() => MarcarSemRecalcular();
+
+    // Uma mudança do projeto que não é do cronograma (conversa, dados da obra, histórico de relatórios).
+    private void MarcarSemRecalcular()
     {
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));

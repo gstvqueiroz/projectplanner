@@ -79,6 +79,9 @@
                     <MenuItem x:Name="ItemSalvarComo" Header="Salvar como…" Command="{Binding SalvarComoProjetoCommand}" />
                     <Separator />
                     <!-- Bloco 25 (E1) -->
+                    <!-- Bloco 27 -->
+                    <MenuItem Header="Relatório fotográfico…" Command="{Binding RelatorioFotograficoCommand}"
+                              ToolTip.Tip="As fotos do período em PDF ou Word, com capa, andamento, legendas e assinaturas" />
                     <MenuItem Header="Exportar para CSV…" Command="{Binding ExportarCsvCommand}"
                               ToolTip.Tip="A tabela do cronograma numa planilha CSV, que o Excel abre direto" />
                     <!-- Bloco 25 (R2) -->

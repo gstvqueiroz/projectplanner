@@ -3,6 +3,21 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.27.0
+
+- Arquivo > Relatório fotográfico…: as fotos do período em PDF ou Word, com capa (logotipo, obra, contratante,
+  contrato, endereço, responsável técnico com CREA/CAU), o andamento da obra (% concluído × previsto, atrasadas e
+  próximos marcos), as fotos numeradas com legenda automática (data, tarefa, % na data, local e autor), o índice das
+  fotos, as assinaturas e o número da página.
+- O que entra: período (com "desde o último relatório"), todas as tarefas, só as em execução no período, só as críticas,
+  só as atrasadas ou uma etapa, e tags. Como organizar: por tarefa (na ordem da EDT), por data ou por local, com 1, 2,
+  4 ou 6 fotos por página. A prévia mostra o número do relatório, as fotos e as páginas, e avisa sobre fotos parecidas
+  (mesma tarefa, poucos minutos de diferença).
+- Na galeria, cada foto pode sair do relatório ou virar destaque (vem primeiro e ocupa a linha inteira); as miniaturas
+  mostram a estrela do destaque e o selo "fora do relatório".
+- Os relatórios gerados ficam numerados no projeto (o próximo é o nº seguinte); os dados da obra ficam no projeto e os
+  da empresa (logotipo e responsável técnico) valem para todos os projetos.
+
 ## 0.26.0
 
 - Assistente em dois modos: ao pedir um cronograma, o assistente pergunta se você prefere montar agora (com premissas
@@ -102,8 +117,7 @@ Revisto no Bloco 26, a partir do planejamento de fotos e IA (cada bloco ainda pa
 começar):
 
 - Bloco 26 (feito): chat em dois modos, ficha do projeto e conversa salva no .pplan.
-- Bloco 27: relatório fotográfico em PDF e Word (capa, resumo do andamento, fotos numeradas com legenda automática,
-  modelos com os dados da empresa) e a curadoria das fotos para o relatório.
+- Bloco 27 (feito): relatório fotográfico em PDF e Word e a curadoria das fotos para o relatório.
 - Bloco 28: fotos do projeto inteiro, importação em lote com a tarefa sugerida pela data, locais padronizados e alerta de
   tarefa sem foto.
 - Bloco 29: IA e fotos (texto do relatório e legendas sugeridas, % concluído sugerido pelas fotos) e antes e depois.

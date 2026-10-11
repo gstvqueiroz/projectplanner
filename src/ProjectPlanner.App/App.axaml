@@ -61,6 +61,9 @@
                     <SolidColorBrush x:Key="GanttContornoDaSelecao" Color="#ECEFF1" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
+            <!-- Bloco 27: selos sobre as fotos (sobre a imagem, iguais nos dois temas). -->
+            <SolidColorBrush x:Key="FundoDoSeloDaFoto" Color="#B3000000" />
+            <SolidColorBrush x:Key="EstrelaDoDestaque" Color="#FFD54F" />
         </ResourceDictionary>
     </Application.Resources>
 

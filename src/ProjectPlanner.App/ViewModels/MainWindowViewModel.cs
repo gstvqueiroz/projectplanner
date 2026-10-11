@@ -39,8 +39,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     public MainWindowViewModel(IProjetoRepository repositorio, ICalculadoraCronograma calculadora,
         IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas,
         IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens,
-        IConfiguracaoAssistente configuracaoAssistente)
+        IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null)
     {
+        _preferenciasRelatorio = preferenciasRelatorio ?? new PreferenciasRelatorioEmMemoria();
         _fotos = new FotosDoProjeto(repositorio, processadorDeImagens, relogio);
         Colunas = new ColunasViewModel(preferenciasColunas);
         Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface, configuracaoAssistente, this);

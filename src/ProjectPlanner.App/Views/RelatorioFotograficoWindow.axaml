@@ -1,0 +1,110 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        x:Class="ProjectPlanner.App.Views.RelatorioFotograficoWindow"
+        x:DataType="vm:RelatorioFotograficoViewModel"
+        Title="Relatório fotográfico"
+        Width="780" Height="720" MinWidth="680" MinHeight="560"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 27: o que entra, como organizar e o cabeçalho, com a prévia e os botões de gerar. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,10,0,6" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.75" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="18">
+        <!-- Prévia, avisos e botões -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,12,0,0">
+            <TextBlock x:Name="Previa" Text="{Binding Previa}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap" FontSize="12"
+                       IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding AvisoDeParecidas}" Foreground="{DynamicResource TextoDeAviso}" TextWrapping="Wrap" FontSize="12"
+                       IsVisible="{Binding AvisoDeParecidas, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Abrir o último" Command="{Binding AbrirUltimoCommand}" IsVisible="{Binding UltimoArquivo, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <Button x:Name="GerarWord" Content="Gerar Word…" Command="{Binding GerarWordCommand}" />
+                    <Button x:Name="GerarPdf" Content="Gerar PDF…" Classes="accent" Command="{Binding GerarPdfCommand}" />
+                    <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+                </StackPanel>
+                <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12" />
+            </DockPanel>
+        </StackPanel>
+
+        <ScrollViewer>
+            <StackPanel Spacing="4" Margin="0,0,12,0">
+                <TextBlock Classes="secao" Text="O que entra" Margin="0,0,0,6" />
+                <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                    <TextBlock Classes="rotulo" Text="Período" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <CalendarDatePicker x:Name="De" SelectedDate="{Binding De}" Width="140" />
+                        <TextBlock Text="a" VerticalAlignment="Center" />
+                        <CalendarDatePicker x:Name="Ate" SelectedDate="{Binding Ate}" Width="140" />
+                        <Button Content="Desde o último relatório" Command="{Binding DesdeOUltimoCommand}"
+                                ToolTip.Tip="Do dia seguinte ao fim do último relatório (ou do início do projeto) até hoje" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Classes="rotulo" Text="Tarefas" />
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <ComboBox x:Name="Tarefas" ItemsSource="{Binding OpcoesDeTarefas}" SelectedItem="{Binding TarefasEscolhidas}" MinWidth="220" />
+                        <ComboBox x:Name="Ramo" ItemsSource="{Binding Ramos}" SelectedItem="{Binding RamoEscolhido}" MinWidth="220"
+                                  IsVisible="{Binding EscolheRamo}" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="2" Classes="rotulo" Text="Só com as tags" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Tags}" PlaceholderText="vazio: todas (separe por vírgula: antes, depois)" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
+                               Text="As fotos tiradas do relatório na galeria (Entra no relatório desmarcado) nunca entram." />
+                </Grid>
+
+                <TextBlock Classes="secao" Text="Como organizar" />
+                <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                    <TextBlock Classes="rotulo" Text="Agrupar" />
+                    <ComboBox Grid.Column="1" x:Name="Agrupamento" ItemsSource="{Binding OpcoesDeAgrupamento}" SelectedItem="{Binding AgrupamentoEscolhido}" MinWidth="240" />
+                    <TextBlock Grid.Row="1" Classes="rotulo" Text="Fotos" />
+                    <ComboBox Grid.Row="1" Grid.Column="1" x:Name="FotosPorPagina" ItemsSource="{Binding OpcoesDeFotosPorPagina}"
+                              SelectedItem="{Binding FotosPorPaginaEscolhida}" MinWidth="160" />
+                    <WrapPanel Grid.Row="2" Grid.Column="1" ItemSpacing="16">
+                        <CheckBox Content="Resumo do andamento na capa" IsChecked="{Binding ComResumo}" />
+                        <CheckBox Content="Índice das fotos" IsChecked="{Binding ComIndice}" />
+                        <CheckBox Content="Assinaturas" IsChecked="{Binding ComAssinaturas}" />
+                    </WrapPanel>
+                </Grid>
+
+                <TextBlock Classes="secao" Text="Cabeçalho" />
+                <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                    <TextBlock Classes="rotulo" Text="Logotipo" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Border Height="44" MaxWidth="160" IsVisible="{Binding TemLogotipo}" BorderThickness="1"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                            <Image Source="{Binding ImagemDoLogotipo, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" />
+                        </Border>
+                        <Button Content="Escolher…" Command="{Binding EscolherLogotipoCommand}" VerticalAlignment="Center" />
+                        <Button Content="Tirar" Command="{Binding RemoverLogotipoCommand}" IsVisible="{Binding TemLogotipo}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Classes="rotulo" Text="Responsável técnico" />
+                    <DockPanel Grid.Row="1" Grid.Column="1">
+                        <TextBox DockPanel.Dock="Right" Text="{Binding Registro}" PlaceholderText="CREA/CAU" Width="170" Margin="8,0,0,0" />
+                        <TextBox x:Name="Responsavel" Text="{Binding Responsavel}" PlaceholderText="Nome" />
+                    </DockPanel>
+                    <TextBlock Grid.Row="2" Grid.Column="1" FontSize="11" Opacity="0.65"
+                               Text="O logotipo e o responsável valem para todos os projetos. Os dados abaixo são deste projeto." />
+                    <TextBlock Grid.Row="3" Classes="rotulo" Text="Contratante" />
+                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="Contratante" Text="{Binding Contratante}" />
+                    <TextBlock Grid.Row="4" Classes="rotulo" Text="Contrato" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Contrato}" PlaceholderText="Número do contrato" />
+                    <TextBlock Grid.Row="5" Classes="rotulo" Text="Endereço da obra" />
+                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Endereco}" />
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

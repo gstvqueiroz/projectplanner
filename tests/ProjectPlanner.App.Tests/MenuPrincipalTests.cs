@@ -104,7 +104,7 @@ public partial class MenuPrincipalTests
             .Should().Equal("Arquivo", "Exibir", "Inserir", "Tarefa", "Ajuda");
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
-        Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Exportar para CSV…",
+        Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…",
             "Abrir a pasta de cópias de segurança");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha Hoje", Linha,
             "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Resumo do projeto…", "Assistente (IA)", Linha, "Tema");

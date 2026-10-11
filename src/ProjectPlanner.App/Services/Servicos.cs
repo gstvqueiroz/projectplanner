@@ -33,6 +33,7 @@ public static class Servicos
         .AddSingleton<IProvedorIA>(s => new ProvedorGemini(s.GetRequiredService<HttpClient>()))
         .AddSingleton(_ => CofreDoSistema.Criar())
         .AddSingleton<IPreferenciasAssistente, ArquivoPreferenciasAssistente>()
+        .AddSingleton<IPreferenciasRelatorio, ArquivoPreferenciasRelatorio>()
         .AddSingleton(s => new ConfiguracaoDoAssistente(s.GetRequiredService<ICofreDeSegredos>(),
             s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(), Environment.GetEnvironmentVariable))
         .AddSingleton<IConfiguracaoIA>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())

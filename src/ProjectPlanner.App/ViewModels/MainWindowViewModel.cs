@@ -41,8 +41,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas,
         IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens,
         IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null,
-        IAnalistaDeFotos? analistaDeFotos = null)
+        IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null)
     {
+        _catalogoDeRecursos = catalogoDeRecursos ?? new CatalogoDeRecursosEmMemoria();
         _preferenciasRelatorio = preferenciasRelatorio ?? new PreferenciasRelatorioEmMemoria();
         _analista = analistaDeFotos ?? new AnalistaIndisponivel();
         _fotos = new FotosDoProjeto(repositorio, processadorDeImagens, relogio);
@@ -850,6 +851,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     Core.Planejamento.LinhaDeBase? IEdicaoCronograma.LinhaDeBase => _cronograma.LinhaDeBaseEmUso;
 
     void IEdicaoCronograma.VerificarContrato(Tarefa tarefa, bool soAUnidade) => _cronograma.Contrato.VerificarSePodeMudar(tarefa, soAUnidade);
+
+    Core.Recursos.RecursosDoProjeto? IEdicaoCronograma.Recursos => _cronograma.Recursos;
 
     void IEdicaoCronograma.EdicaoCancelada() => Mensagem = "";
 

@@ -34,6 +34,37 @@ namespace ProjectPlanner.Data.Migrations
                     b.ToTable("AssistenteDoProjeto", (string)null);
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.AtribuicaoRegistro", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RecursoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TarefaId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecursoId");
+
+                    b.HasIndex("TarefaId", "RecursoId")
+                        .IsUnique();
+
+                    b.ToTable("AtribuicoesDeRecurso", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Atribuicoes_Quantidade", "Quantidade > 0");
+                        });
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.ContratoRegistro", b =>
                 {
                     b.Property<Guid>("ProjetoId")
@@ -250,6 +281,51 @@ namespace ProjectPlanner.Data.Migrations
                     b.ToTable("Projetos", (string)null);
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.RecursoRegistro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CustoUnitario")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Disponivel")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fornecedor")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjetoId", "Ordem")
+                        .IsUnique();
+
+                    b.ToTable("Recursos", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Recursos_Custo", "CustoUnitario >= 0");
+
+                            t.HasCheckConstraint("CK_Recursos_Tipo", "Tipo BETWEEN 0 AND 2");
+                        });
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.RelatorioRegistro", b =>
                 {
                     b.Property<Guid>("ProjetoId")
@@ -347,6 +423,21 @@ namespace ProjectPlanner.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.AtribuicaoRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.RecursoRegistro", null)
+                        .WithMany()
+                        .HasForeignKey("RecursoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
+                        .WithMany()
+                        .HasForeignKey("TarefaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.ContratoRegistro", b =>
                 {
                     b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
@@ -412,6 +503,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
                         .WithMany()
                         .HasForeignKey("TarefaOrigemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.RecursoRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithMany()
+                        .HasForeignKey("ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

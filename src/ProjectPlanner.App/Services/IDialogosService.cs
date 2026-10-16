@@ -76,6 +76,12 @@ public interface IDialogosService
     /// <summary>Bloco 36: mostra Projeto > Medições… e espera ser fechada.</summary>
     Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes);
 
+    /// <summary>Bloco 32: mostra Projeto > Recursos… e espera ser fechada.</summary>
+    Task MostrarRecursosAsync(ViewModels.RecursosViewModel recursos);
+
+    /// <summary>Bloco 32: mostra Tarefa > Recursos da tarefa… e espera ser fechada.</summary>
+    Task MostrarRecursosDaTarefaAsync(ViewModels.RecursosDaTarefaViewModel recursos);
+
     /// <summary>Bloco 37: mostra Projeto > Custos realizados… e espera ser fechada.</summary>
     Task MostrarCustosAsync(ViewModels.CustosViewModel custos);
 

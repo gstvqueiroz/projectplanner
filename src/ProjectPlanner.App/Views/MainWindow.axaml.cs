@@ -244,6 +244,7 @@ public partial class MainWindow : Window
     [
         ("Linha de base e prazos", ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino"]),
         ("Valores e medição", ["Valor", "Unidade", "Quantidade", "PrecoUnitario"]),
+        ("Recursos e custos", ["Recursos", "CustoOrcado", "Margem"]),
     ];
 
     private void MontarMenuDeColunas(ColunasViewModel colunas)
@@ -371,6 +372,14 @@ public partial class MainWindow : Window
 
     private void GradeBeginningEdit(object? sender, DataGridBeginningEditEventArgs e)
     {
+        // Bloco 32: a célula Recursos não edita: abre Tarefa > Recursos da tarefa….
+        if (e.Column.Tag is "Recursos" && e.Row.DataContext is TarefaViewModel linha && DataContext is MainWindowViewModel principal)
+        {
+            e.Cancel = true;
+            principal.TarefaSelecionada = linha;
+            principal.RecursosDaTarefaCommand.Execute(null);
+            return;
+        }
         if (e.Row.DataContext is not TarefaViewModel { EhResumo: true } || e.Column.Tag is not string coluna || DataContext is not MainWindowViewModel vm)
             return;
         if (CalculadasNoResumo.Contains(coluna))

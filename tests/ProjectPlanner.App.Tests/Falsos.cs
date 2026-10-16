@@ -318,6 +318,22 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Task<string?> EscolherPlanilhaAsync() => Task.FromResult(PlanilhaEscolhida);
 
+    public List<RecursosViewModel> Recursos { get; } = [];
+
+    public Task MostrarRecursosAsync(RecursosViewModel recursos)
+    {
+        Recursos.Add(recursos);
+        return Task.CompletedTask;
+    }
+
+    public List<RecursosDaTarefaViewModel> RecursosDasTarefas { get; } = [];
+
+    public Task MostrarRecursosDaTarefaAsync(RecursosDaTarefaViewModel recursos)
+    {
+        RecursosDasTarefas.Add(recursos);
+        return Task.CompletedTask;
+    }
+
     public List<CustosViewModel> Custos { get; } = [];
 
     public Task MostrarCustosAsync(CustosViewModel custos)
@@ -420,9 +436,12 @@ public sealed class Ambiente
     /// <summary>Bloco 29: a IA das fotos.</summary>
     public AnalistaFalso Analista { get; } = new();
 
+    /// <summary>Bloco 32: o catálogo pessoal de recursos.</summary>
+    public Services.CatalogoDeRecursosEmMemoria Catalogo { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
-            analistaDeFotos: Analista);
+            analistaDeFotos: Analista, catalogoDeRecursos: Catalogo);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")

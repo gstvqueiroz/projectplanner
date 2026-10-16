@@ -21,6 +21,8 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<LinhasDeBaseRegistro> LinhasDeBase => Set<LinhasDeBaseRegistro>();
     public DbSet<ContratoRegistro> Contrato => Set<ContratoRegistro>();
     public DbSet<CustosRegistro> Custos => Set<CustosRegistro>();
+    public DbSet<RecursoRegistro> Recursos => Set<RecursoRegistro>();
+    public DbSet<AtribuicaoRegistro> Atribuicoes => Set<AtribuicaoRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +113,28 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             contrato.HasKey(c => c.ProjetoId);
             contrato.HasOne<ProjetoRegistro>().WithOne()
                 .HasForeignKey<ContratoRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Os recursos do projeto e as atribuições às tarefas (Bloco 32). Um recurso em uso não sai do arquivo sem sair das tarefas.
+        modelBuilder.Entity<RecursoRegistro>(recurso =>
+        {
+            recurso.ToTable("Recursos", t =>
+            {
+                t.HasCheckConstraint("CK_Recursos_Tipo", "Tipo BETWEEN 0 AND 2");
+                t.HasCheckConstraint("CK_Recursos_Custo", "CustoUnitario >= 0");
+            });
+            recurso.HasKey(r => r.Id);
+            recurso.HasOne<ProjetoRegistro>().WithMany().HasForeignKey(r => r.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+            recurso.HasIndex(r => new { r.ProjetoId, r.Ordem }).IsUnique();
+        });
+        modelBuilder.Entity<AtribuicaoRegistro>(atribuicao =>
+        {
+            atribuicao.ToTable("AtribuicoesDeRecurso", t => t.HasCheckConstraint("CK_Atribuicoes_Quantidade", "Quantidade > 0"));
+            atribuicao.HasKey(a => a.Id);
+            atribuicao.HasOne<TarefaRegistro>().WithMany().HasForeignKey(a => a.TarefaId).OnDelete(DeleteBehavior.Cascade);
+            atribuicao.HasOne<RecursoRegistro>().WithMany().HasForeignKey(a => a.RecursoId).OnDelete(DeleteBehavior.Restrict);
+            atribuicao.HasIndex(a => new { a.TarefaId, a.RecursoId }).IsUnique();
+            atribuicao.HasIndex(a => a.RecursoId);
         });
 
         // Os custos realizados (Bloco 37), em JSON.

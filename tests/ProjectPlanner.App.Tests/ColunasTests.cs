@@ -23,7 +23,7 @@ public class ColunasTests
         // e preço unitário, do Bloco 36); as demais, visíveis.
         colunas.Colunas.Where(c => !c.Visivel).Select(c => c.Id).Should().BeEquivalentTo(
             ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor",
-             "Unidade", "Quantidade", "PrecoUnitario"]);
+             "Unidade", "Quantidade", "PrecoUnitario", "Recursos", "CustoOrcado", "Margem"]);
         colunas.Colunas.Where(c => !ColunasViewModel.OcultasPorPadrao.Contains(c.Id)).Should().OnlyContain(c => c.Visivel);
         colunas["Nome"].Largura.Should().Be(220);
         colunas["Notas"].Largura.Should().Be(200);
@@ -37,10 +37,10 @@ public class ColunasTests
 
         ids.IndexOf("Edt").Should().Be(ids.IndexOf("Numero") + 1);
         ids.IndexOf("Sucessoras").Should().Be(ids.IndexOf("Predecessoras") + 1);
-        // As dos Blocos 31, 35 e 36 vêm depois das Notas, na ordem em que entraram.
+        // As dos Blocos 31, 35, 36 e 32 vêm depois das Notas, na ordem em que entraram.
         ids.Skip(ids.IndexOf("Notas") + 1).Should().Equal(
             "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor",
-            "Unidade", "Quantidade", "PrecoUnitario");
+            "Unidade", "Quantidade", "PrecoUnitario", "Recursos", "CustoOrcado", "Margem");
         ids.Should().Contain(["Folga", "Critica"]);
     }
 

@@ -114,9 +114,9 @@ public partial class MenuPrincipalTests
             "Adicionar marco", "Adicionar resumo", Linha,
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
-            Linha, "Gerenciar fotos…");
+            Linha, "Gerenciar fotos…", "Recursos da tarefa…");
         Titulos(a.Item("Projeto")).Should().Equal("Salvar linha de base…", "Linhas de base…", Linha,
-            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Medições…", "Custos realizados…", "Indicadores…");
+            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Recursos…", Linha, "Medições…", "Custos realizados…", "Indicadores…");
         Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Sobre o ProjectPlanner…");
     });
 
@@ -485,7 +485,7 @@ public partial class MenuPrincipalTests
         itens.Take(soltas.Count).Cast<MenuItem>().Select(i => i.Header).Should().Equal(soltas.Select(c => c.Titulo));
         itens[soltas.Count].Should().BeOfType<Separator>();
         var grupos = itens.Skip(soltas.Count + 1).Take(MainWindow.GruposDeColunas.Count).Cast<MenuItem>().ToList();
-        grupos.Select(g => g.Header).Should().Equal("Linha de base e prazos", "Valores e medição");
+        grupos.Select(g => g.Header).Should().Equal("Linha de base e prazos", "Valores e medição", "Recursos e custos");
         grupos[1].Items.Cast<MenuItem>().Select(i => i.Header).Should().Equal("Valor (R$)", "Unidade", "Quantidade", "Preço unitário (R$)");
         // Bloco 31: as caixas das colunas ocultas por padrão começam desmarcadas.
         itens.Take(soltas.Count).Concat(grupos.SelectMany(g => g.Items)).Cast<MenuItem>().Should().HaveCount(colunas.Count).And.OnlyContain(i =>

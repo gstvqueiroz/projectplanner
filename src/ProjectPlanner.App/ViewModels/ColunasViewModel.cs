@@ -53,7 +53,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
     /// (EDT ao lado do Nº, Sucessoras ao lado das Predecessoras e Notas no fim), todas visíveis. O Nome
     /// ficou mais largo no Bloco 11, para caber o recuo das subtarefas. A Situação (Bloco 25) entra antes das Notas.
     /// As do Bloco 31 (restrição, prazo, linha de base e desvios), a do Bloco 35 (valor) e as do Bloco 36 (unidade, quantidade
-    /// e preço unitário) vêm ocultas
+    /// e preço unitário) e as do Bloco 32 (recursos, custo orçado e margem) vêm ocultas
     /// (<see cref="OcultasPorPadrao"/>): só quem usa liga, em Exibir > Colunas.
     /// </summary>
     public static readonly IReadOnlyList<(string Id, string Titulo, double Largura)> Padrao =
@@ -85,11 +85,15 @@ public sealed partial class ColunasViewModel : ViewModelBase
         ("Unidade", "Unidade", 70),
         ("Quantidade", "Quantidade", 100),
         ("PrecoUnitario", "Preço unitário (R$)", 110),
+        ("Recursos", "Recursos", 200),
+        ("CustoOrcado", "Custo orçado (R$)", 120),
+        ("Margem", "Margem (R$)", 110),
     ];
 
     /// <summary>As colunas que começam ocultas (as que só servem a quem usa linha de base, prazos e valores).</summary>
     public static readonly IReadOnlySet<string> OcultasPorPadrao = new HashSet<string>
-        { "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor", "Unidade", "Quantidade", "PrecoUnitario" };
+        { "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor", "Unidade", "Quantidade", "PrecoUnitario",
+          "Recursos", "CustoOrcado", "Margem" };
 
     private readonly IPreferenciasColunas _preferencias;
     private bool _aplicando;

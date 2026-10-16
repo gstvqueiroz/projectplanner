@@ -34,6 +34,7 @@ namespace ProjectPlanner.Core;
 public class Tarefa
 {
     private readonly List<FotoTarefa> _fotos = [];
+    private readonly List<Recursos.AtribuicaoDeRecurso> _atribuicoes = [];
 
     public Tarefa(string nome, DateTime dataInicio, int duracao)
         : this(Guid.NewGuid(), nome, dataInicio, duracao)
@@ -141,6 +142,18 @@ public class Tarefa
     /// é o valor ÷ a quantidade); sem ela, a medição é em % do valor. Nula num resumo.
     /// </summary>
     public decimal? Quantidade { get; private set; }
+
+    /// <summary>
+    /// Bloco 32: os recursos da tarefa (por dia nos profissionais e equipamentos; o total nos materiais). Mudam por
+    /// <see cref="Recursos.RecursosDoProjeto.Atribuir"/>, que confere os recursos do projeto. Vazio num resumo.
+    /// </summary>
+    public IReadOnlyList<Recursos.AtribuicaoDeRecurso> Atribuicoes => _atribuicoes.AsReadOnly();
+
+    internal void DefinirAtribuicoes(IEnumerable<Recursos.AtribuicaoDeRecurso> atribuicoes)
+    {
+        _atribuicoes.Clear();
+        _atribuicoes.AddRange(atribuicoes);
+    }
 
     /// <summary>Bloco 36: o valor ÷ a quantidade; nulo sem os dois.</summary>
     public decimal? PrecoUnitario => Quantidade is > 0 && Valor is { } valor ? valor / Quantidade.Value : null;
@@ -419,15 +432,19 @@ public class Tarefa
             Quantidade = Quantidade,
         };
         copia._fotos.AddRange(_fotos);
+        copia._atribuicoes.AddRange(_atribuicoes);
         return copia;
     }
 
     // Bloco 31: um resumo não tem restrição de início (vem das subtarefas); ao virar resumo, ela sai. O valor dele
-    // passa a ser a soma das subtarefas (Bloco 35), e a unidade e a quantidade saem (Bloco 36).
+    // passa a ser a soma das subtarefas (Bloco 35), e a unidade, a quantidade (Bloco 36) e os recursos (Bloco 32) saem.
     internal void DefinirSeEhResumo(bool ehResumo)
     {
         if (ehResumo && !EhResumo)
+        {
             (NaoIniciarAntesDe, Valor, Unidade, Quantidade) = (null, null, null, null);
+            _atribuicoes.Clear(); // Bloco 32: os recursos vão nas tarefas dentro do resumo
+        }
         else if (!ehResumo && EhResumo)
             Valor = null;
         EhResumo = ehResumo;

@@ -188,6 +188,10 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes) => new MedicoesWindow(medicoes).ShowDialog(JanelaPrincipal);
 
+    public Task MostrarRecursosAsync(ViewModels.RecursosViewModel recursos) => new RecursosWindow(recursos).ShowDialog(JanelaPrincipal);
+
+    public Task MostrarRecursosDaTarefaAsync(ViewModels.RecursosDaTarefaViewModel recursos) => new RecursosDaTarefaWindow(recursos).ShowDialog(JanelaPrincipal);
+
     public Task MostrarCustosAsync(ViewModels.CustosViewModel custos) => new CustosWindow(custos).ShowDialog(JanelaPrincipal);
 
     public Task MostrarIndicadoresAsync(ViewModels.IndicadoresViewModel indicadores) => new IndicadoresWindow(indicadores).ShowDialog(JanelaPrincipal);

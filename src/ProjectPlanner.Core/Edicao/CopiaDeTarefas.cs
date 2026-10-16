@@ -8,9 +8,11 @@ namespace ProjectPlanner.Core.Edicao;
 /// <param name="Valor">Bloco 35: o valor (só nas tarefas que não são resumo).</param>
 /// <param name="Unidade">Bloco 36: a unidade (só nas tarefas que não são resumo).</param>
 /// <param name="Quantidade">Bloco 36: a quantidade (só nas tarefas que não são resumo).</param>
+/// <param name="Atribuicoes">Bloco 32: os recursos (ao colar em outro projeto, só os que existem nele).</param>
 public sealed record TarefaCopiada(
     Guid Original, Guid? PaiOriginal, string Nome, DateTime DataInicio, int Duracao, int PercentualConcluido, string? Notas, bool EhResumo,
-    DateTime? NaoIniciarAntesDe = null, DateTime? Prazo = null, decimal? Valor = null, string? Unidade = null, decimal? Quantidade = null);
+    DateTime? NaoIniciarAntesDe = null, DateTime? Prazo = null, decimal? Valor = null, string? Unidade = null, decimal? Quantidade = null,
+    IReadOnlyList<Recursos.AtribuicaoDeRecurso>? Atribuicoes = null);
 
 /// <summary>
 /// Bloco 30: tarefas copiadas, com as subtarefas e os vínculos entre elas (os vínculos com tarefas de fora ficam de
@@ -77,7 +79,8 @@ public static class CopiaDeTarefas
             incluidas.Add(tarefa.Id);
             copiadas.Add(new TarefaCopiada(tarefa.Id, ehRaiz ? null : tarefa.TarefaPaiId, tarefa.Nome, tarefa.DataInicio, tarefa.Duracao,
                 tarefa.PercentualConcluido, tarefa.Notas, tarefa.EhResumo, tarefa.NaoIniciarAntesDe, tarefa.Prazo,
-                tarefa.EhResumo ? null : tarefa.Valor, tarefa.EhResumo ? null : tarefa.Unidade, tarefa.EhResumo ? null : tarefa.Quantidade));
+                tarefa.EhResumo ? null : tarefa.Valor, tarefa.EhResumo ? null : tarefa.Unidade, tarefa.EhResumo ? null : tarefa.Quantidade,
+                tarefa.Atribuicoes.Count == 0 ? null : [.. tarefa.Atribuicoes]));
         }
         var vinculos = cronograma.Predecessoras
             .Where(p => incluidas.Contains(p.TarefaOrigemId) && incluidas.Contains(p.TarefaDestinoId))
@@ -130,6 +133,8 @@ public static class CopiaDeTarefas
                 nova.AtualizarPercentualConcluido(copiada.PercentualConcluido);
                 nova.DefinirRestricaoDeInicio(copiada.NaoIniciarAntesDe);
                 nova.DefinirUnidade(copiada.Unidade);
+                if (copiada.Atribuicoes is { } atribuicoes)
+                    cronograma.Recursos.Atribuir(nova, atribuicoes.Where(a => cronograma.Recursos.Obter(a.RecursoId) is not null));
                 if (cronograma.Contrato.Travado)
                     continue;
                 nova.DefinirValor(copiada.Valor);

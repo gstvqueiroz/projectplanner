@@ -3,6 +3,22 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.35.0
+
+Bloco 32: recursos (a versão segue a ordem de entrega).
+
+- Projeto > Recursos…: os profissionais, os materiais e os equipamentos da obra, com o custo (por dia nos profissionais e
+  equipamentos; por unidade nos materiais), quantos há por dia (equipes e equipamentos) e o fornecedor; o uso e o custo
+  de cada um no projeto. Importa de uma planilha (Nome e Custo, e Tipo, Unidade, Disponível e Fornecedor; os de mesmo
+  nome são atualizados) e exporta em CSV.
+- O seu catálogo de recursos, fora dos projetos: guardar nele os recursos de uma obra e trazê-los para outra.
+- Tarefa > Recursos da tarefa… (ou um duplo clique na coluna Recursos): profissionais e equipamentos por dia (o total é ×
+  os dias úteis da tarefa), materiais pelo total; o custo de cada um, o custo orçado da tarefa e a margem sobre o Valor.
+- Colunas novas, ocultas por padrão (Exibir > Colunas > Recursos e custos): Recursos, Custo orçado (num resumo, a soma) e
+  Margem (Valor − custo orçado, em vermelho quando negativa). O Valor continua sendo o preço do contrato.
+- Copiar e colar tarefas leva os recursos (em outro projeto, só os que existem nele). Tudo entra no Desfazer e fica no
+  .pplan.
+
 ## 0.34.0
 
 Bloco 37: indicadores (a versão segue a ordem de entrega).
@@ -240,6 +256,8 @@ começar):
 - Bloco 35 (feito, na 0.32): cronograma físico-financeiro, Curva S e importação de valores.
 - Bloco 36 (feito, na 0.33): medições (boletins, retenção, reajuste, glosas, aditivos e plano de medições).
 - Bloco 37 (feito, na 0.34): custos realizados, valor agregado, painel de indicadores e a página de indicadores nos
-  relatórios. Depois, recursos (32), composições e orçamento (33) e uso de recursos (34).
+  relatórios.
+- Bloco 32 (feito, na 0.35): recursos, atribuições, custo orçado e margem, e o catálogo pessoal. Depois, uso de recursos
+  (34) e composições e orçamento (33).
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

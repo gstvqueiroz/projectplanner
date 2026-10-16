@@ -1,0 +1,84 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.RecursosDaTarefaWindow"
+        x:DataType="vm:RecursosDaTarefaViewModel"
+        Title="{Binding Titulo}"
+        Width="820" Height="520" MinWidth="640" MinHeight="380"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 32: os recursos de uma tarefa. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.forte">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.negativo">
+            <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10">
+            <TextBlock Text="{Binding Titulo}" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Detalhe}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button DockPanel.Dock="Right" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <!-- Os totais -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="24" Margin="0,10,0,0">
+            <TextBlock>
+                <Run Text="Custo orçado: " />
+                <Run Text="{Binding CustoOrcado}" FontWeight="SemiBold" />
+            </TextBlock>
+            <TextBlock Classes.negativo="{Binding MargemNegativa}">
+                <Run Text="Margem (Valor − custo): " />
+                <Run Text="{Binding Margem}" FontWeight="SemiBold" />
+            </TextBlock>
+        </StackPanel>
+
+        <!-- Acrescentar -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+            <Panel>
+                <TextBlock Text="{x:Static vm:RecursosDaTarefaViewModel.TextoSemRecursosNoProjeto}" IsVisible="{Binding SemRecursosNoProjeto}" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,10,Auto,8,90,10,Auto" IsVisible="{Binding !SemRecursosNoProjeto}">
+                    <ComboBox x:Name="Recurso" ItemsSource="{Binding Disponiveis}" SelectedItem="{Binding RecursoEscolhido}" HorizontalAlignment="Stretch"
+                              PlaceholderText="Todos os recursos do projeto já estão na tarefa" />
+                    <TextBlock Grid.Column="2" Text="{Binding RotuloDaQuantidade}" VerticalAlignment="Center" FontSize="12" />
+                    <TextBox Grid.Column="4" x:Name="Quantidade" Text="{Binding QuantidadeNova}" />
+                    <Button Grid.Column="6" x:Name="Adicionar" Classes="accent" Content="Adicionar" Command="{Binding AdicionarCommand}" IsDefault="True" />
+                </Grid>
+            </Panel>
+        </Border>
+
+        <Panel>
+            <TextBlock Text="Nenhum recurso nesta tarefa." IsVisible="{Binding SemLinhas}" Opacity="0.6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <DataGrid x:Name="Linhas" ItemsSource="{Binding Linhas}" AutoGenerateColumns="False" CanUserSortColumns="False" IsVisible="{Binding !SemLinhas}"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Recurso" Width="*" MinWidth="160" Binding="{Binding Nome}" IsReadOnly="True" x:DataType="vm:AtribuicaoNaTela" />
+                    <DataGridTextColumn Header="Tipo" Width="120" Binding="{Binding Tipo}" IsReadOnly="True" x:DataType="vm:AtribuicaoNaTela" />
+                    <DataGridTextColumn Header="Quantidade" Width="100" Binding="{Binding Quantidade}" x:DataType="vm:AtribuicaoNaTela" />
+                    <DataGridTextColumn Header="" Width="70" Binding="{Binding ComoMede}" IsReadOnly="True" x:DataType="vm:AtribuicaoNaTela" />
+                    <DataGridTextColumn Header="Total" Width="96" Binding="{Binding Total}" IsReadOnly="True" x:DataType="vm:AtribuicaoNaTela" />
+                    <DataGridTextColumn Header="Custo (R$)" Width="110" Binding="{Binding Custo}" IsReadOnly="True" x:DataType="vm:AtribuicaoNaTela" />
+                    <DataGridTemplateColumn Width="44">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="vm:AtribuicaoNaTela">
+                                <Button Content="✕" Padding="6,0" HorizontalAlignment="Center" ToolTip.Tip="Tirar o recurso da tarefa"
+                                        Command="{Binding $parent[Window].((vm:RecursosDaTarefaViewModel)DataContext).RemoverCommand}" CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Panel>
+    </DockPanel>
+</Window>

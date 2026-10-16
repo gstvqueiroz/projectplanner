@@ -196,6 +196,9 @@
                     <!-- Sempre visível (Bloco 17): abre a galeria mesmo sem fotos, para adicionar a primeira. -->
                     <MenuItem x:Name="ItemFotos" Header="Gerenciar fotos…" Command="{Binding GerenciarFotosCommand}"
                               ToolTip.Tip="{Binding DicaGerenciarFotos}" ToolTip.ShowOnDisabled="True" />
+                    <!-- Bloco 32 -->
+                    <MenuItem Header="Recursos da tarefa…" Command="{Binding RecursosDaTarefaCommand}"
+                              ToolTip.Tip="Os profissionais e equipamentos por dia e os materiais da tarefa selecionada, com o custo orçado" />
                 </MenuItem>
                 <!-- Bloco 25 -->
                 <!-- Bloco 31: linha de base; Bloco 35: o cronograma físico-financeiro e os valores; Bloco 36: as medições; Bloco 37: custos e indicadores. -->
@@ -209,6 +212,10 @@
                               ToolTip.Tip="O valor e o % de cada etapa por período (semanal, quinzenal, mensal ou datas de corte), e a Curva S" />
                     <MenuItem Header="Importar valores…" Command="{Binding ImportarValoresCommand}"
                               ToolTip.Tip="Os valores das tarefas de uma planilha (.xlsx ou .csv) com a EDT e o valor de cada uma (e, se houver, a unidade e a quantidade)" />
+                    <Separator />
+                    <!-- Bloco 32 -->
+                    <MenuItem Header="Recursos…" Command="{Binding RecursosDoProjetoCommand}"
+                              ToolTip.Tip="Os profissionais, materiais e equipamentos da obra (custo, disponível por dia, fornecedor) e o seu catálogo" />
                     <Separator />
                     <!-- Bloco 36 -->
                     <MenuItem Header="Medições…" Command="{Binding MedicoesCommand}"
@@ -539,6 +546,23 @@
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Quantidade" Header="Quantidade" Width="100" Binding="{Binding Quantidade}" />
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="PrecoUnitario" Header="Preço&#x0a;unitário (R$)" Width="110"
                                     Binding="{Binding PrecoUnitario}" IsReadOnly="True" />
+                <!-- Bloco 32: os recursos (um duplo clique abre Recursos da tarefa), o custo orçado por eles e a margem (Valor − custo). -->
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Recursos" Header="Recursos" Width="200" Binding="{Binding Recursos, Mode=OneWay}" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="CustoOrcado" Header="Custo&#x0a;orçado (R$)" Width="120"
+                                    Binding="{Binding CustoOrcado}" IsReadOnly="True" />
+                <DataGridTemplateColumn x:DataType="vm:TarefaViewModel" Tag="Margem" Header="Margem (R$)" Width="110" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:TarefaViewModel">
+                            <TextBlock Text="{Binding Margem}" VerticalAlignment="Center" Margin="12,0" Classes.margemNegativa="{Binding MargemNegativa}">
+                                <TextBlock.Styles>
+                                    <Style Selector="TextBlock.margemNegativa">
+                                        <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+                                    </Style>
+                                </TextBlock.Styles>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
         <!-- Linhas vazias abaixo das tarefas, até o fim da área visível: só desenho, sem receber o mouse. -->

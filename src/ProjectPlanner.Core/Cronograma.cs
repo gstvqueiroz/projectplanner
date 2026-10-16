@@ -44,6 +44,7 @@ public class Cronograma
         Nome = ValidarNome(nome);
         DataInicio = NormalizarInicio(dataInicio);
         Contrato = new Medicoes.ContratoDoProjeto(this);
+        Recursos = new Recursos.RecursosDoProjeto(this);
     }
 
     public Guid Id { get; }
@@ -483,6 +484,9 @@ public class Cronograma
     /// </summary>
     public Medicoes.ContratoDoProjeto Contrato { get; private set; }
 
+    /// <summary>Bloco 32: os recursos do projeto (profissionais, materiais e equipamentos). Voltam no Desfazer.</summary>
+    public Recursos.RecursosDoProjeto Recursos { get; private set; }
+
     /// <summary>Bloco 37: os custos realizados da obra. Voltam no Desfazer, como as tarefas.</summary>
     public Indicadores.CustosRealizados Custos { get; private set; } = new();
 
@@ -521,6 +525,7 @@ public class Cronograma
         };
         copia.Contrato = Contrato.CopiarPara(copia);
         copia.Custos = Custos.Copiar();
+        copia.Recursos = Recursos.CopiarPara(copia);
         copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

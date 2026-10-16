@@ -34,6 +34,8 @@ public static class Servicos
         .AddSingleton(_ => CofreDoSistema.Criar())
         .AddSingleton<IPreferenciasAssistente, ArquivoPreferenciasAssistente>()
         .AddSingleton<IPreferenciasRelatorio, ArquivoPreferenciasRelatorio>()
+        // Bloco 32: o catálogo pessoal de recursos (recursos.json).
+        .AddSingleton<ICatalogoDeRecursos, ArquivoCatalogoDeRecursos>()
         .AddSingleton(s => new ConfiguracaoDoAssistente(s.GetRequiredService<ICofreDeSegredos>(),
             s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(), Environment.GetEnvironmentVariable))
         .AddSingleton<IConfiguracaoIA>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())

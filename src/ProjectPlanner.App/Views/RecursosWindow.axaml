@@ -1,0 +1,117 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.RecursosWindow"
+        x:DataType="vm:RecursosViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="700" MinWidth="900" MinHeight="500"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 32: os recursos do projeto e o catálogo pessoal. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button Content="Importar planilha…" Command="{Binding ImportarPlanilhaCommand}"
+                        ToolTip.Tip="Uma planilha (.xlsx ou .csv) com as colunas Nome e Custo (e Tipo, Unidade, Disponível e Fornecedor); os de mesmo nome são atualizados" />
+                <Button Content="Exportar CSV…" Command="{Binding ExportarCsvCommand}" />
+                <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+            </StackPanel>
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <!-- O catálogo pessoal -->
+        <DockPanel DockPanel.Dock="Right" Width="290" Margin="14,0,0,0">
+            <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Seu catálogo" />
+            <TextBlock DockPanel.Dock="Top" FontSize="12" Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,6"
+                       Text="Os recursos que você usa sempre, com os custos de referência, para trazer a qualquer projeto." />
+            <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
+                <Button x:Name="Trazer" Content="← Trazer para o projeto" Command="{Binding TrazerDoCatalogoCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="Guardar o escolhido no catálogo" Command="{Binding GuardarNoCatalogoCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="Guardar todos no catálogo" Command="{Binding GuardarTodosNoCatalogoCommand}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <Panel>
+                <TextBlock Text="O catálogo está vazio: guarde nele os recursos deste projeto." IsVisible="{Binding CatalogoVazio}"
+                           TextWrapping="Wrap" FontSize="12" Opacity="0.6" />
+                <ListBox x:Name="Catalogo" ItemsSource="{Binding Catalogo}" SelectedItem="{Binding SelecionadoNoCatalogo}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RecursoNaLista">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="{Binding Nome}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock FontSize="11" Opacity="0.7">
+                                    <Run Text="{Binding Tipo}" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding Custo}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Panel>
+        </DockPanel>
+
+        <!-- O formulário -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="60,*,14,Auto,8,150,14,Auto,8,90">
+                    <TextBlock Classes="rotulo" Text="Nome" />
+                    <TextBox Grid.Column="1" x:Name="Nome" Text="{Binding Nome}" PlaceholderText="Ex.: Pedreiro, Cimento CP-II, Betoneira 400 L" />
+                    <TextBlock Grid.Column="3" Classes="rotulo" Text="Tipo" />
+                    <ComboBox Grid.Column="5" x:Name="Tipo" ItemsSource="{Binding Tipos}" SelectedItem="{Binding TipoEscolhido}" HorizontalAlignment="Stretch" />
+                    <TextBlock Grid.Column="7" Classes="rotulo" Text="Unidade" />
+                    <TextBox Grid.Column="9" Text="{Binding Unidade}" IsEnabled="{Binding !PorDia}" PlaceholderText="dia"
+                             ToolTip.Tip="Profissionais e equipamentos custam por dia; num material, a unidade dele (sc, m³, kg, un)" />
+                </Grid>
+                <Grid ColumnDefinitions="Auto,8,110,14,Auto,8,80,14,Auto,8,*,10,Auto,6,Auto">
+                    <TextBlock Classes="rotulo" Text="{Binding RotuloDoCusto}" />
+                    <TextBox Grid.Column="2" x:Name="Custo" Text="{Binding Custo}" />
+                    <TextBlock Grid.Column="4" Classes="rotulo" Text="Disponível por dia" IsVisible="{Binding PorDia}" />
+                    <TextBox Grid.Column="6" Text="{Binding Disponivel}" IsVisible="{Binding PorDia}" PlaceholderText="sem limite"
+                             ToolTip.Tip="Quantos há na obra por dia (a equipe, os equipamentos): o uso de recursos avisa quando passa" />
+                    <TextBlock Grid.Column="8" Classes="rotulo" Text="Fornecedor" />
+                    <TextBox Grid.Column="10" Text="{Binding Fornecedor}" />
+                    <Button Grid.Column="12" x:Name="Salvar" Classes="accent" Content="{Binding TextoDoSalvar}" Command="{Binding SalvarCommand}" IsDefault="True" />
+                    <Button Grid.Column="14" Content="Novo" Command="{Binding NovoCommand}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- A lista do projeto -->
+        <Panel>
+            <TextBlock Text="{x:Static vm:RecursosViewModel.TextoSemRecursos}" IsVisible="{Binding SemRecursos}" TextWrapping="Wrap" Opacity="0.6"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" MaxWidth="480" />
+            <DockPanel IsVisible="{Binding !SemRecursos}">
+                <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                    <Button Content="Remover…" Command="{Binding RemoverCommand}" />
+                    <TextBlock Text="{Binding CustoTotal}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                </DockPanel>
+                <DataGrid x:Name="Lista" ItemsSource="{Binding Lista}" SelectedItem="{Binding Selecionado}" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserSortColumns="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Nome" Width="*" MinWidth="150" Binding="{Binding Nome}" x:DataType="vm:RecursoNaLista" />
+                        <DataGridTextColumn Header="Tipo" Width="120" Binding="{Binding Tipo}" x:DataType="vm:RecursoNaLista" />
+                        <DataGridTextColumn Header="Custo (R$)" Width="116" Binding="{Binding Custo}" x:DataType="vm:RecursoNaLista" />
+                        <DataGridTextColumn Header="Disponível" Width="100" Binding="{Binding Disponivel}" x:DataType="vm:RecursoNaLista" />
+                        <DataGridTextColumn Header="Uso no projeto" Width="150" Binding="{Binding Uso}" x:DataType="vm:RecursoNaLista" />
+                        <DataGridTextColumn Header="Custo no projeto" Width="122" Binding="{Binding CustoNoProjeto}" x:DataType="vm:RecursoNaLista" />
+                        <DataGridTextColumn Header="Fornecedor" Width="120" Binding="{Binding Fornecedor}" x:DataType="vm:RecursoNaLista" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Panel>
+    </DockPanel>
+</Window>

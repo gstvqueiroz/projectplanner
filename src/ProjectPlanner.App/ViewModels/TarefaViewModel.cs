@@ -57,6 +57,9 @@ public interface IEdicaoCronograma
     {
     }
 
+    /// <summary>Bloco 32: os recursos do projeto, para as colunas Recursos, Custo orçado e Margem; nulo sem projeto.</summary>
+    Core.Recursos.RecursosDoProjeto? Recursos => null;
+
     /// <summary>O usuário desistiu de uma edição recusada (Esc ou voltou ao valor em vigor): some com a mensagem.</summary>
     void EdicaoCancelada();
 
@@ -84,7 +87,7 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         nameof(Situacao), nameof(EstaAtrasada),
         nameof(NaoIniciarAntesDe), nameof(TemRestricao), nameof(DicaDoInicio), nameof(Prazo), nameof(ForaDoPrazo), nameof(DicaDoPrazo),
         nameof(InicioLinhaDeBase), nameof(TerminoLinhaDeBase), nameof(DesvioDoInicio), nameof(DesvioDoTermino), nameof(Valor),
-        nameof(Unidade), nameof(Quantidade), nameof(PrecoUnitario),
+        nameof(Unidade), nameof(Quantidade), nameof(PrecoUnitario), nameof(Recursos), nameof(CustoOrcado), nameof(Margem), nameof(MargemNegativa),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -298,6 +301,21 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
             Tarefa.DefinirQuantidade(Core.Planejamento.Moeda.LerNumero(value));
         });
     }
+
+    // ---- Bloco 32: recursos, custo orçado e margem (só leitura; os recursos mudam em Tarefa > Recursos da tarefa…) ----
+
+    /// <summary>"2 Pedreiro; 120 sc Cimento".</summary>
+    public string Recursos => _edicao.Recursos?.Texto(Tarefa) ?? "";
+
+    private decimal? CustoOrcadoDaTarefa => _edicao.Recursos?.CustoOrcado(Tarefa);
+
+    /// <summary>A soma dos recursos (num resumo, das tarefas dentro dele); vazio sem recursos.</summary>
+    public string CustoOrcado => CustoOrcadoDaTarefa is { } custo ? Core.Planejamento.Moeda.Formatar(custo) : "";
+
+    /// <summary>O Valor (o preço do contrato) menos o custo orçado; vazio sem os dois.</summary>
+    public string Margem => Tarefa.Valor is { } valor && CustoOrcadoDaTarefa is { } custo ? Core.Planejamento.Moeda.Formatar(valor - custo) : "";
+
+    public bool MargemNegativa => Tarefa.Valor is { } valor && CustoOrcadoDaTarefa is { } custo && custo > valor;
 
     /// <summary>O valor ÷ a quantidade, em reais (só leitura); vazio sem os dois.</summary>
     public string PrecoUnitario => Tarefa.PrecoUnitario is { } preco

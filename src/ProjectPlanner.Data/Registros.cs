@@ -48,6 +48,33 @@ internal sealed class TarefaRegistro
     public decimal? Quantidade { get; set; }
 }
 
+/// <summary>Bloco 32: um recurso do projeto.</summary>
+internal sealed class RecursoRegistro
+{
+    public Guid Id { get; set; }
+    public Guid ProjetoId { get; set; }
+    public int Ordem { get; set; }
+    public required string Nome { get; set; }
+
+    /// <summary>0 profissional, 1 material, 2 equipamento.</summary>
+    public int Tipo { get; set; }
+
+    public required string Unidade { get; set; }
+    public decimal CustoUnitario { get; set; }
+    public decimal? Disponivel { get; set; }
+    public string? Fornecedor { get; set; }
+}
+
+/// <summary>Bloco 32: um recurso numa tarefa (por dia ou o total, conforme o tipo do recurso).</summary>
+internal sealed class AtribuicaoRegistro
+{
+    public int Id { get; set; }
+    public Guid TarefaId { get; set; }
+    public Guid RecursoId { get; set; }
+    public int Ordem { get; set; }
+    public decimal Quantidade { get; set; }
+}
+
 internal sealed class PredecessoraRegistro
 {
     public int Id { get; set; }

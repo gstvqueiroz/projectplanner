@@ -238,6 +238,26 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Quantidade = t.EhResumo ? null : t.Quantidade,
         }));
 
+        contexto.Recursos.AddRange(cronograma.Recursos.Lista.Select((r, ordem) => new RecursoRegistro
+        {
+            Id = r.Id,
+            ProjetoId = cronograma.Id,
+            Ordem = ordem,
+            Nome = r.Nome,
+            Tipo = (int)r.Tipo,
+            Unidade = r.Unidade,
+            CustoUnitario = r.CustoUnitario,
+            Disponivel = r.Disponivel,
+            Fornecedor = r.Fornecedor,
+        }));
+        contexto.Atribuicoes.AddRange(cronograma.Tarefas.SelectMany(t => t.Atribuicoes.Select((a, ordem) => new AtribuicaoRegistro
+        {
+            TarefaId = t.Id,
+            RecursoId = a.RecursoId,
+            Ordem = ordem,
+            Quantidade = a.Quantidade,
+        })));
+
         var fotos = cronograma.Tarefas.SelectMany(t => t.FotosNaOrdemDeCadastro).ToList();
         contexto.Fotos.AddRange(fotos.Select((f, ordem) => new FotoRegistro
         {
@@ -370,6 +390,13 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             tarefa.DefinirPrazo(registro.Prazo);
             cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);
         }
+
+        // Os recursos e as atribuições (Bloco 32).
+        cronograma.Recursos.Restaurar(contexto.Recursos.AsNoTracking().OrderBy(r => r.Ordem).ToList()
+            .Select(r => new Core.Recursos.Recurso(r.Id, r.Nome, (Core.Recursos.TipoDeRecurso)r.Tipo, r.Unidade, r.CustoUnitario, r.Disponivel, r.Fornecedor)));
+        var porTarefa = cronograma.Tarefas.ToDictionary(t => t.Id);
+        foreach (var grupo in contexto.Atribuicoes.AsNoTracking().ToList().GroupBy(a => a.TarefaId))
+            cronograma.Recursos.Atribuir(porTarefa[grupo.Key], grupo.OrderBy(a => a.Ordem).Select(a => new Core.Recursos.AtribuicaoDeRecurso(a.RecursoId, a.Quantidade)));
 
         // Só os ids das imagens, sem os BLOBs. Registros sem imagem são as "fotos de exemplo" das versões 0.14 a
         // 0.21: ficam de fora e somem do arquivo no próximo salvamento (Bloco 22, D6).

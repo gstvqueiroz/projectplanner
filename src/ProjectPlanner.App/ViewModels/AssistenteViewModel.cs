@@ -219,6 +219,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         Aguardando = true;
         MensagemChat resposta;
         AlteracoesNaConversa? alteracoes = null;
+        string? pedidoDeOrcamento = null;
         try
         {
             var retrato = _cronograma.Retrato();
@@ -255,7 +256,10 @@ public sealed partial class AssistenteViewModel : ViewModelBase
                 };
             }
             if (geracao == _geracao)
+            {
                 Conduzir(r, alteracoes);
+                pedidoDeOrcamento = r.PedidoDeOrcamento;
+            }
             resposta = new MensagemChat(AutorMensagem.Assistente, r.Texto, _relogio.GetLocalNow(), [], Resposta: r.Estruturada ? r : null);
         }
         catch (OperationCanceledException)
@@ -273,6 +277,9 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         }
         if (geracao == _geracao)
             Acrescentar(resposta, resposta.EhErro ? null : alteracoes);
+        // Bloco 38: o assistente pediu sugestões de orçamento: elas aparecem em Projeto > Orçamento…, para o usuário aceitar.
+        if (pedidoDeOrcamento is not null && !resposta.EhErro && geracao == _geracao)
+            await _cronograma.AbrirSugestoesDeOrcamentoAsync(pedidoDeOrcamento);
     }
 
     /// <summary>O pedido de correção mandado quando as alterações de uma resposta não puderam ser aplicadas.</summary>

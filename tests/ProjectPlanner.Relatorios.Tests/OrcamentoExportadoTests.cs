@@ -57,6 +57,27 @@ public sealed class OrcamentoExportadoTests
         TextosDoOrcamento.CelulasDoInsumo(analitica[0].Composicao.Insumos.Single(i => i.Codigo == "88309")).Should().Equal("88309", "PEDREIRO", "Mão de obra", "H", "0,8000", "28,00", "22,40");
     }
 
+    // Bloco 38: o que a IA estimou fica marcado nos três formatos; e o resumo para o assistente.
+    [Fact]
+    public void EstimativasDaIA_Marcadas_EResumoParaOAssistente()
+    {
+        var c = new Cronograma("Casa", Seg);
+        var pintura = new Tarefa("Pintura", Seg, 2);
+        c.AdicionarTarefa(pintura);
+        c.Orcamento.EstimarQuantidade(pintura, 100, "m²");
+        c.Orcamento.Associar(pintura, ComposicaoAberta.Estimativa("Pintura acrílica", "m²", 8, 12));
+        var p = c.Orcamento.Planilha();
+
+        TextosDoOrcamento.Celulas(p.Linhas[0]).Should().Equal("1", "IA", "Estimativa IA", "Pintura", "m²", "≈ 100,00", "20,00", "20,00", "2.000,00");
+        TextosDoOrcamento.Rodape(p).Should().Be("BDI 0% · Estimativa IA: preço estimado pela IA, sem composição de base · ≈ quantidade estimada pela IA");
+        TextosDoOrcamento.ParaOAssistente(p).Should().Equal(
+            "BDI 0% · Estimativa IA: preço estimado pela IA, sem composição de base · ≈ quantidade estimada pela IA · custo direto R$ 2.000,00 · " +
+            "BDI R$ 0,00 · valor informado (sem composição) R$ 0,00 · total R$ 2.000,00",
+            "1 Pintura: Estimativa IA IA · ≈100,00 m² × 20,00 = 2.000,00");
+        var (semComposicao, _) = Orcamento(0);
+        TextosDoOrcamento.ParaOAssistente(semComposicao).Should().BeEmpty();
+    }
+
     [Fact]
     public void Pdf_SinteticaEAnalitica_EmPaginasProprias()
     {

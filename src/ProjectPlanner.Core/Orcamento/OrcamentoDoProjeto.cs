@@ -24,8 +24,10 @@ public sealed record ConfiguracaoDoOrcamento
 
 /// <summary>Bloco 33: uma linha da planilha orçamentária (um serviço, uma tarefa com valor informado, ou um grupo).</summary>
 /// <param name="SemComposicao">Uma tarefa sem composição: o preço é o Valor informado.</param>
+/// <param name="QuantidadeEstimada">Bloco 38: a quantidade é a estimada pela IA (e não foi mudada depois).</param>
 public sealed record LinhaDoOrcamento(Guid? TarefaId, string Edt, string Descricao, int Nivel, bool EhGrupo, string Codigo, string Fonte, string Unidade,
-    decimal? Quantidade, decimal? CustoUnitario, decimal? PrecoUnitario, decimal CustoTotal, decimal Total, bool SemComposicao = false);
+    decimal? Quantidade, decimal? CustoUnitario, decimal? PrecoUnitario, decimal CustoTotal, decimal Total, bool SemComposicao = false,
+    bool QuantidadeEstimada = false);
 
 /// <summary>Bloco 33: a planilha orçamentária: as linhas na ordem da EDT e os totais.</summary>
 public sealed record PlanilhaOrcamentaria(IReadOnlyList<LinhaDoOrcamento> Linhas, ConfiguracaoDoOrcamento Configuracao, IReadOnlyList<string> Bases)
@@ -66,6 +68,7 @@ public sealed class OrcamentoDoProjeto
 
     private readonly Cronograma _cronograma;
     private readonly Dictionary<Guid, ComposicaoAberta> _servicos = [];
+    private readonly Dictionary<Guid, decimal> _quantidadesEstimadas = [];
 
     internal OrcamentoDoProjeto(Cronograma cronograma) => _cronograma = cronograma;
 
@@ -74,7 +77,33 @@ public sealed class OrcamentoDoProjeto
     /// <summary>A composição de cada tarefa que tem uma.</summary>
     public IReadOnlyDictionary<Guid, ComposicaoAberta> Servicos => _servicos;
 
-    public bool Vazio => _servicos.Count == 0 && Configuracao.Bdi == 0 && Configuracao.BdiDeMateriais is null;
+    public bool Vazio => _servicos.Count == 0 && Configuracao.Bdi == 0 && Configuracao.BdiDeMateriais is null && _quantidadesEstimadas.Count == 0;
+
+    /// <summary>Bloco 38: as quantidades que a IA estimou, por tarefa (a marca some quando a quantidade muda).</summary>
+    public IReadOnlyDictionary<Guid, decimal> QuantidadesEstimadas => _quantidadesEstimadas;
+
+    /// <summary>Bloco 38: a quantidade da tarefa é a que a IA estimou (ninguém a mudou depois).</summary>
+    public bool QuantidadeEhEstimada(Tarefa tarefa)
+    {
+        ArgumentNullException.ThrowIfNull(tarefa);
+        return tarefa.Quantidade is { } q && _quantidadesEstimadas.TryGetValue(tarefa.Id, out var estimada) && estimada == q;
+    }
+
+    /// <summary>Bloco 38: põe a quantidade estimada pela IA na tarefa, marcada como estimativa.</summary>
+    /// <exception cref="DomainValidationException">Tarefa resumo ou de outro projeto, quantidade inválida ou contrato travado.</exception>
+    public void EstimarQuantidade(Tarefa tarefa, decimal quantidade, string? unidade)
+    {
+        ArgumentNullException.ThrowIfNull(tarefa);
+        if (!_cronograma.Tarefas.Contains(tarefa))
+            throw new DomainValidationException(nameof(QuantidadesEstimadas), "A tarefa não é deste projeto.");
+        if (tarefa.EhResumo)
+            throw new DomainValidationException(nameof(QuantidadesEstimadas), $"\"{tarefa.Nome}\" é um resumo: a quantidade vai nas tarefas dentro dele.");
+        _cronograma.Contrato.VerificarSePodeMudar(tarefa);
+        tarefa.DefinirQuantidade(quantidade);
+        if (!string.IsNullOrWhiteSpace(unidade) && tarefa.Unidade is null)
+            tarefa.DefinirUnidade(unidade.Trim().Length > Tarefa.TamanhoMaximoDaUnidade ? unidade.Trim()[..Tarefa.TamanhoMaximoDaUnidade] : unidade.Trim());
+        _quantidadesEstimadas[tarefa.Id] = tarefa.Quantidade!.Value;
+    }
 
     /// <exception cref="DomainValidationException">BDI fora de 0 a 100%.</exception>
     public void DefinirConfiguracao(ConfiguracaoDoOrcamento configuracao)
@@ -131,11 +160,12 @@ public sealed class OrcamentoDoProjeto
                 var preco = PrecoUnitario(c);
                 doServico[tarefa.Id] = new LinhaDoOrcamento(tarefa.Id, edt[tarefa.Id], tarefa.Nome, niveis[tarefa.Id], false, c.Codigo, c.Base.Fonte,
                     c.Unidade, tarefa.Quantidade, c.CustoUnitario, preco, Math.Round(q * c.CustoUnitario, 2, MidpointRounding.AwayFromZero),
-                    Math.Round(q * preco, 2, MidpointRounding.AwayFromZero));
+                    Math.Round(q * preco, 2, MidpointRounding.AwayFromZero), QuantidadeEstimada: QuantidadeEhEstimada(tarefa));
             }
             else if (tarefa.Valor is > 0 and var valor)
                 doServico[tarefa.Id] = new LinhaDoOrcamento(tarefa.Id, edt[tarefa.Id], tarefa.Nome, niveis[tarefa.Id], false, "", "", tarefa.Unidade ?? "",
-                    tarefa.Quantidade, null, tarefa.PrecoUnitario is { } p ? Math.Round(p, 2) : null, valor, valor, SemComposicao: true);
+                    tarefa.Quantidade, null, tarefa.PrecoUnitario is { } p ? Math.Round(p, 2) : null, valor, valor, SemComposicao: true,
+                    QuantidadeEstimada: QuantidadeEhEstimada(tarefa));
         }
         var somas = new Dictionary<Guid, (decimal Custo, decimal Total)>();
         foreach (var linha in doServico.Values)
@@ -151,7 +181,7 @@ public sealed class OrcamentoDoProjeto
             else if (somas.TryGetValue(tarefa.Id, out var soma))
                 linhas.Add(new LinhaDoOrcamento(tarefa.Id, edt[tarefa.Id], tarefa.Nome, niveis[tarefa.Id], true, "", "", "", null, null, null, soma.Custo, soma.Total));
         return new PlanilhaOrcamentaria(linhas, Configuracao,
-            [.. _servicos.Where(s => ComposicaoDe(s.Key) is not null).Select(s => s.Value.Base.Descricao).Distinct().Order()]);
+            [.. _servicos.Where(s => ComposicaoDe(s.Key) is not null && !s.Value.EhEstimativa).Select(s => s.Value.Base.Descricao).Distinct().Order()]);
     }
 
     /// <summary>
@@ -185,6 +215,8 @@ public sealed class OrcamentoDoProjeto
             tarefa.DefinirValor(Math.Round(quantidade * PrecoUnitario(c), 2, MidpointRounding.AwayFromZero));
             tarefas++;
 
+            if (c.EhEstimativa)
+                continue; // um preço estimado não tem insumos de verdade para virar recursos
             var lista = tarefa.Atribuicoes.ToList();
             foreach (var insumo in c.Insumos)
             {
@@ -247,7 +279,7 @@ public sealed class OrcamentoDoProjeto
     {
         ArgumentNullException.ThrowIfNull(tabela);
         var (atualizadas, faltando) = (0, new List<string>());
-        foreach (var (tarefaId, composicao) in _servicos.ToList())
+        foreach (var (tarefaId, composicao) in _servicos.Where(s => !s.Value.EhEstimativa).ToList())
         {
             if (tabela.Composicao(composicao.Codigo) is null)
             {
@@ -274,17 +306,24 @@ public sealed class OrcamentoDoProjeto
         var copia = new OrcamentoDoProjeto(cronograma) { Configuracao = Configuracao };
         foreach (var (id, c) in _servicos)
             copia._servicos[id] = c; // composições abertas são imutáveis
+        foreach (var (id, q) in _quantidadesEstimadas)
+            copia._quantidadesEstimadas[id] = q;
         return copia;
     }
 
     /// <summary>O orçamento lido do arquivo (as tarefas que não existem mais ficam de fora).</summary>
-    internal void Restaurar(ConfiguracaoDoOrcamento configuracao, IEnumerable<(Guid TarefaId, ComposicaoAberta Composicao)> servicos)
+    internal void Restaurar(ConfiguracaoDoOrcamento configuracao, IEnumerable<(Guid TarefaId, ComposicaoAberta Composicao)> servicos,
+        IEnumerable<(Guid TarefaId, decimal Quantidade)>? quantidadesEstimadas = null)
     {
         DefinirConfiguracao(configuracao);
         _servicos.Clear();
+        _quantidadesEstimadas.Clear();
         var ids = _cronograma.Tarefas.Select(t => t.Id).ToHashSet();
         foreach (var (tarefaId, composicao) in servicos)
             if (ids.Contains(tarefaId))
                 _servicos[tarefaId] = composicao;
+        foreach (var (tarefaId, quantidade) in quantidadesEstimadas ?? [])
+            if (ids.Contains(tarefaId))
+                _quantidadesEstimadas[tarefaId] = quantidade;
     }
 }

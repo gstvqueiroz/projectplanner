@@ -27,6 +27,9 @@ public interface ICronogramaDoAssistente
 {
     ContextoDoProjeto Retrato();
 
+    /// <summary>Bloco 38: abre o orçamento na aba Sugestões da IA, pedindo sugestões com este foco, e espera a janela fechar.</summary>
+    Task AbrirSugestoesDeOrcamentoAsync(string pedido);
+
     /// <summary>Aplica as alterações, achando as tarefas existentes pelo <paramref name="retrato"/> mandado com o pedido.</summary>
     Task<ResultadoDaAplicacao> AplicarAsync(IReadOnlyList<AlteracaoDoCronograma> alteracoes, ContextoDoProjeto retrato);
 

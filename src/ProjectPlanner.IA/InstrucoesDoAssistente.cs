@@ -14,7 +14,17 @@ public static class InstrucoesDoAssistente
         "Ao citar uma tarefa, use a EDT e o nome (por exemplo, \"1.2 Armar\").\n" +
         "Os documentos anexados (plantas, contratos, memoriais, fotos) vêm junto das mensagens; analise-os quando for útil.\n" +
         "Se a informação não estiver no cronograma nem nos anexos, diga isso em vez de inventar.\n" +
-        "\n" + Alteracoes;
+        "\n" + Alteracoes + "\n" + Orcamento;
+
+    /// <summary>Bloco 38: como o assistente responde sobre o orçamento e pede as sugestões de orçamento.</summary>
+    public const string Orcamento =
+        "ORÇAMENTO. O retrato pode trazer o orçamento do projeto (base de preços, BDI, total e os serviços com composição); use-o " +
+        "para responder sobre custos e preços. Quando o usuário pedir para orçar, escolher composições, estimar quantidades ou " +
+        "preços, revisar o orçamento, sugerir o BDI ou dimensionar equipes, não monte os valores na mensagem: preencha o campo " +
+        "\"orcamento\" com o pedido resumido (por exemplo, \"composições e quantidades das vedações\" ou \"revisar o orçamento " +
+        "todo\"); o programa abre Projeto > Orçamento… com as sugestões da IA (composições da base SINAPI importada, preços " +
+        "estimados quando a base não tem o serviço, quantidades, revisão e equipes) para o usuário conferir e aceitar. Na mensagem, " +
+        "diga isso em uma frase. Se a ficha não tem a área construída e o pedido envolve quantidades, você pode perguntar antes.";
 
     /// <summary>Como o assistente altera o cronograma: o formato da resposta, as ações e as regras do programa.</summary>
     public const string Alteracoes =

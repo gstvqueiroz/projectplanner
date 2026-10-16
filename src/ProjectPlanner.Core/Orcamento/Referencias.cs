@@ -155,6 +155,40 @@ public sealed record InsumoNaComposicao(string Codigo, string Descricao, string 
 /// </summary>
 public sealed record ComposicaoAberta(BaseDeReferencia Base, string Codigo, string Descricao, string Unidade, IReadOnlyList<InsumoNaComposicao> Insumos)
 {
+    /// <summary>Bloco 38: a fonte dos preços estimados pela IA (sem composição numa base).</summary>
+    public const string FonteDaEstimativa = "Estimativa IA";
+
+    public const int TamanhoMaximoDaDescricao = 300;
+
+    /// <summary>Bloco 38: um preço estimado pela IA, e não de uma base: não vira recursos nem muda com outra base.</summary>
+    public bool EhEstimativa => Base.Fonte == FonteDaEstimativa;
+
+    /// <summary>
+    /// Bloco 38: um serviço com o custo unitário estimado pela IA, em duas partes (materiais; mão de obra e equipamentos)
+    /// para o BDI diferenciado valer.
+    /// </summary>
+    /// <exception cref="DomainValidationException">Sem descrição ou unidade, custo negativo ou zero.</exception>
+    public static ComposicaoAberta Estimativa(string? descricao, string? unidade, decimal custoDeMateriais, decimal custoDeMaoDeObra)
+    {
+        var d = descricao?.Trim();
+        var u = unidade?.Trim();
+        if (string.IsNullOrEmpty(d))
+            throw new DomainValidationException(nameof(Descricao), "A estimativa precisa de uma descrição do serviço.");
+        if (string.IsNullOrEmpty(u))
+            throw new DomainValidationException(nameof(Unidade), "A estimativa precisa da unidade do serviço.");
+        if (custoDeMateriais < 0 || custoDeMaoDeObra < 0 || custoDeMateriais + custoDeMaoDeObra <= 0)
+            throw new DomainValidationException(nameof(Insumos), "O custo estimado precisa ser maior que zero (e nenhuma parte negativa).");
+        if (d.Length > TamanhoMaximoDaDescricao)
+            d = d[..(TamanhoMaximoDaDescricao - 1)].TrimEnd() + "…";
+        var insumos = new List<InsumoNaComposicao>();
+        if (custoDeMateriais > 0)
+            insumos.Add(new InsumoNaComposicao("IA-MAT", "Materiais (estimativa da IA)", u, TipoDeInsumo.Material, 1, Math.Round(custoDeMateriais, 2, MidpointRounding.AwayFromZero)));
+        if (custoDeMaoDeObra > 0)
+            insumos.Add(new InsumoNaComposicao("IA-MO", "Mão de obra e equipamentos (estimativa da IA)", u, TipoDeInsumo.MaoDeObra, 1,
+                Math.Round(custoDeMaoDeObra, 2, MidpointRounding.AwayFromZero)));
+        return new ComposicaoAberta(new BaseDeReferencia(FonteDaEstimativa), "IA", d, u, insumos);
+    }
+
     /// <summary>O custo direto de uma unidade do serviço.</summary>
     public decimal CustoUnitario => Math.Round(Insumos.Sum(i => i.Parcial), 2, MidpointRounding.AwayFromZero);
 
@@ -231,6 +265,50 @@ public sealed class TabelaDeReferencia
     }
 
     /// <summary>As composições com todas as palavras (ou o código) do texto, as mais curtas primeiro.</summary>
+    private static readonly HashSet<string> PalavrasVazias =
+    [
+        "de", "do", "da", "dos", "das", "e", "em", "no", "na", "nos", "nas", "com", "para", "por", "a", "o", "as", "os", "um", "uma",
+        "ao", "aos", "ou", "sem", "sobre", "entre", "ate", "etapa", "servico", "servicos", "geral", "obra",
+    ];
+
+    // As palavras de um nome de tarefa para buscar: sem acentos, sem as vazias, com 3 letras ou mais; as longas pelo radical
+    // ("alvenarias" acha "alvenaria").
+    private static IReadOnlyList<string> Radicais(string? texto) =>
+    [
+        .. new string([.. TiposDeInsumo.Normalizar(texto).Select(c => char.IsLetterOrDigit(c) ? c : ' ')])
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => p.Length >= 3 && !PalavrasVazias.Contains(p))
+            .Select(p => p.Length > 6 ? p[..6] : p)
+            .Distinct(),
+    ];
+
+    /// <summary>
+    /// Bloco 38: as composições candidatas para uma tarefa, para a IA escolher: as que mais têm as palavras do nome da tarefa
+    /// (as do resumo onde ela está valem a metade; a que começa pela primeira palavra ganha um ponto), das mais parecidas
+    /// para as menos.
+    /// </summary>
+    public IReadOnlyList<Composicao> Candidatas(string? nome, string? contexto = null, int maximo = 12)
+    {
+        var proprias = Radicais(nome);
+        var doContexto = Radicais(contexto).Except(proprias).ToList();
+        if (proprias.Count == 0 && doContexto.Count == 0)
+            return [];
+        return [.. _composicoes.Values
+            .Select(c =>
+            {
+                var descricao = " " + new string([.. TiposDeInsumo.Normalizar(c.Descricao).Select(ch => char.IsLetterOrDigit(ch) ? ch : ' ')]);
+                var pontos = proprias.Count(p => descricao.Contains(" " + p, StringComparison.Ordinal)) * 2 +
+                             doContexto.Count(p => descricao.Contains(" " + p, StringComparison.Ordinal));
+                if (pontos >= 2 && proprias.Count > 0 && descricao.StartsWith(" " + proprias[0], StringComparison.Ordinal))
+                    pontos++; // o serviço principal da composição é a primeira palavra da tarefa ("Alvenaria…")
+                return (Composicao: c, Pontos: pontos);
+            })
+            .Where(c => c.Pontos >= 2)
+            .OrderByDescending(c => c.Pontos).ThenBy(c => c.Composicao.Descricao.Length).ThenBy(c => c.Composicao.Codigo, StringComparer.Ordinal)
+            .Take(maximo)
+            .Select(c => c.Composicao)];
+    }
+
     public IReadOnlyList<Composicao> Buscar(string? texto, int maximo = 100)
     {
         var palavras = TiposDeInsumo.Normalizar(texto).Split(' ', StringSplitOptions.RemoveEmptyEntries);

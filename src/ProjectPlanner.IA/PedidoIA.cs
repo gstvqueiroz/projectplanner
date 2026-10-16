@@ -42,6 +42,12 @@ public sealed record RespostaIA(string Texto)
     /// <summary>O que o assistente entendeu do projeto nesta resposta: campos novos ou corrigidos da ficha.</summary>
     public IReadOnlyList<ItemDeFicha> Ficha { get; init; } = [];
 
+    /// <summary>
+    /// Bloco 38: o assistente pediu sugestões de orçamento (o pedido resumido, como "composições e quantidades das
+    /// vedações"): o App abre Projeto > Orçamento… na aba Sugestões da IA. Nulo quando não pediu.
+    /// </summary>
+    public string? PedidoDeOrcamento { get; init; }
+
     /// <summary>Tem algo além do texto e das alterações (tipo, perguntas, plano, ficha).</summary>
     public bool Estruturada => Tipo != TipoDeResposta.Resposta || Ficha.Count > 0;
 }

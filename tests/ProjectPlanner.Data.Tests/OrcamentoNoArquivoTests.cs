@@ -36,13 +36,43 @@ public sealed class OrcamentoNoArquivoTests : TesteComArquivo
     [Theory]
     [InlineData(1, "{ ruim")]
     [InlineData(1, """{"bdi":150}""")]
-    [InlineData(2, """{}""")]
+    [InlineData(3, """{}""")] // uma versão mais nova que a deste programa (a 2 é a do Bloco 38)
     public void OrcamentoComDefeito_ArquivoRecusado(int versao, string dados)
     {
         Repositorio.Salvar(Obra(), Caminho);
         Executar("UPDATE OrcamentoDoProjeto SET Versao = $p0, Dados = $p1", versao, dados);
 
         ((Action)(() => Repositorio.Abrir(Caminho))).Should().Throw<InvalidDataException>();
+    }
+
+    [Fact]
+    public void SemNadaDoBloco38_ContinuaNaVersao1()
+    {
+        Repositorio.Salvar(Obra(), Caminho);
+
+        Contar("OrcamentoDoProjeto WHERE Versao = 1").Should().Be(1, "a 0.37 continua abrindo o arquivo");
+    }
+
+    // Bloco 38: a estimativa da IA e a quantidade estimada voltam iguais (versão 2 só com quantidade estimada).
+    [Fact]
+    public void EstimativaEQuantidadeEstimada_VoltamIguais_NaVersao2()
+    {
+        var c = Obra();
+        var pintura = new Tarefa("Pintura", Segunda, 3);
+        c.AdicionarTarefa(pintura);
+        c.Orcamento.EstimarQuantidade(pintura, 342.72m, "m²");
+        c.Orcamento.Associar(pintura, ComposicaoAberta.Estimativa("Pintura acrílica", "m²", 8.5m, 12));
+
+        Repositorio.Salvar(c, Caminho);
+        var aberto = Repositorio.Abrir(Caminho);
+
+        Contar("OrcamentoDoProjeto WHERE Versao = 2").Should().Be(1);
+        var p = aberto.Tarefas.Single(t => t.Id == pintura.Id);
+        aberto.Orcamento.QuantidadeEhEstimada(p).Should().BeTrue();
+        aberto.Orcamento.QuantidadesEstimadas.Should().Equal(c.Orcamento.QuantidadesEstimadas);
+        var estimativa = aberto.Orcamento.ComposicaoDe(p.Id)!;
+        (estimativa.EhEstimativa, estimativa.Descricao, estimativa.CustoUnitario).Should().Be((true, "Pintura acrílica", 20.5m));
+        aberto.Orcamento.Planilha().Total.Should().Be(c.Orcamento.Planilha().Total);
     }
 
     [Fact]

@@ -111,9 +111,10 @@ public sealed class AssistenteGemini : IAssistenteIA
                     ["premissas"] = Lista(Tipo("STRING")),
                 }, "etapas"),
                 ["alteracoes"] = new JsonObject { ["type"] = "ARRAY", ["items"] = alteracao },
+                ["orcamento"] = Tipo("STRING"), // Bloco 38: o pedido de sugestões de orçamento
             },
             ["required"] = new JsonArray("mensagem", "alteracoes"),
-            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes"),
+            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes", "orcamento"),
         };
     }
 

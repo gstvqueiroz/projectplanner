@@ -38,8 +38,13 @@ public sealed record TarefaNoContexto(
 /// Retrato só de leitura do cronograma aberto (Bloco 23), montado pelo App a cada envio. O assistente nunca recebe o
 /// <c>Cronograma</c> do domínio: só este texto, que vai nas instruções do pedido.
 /// </summary>
-public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Termino, DateOnly Hoje, IReadOnlyList<TarefaNoContexto> Tarefas)
+/// <param name="Orcamento">Bloco 38: o resumo do orçamento, uma linha por item (vazio sem orçamento).</param>
+public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Termino, DateOnly Hoje, IReadOnlyList<TarefaNoContexto> Tarefas,
+    IReadOnlyList<string>? Orcamento = null)
 {
+    /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
+    public const int LinhasDoOrcamento = 200;
+
     /// <summary>Notas mais longas que isso são cortadas no retrato.</summary>
     public const int TamanhoMaximoDasNotas = 500;
 
@@ -79,6 +84,14 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
                 t.Critica ? "sim" : "não",
                 t.Fotos.ToString(Cultura),
                 Notas(t.Notas)));
+        }
+        if (Orcamento is { Count: > 0 } orcamento)
+        {
+            texto.AppendLine("Orçamento:");
+            foreach (var linha in orcamento.Take(LinhasDoOrcamento))
+                texto.AppendLine("- " + Limpar(linha));
+            if (orcamento.Count > LinhasDoOrcamento)
+                texto.AppendLine($"- (mais {orcamento.Count - LinhasDoOrcamento} serviços)");
         }
         return texto.ToString().TrimEnd();
     }

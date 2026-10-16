@@ -195,7 +195,7 @@ public sealed class GeminiConducaoTests : IDisposable
         var esquema = _servidor.UltimoCorpo["generationConfig"]!["responseSchema"]!;
         esquema["required"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal("mensagem", "alteracoes");
         var propriedades = esquema["properties"]!.AsObject().Select(p => p.Key);
-        propriedades.Should().Equal("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes");
+        propriedades.Should().Equal("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes", "orcamento"); // Bloco 38: "orcamento", opcional
         esquema["properties"]!["tipo"]!["enum"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal("resposta", "modo", "perguntas", "plano");
         esquema["properties"]!["plano"]!["properties"]!["etapas"]!["items"]!["properties"]!["duracao"]!["type"]!.GetValue<string>().Should().Be("INTEGER");
     }

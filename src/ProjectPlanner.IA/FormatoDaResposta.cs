@@ -20,6 +20,7 @@ public static class FormatoDaResposta
     public const int MaximoDeEtapas = 60;
     public const int MaximoDePremissas = 20;
     public const int MaximoDeItensNaFicha = 60;
+    public const int TamanhoMaximoDoPedidoDeOrcamento = 300;
 
     private const string NotaDeCorte = "\n\n(Resposta cortada: ficou longa demais.)";
 
@@ -84,6 +85,9 @@ public static class FormatoDaResposta
                 Perguntas = tipo == TipoDeResposta.Perguntas ? perguntas : [],
                 Plano = tipo == TipoDeResposta.Plano ? plano : null,
                 Ficha = Ficha(raiz),
+                PedidoDeOrcamento = tipo == TipoDeResposta.Resposta && Texto(raiz, "orcamento")?.Trim() is { Length: > 0 } orcamento
+                    ? (orcamento.Length > TamanhoMaximoDoPedidoDeOrcamento ? orcamento[..TamanhoMaximoDoPedidoDeOrcamento] : orcamento)
+                    : null,
             };
         }
     }
@@ -127,6 +131,8 @@ public static class FormatoDaResposta
                 ["termino"] = plano.Termino,
                 ["premissas"] = new JsonArray([.. plano.Premissas.Select(p => (JsonNode)p)]),
             };
+        if (resposta.PedidoDeOrcamento is { } pedido)
+            json["orcamento"] = pedido;
         // As alterações não voltam no histórico (seriam centenas de itens a cada envio): o resultado delas já está no
         // retrato do cronograma, e a mensagem as resume.
         json["alteracoes"] = new JsonArray();

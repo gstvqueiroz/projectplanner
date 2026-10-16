@@ -40,6 +40,11 @@ Desde o Bloco 24, o assistente **altera o cronograma pelo chat**: pedir "monte o
 | Bloco 29: a IA das fotos (`IAnalistaDeFotos`, pedidos e sugestões, `AnalistaConformeConfiguracao`) | `src/ProjectPlanner.IA/AnaliseDeFotos.cs` |
 | Bloco 29: o Gemini olhando as fotos (`AnalistaGemini`) | `src/ProjectPlanner.IA/Gemini/` |
 | Bloco 29: as telas (Sugestões da IA, texto do relatório) | `FotosDoProjetoViewModel.IA.cs`, `RelatorioFotograficoViewModel.Texto.cs` |
+| Bloco 38: o consultor de orçamento (`IConsultorDeOrcamento`, `PedidoDeOrcamento`, `SugestaoDaIA`) | `src/ProjectPlanner.IA/ConsultaDeOrcamento.cs` |
+| Bloco 38: o Gemini sugerindo o orçamento (`ConsultorGemini`) | `src/ProjectPlanner.IA/Gemini/` |
+| Bloco 38: o pedido montado do projeto (candidatas, horas de equipe, ficha) e a volta para o domínio | `src/ProjectPlanner.App/Services/ConsultaDeOrcamento.cs` |
+| Bloco 38: conferir e aplicar as sugestões (`AplicacaoDeSugestoes`) | `src/ProjectPlanner.Core/Orcamento/SugestoesDeOrcamento.cs` |
+| Bloco 38: a aba Sugestões da IA | `OrcamentoViewModel.Sugestoes.cs`, `OrcamentoWindow` |
 
 `ProjectPlanner.IA` continua sem depender do domínio (Core): recebe o retrato já pronto. A rede (`System.Net.Http`)
 só aparece no namespace `ProjectPlanner.IA.Gemini`, e um teste garante isso.
@@ -214,6 +219,29 @@ fotos fica em torno de 20 mil tokens, alguns centavos de real com o `gemini-2.5-
 
 **Calibrar:** os testes usam uma IA simulada. A qualidade das legendas, do % e do texto só se vê com a chave e fotos de
 obra de verdade; ajuste as instruções em `AnalistaGemini` depois de testar.
+
+## A IA no orçamento (Bloco 38)
+
+`IConsultorDeOrcamento` usa a mesma chave e o mesmo modelo. Um pedido só, sem imagens: a obra (a ficha do assistente,
+como área e pavimentos), a base escolhida, o BDI, as tarefas (até 150, as sem preço ou sem quantidade primeiro) e os
+recursos por dia. Para cada tarefa o App manda até 10 **candidatas**: as composições da base com mais palavras do nome
+da tarefa (as do resumo valem a metade). A IA só pode escolher entre elas, e o preço vem sempre da base; sem candidata
+adequada, ela estima o custo por unidade (materiais e mão de obra, sem BDI), que entra como "Estimativa IA".
+
+Resposta: `{resumo, sugestoes: [{tipo, tarefa, recurso, codigo, descricao, unidade, valor, custoMateriais,
+custoMaoDeObra, justificativa}]}`, com `tipo` entre composicao, estimativa, quantidade, duracao, disponivel, bdi e
+alerta. Antes de virar sugestão, a resposta é conferida (`ConsultorGemini.Interpretar`): tipos dos grupos pedidos,
+tarefas e recursos do pedido, códigos só entre as candidatas, números válidos, uma de cada por tarefa. Na hora de
+aplicar, o domínio confere de novo (`AplicacaoDeSugestoes.Motivo`): a tarefa pode ter virado resumo, o contrato pode ter
+travado.
+
+**Pelo chat:** a resposta do assistente ganhou o campo opcional `orcamento` (o pedido resumido). Com ele, o App abre
+Projeto > Orçamento… na aba Sugestões da IA, já pedindo com esse foco. O retrato do cronograma leva o resumo do
+orçamento (até 200 serviços) para o assistente responder sobre custos.
+
+**Custo:** só texto; com 100 tarefas e 10 candidatas cada, cerca de 40 mil tokens de entrada, alguns centavos com o
+`gemini-2.5-flash`. **Calibrar:** a qualidade das escolhas e das estimativas só se vê com a chave e uma base SINAPI de
+verdade; ajuste `ConsultorGemini.Instrucoes` e a busca das candidatas (`TabelaDeReferencia.Candidatas`) depois de testar.
 
 ## O que ainda não existe (blocos futuros)
 

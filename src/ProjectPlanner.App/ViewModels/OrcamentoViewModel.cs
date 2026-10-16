@@ -18,7 +18,7 @@ public sealed record LinhaDoOrcamentoNaTela(LinhaDoOrcamento Linha)
     public string Codigo => Linha.SemComposicao ? "—" : Linha.Codigo;
     public string Fonte => Linha.SemComposicao ? "valor informado" : Linha.Fonte;
     public string Unidade => Linha.Unidade;
-    public string Quantidade => Linha.Quantidade is { } q ? Moeda.FormatarQuantidade(q) : "";
+    public string Quantidade => Linha.Quantidade is { } q ? (Linha.QuantidadeEstimada ? "≈ " : "") + Moeda.FormatarQuantidade(q) : "";
     public string CustoUnitario => Linha.CustoUnitario is { } c ? Moeda.Formatar(c) : "";
     public string PrecoUnitario => Linha.PrecoUnitario is { } p ? Moeda.Formatar(p) : "";
     public string Total => Moeda.Formatar(Linha.Total);
@@ -65,8 +65,11 @@ public sealed partial class OrcamentoViewModel : ViewModelBase
     private bool _carregando;
 
     /// <param name="mudou">Uma mudança no projeto, com o nome para o Desfazer.</param>
-    public OrcamentoViewModel(Cronograma cronograma, IDialogosService dialogos, IBibliotecaDeReferencias biblioteca, TimeProvider relogio, Action<string> mudou)
+    /// <param name="consultor">Bloco 38: a IA das sugestões; sem ela, a aba avisa que é preciso configurar o assistente.</param>
+    public OrcamentoViewModel(Cronograma cronograma, IDialogosService dialogos, IBibliotecaDeReferencias biblioteca, TimeProvider relogio, Action<string> mudou,
+        IA.IConsultorDeOrcamento? consultor = null)
     {
+        _consultor = consultor ?? new IA.ConsultorIndisponivel();
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(dialogos);
         ArgumentNullException.ThrowIfNull(biblioteca);
@@ -124,7 +127,12 @@ public sealed partial class OrcamentoViewModel : ViewModelBase
             new("Tarefas sem composição (valor informado)", Moeda.ComSimbolo(p.Informado)),
             new("Total do orçamento", Moeda.ComSimbolo(p.Total), true),
         ];
-        BasesUsadas = p.Bases.Count == 0 ? "" : "Preços: " + string.Join(", ", p.Bases);
+        BasesUsadas = string.Join(" · ", new[]
+        {
+            p.Bases.Count == 0 ? null : "Preços: " + string.Join(", ", p.Bases),
+            p.Servicos.Any(l => l.Fonte == ComposicaoAberta.FonteDaEstimativa) ? "Estimativa IA: preço estimado pela IA, sem composição de base" : null,
+            p.Servicos.Any(l => l.QuantidadeEstimada) ? "≈ quantidade estimada pela IA" : null,
+        }.OfType<string>());
         foreach (var nome in new[] { nameof(Linhas), nameof(Totais), nameof(BasesUsadas), nameof(SemServicos) })
             OnPropertyChanged(nome);
         AplicarCommand.NotifyCanExecuteChanged();
@@ -297,8 +305,8 @@ public sealed partial class OrcamentoViewModel : ViewModelBase
     {
         var c = TarefaEscolhida is { } t ? Orcamento.ComposicaoDe(t.Valor) : null;
         TextoDaComposicao = c is null ? "Sem composição." :
-            $"{c.Base.Fonte} {c.Codigo} — {c.Descricao} ({c.Unidade}) · {c.Base.Descricao} · custo {Moeda.ComSimbolo(c.CustoUnitario)}/{c.Unidade} · " +
-            $"preço com BDI {Moeda.ComSimbolo(Orcamento.PrecoUnitario(c))}/{c.Unidade}";
+            (c.EhEstimativa ? $"Estimativa da IA — {c.Descricao} ({c.Unidade}) · " : $"{c.Base.Fonte} {c.Codigo} — {c.Descricao} ({c.Unidade}) · {c.Base.Descricao} · ") +
+            $"custo {Moeda.ComSimbolo(c.CustoUnitario)}/{c.Unidade} · preço com BDI {Moeda.ComSimbolo(Orcamento.PrecoUnitario(c))}/{c.Unidade}";
         InsumosDaTarefa = c is null ? [] : [.. c.Insumos.Select(i => new InsumoNaTela(i))];
         OnPropertyChanged(nameof(TextoDaComposicao));
         OnPropertyChanged(nameof(InsumosDaTarefa));

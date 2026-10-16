@@ -22,7 +22,7 @@ public static class TextosDoOrcamento
     public static string[] Celulas(LinhaDoOrcamento l) =>
     [
         l.Edt, l.SemComposicao ? "" : l.Codigo, l.SemComposicao ? "informado" : l.Fonte, new string(' ', Math.Min(l.Nivel, 6) * 2) + l.Descricao, l.Unidade,
-        l.Quantidade is { } q ? Moeda.FormatarQuantidade(q) : "", l.CustoUnitario is { } c ? Moeda.Formatar(c) : "",
+        l.Quantidade is { } q ? (l.QuantidadeEstimada ? "≈ " : "") + Moeda.FormatarQuantidade(q) : "", l.CustoUnitario is { } c ? Moeda.Formatar(c) : "",
         l.PrecoUnitario is { } p ? Moeda.Formatar(p) : "", Moeda.Formatar(l.Total),
     ];
 
@@ -36,8 +36,33 @@ public static class TextosDoOrcamento
     }
 
     /// <summary>"Preços: SINAPI SP 09/2026 desonerado · BDI 25%".</summary>
+    /// <remarks>Bloco 38: com estimativas da IA, a legenda delas.</remarks>
     public static string Rodape(PlanilhaOrcamentaria p) =>
-        (p.Bases.Count == 0 ? "" : "Preços: " + string.Join(", ", p.Bases) + " · ") + Bdi(p.Configuracao);
+        (p.Bases.Count == 0 ? "" : "Preços: " + string.Join(", ", p.Bases) + " · ") + Bdi(p.Configuracao) +
+        (p.Servicos.Any(l => l.Fonte == ComposicaoAberta.FonteDaEstimativa) ? $" · {ComposicaoAberta.FonteDaEstimativa}: preço estimado pela IA, sem composição de base" : "") +
+        (p.Servicos.Any(l => l.QuantidadeEstimada) ? " · ≈ quantidade estimada pela IA" : "");
+
+    /// <summary>
+    /// Bloco 38: o orçamento no retrato do assistente: o resumo (bases, BDI, totais) e um serviço por linha. Vazio sem nenhum
+    /// serviço com composição.
+    /// </summary>
+    public static IReadOnlyList<string> ParaOAssistente(PlanilhaOrcamentaria p)
+    {
+        ArgumentNullException.ThrowIfNull(p);
+        var comComposicao = p.Servicos.Where(l => !l.SemComposicao).ToList();
+        if (comComposicao.Count == 0)
+            return [];
+        var linhas = new List<string>
+        {
+            $"{Rodape(p)} · custo direto {Moeda.ComSimbolo(p.CustoDireto)} · BDI {Moeda.ComSimbolo(p.ValorDoBdi)} · " +
+            $"valor informado (sem composição) {Moeda.ComSimbolo(p.Informado)} · total {Moeda.ComSimbolo(p.Total)}",
+        };
+        foreach (var l in comComposicao)
+            linhas.Add($"{l.Edt} {l.Descricao}: {l.Fonte} {l.Codigo} · " +
+                       (l.Quantidade is { } q ? $"{(l.QuantidadeEstimada ? "≈" : "")}{Moeda.FormatarQuantidade(q)} {l.Unidade}" : $"sem quantidade ({l.Unidade})") +
+                       $" × {Moeda.Formatar(l.PrecoUnitario ?? 0)} = {Moeda.Formatar(l.Total)}");
+        return linhas;
+    }
 
     /// <summary>Os serviços com composição, na ordem da planilha, com a composição de cada um.</summary>
     public static IEnumerable<(LinhaDoOrcamento Linha, ComposicaoAberta Composicao)> Analitica(PlanilhaOrcamentaria p, IReadOnlyDictionary<Guid, ComposicaoAberta> composicoes) =>

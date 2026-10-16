@@ -32,7 +32,7 @@
             <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
         </DockPanel>
 
-        <TabControl x:Name="Abas">
+        <TabControl x:Name="Abas" SelectedIndex="{Binding AbaEscolhida}">
             <!-- ===== Planilha ===== -->
             <TabItem Header="Planilha">
                 <DockPanel Margin="0,8,0,0">
@@ -158,6 +158,71 @@
                             <DataGridTextColumn Header="Base" Binding="{Binding Base.Descricao}" Width="*" />
                             <DataGridTextColumn Header="Insumos" Binding="{Binding Insumos}" Width="100" />
                             <DataGridTextColumn Header="Composições" Binding="{Binding Composicoes}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <!-- ===== Sugestões da IA (Bloco 38) ===== -->
+            <TabItem Header="Sugestões da IA">
+                <DockPanel Margin="0,8,0,0">
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8" Text="{Binding BaseDasSugestoes}" />
+                        <WrapPanel ItemSpacing="12" LineSpacing="6">
+                            <CheckBox x:Name="PedirComposicoes" Content="Composições e preços" IsChecked="{Binding PedirComposicoes}"
+                                      ToolTip.Tip="A composição da base para cada tarefa; sem uma adequada, um preço estimado pela IA" />
+                            <CheckBox x:Name="PedirQuantidades" Content="Quantidades" IsChecked="{Binding PedirQuantidades}"
+                                      ToolTip.Tip="Estimadas pela ficha da obra (área, pavimentos…) e pelas notas, com a conta na justificativa" />
+                            <CheckBox x:Name="PedirRevisao" Content="Revisão e BDI" IsChecked="{Binding PedirRevisao}"
+                                      ToolTip.Tip="Serviços que parecem faltar, unidades incoerentes, quantidades fora do padrão e o BDI" />
+                            <CheckBox x:Name="PedirEquipes" Content="Equipes e durações" IsChecked="{Binding PedirEquipes}"
+                                      ToolTip.Tip="Quantos profissionais e equipamentos por dia, e durações coerentes com as horas das composições" />
+                        </WrapPanel>
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
+                                <Button x:Name="Pedir" Classes="accent" Content="Pedir sugestões" Command="{Binding PedirSugestoesCommand}" />
+                                <Button x:Name="Cancelar" Content="Cancelar" Command="{Binding CancelarConsultaCommand}" IsVisible="{Binding Consultando}" />
+                            </StackPanel>
+                            <TextBox x:Name="Foco" Text="{Binding Foco}" PlaceholderText="Foco (opcional): por exemplo, só as vedações; ou a casa tem 120 m² em dois pavimentos" />
+                        </DockPanel>
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding Consultando}" />
+                        <TextBlock x:Name="TextoDaConsulta" Text="{Binding TextoDaConsulta}" TextWrapping="Wrap" FontSize="12" />
+                    </StackPanel>
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <Button x:Name="AplicarSugestoes" DockPanel.Dock="Right" Classes="accent" Content="Aplicar marcadas" Command="{Binding AplicarSugestoesCommand}"
+                                ToolTip.Tip="As marcadas entram no projeto num passo só do Desfazer" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Marcar todas" Command="{Binding MarcarTodasCommand}" />
+                            <Button Content="Desmarcar" Command="{Binding DesmarcarTodasCommand}" />
+                            <TextBlock VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="8,0,0,0"
+                                       Text="Os preços das composições são sempre os da base; &quot;Estimativa IA&quot; e &quot;≈&quot; marcam o que a IA estimou." />
+                        </StackPanel>
+                    </DockPanel>
+                    <DataGrid x:Name="ListaDeSugestoes" ItemsSource="{Binding Sugestoes}" AutoGenerateColumns="False" CanUserSortColumns="False"
+                              GridLinesVisibility="Horizontal">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="" Width="34">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:SugestaoNaTela">
+                                        <CheckBox IsChecked="{Binding Aceita}" IsEnabled="{Binding PodeAceitar}" IsVisible="{Binding !EhAlerta}"
+                                                  HorizontalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Tipo" Binding="{Binding Grupo}" Width="100" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Tarefa ou recurso" Binding="{Binding Alvo}" Width="230" IsReadOnly="True" />
+                            <DataGridTemplateColumn Header="Sugestão" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:SugestaoNaTela">
+                                        <StackPanel Margin="4,3" Spacing="1">
+                                            <TextBlock Text="{Binding Texto}" TextWrapping="Wrap" FontSize="12" />
+                                            <TextBlock Text="{Binding Justificativa}" TextWrapping="Wrap" FontSize="11" Opacity="0.7"
+                                                       IsVisible="{Binding Justificativa, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <TextBlock Text="{Binding Motivo, StringFormat='Não dá para aplicar: {0}'}" TextWrapping="Wrap" FontSize="11"
+                                                       Foreground="{DynamicResource TextoDeErro}" IsVisible="{Binding Motivo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>

@@ -3,6 +3,25 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.38.0
+
+Bloco 38: a IA no orçamento.
+
+- Projeto > Orçamento…, aba Sugestões da IA: a IA sugere, para você conferir e aceitar, as composições de cada tarefa
+  (escolhidas entre as candidatas que o programa acha na base importada pelas palavras do nome da tarefa; os preços
+  vêm sempre da base), um preço estimado quando a base não tem o serviço ("Estimativa IA", em materiais e mão de obra,
+  sem virar recursos), as quantidades (pela ficha da obra, como área e pavimentos, com a conta na justificativa,
+  marcadas com "≈" até você mudar), a revisão (serviços que parecem faltar, unidades, quantidades fora do padrão, o
+  BDI) e as equipes (quantos por dia de cada profissional e equipamento, e durações coerentes com as horas das
+  composições).
+- Escolha o que pedir e, se quiser, um foco ("só as vedações"). A lista mostra o porquê de cada sugestão; os alertas
+  são só para ler, e as que não valem (código fora da base, tarefa que virou resumo) aparecem com o motivo. Aplicar
+  marcadas é um passo do Desfazer.
+- Pelo chat: peça "orce as vedações" ou "revise o orçamento" e o assistente abre o orçamento nessa aba, já pedindo. O
+  assistente também passa a ver o resumo do orçamento para responder sobre custos.
+- O PDF, o Word e o Excel do orçamento marcam o que a IA estimou. Um arquivo com quantidades estimadas pela IA não
+  abre na 0.37 (os outros continuam abrindo).
+
 ## 0.37.0
 
 Bloco 33: orçamento com a SINAPI (a versão segue a ordem de entrega).
@@ -292,6 +311,10 @@ começar):
   relatórios.
 - Bloco 32 (feito, na 0.35): recursos, atribuições, custo orçado e margem, e o catálogo pessoal.
 - Bloco 34 (feito, na 0.36): uso de recursos (histograma, superalocações, nivelamento sugerido e necessidades por
-  período). Depois, composições e orçamento (33) e, se quiser, a IA para custos e recursos (38).
+  período).
+- Bloco 33 (feito, na 0.37): orçamento com a SINAPI (bases, composições, BDI, planilha sintética e analítica, aplicar aos
+  valores e recursos).
+- Bloco 38 (feito, na 0.38): a IA no orçamento (composições, preços estimados, quantidades, revisão e equipes, também
+  pelo chat).
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

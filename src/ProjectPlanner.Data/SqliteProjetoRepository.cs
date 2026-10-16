@@ -318,7 +318,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             contexto.Orcamento.Add(new OrcamentoRegistro
             {
                 ProjetoId = cronograma.Id,
-                Versao = FormatoDoOrcamento.Versao,
+                Versao = FormatoDoOrcamento.VersaoDe(cronograma),
                 Dados = FormatoDoOrcamento.Serializar(cronograma),
             });
 
@@ -452,7 +452,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
         // O orçamento (Bloco 33).
         if (contexto.Orcamento.AsNoTracking().FirstOrDefault() is { } orcamento)
         {
-            if (orcamento.Versao != FormatoDoOrcamento.Versao)
+            if (!FormatoDoOrcamento.Conhece(orcamento.Versao))
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o orçamento num formato desconhecido.");
             FormatoDoOrcamento.Ler(orcamento.Dados, cronograma);
         }

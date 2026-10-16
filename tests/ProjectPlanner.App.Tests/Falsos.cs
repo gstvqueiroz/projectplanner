@@ -458,9 +458,13 @@ public sealed class Ambiente
     /// <summary>Bloco 33: as bases de preços importadas.</summary>
     public Services.BibliotecaDeReferenciasEmMemoria Biblioteca { get; } = new();
 
+    /// <summary>Bloco 38: a IA das sugestões de orçamento.</summary>
+    public ConsultorFalso Consultor { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
-            analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca);
+            analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
+            consultorDeOrcamento: Consultor);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -671,6 +675,8 @@ public sealed class ProvedorFalso : IProvedorIA
 
     public IAnalistaDeFotos CriarAnalista(string chave, string modelo) => new AnalistaFalso();
 
+    public IConsultorDeOrcamento CriarConsultor(string chave, string modelo) => new ConsultorFalso();
+
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
         Testes.Add((chave, modelo));
@@ -678,6 +684,32 @@ public sealed class ProvedorFalso : IProvedorIA
             await segurado.Task.WaitAsync(cancelamento);
         if (ErroNoTeste is not null)
             throw ErroNoTeste;
+    }
+}
+
+/// <summary>Bloco 38: o consultor de orçamento nos testes: guarda os pedidos e responde o que o teste mandar (sem rede).</summary>
+public sealed class ConsultorFalso : IConsultorDeOrcamento
+{
+    public bool EstaConfigurado { get; set; } = true;
+
+    public List<PedidoDeOrcamento> Pedidos { get; } = [];
+
+    public Exception? Erro { get; set; }
+
+    /// <summary>Segura a resposta até o teste liberar (para ver a tela "trabalhando" e o cancelar).</summary>
+    public TaskCompletionSource? Segurar { get; set; }
+
+    public Func<PedidoDeOrcamento, RespostaDoConsultor> Responder { get; set; } = _ => new RespostaDoConsultor("Nada a sugerir.", []);
+
+    public async Task<RespostaDoConsultor> SugerirAsync(PedidoDeOrcamento pedido, CancellationToken cancelamento)
+    {
+        Pedidos.Add(pedido);
+        if (Segurar is { } segurar)
+            await segurar.Task.WaitAsync(cancelamento);
+        cancelamento.ThrowIfCancellationRequested();
+        if (Erro is not null)
+            throw Erro;
+        return Responder(pedido);
     }
 }
 

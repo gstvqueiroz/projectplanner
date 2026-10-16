@@ -8,7 +8,11 @@ public partial class OrcamentoWindow : Window
 {
     public OrcamentoWindow() => InitializeComponent();
 
-    public OrcamentoWindow(OrcamentoViewModel orcamento) : this() => DataContext = orcamento;
+    public OrcamentoWindow(OrcamentoViewModel orcamento) : this()
+    {
+        DataContext = orcamento;
+        Closed += (_, _) => orcamento.Fechando(); // a consulta à IA em andamento é cancelada
+    }
 
     private void Fechar(object? sender, RoutedEventArgs e) => Close();
 }

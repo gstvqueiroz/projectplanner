@@ -172,11 +172,16 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
 
     // ---- Comum ----
 
-    private async Task<JsonElement> ChamarAsync(JsonObject corpo, CancellationToken cancelamento)
+    private Task<JsonElement> ChamarAsync(JsonObject corpo, CancellationToken cancelamento) =>
+        ChamarJsonAsync(_http, _chave, Modelo, corpo, "A resposta do Gemini ficou grande demais e veio cortada. Tente com menos fotos.", cancelamento);
+
+    /// <summary>Uma chamada que responde em JSON (o objeto da raiz); também a do consultor de orçamento (Bloco 38).</summary>
+    internal static async Task<JsonElement> ChamarJsonAsync(HttpClient http, string chave, string modelo, JsonObject corpo, string seCortada,
+        CancellationToken cancelamento)
     {
-        using var mensagem = ChamadaGemini.Pedido(HttpMethod.Post, $"models/{Modelo}:generateContent", _chave);
+        using var mensagem = ChamadaGemini.Pedido(HttpMethod.Post, $"models/{modelo}:generateContent", chave);
         mensagem.Content = new StringContent(corpo.ToJsonString(), Encoding.UTF8, "application/json");
-        using var resposta = await ChamadaGemini.ExecutarAsync(_http, mensagem, _chave, Modelo, cancelamento);
+        using var resposta = await ChamadaGemini.ExecutarAsync(http, mensagem, chave, modelo, cancelamento);
         var (texto, fim) = AssistenteGemini.LerResposta(resposta.RootElement);
         try
         {
@@ -188,7 +193,7 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
         catch (JsonException ex)
         {
             throw new ErroDoAssistenteException(fim == "MAX_TOKENS"
-                ? "A resposta do Gemini ficou grande demais e veio cortada. Tente com menos fotos."
+                ? seCortada
                 : "O Gemini mandou uma resposta que não deu para entender. Tente de novo.", ex);
         }
     }
@@ -244,19 +249,19 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
         ["required"] = new JsonArray(lista),
     };
 
-    private static JsonObject Tipo(string tipo) => new() { ["type"] = tipo };
+    internal static JsonObject Tipo(string tipo) => new() { ["type"] = tipo };
 
-    private static JsonObject Nota(string texto) => new() { ["text"] = texto };
+    internal static JsonObject Nota(string texto) => new() { ["text"] = texto };
 
-    private static IEnumerable<JsonElement> Lista(JsonElement raiz, string nome) =>
+    internal static IEnumerable<JsonElement> Lista(JsonElement raiz, string nome) =>
         raiz.TryGetProperty(nome, out var lista) && lista.ValueKind == JsonValueKind.Array
             ? lista.EnumerateArray().Where(i => i.ValueKind == JsonValueKind.Object)
             : [];
 
-    private static string? Texto(JsonElement objeto, string nome) =>
+    internal static string? Texto(JsonElement objeto, string nome) =>
         objeto.TryGetProperty(nome, out var valor) && valor.ValueKind == JsonValueKind.String ? valor.GetString() : null;
 
-    private static string? Limitar(string? texto, int maximo)
+    internal static string? Limitar(string? texto, int maximo)
     {
         var limpo = texto?.Trim();
         if (string.IsNullOrEmpty(limpo))

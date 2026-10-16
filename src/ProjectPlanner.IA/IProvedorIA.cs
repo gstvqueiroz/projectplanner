@@ -23,6 +23,9 @@ public interface IProvedorIA
     /// <summary>Bloco 29: a IA que olha as fotos (legendas, % pelas fotos, texto do relatório), com a mesma chave e modelo.</summary>
     IAnalistaDeFotos CriarAnalista(string chave, string modelo);
 
+    /// <summary>Bloco 38: a IA que sugere o orçamento, com a mesma chave e modelo.</summary>
+    IConsultorDeOrcamento CriarConsultor(string chave, string modelo);
+
     /// <summary>Confere se a chave funciona com o modelo, sem gastar a cota de mensagens.</summary>
     /// <exception cref="ArgumentException">Chave vazia ou com espaços, ou nome de modelo inválido.</exception>
     /// <exception cref="ErroDoAssistenteException">A chave não vale, o modelo não existe ou não há conexão.</exception>

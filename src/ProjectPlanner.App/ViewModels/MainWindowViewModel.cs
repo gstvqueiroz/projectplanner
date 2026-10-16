@@ -41,8 +41,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IDialogosService dialogos, TimeProvider relogio, IPreferenciasColunas preferenciasColunas,
         IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens,
         IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null,
-        IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null)
+        IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null,
+        IConsultorDeOrcamento? consultorDeOrcamento = null)
     {
+        _consultor = consultorDeOrcamento ?? new ConsultorIndisponivel();
         _biblioteca = bibliotecaDeReferencias ?? new BibliotecaDeReferenciasEmMemoria();
         _catalogoDeRecursos = catalogoDeRecursos ?? new CatalogoDeRecursosEmMemoria();
         _preferenciasRelatorio = preferenciasRelatorio ?? new PreferenciasRelatorioEmMemoria();
@@ -103,7 +105,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             linha.Tarefa.Id)).ToList();
         var inicio = DateOnly.FromDateTime(_cronograma.DataInicio);
         var termino = TerminoProjeto is { } fim ? DateOnly.FromDateTime(fim) : tarefas.Select(t => t.Termino).DefaultIfEmpty(inicio).Max();
-        return new ContextoDoProjeto(_cronograma.Nome, inicio, termino, DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), tarefas);
+        return new ContextoDoProjeto(_cronograma.Nome, inicio, termino, DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), tarefas,
+            ProjectPlanner.Relatorios.TextosDoOrcamento.ParaOAssistente(_cronograma.Orcamento.Planilha()));
     }
 
     /// <summary>Todas as linhas, na ordem do cronograma: cada resumo seguido das suas subtarefas.</summary>

@@ -10,7 +10,8 @@ namespace ProjectPlanner.App.Services;
 /// <remarks>
 /// O tema (Bloco 25) entrou como um campo a mais, <c>"tema": "sistema" | "claro" | "escuro"</c>, sem mudar a versão do
 /// formato: um arquivo sem ele (das versões anteriores) vale como "sistema", um valor desconhecido também, e as versões
-/// anteriores do programa ignoram o campo.
+/// anteriores do programa ignoram o campo. Bloco 39: do mesmo jeito, <c>"ocultosNaBarra": ["novo", …]</c>, os botões tirados
+/// da barra de ícones.
 /// </remarks>
 public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferenciasInterface
 {
@@ -20,6 +21,7 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
     public ArquivoPreferenciasInterface() : this(CaminhoPadrao())
@@ -39,7 +41,8 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
                 return null;
             var arquivo = JsonSerializer.Deserialize<Arquivo>(File.ReadAllText(Caminho), Opcoes);
             return arquivo is { Versao: VersaoDoFormato }
-                ? new PreferenciasInterface(arquivo.MostrarAssistente, TemaDoTexto(arquivo.Tema))
+                ? new PreferenciasInterface(arquivo.MostrarAssistente, TemaDoTexto(arquivo.Tema),
+                    arquivo.OcultosNaBarra is { } ocultos ? [.. ocultos.Where(o => !string.IsNullOrWhiteSpace(o))] : null)
                 : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
@@ -55,7 +58,8 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Caminho)!);
             File.WriteAllText(temporario, JsonSerializer.Serialize(
-                new Arquivo(VersaoDoFormato, preferencias.MostrarAssistente, TextoDoTema(preferencias.Tema)), Opcoes));
+                new Arquivo(VersaoDoFormato, preferencias.MostrarAssistente, TextoDoTema(preferencias.Tema),
+                    preferencias.OcultosNaBarra is { Count: > 0 } ocultos ? [.. ocultos] : null), Opcoes));
             File.Move(temporario, Caminho, overwrite: true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -78,5 +82,5 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
         _ => TemaDaInterface.Sistema,
     };
 
-    private sealed record Arquivo(int Versao, bool MostrarAssistente, string? Tema = null);
+    private sealed record Arquivo(int Versao, bool MostrarAssistente, string? Tema = null, List<string>? OcultosNaBarra = null);
 }

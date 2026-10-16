@@ -106,17 +106,17 @@
                     <MenuItem Header="Seleção" ToggleType="CheckBox" IsChecked="{Binding MostrarSelecao, Mode=TwoWay}"
                               ToolTip.Tip="Destacar a tarefa selecionada na grid e no Gantt" />
                     <MenuItem Header="Caminho crítico" ToggleType="CheckBox"
-                              IsChecked="{Binding Gantt.MostrarCaminhoCritico, Mode=TwoWay}"
+                              IsChecked="{Binding Gantt.MostrarCaminhoCritico, Mode=OneWay}" Command="{Binding AlternarCaminhoCriticoCommand}"
                               ToolTip.Tip="Pintar de vermelho as tarefas e vínculos críticos no Gantt" />
                     <MenuItem Header="Fotos" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFotos, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar a câmera ao lado das tarefas que têm fotos (clique nela para ver a galeria)" />
                     <MenuItem Header="Folga" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarFolga, Mode=TwoWay}"
                               ToolTip.Tip="Mostrar a linha cinza da folga total, abaixo da barra de cada tarefa" />
                     <!-- Bloco 31 -->
-                    <MenuItem Header="Linha de base" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarLinhaDeBase, Mode=TwoWay}"
+                    <MenuItem Header="Linha de base" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarLinhaDeBase, Mode=OneWay}" Command="{Binding AlternarLinhaDeBaseCommand}"
                               ToolTip.Tip="Mostrar no Gantt a barra cinza da linha de base em uso, abaixo da barra atual" />
                     <!-- Bloco 25 (C1) -->
-                    <MenuItem Header="Linha Hoje" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarHoje, Mode=TwoWay}"
+                    <MenuItem Header="Linha Hoje" ToggleType="CheckBox" IsChecked="{Binding Gantt.MostrarHoje, Mode=OneWay}" Command="{Binding AlternarLinhaHojeCommand}"
                               ToolTip.Tip="A linha tracejada do dia de hoje no Gantt" />
                     <Separator />
                     <!-- Modos de visualização (Bloco 16): quais painéis aparecem. Só da sessão. -->
@@ -136,6 +136,8 @@
                     <!-- Mostrar/ocultar colunas e restaurar o layout padrão. Ordem e largura mudam arrastando os
                          cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
                     <MenuItem x:Name="MenuColunas" Header="Colunas" />
+                    <!-- Bloco 39: quais botões a barra de ícones mostra (interface.json); montado em MainWindow.axaml.cs. -->
+                    <MenuItem x:Name="MenuBarra" Header="Barra de ícones" />
                     <Separator />
                     <!-- Bloco 25 (C7) -->
                     <MenuItem Header="Resumo do projeto…" Command="{Binding ResumoDoProjetoCommand}"
@@ -247,82 +249,161 @@
         <Border DockPanel.Dock="Top" Padding="4,2" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <DockPanel>
-                <StackPanel x:Name="AcessoRapido" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <Button Classes="acessoRapido" Command="{Binding SalvarProjetoCommand}" ToolTip.Tip="Salvar"
+                <!-- Bloco 39: o que não cabe na largura vai para este menu (MainWindow.axaml.cs, AjustarBarra). -->
+                <Button x:Name="BotaoMais" DockPanel.Dock="Right" Classes="acessoRapido" Content="»" FontSize="15" Padding="8,2"
+                        IsVisible="False" ToolTip.Tip="Mais botões (os que não cabem na largura da janela)" AutomationProperties.Name="Mais botões">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight" />
+                    </Button.Flyout>
+                </Button>
+                <!-- Bloco 39: cada botão tem o id (Tag) do catálogo em BarraDeIconesViewModel; Exibir > Barra de ícones escolhe quais
+                     aparecem, e os divisores entre os grupos aparecem só entre botões visíveis. -->
+                <StackPanel x:Name="AcessoRapido" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" ClipToBounds="True">
+                    <Button Tag="novo" Classes="acessoRapido" Command="{Binding NovoProjetoCommand}" ToolTip.Tip="Novo projeto"
+                            AutomationProperties.Name="Novo projeto">
+                        <!-- Folha com a ponta dobrada e um + -->
+                        <Path Data="M3.5,1.5 H9.5 L12.5,4.5 V14.5 H3.5 Z M9.5,1.5 V4.5 H12.5 M8,7.5 V12 M5.75,9.75 H10.25" />
+                    </Button>
+                    <Button Tag="abrir" Classes="acessoRapido" Command="{Binding AbrirProjetoCommand}" ToolTip.Tip="Abrir projeto"
+                            AutomationProperties.Name="Abrir projeto">
+                        <!-- Pasta aberta -->
+                        <Path Data="M1.5,13 V3.5 A1,1 0 0 1 2.5,2.5 H6 L7.5,4 H12 A1,1 0 0 1 13,5 V7 M1.5,13 L3.5,7.5 H15 L13,13 Z" />
+                    </Button>
+                    <Button Tag="salvar" Classes="acessoRapido" Command="{Binding SalvarProjetoCommand}" ToolTip.Tip="Salvar"
                             AutomationProperties.Name="Salvar">
                         <!-- Disquete -->
                         <Path Data="M2.5,1.5 H11 L14.5,5 V14.5 H1.5 V2.5 Z M4.5,1.5 V5.5 H10.5 V1.5 M4.5,14.5 V9.5 H11.5 V14.5" />
                     </Button>
                     <Border Classes="divisor" />
                     <!-- Bloco 30: a dica mostra o nome da alteração (MainWindow.axaml.cs, MostrarAtalhos). -->
-                    <Button x:Name="BotaoDesfazer" Classes="acessoRapido" Command="{Binding DesfazerAlteracaoCommand}"
+                    <Button x:Name="BotaoDesfazer" Tag="desfazer" Classes="acessoRapido" Command="{Binding DesfazerAlteracaoCommand}"
                             ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Desfazer">
                         <!-- Seta curva para a esquerda -->
                         <Path Data="M5,3 L1.5,6.5 L5,10 M1.5,6.5 H10 A4.5,4.5 0 0 1 10,15.5 H6" />
                     </Button>
-                    <Button x:Name="BotaoRefazer" Classes="acessoRapido" Command="{Binding RefazerAlteracaoCommand}"
+                    <Button x:Name="BotaoRefazer" Tag="refazer" Classes="acessoRapido" Command="{Binding RefazerAlteracaoCommand}"
                             ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Refazer">
                         <!-- Seta curva para a direita -->
                         <Path Data="M11,3 L14.5,6.5 L11,10 M14.5,6.5 H6 A4.5,4.5 0 0 0 6,15.5 H10" />
                     </Button>
                     <Border Classes="divisor" />
-                    <Button Classes="acessoRapido" Command="{Binding AdicionarTarefaCommand}" ToolTip.Tip="Adicionar tarefa"
+                    <Button Tag="adicionar" Classes="acessoRapido" Command="{Binding AdicionarTarefaCommand}" ToolTip.Tip="Adicionar tarefa"
                             AutomationProperties.Name="Adicionar tarefa">
                         <!-- Barra de tarefa com um + -->
                         <Path Data="M1,6.5 H8.5 V9.5 H1 Z M12.5,4 V12 M8.5,8 H16" />
                     </Button>
-                    <Button Classes="acessoRapido" Command="{Binding RemoverTarefaCommand}"
+                    <Button Tag="remover" Classes="acessoRapido" Command="{Binding RemoverTarefaCommand}"
                             ToolTip.Tip="Remover tarefa (a selecionada)" AutomationProperties.Name="Remover tarefa">
                         <!-- Barra de tarefa com um − -->
                         <Path Data="M1,6.5 H8.5 V9.5 H1 Z M10,8 H15.5" />
                     </Button>
-                    <Border Classes="divisor" />
-                    <Button Classes="acessoRapido" Command="{Binding PromoverCommand}"
+                    <Button Tag="promover" Classes="acessoRapido" Command="{Binding PromoverCommand}"
                             ToolTip.Tip="Promover: sobe a tarefa um nível (Alt+Shift+←)" AutomationProperties.Name="Promover">
                         <!-- Seta para a esquerda, com as linhas de um recuo -->
                         <Path Data="M15,8 H3.5 M7.5,4 L3.5,8 L7.5,12 M1,2 V14" />
                     </Button>
-                    <Button Classes="acessoRapido" Command="{Binding RebaixarCommand}"
+                    <Button Tag="rebaixar" Classes="acessoRapido" Command="{Binding RebaixarCommand}"
                             ToolTip.Tip="Rebaixar: desce a tarefa um nível, para dentro da de cima (Alt+Shift+→)"
                             AutomationProperties.Name="Rebaixar">
                         <!-- Seta para a direita, com a linha de um recuo -->
                         <Path Data="M1,2 V14 M4,8 H15 M11,4 L15,8 L11,12" />
                     </Button>
-                    <Border Classes="divisor" />
-                    <Button Classes="acessoRapido" Command="{Binding RecalcularCronogramaCommand}" ToolTip.Tip="Recalcular cronograma"
+                    <Button Tag="recalcular" Classes="acessoRapido" Command="{Binding RecalcularCronogramaCommand}" ToolTip.Tip="Recalcular cronograma"
                             AutomationProperties.Name="Recalcular cronograma">
                         <!-- Setas em círculo -->
                         <Path Data="M13.5,8 A5.5,5.5 0 1 1 11.9,4.1 M12.2,1.2 L12,4.3 L8.9,4.2" />
                     </Button>
-                    <Border Classes="divisor" />
                     <!-- Bloco 25 (F1): a galeria da tarefa selecionada, com quantas fotos ela tem; desabilitado sem seleção. -->
-                    <Button x:Name="BotaoFotos" Classes="acessoRapido" Command="{Binding GerenciarFotosCommand}"
+                    <Button x:Name="BotaoFotos" Tag="fotos" Classes="acessoRapido" Command="{Binding GerenciarFotosCommand}"
                             ToolTip.ShowOnDisabled="True" AutomationProperties.Name="Fotos da tarefa">
                         <!-- Câmera. O número de fotos vai por cima, num adorno (ver MainWindow.axaml.cs, ContadorDeFotos). -->
                         <Path Data="M1.5,5 A1,1 0 0 1 2.5,4 H5 L6.2,2.3 H9.8 L11,4 H13.5 A1,1 0 0 1 14.5,5 V12.5 A1,1 0 0 1 13.5,13.5 H2.5 A1,1 0 0 1 1.5,12.5 Z M8,6.2 A2.6,2.6 0 1 0 8,11.4 A2.6,2.6 0 1 0 8,6.2" />
                     </Button>
+                    <Button Tag="recursosDaTarefa" Classes="acessoRapido" Command="{Binding RecursosDaTarefaCommand}"
+                            ToolTip.Tip="Recursos da tarefa: profissionais, equipamentos e materiais da selecionada, com o custo orçado"
+                            AutomationProperties.Name="Recursos da tarefa">
+                        <!-- Pessoa -->
+                        <Path Data="M8,1.5 A2.75,2.75 0 1 0 8,7 A2.75,2.75 0 1 0 8,1.5 M2.5,14.5 A5.5,5.5 0 0 1 13.5,14.5" />
+                    </Button>
+                    <Border Classes="divisor" />
+                    <Button Tag="irParaTarefa" Classes="acessoRapido" Command="{Binding IrParaTarefaCommand}"
+                            ToolTip.Tip="Ir para a tarefa: trazer a selecionada para a vista na grid e no Gantt" AutomationProperties.Name="Ir para a tarefa">
+                        <!-- Mira -->
+                        <Path Data="M8,3 A5,5 0 1 0 8,13 A5,5 0 1 0 8,3 M8,0.5 V4.5 M8,11.5 V15.5 M0.5,8 H4.5 M11.5,8 H15.5" />
+                    </Button>
+                    <Button Tag="linhaDeBase" Classes="acessoRapido" Command="{Binding SalvarLinhaDeBaseCommand}"
+                            ToolTip.Tip="Salvar linha de base: guardar o cronograma de agora para comparar com o realizado"
+                            AutomationProperties.Name="Salvar linha de base">
+                        <!-- Barra com a linha de base embaixo e um alfinete -->
+                        <Path Data="M1.5,3 H10.5 V6.5 H1.5 Z M1.5,10.5 H14.5 M1.5,13.5 H10.5 M13,2 V7.5 M11.5,3.5 H14.5" />
+                    </Button>
+                    <Border Classes="divisor" />
+                    <Button Tag="relatorio" Classes="acessoRapido" Command="{Binding RelatorioFotograficoCommand}"
+                            ToolTip.Tip="Relatório fotográfico: as fotos do período em PDF ou Word" AutomationProperties.Name="Relatório fotográfico">
+                        <!-- Folha com uma foto (montanha e sol) e linhas de texto -->
+                        <Path Data="M3,1.5 H13 V14.5 H3 Z M5,9 L7,6.5 L9,8.5 L10,7.5 L11,9 M5,11.5 H11 M5,13 H9 M9.8,3.6 A0.8,0.8 0 1 0 9.8,5.2 A0.8,0.8 0 1 0 9.8,3.6" />
+                    </Button>
+                    <Button Tag="fotosDoProjeto" Classes="acessoRapido" Command="{Binding FotosDoProjetoCommand}"
+                            ToolTip.Tip="Fotos do projeto: a linha do tempo, a importação em lote e os locais da obra" AutomationProperties.Name="Fotos do projeto">
+                        <!-- Quatro fotos em grade -->
+                        <Path Data="M1.5,1.5 H7 V7 H1.5 Z M9,1.5 H14.5 V7 H9 Z M1.5,9 H7 V14.5 H1.5 Z M9,9 H14.5 V14.5 H9 Z" />
+                    </Button>
+                    <Button Tag="medicoes" Classes="acessoRapido" Command="{Binding MedicoesCommand}"
+                            ToolTip.Tip="Medições: os boletins, os aditivos e o plano de medições" AutomationProperties.Name="Medições">
+                        <!-- Prancheta com um visto -->
+                        <Path Data="M4.5,2.5 H2.5 V15 H13.5 V2.5 H11.5 M5.5,1 H10.5 V4 H5.5 Z M5,9.5 L7,11.5 L11,7.5" />
+                    </Button>
+                    <Button Tag="orcamento" Classes="acessoRapido" Command="{Binding OrcamentoCommand}"
+                            ToolTip.Tip="Orçamento: a planilha com as composições da SINAPI, o BDI e as sugestões da IA" AutomationProperties.Name="Orçamento">
+                        <!-- Calculadora -->
+                        <Path Data="M3,1.5 H13 V14.5 H3 Z M5,3.5 H11 V6 H5 Z M5.5,8.5 H6 M8,8.5 H8.5 M10.5,8.5 H11 M5.5,10.75 H6 M8,10.75 H8.5 M10.5,10.75 H11 M5.5,13 H11" />
+                    </Button>
+                    <Button Tag="indicadores" Classes="acessoRapido" Command="{Binding IndicadoresCommand}"
+                            ToolTip.Tip="Indicadores: valor agregado (IDP e IDC), Curva S, etapas e atrasos" AutomationProperties.Name="Indicadores">
+                        <!-- Velocímetro -->
+                        <Path Data="M1.5,12 A6.5,6.5 0 0 1 14.5,12 Z M8,12 L11,7 M4,9.5 L5,10.1 M8,6.5 V7.7 M12,9.5 L11,10.1" />
+                    </Button>
                     <Border Classes="divisor" />
                     <!-- Modos de visualização: o do modo atual fica marcado (classe ativo). -->
-                    <Button Classes="acessoRapido" Classes.ativo="{Binding EhDividido}"
+                    <Button Tag="dividido" Classes="acessoRapido" Classes.ativo="{Binding EhDividido}"
                             Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Dividido}"
                             ToolTip.Tip="Dividido: tabela e Gantt lado a lado" AutomationProperties.Name="Dividido">
                         <!-- Retângulo dividido ao meio -->
                         <Path Data="M1.5,2.5 H14.5 V13.5 H1.5 Z M7,2.5 V13.5" />
                     </Button>
-                    <Button Classes="acessoRapido" Classes.ativo="{Binding EhSomenteTabela}"
+                    <Button Tag="somenteTabela" Classes="acessoRapido" Classes.ativo="{Binding EhSomenteTabela}"
                             Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteTabela}"
                             ToolTip.Tip="Somente Tabela: a grid de tarefas na largura toda" AutomationProperties.Name="Somente Tabela">
                         <!-- Tabela -->
                         <Path Data="M1.5,2.5 H14.5 V13.5 H1.5 Z M1.5,6 H14.5 M1.5,9.75 H14.5 M5.5,2.5 V13.5" />
                     </Button>
-                    <Button Classes="acessoRapido" Classes.ativo="{Binding EhSomenteGantt}"
+                    <Button Tag="somenteGantt" Classes="acessoRapido" Classes.ativo="{Binding EhSomenteGantt}"
                             Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteGantt}"
                             ToolTip.Tip="Somente Gantt: o Gantt na largura toda" AutomationProperties.Name="Somente Gantt">
                         <!-- Barras em escada -->
                         <Path Data="M1.5,3.5 H7 M5,8 H11 M9.5,12.5 H14.5" StrokeThickness="2.4" />
                     </Button>
+                    <!-- Bloco 39: as opções do Gantt; o botão fica marcado quando ligada (as mesmas de Exibir). -->
+                    <Button Tag="caminhoCritico" Classes="acessoRapido" Classes.ativo="{Binding Gantt.MostrarCaminhoCritico}"
+                            Command="{Binding AlternarCaminhoCriticoCommand}"
+                            ToolTip.Tip="Caminho crítico: pintar de vermelho as tarefas e vínculos críticos no Gantt" AutomationProperties.Name="Caminho crítico">
+                        <!-- Barras ligadas por um vínculo com seta -->
+                        <Path Data="M1.5,3 H7 V5 H1.5 Z M4.5,5 V10.5 H8.5 M6.5,8.5 L8.5,10.5 L6.5,12.5 M9,9.5 H14.5 V11.5 H9 Z" />
+                    </Button>
+                    <Button Tag="linhaDeBaseNoGantt" Classes="acessoRapido" Classes.ativo="{Binding Gantt.MostrarLinhaDeBase}"
+                            Command="{Binding AlternarLinhaDeBaseCommand}"
+                            ToolTip.Tip="Linha de base no Gantt: a barra cinza da linha de base, abaixo da barra atual" AutomationProperties.Name="Linha de base no Gantt">
+                        <!-- Barra com a linha de base tracejada embaixo -->
+                        <Path Data="M2,3.5 H14 V7.5 H2 Z M2,11.5 H4.5 M6.75,11.5 H9.25 M11.5,11.5 H14" />
+                    </Button>
+                    <Button Tag="linhaHoje" Classes="acessoRapido" Classes.ativo="{Binding Gantt.MostrarHoje}"
+                            Command="{Binding AlternarLinhaHojeCommand}"
+                            ToolTip.Tip="Linha de hoje: a linha tracejada do dia de hoje no Gantt" AutomationProperties.Name="Linha de hoje">
+                        <!-- Linha vertical tracejada sobre as barras -->
+                        <Path Data="M8,1 V3 M8,5.5 V7.5 M8,10 V12 M8,14 V15.5 M1.5,5 H6 M10,10.5 H14.5" />
+                    </Button>
                     <Border Classes="divisor" />
-                    <Button Classes="acessoRapido" Classes.ativo="{Binding Assistente.Visivel}"
+                    <Button Tag="assistente" Classes="acessoRapido" Classes.ativo="{Binding Assistente.Visivel}"
                             Command="{Binding Assistente.AlternarVisibilidadeCommand}"
                             ToolTip.Tip="Assistente (IA): mostrar ou ocultar o painel" AutomationProperties.Name="Assistente">
                         <!-- Balão de conversa -->

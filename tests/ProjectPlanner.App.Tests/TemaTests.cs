@@ -126,6 +126,23 @@ public sealed class ArquivoPreferenciasInterfaceTemaTests : IDisposable
             .And.Contain($"\"tema\": \"{noArquivo}\"");
     }
 
+    // Bloco 39: os botões tirados da barra de ícones, um campo a mais (sem ele, todos aparecem).
+    [Fact]
+    public void BotoesEscondidosDaBarra_SalvosECarregados_SemCampoNenhumEscondido()
+    {
+        new ArquivoPreferenciasInterface(Caminho).Salvar(new PreferenciasInterface(false, TemaDaInterface.Claro, ["novo", "medicoes"]));
+
+        new ArquivoPreferenciasInterface(Caminho).Carregar()!.OcultosNaBarra.Should().Equal("novo", "medicoes");
+        File.ReadAllText(Caminho).Should().Contain("\"ocultosNaBarra\"").And.Contain("\"tema\": \"claro\"");
+
+        new ArquivoPreferenciasInterface(Caminho).Salvar(new PreferenciasInterface(false, TemaDaInterface.Claro));
+        File.ReadAllText(Caminho).Should().NotContain("ocultosNaBarra", "sem botão escondido o arquivo fica como antes");
+        new ArquivoPreferenciasInterface(Caminho).Carregar()!.OcultosNaBarra.Should().BeNull();
+
+        Escrever("{\"versao\": 1, \"mostrarAssistente\": true, \"ocultosNaBarra\": [\"abrir\", \" \", null]}");
+        new ArquivoPreferenciasInterface(Caminho).Carregar()!.OcultosNaBarra.Should().Equal("abrir");
+    }
+
     [Fact]
     public void ArquivoDasVersoesAnteriores_SemTema_ValeComoSistema()
     {

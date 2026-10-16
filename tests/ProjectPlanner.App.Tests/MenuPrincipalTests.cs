@@ -108,7 +108,7 @@ public partial class MenuPrincipalTests
             "Abrir a pasta de cópias de segurança");
         Titulos(a.Item("Editar")).Should().Equal("Desfazer", "Refazer", Linha, "Copiar tarefa", "Colar tarefa", "Duplicar tarefa");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha de base", "Linha Hoje", Linha,
-            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
+            "Dividido", "Somente Tabela", "Somente Gantt", Linha, "Colunas", "Barra de ícones", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
             "Adicionar marco", "Adicionar resumo", Linha,
@@ -159,6 +159,8 @@ public partial class MenuPrincipalTests
         var botoes = a.Janela.AcessoRapido.Children.OfType<Button>().ToList();
 
         botoes.Select(b => (b.Command, Avalonia.Automation.AutomationProperties.GetName(b))).Should().Equal(
+            (a.Vm.NovoProjetoCommand, "Novo projeto"), // Bloco 39: os botões novos (a ordem dos antigos é a mesma)
+            (a.Vm.AbrirProjetoCommand, "Abrir projeto"),
             (a.Vm.SalvarProjetoCommand, "Salvar"),
             (a.Vm.DesfazerAlteracaoCommand, "Desfazer"),
             (a.Vm.RefazerAlteracaoCommand, "Refazer"),
@@ -168,9 +170,20 @@ public partial class MenuPrincipalTests
             (a.Vm.RebaixarCommand, "Rebaixar"),
             (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"),
             (a.Vm.GerenciarFotosCommand, "Fotos da tarefa"),
+            (a.Vm.RecursosDaTarefaCommand, "Recursos da tarefa"),
+            (a.Vm.IrParaTarefaCommand, "Ir para a tarefa"),
+            (a.Vm.SalvarLinhaDeBaseCommand, "Salvar linha de base"),
+            (a.Vm.RelatorioFotograficoCommand, "Relatório fotográfico"),
+            (a.Vm.FotosDoProjetoCommand, "Fotos do projeto"),
+            (a.Vm.MedicoesCommand, "Medições"),
+            (a.Vm.OrcamentoCommand, "Orçamento"),
+            (a.Vm.IndicadoresCommand, "Indicadores"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Dividido"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Somente Tabela"),
             (a.Vm.DefinirModoVisualizacaoCommand, "Somente Gantt"),
+            (a.Vm.AlternarCaminhoCriticoCommand, "Caminho crítico"),
+            (a.Vm.AlternarLinhaDeBaseCommand, "Linha de base no Gantt"),
+            (a.Vm.AlternarLinhaHojeCommand, "Linha de hoje"),
             (a.Vm.Assistente.AlternarVisibilidadeCommand, "Assistente"));
         botoes.Should().OnlyContain(b => b.Content is Avalonia.Controls.Shapes.Path, "são botões só de ícone");
         botoes.Select(b => ToolTip.GetTip(b) as string).Should().OnlyContain(dica => !string.IsNullOrWhiteSpace(dica));

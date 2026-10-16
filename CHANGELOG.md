@@ -3,6 +3,18 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.39.0
+
+Bloco 39: a barra de ícones ampliada.
+
+- Botões novos, em grupos: Novo projeto e Abrir projeto; Recursos da tarefa; Ir para a tarefa e Salvar linha de base;
+  Relatório fotográfico, Fotos do projeto, Medições, Orçamento e Indicadores; e as opções do Gantt (caminho crítico,
+  linha de base e linha de hoje), que ficam marcadas quando ligadas, como os modos de exibição.
+- Exibir > Barra de ícones: escolha quais botões aparecem, por grupo (fica guardado nas suas preferências); "Mostrar
+  todos os botões" volta ao padrão. Os divisores aparecem só entre grupos à vista.
+- Numa janela estreita, os botões que não cabem vão, na ordem, para o "»" no fim da barra, em vez de sumirem.
+- As opções do Gantt em Exibir continuam lá, e o menu e o botão mostram sempre o mesmo estado.
+
 ## 0.38.0
 
 Bloco 38: a IA no orçamento.
@@ -316,5 +328,6 @@ começar):
   valores e recursos).
 - Bloco 38 (feito, na 0.38): a IA no orçamento (composições, preços estimados, quantidades, revisão e equipes, também
   pelo chat).
+- Bloco 39 (feito, na 0.39): a barra de ícones ampliada e personalizável, com o "»" para janelas estreitas.
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

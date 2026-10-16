@@ -26,6 +26,10 @@ public sealed partial class MainWindowViewModel
         if (!Enum.IsDefined(tema))
             throw new ArgumentOutOfRangeException(nameof(tema), tema, "Tema desconhecido.");
         Tema = tema;
-        _preferenciasInterface.Salvar(new PreferenciasInterface(Assistente.Visivel, tema));
+        // "with": os outros campos (os botões tirados da barra, Bloco 39) ficam como estavam.
+        _preferenciasInterface.Salvar((_preferenciasInterface.Carregar() ?? new PreferenciasInterface(Assistente.Visivel)) with
+        {
+            MostrarAssistente = Assistente.Visivel, Tema = tema,
+        });
     }
 }

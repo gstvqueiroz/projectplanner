@@ -57,12 +57,16 @@ public partial class MainWindow : Window
             _viewModel.LinhaParaMostrar -= RolarAteALinha;
             _viewModel.PropertyChanged -= ViewModelMudou;
             _viewModel.Assistente.PropertyChanged -= AssistenteMudou;
+            _viewModel.Barra.Mudou -= AjustarBarra;
         }
         base.OnDataContextChanged(e);
         _viewModel = DataContext as MainWindowViewModel;
         if (_viewModel is null)
             return;
         MontarMenuDeColunas(_viewModel.Colunas);
+        MontarMenuDaBarra(_viewModel.Barra);
+        _viewModel.Barra.Mudou += AjustarBarra;
+        AjustarBarra();
         MostrarContadorDeFotos(_viewModel);
         _viewModel.LinhaParaMostrar += RolarAteALinha;
         _viewModel.PropertyChanged += ViewModelMudou;
@@ -247,6 +251,123 @@ public partial class MainWindow : Window
         ("Recursos e custos", ["Recursos", "CustoOrcado", "Margem"]),
     ];
 
+    // ---- Bloco 39: a barra de ícones ----
+
+    /// <summary>Exibir > Barra de ícones: uma caixa por botão, por grupo, e "Mostrar todos".</summary>
+    private void MontarMenuDaBarra(BarraDeIconesViewModel barra)
+    {
+        MenuBarra.Items.Clear();
+        foreach (var grupo in barra.Botoes.GroupBy(b => b.Grupo))
+        {
+            var submenu = new MenuItem { Header = BarraDeIconesViewModel.NomeDoGrupo(grupo.Key) };
+            foreach (var botao in grupo)
+            {
+                var item = new MenuItem { Header = botao.Nome, ToggleType = MenuItemToggleType.CheckBox, StaysOpenOnClick = true, DataContext = botao };
+                item.Bind(MenuItem.IsCheckedProperty, new Binding(nameof(BotaoDaBarra.Visivel)) { Mode = BindingMode.TwoWay });
+                submenu.Items.Add(item);
+            }
+            MenuBarra.Items.Add(submenu);
+        }
+        MenuBarra.Items.Add(new Separator());
+        MenuBarra.Items.Add(new MenuItem { Header = "Mostrar todos os botões", Command = barra.RestaurarCommand });
+    }
+
+    private const double LarguraDoBotaoDaBarra = 28, LarguraDoDivisor = 9, LarguraDoMais = 34;
+
+    // A largura de cada botão, medida quando aparece (escondido, o Avalonia não mede).
+    private readonly Dictionary<Button, double> _larguraDosBotoes = [];
+    private double _larguraDaBarra = -1;
+
+    /// <summary>Os botões da barra, na ordem, com o id do catálogo (o Tag).</summary>
+    internal IEnumerable<Button> BotoesDaBarra => AcessoRapido.Children.OfType<Button>().Where(b => b.Tag is string);
+
+    // O menu do "»" (um flyout não entra no escopo de nomes da janela).
+    internal MenuFlyout MenuMais => (MenuFlyout)BotaoMais.Flyout!;
+
+    /// <summary>Os que foram para o "»" por falta de largura.</summary>
+    internal IReadOnlyList<Button> BotoesNoMais { get; private set; } = [];
+
+    private void BarraMudouDeTamanho(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == BoundsProperty && sender is Control c && Math.Abs(c.Bounds.Width - _larguraDaBarra) > 0.5)
+            AjustarBarra();
+    }
+
+    /// <summary>
+    /// Mostra os botões escolhidos em Exibir > Barra de ícones; os que não cabem na largura vão, na ordem, para o "»". Os
+    /// divisores aparecem só entre dois grupos com botões à vista.
+    /// </summary>
+    internal void AjustarBarra()
+    {
+        if (_viewModel is null || AcessoRapido.Parent is not Control area)
+            return;
+        if (_larguraDaBarra < 0)
+            area.PropertyChanged += BarraMudouDeTamanho;
+        _larguraDaBarra = area.Bounds.Width;
+        foreach (var b in BotoesDaBarra.Where(b => b.IsVisible && b.DesiredSize.Width > 0))
+            _larguraDosBotoes[b] = b.DesiredSize.Width;
+        double Largura(Button b) => _larguraDosBotoes.GetValueOrDefault(b, LarguraDoBotaoDaBarra) + AcessoRapido.Spacing;
+
+        var escolhidos = BotoesDaBarra.Where(b => _viewModel.Barra.Botao((string)b.Tag!).Visivel).ToList();
+        var disponivel = _larguraDaBarra <= 0 ? double.MaxValue : _larguraDaBarra;
+        var total = escolhidos.Sum(Largura) + 8 * LarguraDoDivisor;
+        var cabem = new HashSet<Button>(escolhidos);
+        if (total > disponivel)
+        {
+            cabem.Clear();
+            var usado = LarguraDoMais;
+            GrupoDaBarra? grupoAnterior = null;
+            foreach (var b in escolhidos)
+            {
+                var grupo = _viewModel.Barra.Botao((string)b.Tag!).Grupo;
+                var largura = Largura(b) + (grupoAnterior is { } g && g != grupo ? LarguraDoDivisor : 0);
+                if (usado + largura > disponivel)
+                    break;
+                usado += largura;
+                cabem.Add(b);
+                grupoAnterior = grupo;
+            }
+        }
+        foreach (var b in BotoesDaBarra)
+            b.IsVisible = cabem.Contains(b);
+
+        // Divisores: só entre botões à vista.
+        Border? pendente = null;
+        var haBotaoAntes = false;
+        foreach (var filho in AcessoRapido.Children)
+            if (filho is Border divisor)
+            {
+                divisor.IsVisible = false;
+                if (haBotaoAntes)
+                    (pendente, haBotaoAntes) = (divisor, false);
+            }
+            else if (filho.IsVisible)
+            {
+                if (pendente is not null)
+                    (pendente.IsVisible, pendente) = (true, null);
+                haBotaoAntes = true;
+            }
+
+        // O "»": os que não couberam, separados por grupo.
+        BotoesNoMais = [.. escolhidos.Where(b => !cabem.Contains(b))];
+        MenuMais.Items.Clear();
+        GrupoDaBarra? ultimo = null;
+        foreach (var b in BotoesNoMais)
+        {
+            var grupo = _viewModel.Barra.Botao((string)b.Tag!).Grupo;
+            if (ultimo is { } u && u != grupo)
+                MenuMais.Items.Add(new Separator());
+            ultimo = grupo;
+            MenuMais.Items.Add(new MenuItem
+            {
+                Header = Avalonia.Automation.AutomationProperties.GetName(b),
+                Command = b.Command,
+                CommandParameter = b.CommandParameter,
+            });
+        }
+        BotaoMais.IsVisible = BotoesNoMais.Count > 0;
+    }
+
     private void MontarMenuDeColunas(ColunasViewModel colunas)
     {
         static MenuItem Caixa(ColunaViewModel coluna)
@@ -411,6 +532,7 @@ public partial class MainWindow : Window
 
         foreach (var (nome, acao) in new (string, AcaoComAtalho)[]
                  {
+                     ("Novo projeto", AcaoComAtalho.Novo), ("Abrir projeto", AcaoComAtalho.Abrir), ("Ir para a tarefa", AcaoComAtalho.IrParaTarefa),
                      ("Salvar", AcaoComAtalho.Salvar), ("Recalcular cronograma", AcaoComAtalho.Recalcular),
                      ("Dividido", AcaoComAtalho.Dividido), ("Somente Tabela", AcaoComAtalho.SomenteTabela),
                      ("Somente Gantt", AcaoComAtalho.SomenteGantt), ("Assistente", AcaoComAtalho.Assistente),

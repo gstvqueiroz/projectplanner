@@ -45,6 +45,7 @@ public class Cronograma
         DataInicio = NormalizarInicio(dataInicio);
         Contrato = new Medicoes.ContratoDoProjeto(this);
         Recursos = new Recursos.RecursosDoProjeto(this);
+        Orcamento = new Orcamento.OrcamentoDoProjeto(this);
     }
 
     public Guid Id { get; }
@@ -487,6 +488,9 @@ public class Cronograma
     /// <summary>Bloco 32: os recursos do projeto (profissionais, materiais e equipamentos). Voltam no Desfazer.</summary>
     public Recursos.RecursosDoProjeto Recursos { get; private set; }
 
+    /// <summary>Bloco 33: o orçamento (as composições das tarefas e o BDI). Volta no Desfazer.</summary>
+    public Orcamento.OrcamentoDoProjeto Orcamento { get; private set; }
+
     /// <summary>Bloco 37: os custos realizados da obra. Voltam no Desfazer, como as tarefas.</summary>
     public Indicadores.CustosRealizados Custos { get; private set; } = new();
 
@@ -526,6 +530,7 @@ public class Cronograma
         copia.Contrato = Contrato.CopiarPara(copia);
         copia.Custos = Custos.Copiar();
         copia.Recursos = Recursos.CopiarPara(copia);
+        copia.Orcamento = Orcamento.CopiarPara(copia);
         copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

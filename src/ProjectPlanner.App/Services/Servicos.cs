@@ -36,6 +36,8 @@ public static class Servicos
         .AddSingleton<IPreferenciasRelatorio, ArquivoPreferenciasRelatorio>()
         // Bloco 32: o catálogo pessoal de recursos (recursos.json).
         .AddSingleton<ICatalogoDeRecursos, ArquivoCatalogoDeRecursos>()
+        // Bloco 33: as bases de preços (SINAPI…) importadas, na pasta referencias.
+        .AddSingleton<IBibliotecaDeReferencias, ArquivoBibliotecaDeReferencias>()
         .AddSingleton(s => new ConfiguracaoDoAssistente(s.GetRequiredService<ICofreDeSegredos>(),
             s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(), Environment.GetEnvironmentVariable))
         .AddSingleton<IConfiguracaoIA>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())

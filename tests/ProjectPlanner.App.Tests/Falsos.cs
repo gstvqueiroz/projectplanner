@@ -334,6 +334,14 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    public List<OrcamentoViewModel> Orcamentos { get; } = [];
+
+    public Task MostrarOrcamentoAsync(OrcamentoViewModel orcamento)
+    {
+        Orcamentos.Add(orcamento);
+        return Task.CompletedTask;
+    }
+
     public List<UsoDeRecursosViewModel> UsosDeRecursos { get; } = [];
 
     public Task MostrarUsoDeRecursosAsync(UsoDeRecursosViewModel uso)
@@ -447,9 +455,12 @@ public sealed class Ambiente
     /// <summary>Bloco 32: o catálogo pessoal de recursos.</summary>
     public Services.CatalogoDeRecursosEmMemoria Catalogo { get; } = new();
 
+    /// <summary>Bloco 33: as bases de preços importadas.</summary>
+    public Services.BibliotecaDeReferenciasEmMemoria Biblioteca { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
-            analistaDeFotos: Analista, catalogoDeRecursos: Catalogo);
+            analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")

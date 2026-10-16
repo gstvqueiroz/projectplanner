@@ -13,7 +13,7 @@ namespace ProjectPlanner.Relatorios;
 public sealed class GeradorBoletimExcel
 {
     // Os estilos (a ordem dos CellFormats da folha de estilos).
-    private const uint Normal = 0, Negrito = 1, Titulo = 2, CabecalhoDaTabela = 3, TextoComBorda = 4, Dinheiro = 5, Quantidade = 6,
+    internal const uint Normal = 0, Negrito = 1, Titulo = 2, CabecalhoDaTabela = 3, TextoComBorda = 4, Dinheiro = 5, Quantidade = 6,
         Percentual = 7, GrupoTexto = 8, GrupoDinheiro = 9, GrupoPercentual = 10, DinheiroForte = 11, DinheiroSemBorda = 12, Cinza = 13;
 
     private static readonly double[] Larguras = [8, 46, 7, 14, 14, 16, 13, 13, 13, 13, 16, 16, 16, 9];
@@ -138,14 +138,14 @@ public sealed class GeradorBoletimExcel
             yield return ("Retido acumulado", r.RetidoAcumulado, false);
     }
 
-    private static Cell Texto(string texto, uint estilo = Normal) =>
+    internal static Cell Texto(string texto, uint estilo = Normal) =>
         new() { DataType = CellValues.InlineString, StyleIndex = estilo, InlineString = new InlineString(new Text(texto) { Space = SpaceProcessingModeValues.Preserve }) };
 
-    private static Cell Numero(decimal valor, uint estilo) => new() { CellValue = new CellValue(valor), DataType = CellValues.Number, StyleIndex = estilo };
+    internal static Cell Numero(decimal valor, uint estilo) => new() { CellValue = new CellValue(valor), DataType = CellValues.Number, StyleIndex = estilo };
 
-    private static string Coluna(int indice) => indice < 26 ? ((char)('A' + indice)).ToString() : $"{(char)('A' + indice / 26 - 1)}{(char)('A' + indice % 26)}";
+    internal static string Coluna(int indice) => indice < 26 ? ((char)('A' + indice)).ToString() : $"{(char)('A' + indice / 26 - 1)}{(char)('A' + indice % 26)}";
 
-    private static Stylesheet FolhaDeEstilos()
+    internal static Stylesheet FolhaDeEstilos()
     {
         var borda = new Border(
             new LeftBorder(new Color { Rgb = "FFCFD8DC" }) { Style = BorderStyleValues.Thin },

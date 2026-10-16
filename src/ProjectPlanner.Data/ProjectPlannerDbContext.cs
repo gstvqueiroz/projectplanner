@@ -22,6 +22,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<ContratoRegistro> Contrato => Set<ContratoRegistro>();
     public DbSet<CustosRegistro> Custos => Set<CustosRegistro>();
     public DbSet<RecursoRegistro> Recursos => Set<RecursoRegistro>();
+    public DbSet<OrcamentoRegistro> Orcamento => Set<OrcamentoRegistro>();
     public DbSet<AtribuicaoRegistro> Atribuicoes => Set<AtribuicaoRegistro>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -135,6 +136,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             atribuicao.HasOne<RecursoRegistro>().WithMany().HasForeignKey(a => a.RecursoId).OnDelete(DeleteBehavior.Restrict);
             atribuicao.HasIndex(a => new { a.TarefaId, a.RecursoId }).IsUnique();
             atribuicao.HasIndex(a => a.RecursoId);
+        });
+
+        // O orçamento (Bloco 33), em JSON.
+        modelBuilder.Entity<OrcamentoRegistro>(orcamento =>
+        {
+            orcamento.ToTable("OrcamentoDoProjeto");
+            orcamento.HasKey(o => o.ProjetoId);
+            orcamento.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<OrcamentoRegistro>(o => o.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Os custos realizados (Bloco 37), em JSON.

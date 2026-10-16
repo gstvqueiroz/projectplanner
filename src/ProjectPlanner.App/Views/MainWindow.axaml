@@ -213,6 +213,9 @@
                     <MenuItem Header="Importar valores…" Command="{Binding ImportarValoresCommand}"
                               ToolTip.Tip="Os valores das tarefas de uma planilha (.xlsx ou .csv) com a EDT e o valor de cada uma (e, se houver, a unidade e a quantidade)" />
                     <Separator />
+                    <!-- Bloco 33 -->
+                    <MenuItem Header="Orçamento…" Command="{Binding OrcamentoCommand}"
+                              ToolTip.Tip="A planilha orçamentária com as composições da SINAPI (ou outra base) e o BDI; aplica os valores e os recursos nas tarefas" />
                     <!-- Bloco 32 -->
                     <MenuItem Header="Recursos…" Command="{Binding RecursosDoProjetoCommand}"
                               ToolTip.Tip="Os profissionais, materiais e equipamentos da obra (custo, disponível por dia, fornecedor) e o seu catálogo" />

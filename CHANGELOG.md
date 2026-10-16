@@ -3,6 +3,25 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.37.0
+
+Bloco 33: orçamento com a SINAPI (a versão segue a ordem de entrega).
+
+- Projeto > Orçamento…, aba Bases: importe as planilhas da SINAPI (a de insumos e a de composições analíticas, em .xlsx
+  ou .csv) de qualquer estado e mês, desonerada ou não; a UF, o mês e a desoneração vêm do nome do arquivo da Caixa. As
+  bases ficam numa biblioteca sua, fora dos projetos (a pasta referencias, ao lado das preferências). A leitura é pelos
+  nomes das colunas, então uma base própria no mesmo jeito (ou outra fonte, no futuro) também entra.
+- Aba Composições: busque por código ou palavras, escolha a tarefa e "Usar na tarefa"; as composições auxiliares são
+  abertas até os insumos (coeficiente, preço e parcial). O projeto guarda a composição que usa, com a base de onde veio.
+- Aba Planilha: a planilha orçamentária sintética na ordem da EDT (os grupos somando; tarefas sem composição entram pelo
+  Valor informado), com o BDI do projeto sobre o custo direto (os encargos já estão na SINAPI) e, se quiser, um BDI
+  diferenciado para os materiais. Exporta em PDF, Word e Excel (a sintética e a analítica).
+- Aplicar aos valores e recursos: o total de cada serviço vai para o Valor da tarefa (e a unidade, se estiver vazia), e
+  os insumos viram recursos atribuídos a ela (mão de obra e equipamento em horas ÷ 8 por dia; materiais pelo total). É
+  um passo do Desfazer e é recusado com o contrato travado por uma medição aprovada.
+- Atualizar os preços do orçamento por outra base (outro mês, por exemplo): as composições de mesmo código são trocadas;
+  as que não estão na base nova ficam como estavam. Tudo fica no .pplan.
+
 ## 0.36.0
 
 Bloco 34: uso de recursos (a versão segue a ordem de entrega).

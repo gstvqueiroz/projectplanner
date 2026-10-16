@@ -1,0 +1,167 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.OrcamentoWindow"
+        x:DataType="vm:OrcamentoViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="740" MinWidth="900" MinHeight="540"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 33: planilha orçamentária, composições e bases de preços (SINAPI). -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="TextBlock.forte">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="DataGridCell">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button DockPanel.Dock="Right" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <ProgressBar DockPanel.Dock="Right" IsIndeterminate="True" IsVisible="{Binding Ocupado}" Width="120" Margin="0,0,12,0" />
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <TabControl x:Name="Abas">
+            <!-- ===== Planilha ===== -->
+            <TabItem Header="Planilha">
+                <DockPanel Margin="0,8,0,0">
+                    <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="6" Margin="0,0,0,6">
+                        <TextBlock Text="BDI (%)" VerticalAlignment="Center" />
+                        <TextBox x:Name="Bdi" Text="{Binding Bdi}" Width="70"
+                                 ToolTip.Tip="Sobre o custo direto (os encargos sociais já estão nos preços da SINAPI)" />
+                        <TextBlock Text="BDI de materiais (%)" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        <TextBox x:Name="BdiDeMateriais" Text="{Binding BdiDeMateriais}" Width="70" PlaceholderText="igual"
+                                 ToolTip.Tip="Opcional: um BDI diferenciado para os materiais (em branco, vale o BDI acima para tudo)" />
+                        <Button x:Name="SalvarBdi" Content="Guardar BDI" Command="{Binding SalvarBdiCommand}" />
+                        <Button x:Name="Aplicar" Classes="accent" Content="Aplicar aos valores e recursos…" Command="{Binding AplicarCommand}" Margin="16,0,0,0"
+                                ToolTip.Tip="O total de cada serviço vai para o Valor da tarefa e os insumos viram recursos atribuídos a ela" />
+                        <Button Content="PDF…" Command="{Binding ExportarPdfCommand}" Margin="16,0,0,0" />
+                        <Button Content="Word…" Command="{Binding ExportarWordCommand}" />
+                        <Button Content="Excel…" Command="{Binding ExportarExcelCommand}" />
+                    </WrapPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{x:Static vm:OrcamentoViewModel.TextoSemServicos}" IsVisible="{Binding SemServicos}"
+                               TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,6" />
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <ItemsControl DockPanel.Dock="Right" ItemsSource="{Binding Totais}" Width="420">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                                    <DockPanel Margin="0,2">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Valor}" Classes.forte="{Binding Destaque}" Margin="16,0,0,0" />
+                                        <TextBlock Text="{Binding Rotulo}" Classes.forte="{Binding Destaque}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{Binding BasesUsadas}" TextWrapping="Wrap" FontSize="12" Opacity="0.75" VerticalAlignment="Bottom" />
+                    </DockPanel>
+                    <DataGrid x:Name="Planilha" ItemsSource="{Binding Linhas}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                              GridLinesVisibility="Horizontal">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="EDT" Binding="{Binding Edt}" Width="60" />
+                            <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                            <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="80" />
+                            <DataGridTextColumn Header="Fonte" Binding="{Binding Fonte}" Width="115" />
+                            <DataGridTextColumn Header="Unid." Binding="{Binding Unidade}" Width="55" />
+                            <DataGridTextColumn Header="Quant." Binding="{Binding Quantidade}" Width="75" />
+                            <DataGridTextColumn Header="Custo unit." Binding="{Binding CustoUnitario}" Width="95" />
+                            <DataGridTextColumn Header="Preço unit. c/ BDI" Binding="{Binding PrecoUnitario}" Width="125" />
+                            <DataGridTextColumn Header="Total" Binding="{Binding Total}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===== Composições ===== -->
+            <TabItem Header="Composições">
+                <Grid RowDefinitions="*,Auto,*" Margin="0,8,0,0">
+                    <DockPanel Grid.Row="0">
+                        <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="6" Margin="0,0,0,6">
+                            <TextBlock Text="Base" VerticalAlignment="Center" />
+                            <ComboBox x:Name="Base" ItemsSource="{Binding Bases}" SelectedItem="{Binding BaseEscolhida}" MinWidth="280"
+                                      PlaceholderText="importe uma base na aba Bases" />
+                            <TextBlock Text="Buscar" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <TextBox x:Name="Busca" Text="{Binding Busca}" Width="300" PlaceholderText="código ou palavras da descrição" />
+                        </WrapPanel>
+                        <DataGrid x:Name="Resultados" ItemsSource="{Binding Resultados}" SelectedItem="{Binding ResultadoEscolhido}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False" GridLinesVisibility="Horizontal">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="80" />
+                                <DataGridTextColumn Header="Descrição" Binding="{Binding Descricao}" Width="*" />
+                                <DataGridTextColumn Header="Unid." Binding="{Binding Unidade}" Width="55" />
+                                <DataGridTextColumn Header="Custo unit." Binding="{Binding Custo}" Width="100" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <WrapPanel Grid.Row="1" ItemSpacing="8" LineSpacing="6" Margin="0,8">
+                        <TextBlock Text="Tarefa" VerticalAlignment="Center" />
+                        <ComboBox x:Name="Tarefa" ItemsSource="{Binding Tarefas}" SelectedItem="{Binding TarefaEscolhida}" MinWidth="420" />
+                        <Button x:Name="Usar" Classes="accent" Content="Usar na tarefa" Command="{Binding UsarCommand}"
+                                ToolTip.Tip="A composição escolhida acima passa a ser a da tarefa (a quantidade vem da coluna Quantidade)" />
+                        <Button x:Name="Tirar" Content="Tirar" Command="{Binding TirarCommand}" />
+                    </WrapPanel>
+                    <DockPanel Grid.Row="2">
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding TextoDaComposicao}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,6" />
+                        <DataGrid x:Name="Insumos" ItemsSource="{Binding InsumosDaTarefa}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserSortColumns="False" GridLinesVisibility="Horizontal">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="80" />
+                                <DataGridTextColumn Header="Insumo" Binding="{Binding Descricao}" Width="*" />
+                                <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" Width="110" />
+                                <DataGridTextColumn Header="Unid." Binding="{Binding Unidade}" Width="55" />
+                                <DataGridTextColumn Header="Coeficiente" Binding="{Binding Coeficiente}" Width="95" />
+                                <DataGridTextColumn Header="Preço" Binding="{Binding Preco}" Width="90" />
+                                <DataGridTextColumn Header="Parcial" Binding="{Binding Parcial}" Width="90" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ===== Bases ===== -->
+            <TabItem Header="Bases">
+                <DockPanel Margin="0,8,0,0">
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+                        <TextBlock Classes="secao" Text="Importar uma planilha de preços" />
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                                   Text="A planilha de insumos (código, descrição, unidade, preço) e a de composições analíticas (código da composição, tipo e código do item, coeficiente) vão para a mesma base: importe as duas. A UF, a referência e a desoneração vêm do nome do arquivo quando ele as traz (por exemplo SINAPI_Custo_Ref_Insumos_SP_202609_Desonerado.xlsx). Só a primeira aba de um .xlsx é lida." />
+                        <WrapPanel ItemSpacing="8" LineSpacing="6">
+                            <TextBlock Text="Fonte" VerticalAlignment="Center" />
+                            <TextBox x:Name="Fonte" Text="{Binding Fonte}" Width="110" />
+                            <TextBlock Text="UF" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <TextBox x:Name="Uf" Text="{Binding Uf}" Width="50" />
+                            <TextBlock Text="Referência" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <TextBox x:Name="Referencia" Text="{Binding Referencia}" Width="90" PlaceholderText="09/2026" />
+                            <ComboBox x:Name="Desoneracao" ItemsSource="{Binding OpcoesDeDesoneracao}" SelectedItem="{Binding DesoneradoEscolhido}" Margin="8,0,0,0" />
+                            <Button x:Name="Importar" Classes="accent" Content="Importar planilha…" Command="{Binding ImportarPlanilhaCommand}" Margin="8,0,0,0" />
+                        </WrapPanel>
+                    </StackPanel>
+                    <WrapPanel DockPanel.Dock="Bottom" ItemSpacing="8" Margin="0,8,0,0">
+                        <Button x:Name="AtualizarPrecos" Content="Atualizar os preços do orçamento por esta base…" Command="{Binding AtualizarPrecosCommand}"
+                                ToolTip.Tip="Troca as composições do orçamento pelas de mesmo código nesta base (outro mês ou outro estado)" />
+                        <Button x:Name="RemoverBase" Content="Remover base…" Command="{Binding RemoverBaseCommand}" />
+                    </WrapPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Nenhuma base importada ainda." IsVisible="{Binding SemBases}" Opacity="0.7" Margin="0,0,0,6" />
+                    <DataGrid x:Name="ListaDeBases" ItemsSource="{Binding BasesNaBiblioteca}" SelectedItem="{Binding BaseNaLista}"
+                              AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False" GridLinesVisibility="Horizontal">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Base" Binding="{Binding Base.Descricao}" Width="*" />
+                            <DataGridTextColumn Header="Insumos" Binding="{Binding Insumos}" Width="100" />
+                            <DataGridTextColumn Header="Composições" Binding="{Binding Composicoes}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

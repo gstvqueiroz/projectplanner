@@ -314,6 +314,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 Dados = FormatoDoContrato.Serializar(cronograma),
             });
 
+        if (!cronograma.Orcamento.Vazio)
+            contexto.Orcamento.Add(new OrcamentoRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDoOrcamento.Versao,
+                Dados = FormatoDoOrcamento.Serializar(cronograma),
+            });
+
         if (!cronograma.Custos.Vazio)
             contexto.Custos.Add(new CustosRegistro
             {
@@ -439,6 +447,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             if (contrato.Versao != FormatoDoContrato.Versao)
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o contrato num formato desconhecido.");
             FormatoDoContrato.Ler(contrato.Dados, cronograma);
+        }
+
+        // O orçamento (Bloco 33).
+        if (contexto.Orcamento.AsNoTracking().FirstOrDefault() is { } orcamento)
+        {
+            if (orcamento.Versao != FormatoDoOrcamento.Versao)
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o orçamento num formato desconhecido.");
+            FormatoDoOrcamento.Ler(orcamento.Dados, cronograma);
         }
 
         // Os custos realizados (Bloco 37).

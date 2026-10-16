@@ -216,6 +216,9 @@
                     <!-- Bloco 32 -->
                     <MenuItem Header="Recursos…" Command="{Binding RecursosDoProjetoCommand}"
                               ToolTip.Tip="Os profissionais, materiais e equipamentos da obra (custo, disponível por dia, fornecedor) e o seu catálogo" />
+                    <!-- Bloco 34 -->
+                    <MenuItem Header="Uso de recursos…" Command="{Binding UsoDeRecursosCommand}"
+                              ToolTip.Tip="O histograma de cada recurso, as superalocações e o nivelamento sugerido, e as equipes e compras por período" />
                     <Separator />
                     <!-- Bloco 36 -->
                     <MenuItem Header="Medições…" Command="{Binding MedicoesCommand}"

@@ -334,6 +334,14 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    public List<UsoDeRecursosViewModel> UsosDeRecursos { get; } = [];
+
+    public Task MostrarUsoDeRecursosAsync(UsoDeRecursosViewModel uso)
+    {
+        UsosDeRecursos.Add(uso);
+        return Task.CompletedTask;
+    }
+
     public List<CustosViewModel> Custos { get; } = [];
 
     public Task MostrarCustosAsync(CustosViewModel custos)

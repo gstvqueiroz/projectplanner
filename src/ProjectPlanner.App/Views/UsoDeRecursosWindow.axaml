@@ -1,0 +1,110 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        x:Class="ProjectPlanner.App.Views.UsoDeRecursosWindow"
+        x:DataType="vm:UsoDeRecursosViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="720" MinWidth="880" MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 34: histograma, superalocações e nivelamento, e necessidades por período. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding" Value="6,2,-26,2" /> <!-- sem ordenação: o espaço da seta fica para o título -->
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button DockPanel.Dock="Right" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+            <TextBlock Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap"
+                       IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{x:Static vm:UsoDeRecursosViewModel.TextoSemRecursos}" IsVisible="{Binding SemRecursos}" TextWrapping="Wrap" Opacity="0.7" />
+        </StackPanel>
+
+        <TabControl x:Name="Abas">
+            <TabItem Header="Histograma">
+                <DockPanel Margin="0,8,0,0">
+                    <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="6" Margin="0,0,0,6">
+                        <TextBlock Text="Recurso" VerticalAlignment="Center" />
+                        <ComboBox x:Name="Recurso" ItemsSource="{Binding Recursos}" SelectedItem="{Binding RecursoEscolhido}" MinWidth="260" />
+                        <TextBlock Text="{Binding ResumoDoRecurso}" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" Opacity="0.8" />
+                    </WrapPanel>
+                    <v:HistogramaView x:Name="Histograma" Uso="{Binding Uso}" />
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Superalocações">
+                <DockPanel Margin="0,8,0,0">
+                    <TextBlock DockPanel.Dock="Top" Text="Nenhum recurso passa do disponível por dia." IsVisible="{Binding SemSuperalocacoes}" Opacity="0.7" Margin="0,0,0,6" />
+                    <!-- O nivelamento sugerido -->
+                    <DockPanel DockPanel.Dock="Bottom" Height="250" Margin="0,10,0,0">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="Sugerir" Content="Sugerir nivelamento" Command="{Binding SugerirNivelamentoCommand}"
+                                        ToolTip.Tip="Adia, um dia de cada vez, as tarefas não iniciadas que começam por último até os recursos caberem no disponível" />
+                                <Button x:Name="Aplicar" Classes="accent" Content="Aplicar…" Command="{Binding AplicarNivelamentoCommand}" />
+                            </StackPanel>
+                            <TextBlock Classes="secao" Text="Nivelamento sugerido" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding TextoDaSugestao}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,6" />
+                        <DataGrid ItemsSource="{Binding Mudancas}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" IsVisible="{Binding TemSugestao}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Tarefa" Width="*" Binding="{Binding Tarefa}" x:DataType="vm:MudancaNaTela" />
+                                <DataGridTextColumn Header="Início hoje" Width="110" Binding="{Binding InicioAtual}" x:DataType="vm:MudancaNaTela" />
+                                <DataGridTextColumn Header="Novo início" Width="110" Binding="{Binding InicioNovo}" x:DataType="vm:MudancaNaTela" />
+                                <DataGridTextColumn Header="Atraso" Width="110" Binding="{Binding Atraso}" x:DataType="vm:MudancaNaTela" />
+                                <DataGridTextColumn Header="Por quê" Width="220" Binding="{Binding Motivo}" x:DataType="vm:MudancaNaTela" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <DataGrid x:Name="Superalocacoes" ItemsSource="{Binding Superalocacoes}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Recurso" Width="170" Binding="{Binding Recurso}" x:DataType="vm:SuperalocacaoNaTela" />
+                            <DataGridTextColumn Header="Quando" Width="260" Binding="{Binding Periodo}" x:DataType="vm:SuperalocacaoNaTela" />
+                            <DataGridTextColumn Header="Pico" Width="210" Binding="{Binding Pico}" x:DataType="vm:SuperalocacaoNaTela" />
+                            <DataGridTextColumn Header="Tarefas" Width="*" Binding="{Binding Tarefas}" x:DataType="vm:SuperalocacaoNaTela" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Necessidades">
+                <DockPanel Margin="0,8,0,0">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Content="Exportar CSV…" Command="{Binding ExportarNecessidadesCommand}"
+                                ToolTip.Tip="A lista de compras e de equipes por período, para o Excel" />
+                        <WrapPanel ItemSpacing="8">
+                            <TextBlock Text="Períodos" VerticalAlignment="Center" />
+                            <ComboBox ItemsSource="{Binding Periodicidades}" SelectedItem="{Binding PeriodicidadeEscolhida}" MinWidth="130" />
+                            <TextBlock Text="Mostrar" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <ComboBox x:Name="Tipo" ItemsSource="{Binding Tipos}" SelectedItem="{Binding TipoEscolhido}" MinWidth="150" />
+                        </WrapPanel>
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding TotalDasNecessidades}" FontWeight="SemiBold" HorizontalAlignment="Right" Margin="0,6,0,0" />
+                    <DataGrid x:Name="Necessidades" ItemsSource="{Binding Necessidades}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Período" Width="130" Binding="{Binding Periodo}" x:DataType="vm:NecessidadeNaTela" />
+                            <DataGridTextColumn Header="Recurso" Width="*" Binding="{Binding Recurso}" x:DataType="vm:NecessidadeNaTela" />
+                            <DataGridTextColumn Header="Tipo" Width="130" Binding="{Binding Tipo}" x:DataType="vm:NecessidadeNaTela" />
+                            <DataGridTextColumn Header="Quantidade" Width="150" Binding="{Binding Quantidade}" x:DataType="vm:NecessidadeNaTela" />
+                            <DataGridTextColumn Header="Custo (R$)" Width="130" Binding="{Binding Custo}" x:DataType="vm:NecessidadeNaTela" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

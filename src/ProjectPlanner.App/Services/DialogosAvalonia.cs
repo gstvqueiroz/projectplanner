@@ -192,6 +192,8 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarRecursosDaTarefaAsync(ViewModels.RecursosDaTarefaViewModel recursos) => new RecursosDaTarefaWindow(recursos).ShowDialog(JanelaPrincipal);
 
+    public Task MostrarUsoDeRecursosAsync(ViewModels.UsoDeRecursosViewModel uso) => new UsoDeRecursosWindow(uso).ShowDialog(JanelaPrincipal);
+
     public Task MostrarCustosAsync(ViewModels.CustosViewModel custos) => new CustosWindow(custos).ShowDialog(JanelaPrincipal);
 
     public Task MostrarIndicadoresAsync(ViewModels.IndicadoresViewModel indicadores) => new IndicadoresWindow(indicadores).ShowDialog(JanelaPrincipal);

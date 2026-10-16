@@ -3,7 +3,7 @@ using ProjectPlanner.App.Services;
 
 namespace ProjectPlanner.App.ViewModels;
 
-// Bloco 32: Projeto > Recursos… e Tarefa > Recursos da tarefa….
+// Bloco 32: Projeto > Recursos… e Tarefa > Recursos da tarefa…; Bloco 34: Projeto > Uso de recursos….
 public sealed partial class MainWindowViewModel
 {
     private readonly ICatalogoDeRecursos _catalogoDeRecursos;
@@ -27,5 +27,12 @@ public sealed partial class MainWindowViewModel
             return Task.CompletedTask;
         }
         return _dialogos.MostrarRecursosDaTarefaAsync(new RecursosDaTarefaViewModel(_cronograma, linha.Tarefa, descricao => MarcarAlteracao(descricao)));
+    }
+
+    [RelayCommand]
+    private Task UsoDeRecursos()
+    {
+        Recalcular(); // o uso vem das datas calculadas
+        return _dialogos.MostrarUsoDeRecursosAsync(new UsoDeRecursosViewModel(_cronograma, _dialogos, descricao => MarcarAlteracao(descricao)));
     }
 }

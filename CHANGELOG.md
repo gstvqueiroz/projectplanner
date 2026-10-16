@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.36.0
+
+Bloco 34: uso de recursos (a versão segue a ordem de entrega).
+
+- Projeto > Uso de recursos…, aba Histograma: o uso de cada recurso por dia útil (pelas datas calculadas), com a linha do
+  disponível por dia e os dias acima dele em vermelho; o pico, os dias acima e o total no projeto.
+- Aba Superalocações: os trechos de dias em que um recurso passa do disponível, com o pico e as tarefas. Sugerir
+  nivelamento adia, um dia útil de cada vez, a tarefa não iniciada que começa por último até tudo caber, e mostra as
+  tarefas que mudam e o término novo sem mudar o cronograma; Aplicar põe "não iniciar antes de" nas tarefas adiadas
+  (um passo do Desfazer). Tarefas já iniciadas não são adiadas; o que não dá para resolver aparece no aviso.
+- Aba Necessidades: o que cada recurso pede por semana, quinzena ou mês (dias de equipe e de equipamento; quantidades de
+  material, divididas pelos dias da tarefa), com o custo; filtra por tipo e exporta em CSV (a lista de compras e de
+  equipes).
+
 ## 0.35.0
 
 Bloco 32: recursos (a versão segue a ordem de entrega).
@@ -257,7 +271,8 @@ começar):
 - Bloco 36 (feito, na 0.33): medições (boletins, retenção, reajuste, glosas, aditivos e plano de medições).
 - Bloco 37 (feito, na 0.34): custos realizados, valor agregado, painel de indicadores e a página de indicadores nos
   relatórios.
-- Bloco 32 (feito, na 0.35): recursos, atribuições, custo orçado e margem, e o catálogo pessoal. Depois, uso de recursos
-  (34) e composições e orçamento (33).
+- Bloco 32 (feito, na 0.35): recursos, atribuições, custo orçado e margem, e o catálogo pessoal.
+- Bloco 34 (feito, na 0.36): uso de recursos (histograma, superalocações, nivelamento sugerido e necessidades por
+  período). Depois, composições e orçamento (33) e, se quiser, a IA para custos e recursos (38).
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

@@ -86,6 +86,10 @@ Para vender com a IA incluída (sem o cliente precisar de chave), o caminho é u
    painel, o retrato do cronograma e os anexos não mudam. O "segredo" guardado no cofre passa a ser o token da conta do
    cliente, não uma chave de IA.
 
+Desde o Bloco 44 esse servidor existe, neste repositório: `src/ProjectPlanner.Servidor`, com contas, planos e cota, e o
+ponto de IA no mesmo caminho do Gemini. O provedor do programa ("Conta ProjectPlanner") vem no Bloco 45. Ver
+`docs/SERVIDOR.md`.
+
 Outros pontos para a versão comercial: assinar o programa (Developer ID e notarização no Mac, certificado de assinatura
 de código no Windows), usar a camada paga da API (os dados não são usados para treino) e mostrar os termos de uso de IA
 ao cliente.

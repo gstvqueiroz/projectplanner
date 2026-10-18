@@ -214,6 +214,9 @@ ls -lh publicacao/*.exe
 
 **Assistente de IA no binário publicado (Bloco 23):** no `.app`, abra o painel do assistente, clique na engrenagem, cole uma chave do Gemini, **Testar conexão** e **Salvar**, mande uma pergunta sobre o cronograma e peça um cronograma ("monte o cronograma de uma residência de 100 m²"): as tarefas aparecem na grid e no Gantt, e o Desfazer da conversa volta ao cronograma de antes (Bloco 24). A chave fica nas **Chaves do macOS** (app Acesso às Chaves, item `ProjectPlanner`). Depois de publicar uma versão nova, o macOS pode perguntar se o programa pode usar esse item (o `.app` é assinado sem identidade de desenvolvedor): "Permitir sempre". Ver `docs/ASSISTENTE-IA.md`.
 
+**Novidades da 0.43 (Bloco 44):** o programa não muda (só a versão e as novidades em Ajuda > Sobre). A novidade é o
+servidor de contas e IA, que não vai nos pacotes do programa: ele roda na nuvem, com Docker. Ver `docs/SERVIDOR.md`.
+
 **Novidades da 0.42 no binário publicado (Bloco 42):** com a chave do Gemini, em **Fotos do projeto > Importar em lote**,
 escolha algumas fotos da obra e **Classificar com IA**: confira a tarefa, a legenda, o local e o % de cada uma (as
 duvidosas em vermelho) e **Importar**. Em **Buscar na pasta da obra…**, escolha uma pasta com fotos; buscar de novo traz só

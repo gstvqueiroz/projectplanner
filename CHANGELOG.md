@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.43.0
+
+Bloco 44: o servidor de contas e IA (primeira parte da IA por assinatura).
+
+- Novo projeto `src/ProjectPlanner.Servidor`, aberto como o resto do código: as contas do ProjectPlanner (cadastro com
+  código por e-mail, login com senha ou com o Google, sessões que se renovam, troca de senha), os planos (grátis com cota
+  pequena e Profissional) e o ponto de IA, que chama o Gemini com a chave do servidor e conta os tokens de cada conta.
+- A chave do Gemini da empresa fica só na nuvem: o app nunca a recebe. A cota do plano é conferida a cada pedido.
+- Segurança: senhas só como hash (PBKDF2), tokens e códigos só como hash, bloqueio depois de 5 senhas erradas, limites de
+  pedidos por minuto, respostas que não revelam quem tem conta e nenhum conteúdo de conversa guardado.
+- O programa ainda não usa o servidor: o login no app e a opção "Conta ProjectPlanner" no assistente vêm no Bloco 45. A
+  chave própria do Gemini continua funcionando como sempre.
+- Como publicar o servidor (PostgreSQL, Docker e as variáveis de ambiente): `docs/SERVIDOR.md`.
+
 ## 0.42.0
 
 Bloco 42: fotos com IA.

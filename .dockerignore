@@ -1,0 +1,8 @@
+# Bloco 44: o que não vai para a imagem do servidor
+**/bin/
+**/obj/
+publicacao/
+.git/
+**/*.db
+**/*.db-*
+**/.DS_Store

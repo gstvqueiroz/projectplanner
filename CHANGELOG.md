@@ -3,6 +3,25 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.42.0
+
+Bloco 42: fotos com IA.
+
+- Fotos do projeto > Importar em lote > Classificar com IA: a IA olha cada foto e escolhe a tarefa (pelo que aparece e pela
+  data), escreve a legenda, escolhe o local (da lista da obra) e diz o % que a foto mostra, com o grau de certeza; as
+  duvidosas ficam marcadas. A legenda e o local são editáveis e vão para a foto ao importar; com "Subir o % das tarefas
+  pelo que as fotos mostram", o % concluído sobe (nunca desce). Tudo num passo do Desfazer.
+- Buscar na pasta da obra…: escolha uma vez a pasta onde as fotos chegam (a do celular sincronizada, por exemplo); cada
+  busca traz só as fotos novas e já as classifica. A pasta fica guardada no projeto.
+- Pelo chat: anexe fotos e peça "coloca essas fotos nas tarefas" (ou "importa as fotos novas da pasta"): abre a importação
+  com a IA já classificando, para conferir e importar. "Gera o relatório fotográfico desta semana" abre o relatório no
+  período, já com o texto do andamento escrito pela IA.
+- A data da foto é conferida com a tarefa escolhida: uma foto bem antes do início previsto (ou depois do término de uma
+  tarefa concluída) aparece com o aviso.
+- Relatório fotográfico: o primeiro relatório começa na foto mais antiga quando ela é de antes do início do projeto; e,
+  quando o período não pega nenhuma foto, a mensagem diz quantas estão fora dele e de quando, com o botão "Incluir todas
+  as fotos".
+
 ## 0.41.2
 
 Correção: medição num projeto sem Valor nas tarefas.
@@ -382,7 +401,8 @@ começar):
 - Bloco 39 (feito, na 0.39): a barra de ícones ampliada e personalizável, com o "»" para janelas estreitas.
 - Bloco 43 (feito, na 0.40): indicadores ampliados (custos e margem, medições e caixa, alertas e análise da IA).
 - Bloco 41 (feito, na 0.41): o chat como central da obra (consultar, abrir telas e atualizar com cartão de confirmação).
-- A seguir: Bloco 42 (fotos com IA: classificar pelo chat, pela importação em lote e por uma pasta). Bloco 40 (baixar a SINAPI da
-  Caixa) espera um arquivo real para o formato novo.
+- Bloco 42 (feito, na 0.42): fotos com IA (classificar pelo chat, pela importação em lote e pela pasta da obra) e as
+  melhorias do relatório fotográfico.
+- A seguir: Bloco 40 (baixar a SINAPI da Caixa) espera um arquivo real para o formato novo.
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

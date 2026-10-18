@@ -230,4 +230,10 @@ public sealed class DialogosAvalonia : IDialogosService
         });
         return arquivos.Select(a => a.TryGetLocalPath()).OfType<string>().FirstOrDefault();
     }
+
+    public async Task<string?> EscolherPastaAsync(string titulo)
+    {
+        var pastas = await JanelaAtiva.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = titulo, AllowMultiple = false });
+        return pastas.Select(p => p.TryGetLocalPath()).OfType<string>().FirstOrDefault();
+    }
 }

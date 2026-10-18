@@ -40,13 +40,51 @@ public sealed record GrupoNoProjeto(string Cabecalho, IReadOnlyList<FotoNoProjet
 /// <summary>Uma foto lida na importação em lote: a tarefa sugerida pela data, que o usuário pode trocar.</summary>
 public sealed partial class LinhaDaImportacao : ObservableObject
 {
-    internal LinhaDaImportacao(FotoLida lida, IReadOnlyList<OpcaoDeTarefa> tarefas, OpcaoDeTarefa escolhida, string situacao)
+    private readonly Func<Guid, DateTime, string?>? _avisoDeData;
+
+    /// <param name="avisoDeData">Bloco 42: o aviso de data incoerente com a tarefa escolhida (a tarefa e a data da foto).</param>
+    internal LinhaDaImportacao(FotoLida lida, IReadOnlyList<OpcaoDeTarefa> tarefas, OpcaoDeTarefa escolhida, string situacao,
+        Func<Guid, DateTime, string?>? avisoDeData = null)
     {
         Lida = lida;
         Tarefas = tarefas;
         Situacao = situacao;
+        _avisoDeData = avisoDeData;
         TarefaEscolhida = escolhida;
     }
+
+    // ---- Bloco 42: o que a IA sugeriu (editável) ----
+
+    /// <summary>A legenda (sugerida pela IA ou escrita pelo usuário); vai para a foto ao importar.</summary>
+    [ObservableProperty] public partial string Legenda { get; set; } = "";
+
+    /// <summary>O local desta foto (vale mais que o local do lote).</summary>
+    [ObservableProperty] public partial string Local { get; set; } = "";
+
+    /// <summary>O % concluído que a foto mostra, segundo a IA (aplicado só com "Atualizar o % das tarefas").</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TextoDoPercentual))]
+    public partial int? PercentualSugerido { get; set; }
+
+    /// <summary>"70%", ou vazio sem % sugerido.</summary>
+    public string TextoDoPercentual => PercentualSugerido is { } p ? $"{p}%" : "";
+
+    [ObservableProperty] public partial string Confianca { get; set; } = "";
+
+    [ObservableProperty] public partial string Justificativa { get; set; } = "";
+
+    /// <summary>A IA está pouco segura da tarefa: confira.</summary>
+    [ObservableProperty] public partial bool Duvidosa { get; set; }
+
+    /// <summary>A data da foto não confere com a tarefa escolhida.</summary>
+    [ObservableProperty] public partial string? AvisoDeData { get; private set; }
+
+    public bool TemAvisoDeData => AvisoDeData is not null;
+
+    partial void OnAvisoDeDataChanged(string? value) => OnPropertyChanged(nameof(TemAvisoDeData));
+
+    partial void OnTarefaEscolhidaChanged(OpcaoDeTarefa value) =>
+        AvisoDeData = value?.Id is { } id && Lida.Importada is { } i ? _avisoDeData?.Invoke(id, i.DataFoto) : null;
 
     internal FotoLida Lida { get; }
 
@@ -73,8 +111,8 @@ public sealed partial class LinhaDaImportacao : ObservableObject
 
     public bool Importar => !Recusada && TarefaEscolhida?.Id is not null;
 
-    /// <summary>Por que a tarefa é essa (sugerida pela data, já está no projeto, recusada...).</summary>
-    public string Situacao { get; }
+    /// <summary>Por que a tarefa é essa (sugerida pela data, escolhida pela IA, já está no projeto, recusada...).</summary>
+    [ObservableProperty] public partial string Situacao { get; internal set; }
 }
 
 /// <summary>
@@ -375,7 +413,9 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
     }
 
     /// <summary>Lê os arquivos (do diálogo ou soltos na janela) e monta a tabela, sem importar ainda.</summary>
-    public async Task LerLoteAsync(IEnumerable<string> caminhos)
+    public Task LerLoteAsync(IEnumerable<string> caminhos) => LerLoteAsync(caminhos, soNovas: false);
+
+    private async Task LerLoteAsync(IEnumerable<string> caminhos, bool soNovas)
     {
         var lista = caminhos.ToList();
         if (lista.Count == 0 || Ocupado)
@@ -386,7 +426,7 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
         {
             var progresso = new Progress<int>(i => Progresso = $"Lendo {Math.Min(i + 1, lista.Count)} de {lista.Count}…");
             var lidas = await _fotos.LerAsync(lista, progresso);
-            MontarLote(lidas);
+            MontarLote(lidas, soNovas);
             AvisoDoLote = "";
         }
         finally
@@ -396,7 +436,11 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
         }
     }
 
-    private void MontarLote(IReadOnlyList<FotoLida> lidas)
+    private string? AvisoDeData(Guid tarefaId, DateTime data) =>
+        _cronograma.Tarefas.FirstOrDefault(t => t.Id == tarefaId) is { } t ? CoerenciaDaData.Aviso(t, data) : null;
+
+    /// <param name="soNovas">Bloco 42 (a pasta da obra): as que já estão no projeto ficam de fora, sem linha.</param>
+    private void MontarLote(IReadOnlyList<FotoLida> lidas, bool soNovas = false)
     {
         var edt = _cronograma.NumeracaoEdt();
         var opcoes = (IReadOnlyList<OpcaoDeTarefa>)[OpcaoNaoImportar,
@@ -416,13 +460,15 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
             }
             if (_cronograma.Tarefas.FirstOrDefault(t => t.TemFotoDaMesmaImagem(importada.HashOriginal)) is { } dona)
             {
+                if (soNovas)
+                    continue;
                 Lote.Add(new LinhaDaImportacao(lida, opcoes, OpcaoNaoImportar, $"Já está no projeto, em \"{edt[dona.Id]} {dona.Nome}\"."));
                 continue;
             }
             var sugerida = SugestaoDeTarefa.Sugerir(_cronograma, importada.DataFoto);
             Lote.Add(sugerida is null
-                ? new LinhaDaImportacao(lida, opcoes, OpcaoNaoImportar, "Nenhuma tarefa prevista nesse dia: escolha uma.")
-                : new LinhaDaImportacao(lida, opcoes, opcoes.First(o => o.Id == sugerida.Id), "Sugerida pela data da foto."));
+                ? new LinhaDaImportacao(lida, opcoes, OpcaoNaoImportar, "Nenhuma tarefa prevista nesse dia: escolha uma.", AvisoDeData)
+                : new LinhaDaImportacao(lida, opcoes, opcoes.First(o => o.Id == sugerida.Id), "Sugerida pela data da foto.", AvisoDeData));
         }
         foreach (var linha in Lote)
         {
@@ -453,15 +499,32 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
         }
         var tarefas = _cronograma.Tarefas.ToDictionary(t => t.Id);
         var (importadas, jaEstavam, mudaram) = (0, 0, new HashSet<Guid>());
+        var percentuais = 0;
         foreach (var linha in Lote.Where(l => l.Importar))
         {
             var tarefa = tarefas[linha.TarefaEscolhida.Id!.Value];
-            if (_fotos.Adicionar(tarefa, linha.Lida.Importada!, local) is null)
+            var localDaFoto = string.IsNullOrWhiteSpace(linha.Local) ? local : linha.Local.Trim();
+            if (localDaFoto is { Length: > MetadadosFoto.TamanhoMaximoDoLocal })
+                localDaFoto = localDaFoto[..MetadadosFoto.TamanhoMaximoDoLocal];
+            if (_fotos.Adicionar(tarefa, linha.Lida.Importada!, localDaFoto) is not { } foto)
                 jaEstavam++;
             else
             {
                 importadas++;
                 mudaram.Add(tarefa.Id);
+                // Bloco 42: a legenda e o % sugeridos (o % só com a opção ligada, e só para subir).
+                var percentual = AtualizarPercentualPelasFotos && linha.PercentualSugerido is { } p && p > tarefa.PercentualConcluido && !tarefa.EhResumo ? p : (int?)null;
+                if (!string.IsNullOrWhiteSpace(linha.Legenda) || percentual is not null)
+                {
+                    var legenda = linha.Legenda.Trim() is { Length: > 0 } l ? (l.Length > MetadadosFoto.TamanhoMaximoDaDescricao ? l[..MetadadosFoto.TamanhoMaximoDaDescricao] : l) : foto.Descricao;
+                    _fotos.Editar(tarefa, foto.Id, new MetadadosFoto(foto.DataFoto, foto.Titulo, legenda, foto.Autor, foto.Local,
+                        percentual ?? foto.PercentualConcluidoNaData, foto.Tags));
+                }
+                if (percentual is { } novo)
+                {
+                    tarefa.AtualizarPercentualConcluido(novo);
+                    percentuais++;
+                }
             }
         }
         if (mudaram.Count > 0)
@@ -470,7 +533,8 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
         LoteMudou();
         AvisoDoLote = (importadas == 1 ? "1 foto importada" : $"{importadas} fotos importadas") +
                       (mudaram.Count == 1 ? " em 1 tarefa." : $" em {mudaram.Count} tarefas.") +
-                      (jaEstavam == 0 ? "" : jaEstavam == 1 ? " 1 já estava na tarefa escolhida." : $" {jaEstavam} já estavam nas tarefas escolhidas.");
+                      (jaEstavam == 0 ? "" : jaEstavam == 1 ? " 1 já estava na tarefa escolhida." : $" {jaEstavam} já estavam nas tarefas escolhidas.") +
+                      (percentuais == 0 ? "" : percentuais == 1 ? " O % de 1 tarefa subiu pelas fotos." : $" O % de {percentuais} tarefas subiu pelas fotos.");
         Atualizar();
     }
 
@@ -516,7 +580,11 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
         ConfiguracaoDasFotos nova;
         try
         {
-            nova = new ConfiguracaoDasFotos(TextoDosLocais.Split('\n').Select(l => l.TrimEnd('\r')), (int)Math.Round(DiasSemFoto ?? 0));
+            nova = new ConfiguracaoDasFotos(TextoDosLocais.Split('\n').Select(l => l.TrimEnd('\r')), (int)Math.Round(DiasSemFoto ?? 0))
+            {
+                PastaDaObra = _cronograma.ConfiguracaoDasFotos.PastaDaObra, // Bloco 42: a pasta fica
+                UltimaLeituraDaPasta = _cronograma.ConfiguracaoDasFotos.UltimaLeituraDaPasta,
+            };
         }
         catch (DomainValidationException ex)
         {

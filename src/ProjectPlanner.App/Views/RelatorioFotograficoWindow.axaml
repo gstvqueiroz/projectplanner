@@ -28,6 +28,10 @@
             <TextBlock x:Name="Previa" Text="{Binding Previa}" FontWeight="SemiBold" />
             <TextBlock Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap" FontSize="12"
                        IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <!-- Bloco 42: as fotos estão fora do período (a data da câmera): um clique as inclui. -->
+            <Button x:Name="IncluirTodasAsFotos" Content="Incluir todas as fotos" Command="{Binding IncluirTodasAsFotosCommand}"
+                    IsVisible="{Binding TemFotosForaDoPeriodo}" FontSize="12" Padding="8,2" HorizontalAlignment="Left" Margin="0,2,0,0"
+                    ToolTip.Tip="Estende o período até pegar todas as fotos do projeto" />
             <TextBlock Text="{Binding AvisoDeParecidas}" Foreground="{DynamicResource TextoDeAviso}" TextWrapping="Wrap" FontSize="12"
                        IsVisible="{Binding AvisoDeParecidas, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <DockPanel>
@@ -51,7 +55,7 @@
                         <TextBlock Text="a" VerticalAlignment="Center" />
                         <CalendarDatePicker x:Name="Ate" SelectedDate="{Binding Ate}" Width="140" />
                         <Button Content="Desde o último relatório" Command="{Binding DesdeOUltimoCommand}"
-                                ToolTip.Tip="Do dia seguinte ao fim do último relatório (ou do início do projeto) até hoje" />
+                                ToolTip.Tip="Do dia seguinte ao fim do último relatório (no primeiro, do início do projeto ou da foto mais antiga) até hoje" />
                     </StackPanel>
                     <TextBlock Grid.Row="1" Classes="rotulo" Text="Tarefas" />
                     <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">

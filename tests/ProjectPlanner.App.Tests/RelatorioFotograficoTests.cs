@@ -82,8 +82,13 @@ public sealed class RelatorioFotograficoTests : TesteDeFotos, IDisposable
 
         tela.De = tela.Ate = new DateTime(2026, 10, 5);
 
-        (tela.Erro, tela.GerarPdfCommand.CanExecute(null), tela.GerarWordCommand.CanExecute(null))
-            .Should().Be(("Nenhuma foto no período com essas escolhas.", false, false));
+        (tela.GerarPdfCommand.CanExecute(null), tela.GerarWordCommand.CanExecute(null)).Should().Be((false, false));
+        // Bloco 42: a mensagem diz onde estão as fotos (fora do período, pela data da câmera) e o botão as inclui.
+        tela.Erro.Should().StartWith("Nenhuma foto no período com essas escolhas. ").And.Contain("fora dele").And.EndWith("use Incluir todas as fotos.");
+        tela.TemFotosForaDoPeriodo.Should().BeTrue();
+        tela.IncluirTodasAsFotosCommand.Execute(null);
+        (tela.Erro, tela.TemFotosForaDoPeriodo, tela.GerarPdfCommand.CanExecute(null)).Should().Be(("", false, true));
+        tela.De = tela.Ate = new DateTime(2026, 10, 5);
         tela.Ate = new DateTime(2026, 10, 1);
         tela.Erro.Should().Be("O período termina antes de começar.");
     }

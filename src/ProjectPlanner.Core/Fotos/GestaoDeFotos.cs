@@ -72,7 +72,13 @@ public sealed record ConfiguracaoDasFotos
 
     public bool AlertaLigado => DiasSemFotoParaAlerta > 0;
 
-    public bool EhPadrao => Locais.Count == 0 && DiasSemFotoParaAlerta == DiasPadrao;
+    /// <summary>Bloco 42: a pasta de onde vêm as fotos da obra (a do celular sincronizada, por exemplo); nula sem pasta.</summary>
+    public string? PastaDaObra { get; init; }
+
+    /// <summary>Bloco 42: a última vez que a pasta foi lida (só os arquivos mais novos que isso entram de novo).</summary>
+    public DateTime? UltimaLeituraDaPasta { get; init; }
+
+    public bool EhPadrao => Locais.Count == 0 && DiasSemFotoParaAlerta == DiasPadrao && PastaDaObra is null;
 
     public bool Equals(ConfiguracaoDasFotos? outra) =>
         outra is not null && DiasSemFotoParaAlerta == outra.DiasSemFotoParaAlerta && Locais.SequenceEqual(outra.Locais);
@@ -115,6 +121,27 @@ public static class SugestaoDeTarefa
             .ThenBy(x => x.ordem)
             .Select(x => x.tarefa)
             .FirstOrDefault();
+    }
+}
+
+/// <summary>
+/// Bloco 42: a data da foto confere com a tarefa? Uma foto tirada bem antes do início ou bem depois do término previsto
+/// (com uma folga de <see cref="Folga"/> dias) provavelmente é de outra tarefa, ou a data da câmera está errada.
+/// </summary>
+public static class CoerenciaDaData
+{
+    public const int Folga = 7;
+
+    /// <summary>O aviso ("A foto é de 05/10/2026, antes do início previsto da tarefa (12/10/2026)."); nulo se confere.</summary>
+    public static string? Aviso(Tarefa tarefa, DateTime dataDaFoto)
+    {
+        ArgumentNullException.ThrowIfNull(tarefa);
+        var (inicio, termino, dia) = ((tarefa.InicioMaisCedo ?? tarefa.DataInicio).Date, (tarefa.TerminoMaisCedo ?? tarefa.DataTermino).Date, dataDaFoto.Date);
+        if (dia < inicio.AddDays(-Folga))
+            return $"A foto é de {dia:dd/MM/yyyy}, antes do início previsto da tarefa ({inicio:dd/MM/yyyy}).";
+        if (dia > termino.AddDays(Folga) && tarefa.PercentualConcluido >= 100)
+            return $"A foto é de {dia:dd/MM/yyyy}, depois do término da tarefa ({termino:dd/MM/yyyy}), que já está concluída.";
+        return null;
     }
 }
 

@@ -26,7 +26,12 @@ public static class InstrucoesDoAssistente
         "usoDeRecursos, fisicoFinanceiro, relatorioFotografico, fotosDoProjeto, resumo, linhasDeBase) e, quando fizer sentido, a " +
         "aba (indicadores: visaoGeral, custos, medicoes, alertas; orcamento: planilha, composicoes, bases, sugestoes; medicoes: " +
         "medicoes, aditivos, contrato, plano), o nº da medição, ou o período (de, ate em AAAA-MM-DD) do relatório fotográfico. " +
-        "O programa abre a tela; na mensagem, diga em uma frase o que ela mostra.\n" +
+        "O programa abre a tela; na mensagem, diga em uma frase o que ela mostra. Para o relatório fotográfico, \"texto\": true já " +
+        "pede à IA o texto do andamento (quando o usuário pedir para gerar ou montar o relatório).\n" +
+        "FOTOS. Quando o usuário anexar fotos da obra e pedir para registrar, importar ou classificar (\"coloca essas fotos nas " +
+        "tarefas\"), preencha \"importarFotos\": \"anexos\"; quando pedir as fotos novas da pasta da obra, \"pasta\". O programa abre " +
+        "Fotos do projeto > Importar em lote com a IA já escolhendo a tarefa, a legenda e o local de cada foto, para o usuário " +
+        "conferir e importar. Na mensagem, comente o que você vê nas fotos e diga para conferir a tabela.\n" +
         "ATUALIZAR A OBRA. Quando o usuário informar o andamento ou pedir para registrar algo, proponha em \"atualizacoes\" (o " +
         "programa mostra um cartão e ele confirma; nada muda antes): percentual (tarefa, percentual: o % concluído de hoje), " +
         "medicao (tarefa, quantidade medida no período na unidade da tarefa, ou percentual num item sem quantidade; medicao = nº " +

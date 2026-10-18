@@ -40,6 +40,15 @@ public sealed record AtualizacaoDaObra(
     string? Documento = null,
     string? Nome = null);
 
+/// <summary>Bloco 42: de onde vêm as fotos que o assistente pede para importar.</summary>
+public static class OrigensDasFotos
+{
+    public const string Anexos = "anexos";
+    public const string Pasta = "pasta";
+
+    public static IReadOnlyList<string> Todas { get; } = [Anexos, Pasta];
+}
+
 /// <summary>Bloco 41: as telas que o assistente pode abrir.</summary>
 public static class TelasDoPrograma
 {
@@ -87,7 +96,8 @@ public static class TelasDoPrograma
 /// <summary>Bloco 41: a tela que o assistente pede para abrir, com a aba e o que mostrar nela.</summary>
 /// <param name="Medicao">medicoes: o nº da medição para selecionar.</param>
 /// <param name="De">relatorioFotografico: o início do período (AAAA-MM-DD).</param>
-public sealed record TelaParaAbrir(string Tela, string? Aba = null, int? Medicao = null, string? De = null, string? Ate = null)
+/// <param name="Texto">Bloco 42, relatorioFotografico: já pedir à IA o texto do andamento.</param>
+public sealed record TelaParaAbrir(string Tela, string? Aba = null, int? Medicao = null, string? De = null, string? Ate = null, bool Texto = false)
 {
     /// <summary>"Abrir Indicadores › custos".</summary>
     public string Rotulo => $"Abrir {TelasDoPrograma.Nome(Tela)}";

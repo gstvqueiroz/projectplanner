@@ -39,6 +39,9 @@ public interface ICronogramaDoAssistente
     /// <summary>Bloco 41: abre a tela pedida e espera ela fechar.</summary>
     Task AbrirTelaAsync(TelaParaAbrir tela);
 
+    /// <summary>Bloco 42: abre a importação em lote com estas fotos (ou as novas da pasta da obra), já classificadas pela IA.</summary>
+    Task ImportarFotosAsync(string origem, IReadOnlyList<string> caminhos);
+
     /// <summary>Aplica as alterações, achando as tarefas existentes pelo <paramref name="retrato"/> mandado com o pedido.</summary>
     Task<ResultadoDaAplicacao> AplicarAsync(IReadOnlyList<AlteracaoDoCronograma> alteracoes, ContextoDoProjeto retrato);
 

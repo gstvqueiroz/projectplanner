@@ -132,11 +132,19 @@ public sealed partial class MainWindowViewModel
                     medicoes.Selecionada = escolhida;
                 await _dialogos.MostrarMedicoesAsync(medicoes);
                 break;
-            case TelasDoPrograma.RelatorioFotografico when Data(tela.De) is { } de:
-                await RelatorioDoPeriodoAsync(de, Data(tela.Ate) is { } ate && ate >= de ? ate : DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime));
-                break;
             case TelasDoPrograma.RelatorioFotografico:
-                await RelatorioFotograficoCommand.ExecuteAsync(null);
+                Recalcular();
+                var relatorio = new RelatorioFotograficoViewModel(_cronograma, _fotos, _preferenciasRelatorio, _dialogos, _relogio, MarcarSemRecalcular, _analista);
+                if (Data(tela.De) is { } de)
+                {
+                    (relatorio.De, relatorio.Ate) = (de.ToDateTime(TimeOnly.MinValue),
+                        (Data(tela.Ate) is { } ate && ate >= de ? ate : DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime)).ToDateTime(TimeOnly.MinValue));
+                    relatorio.TarefasEscolhidas = relatorio.OpcoesDeTarefas.First(o => o.Valor == Core.Relatorios.TarefasDoRelatorio.EmExecucaoNoPeriodo);
+                }
+                // Bloco 42: "gera o relatório desta semana": a IA já escreve o texto do andamento.
+                var texto = tela.Texto && relatorio.SugerirTextoCommand.CanExecute(null) ? relatorio.SugerirTextoCommand.ExecuteAsync(null) : Task.CompletedTask;
+                await _dialogos.MostrarRelatorioFotograficoAsync(relatorio);
+                await texto;
                 break;
             case TelasDoPrograma.Custos:
                 await CustosRealizadosCommand.ExecuteAsync(null);

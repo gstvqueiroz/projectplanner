@@ -13,12 +13,26 @@ public sealed partial class MainWindowViewModel
     /// <summary>Os locais padronizados e o alerta de foto do projeto aberto.</summary>
     public ConfiguracaoDasFotos ConfiguracaoDasFotos => _cronograma.ConfiguracaoDasFotos;
 
-    [RelayCommand]
-    private Task FotosDoProjeto()
+    private FotosDoProjetoViewModel NovasFotosDoProjeto()
     {
         Recalcular(); // a tarefa sugerida pela data e o alerta usam as datas calculadas
-        return _dialogos.MostrarFotosDoProjetoAsync(new FotosDoProjetoViewModel(_cronograma, _fotos, _dialogos, _relogio,
-            ProjetoMudouNasFotos, ConfiguracaoDasFotosMudou, MostrarFotosAsync, _analista));
+        return new FotosDoProjetoViewModel(_cronograma, _fotos, _dialogos, _relogio, ProjetoMudouNasFotos, ConfiguracaoDasFotosMudou, MostrarFotosAsync, _analista);
+    }
+
+    [RelayCommand]
+    private Task FotosDoProjeto() => _dialogos.MostrarFotosDoProjetoAsync(NovasFotosDoProjeto());
+
+    /// <summary>
+    /// Bloco 42 (o chat): abre Fotos do projeto > Importar em lote com as fotos anexadas (ou as novas da pasta da obra) e a IA
+    /// já as classificando; o usuário confere e importa.
+    /// </summary>
+    public async Task ImportarFotosAsync(string origem, IReadOnlyList<string> caminhos)
+    {
+        var fotos = NovasFotosDoProjeto();
+        fotos.AbaEscolhida = FotosDoProjetoViewModel.AbaImportacao;
+        var leitura = origem == OrigensDasFotos.Pasta ? fotos.BuscarNaPastaDaObraCommand.ExecuteAsync(null) : fotos.ImportarComIaAsync(caminhos);
+        await _dialogos.MostrarFotosDoProjetoAsync(fotos);
+        await leitura;
     }
 
     // Fotos importadas, legendas ou % sugeridos pela IA aplicados: as linhas dessas tarefas se atualizam, e é um passo do

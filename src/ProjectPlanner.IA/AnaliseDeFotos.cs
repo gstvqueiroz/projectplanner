@@ -36,6 +36,31 @@ public sealed record PedidoDeTextoDoRelatorio(string Obra, DateOnly De, DateOnly
 /// <summary>O texto sugerido: um ou mais parágrafos e os pontos de atenção.</summary>
 public sealed record TextoSugerido(string Andamento, IReadOnlyList<string> PontosDeAtencao);
 
+/// <summary>Bloco 42: uma tarefa que pode receber fotos, para a IA escolher onde cada foto se encaixa.</summary>
+/// <param name="Id">"T3": é como a IA se refere à tarefa.</param>
+/// <param name="Caminho">Os resumos acima dela ("Estrutura > Térreo").</param>
+/// <param name="EmExecucao">Prevista para o período das fotos (é a candidata mais provável).</param>
+public sealed record TarefaParaClassificar(string Id, string Edt, string Nome, string Caminho, DateOnly Inicio, DateOnly Termino, int Percentual,
+    bool EmExecucao);
+
+/// <summary>Bloco 42: classificar fotos novas: em que tarefa cada uma se encaixa, com a legenda, o local e o % que mostra.</summary>
+/// <param name="Locais">Os locais padronizados da obra (a IA escolhe um deles, quando dá para saber).</param>
+public sealed record PedidoDeClassificacao(string Obra, DateOnly Hoje, IReadOnlyList<TarefaParaClassificar> Tarefas, IReadOnlyList<FotoParaIA> Fotos,
+    IReadOnlyList<string> Locais);
+
+/// <summary>Quão segura a IA está da tarefa.</summary>
+public enum ConfiancaDaIA
+{
+    Baixa,
+    Media,
+    Alta,
+}
+
+/// <summary>Bloco 42: onde a foto se encaixa, conferido (a tarefa e o local são do pedido; o % de 0 a 100).</summary>
+/// <param name="Tarefa">"T3"; nulo quando a IA não soube.</param>
+public sealed record ClassificacaoDaFoto(string Id, string? Tarefa, ConfiancaDaIA Confianca, string? Legenda, string? Local, int? Percentual,
+    string Justificativa);
+
 /// <summary>
 /// Bloco 29: a IA olhando as fotos e o cronograma. Tudo o que vem daqui é sugestão: o App mostra para o usuário revisar,
 /// editar e aplicar (nada muda no projeto sozinho).
@@ -53,6 +78,10 @@ public interface IAnalistaDeFotos
 
     /// <exception cref="ErroDoAssistenteException">Falha da IA, já com a mensagem para o usuário.</exception>
     Task<TextoSugerido> RedigirRelatorioAsync(PedidoDeTextoDoRelatorio pedido, CancellationToken cancelamento);
+
+    /// <summary>Bloco 42: em que tarefa cada foto se encaixa (até <see cref="LimitesDaAnalise.FotosPorClassificacao"/> por pedido).</summary>
+    /// <exception cref="ErroDoAssistenteException">Falha da IA, já com a mensagem para o usuário.</exception>
+    Task<IReadOnlyList<ClassificacaoDaFoto>> ClassificarFotosAsync(PedidoDeClassificacao pedido, CancellationToken cancelamento);
 }
 
 /// <summary>Os limites de cada pedido (o custo cresce com as imagens).</summary>
@@ -69,6 +98,12 @@ public static class LimitesDaAnalise
 
     /// <summary>Fotos no pedido do texto do relatório.</summary>
     public const int FotosNoTexto = 8;
+
+    /// <summary>Bloco 42: fotos por pedido de classificação (o App divide um lote maior em vários pedidos).</summary>
+    public const int FotosPorClassificacao = 10;
+
+    /// <summary>Bloco 42: tarefas mandadas na classificação (as em execução no período primeiro).</summary>
+    public const int TarefasNaClassificacao = 150;
 }
 
 /// <summary>Sem chave de API: avisa que é preciso configurar o assistente.</summary>
@@ -87,6 +122,9 @@ public sealed class AnalistaIndisponivel : IAnalistaDeFotos
 
     public Task<TextoSugerido> RedigirRelatorioAsync(PedidoDeTextoDoRelatorio pedido, CancellationToken cancelamento) =>
         Task.FromException<TextoSugerido>(new ErroDoAssistenteException(Mensagem));
+
+    public Task<IReadOnlyList<ClassificacaoDaFoto>> ClassificarFotosAsync(PedidoDeClassificacao pedido, CancellationToken cancelamento) =>
+        Task.FromException<IReadOnlyList<ClassificacaoDaFoto>>(new ErroDoAssistenteException(Mensagem));
 }
 
 /// <summary>Usa a configuração do momento (a chave salva ou removida vale na hora), como o assistente do painel.</summary>
@@ -109,4 +147,7 @@ public sealed class AnalistaConformeConfiguracao(IConfiguracaoIA configuracao, I
 
     public Task<TextoSugerido> RedigirRelatorioAsync(PedidoDeTextoDoRelatorio pedido, CancellationToken cancelamento) =>
         Analista().RedigirRelatorioAsync(pedido, cancelamento);
+
+    public Task<IReadOnlyList<ClassificacaoDaFoto>> ClassificarFotosAsync(PedidoDeClassificacao pedido, CancellationToken cancelamento) =>
+        Analista().ClassificarFotosAsync(pedido, cancelamento);
 }

@@ -8,7 +8,8 @@ namespace ProjectPlanner.Data;
 /// <summary>
 /// Os dados da obra e o histórico dos relatórios fotográficos em JSON, na tabela RelatorioDoProjeto (Bloco 27). O
 /// Bloco 28 acrescentou os locais padronizados e os dias do alerta de foto: campos novos e opcionais, sem mudar a
-/// versão (um arquivo da 0.27, sem eles, abre com os valores padrão).
+/// versão (um arquivo da 0.27, sem eles, abre com os valores padrão). Bloco 42: a pasta das fotos da obra e a última
+/// leitura dela, do mesmo jeito.
 /// </summary>
 internal static class FormatoDoRelatorio
 {
@@ -19,7 +20,8 @@ internal static class FormatoDoRelatorio
     public static string Serializar(Cronograma cronograma) => JsonSerializer.Serialize(new Dados(
         cronograma.Obra.Contratante, cronograma.Obra.Contrato, cronograma.Obra.Endereco,
         [.. cronograma.Relatorios.Select(r => new Relatorio(r.Numero, r.GeradoEm, r.De, r.Ate, r.Fotos))],
-        [.. cronograma.ConfiguracaoDasFotos.Locais], cronograma.ConfiguracaoDasFotos.DiasSemFotoParaAlerta), Opcoes);
+        [.. cronograma.ConfiguracaoDasFotos.Locais], cronograma.ConfiguracaoDasFotos.DiasSemFotoParaAlerta,
+        cronograma.ConfiguracaoDasFotos.PastaDaObra, cronograma.ConfiguracaoDasFotos.UltimaLeituraDaPasta), Opcoes);
 
     /// <summary>Há algo para gravar (sem nada, o arquivo fica sem a linha).</summary>
     public static bool TemDados(Cronograma cronograma) =>
@@ -35,7 +37,11 @@ internal static class FormatoDoRelatorio
             foreach (var r in dados.Relatorios ?? [])
                 cronograma.RegistrarRelatorio(new RelatorioGerado(r.Numero, r.GeradoEm, r.De, r.Ate, r.Fotos));
             cronograma.DefinirConfiguracaoDasFotos(new ConfiguracaoDasFotos(dados.Locais ?? [],
-                dados.DiasSemFoto ?? ConfiguracaoDasFotos.DiasPadrao));
+                dados.DiasSemFoto ?? ConfiguracaoDasFotos.DiasPadrao)
+            {
+                PastaDaObra = string.IsNullOrWhiteSpace(dados.PastaDaObra) ? null : dados.PastaDaObra,
+                UltimaLeituraDaPasta = dados.UltimaLeituraDaPasta,
+            });
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or DomainValidationException)
         {
@@ -44,7 +50,7 @@ internal static class FormatoDoRelatorio
     }
 
     private sealed record Dados(string? Contratante, string? Contrato, string? Endereco, List<Relatorio>? Relatorios,
-        List<string>? Locais = null, int? DiasSemFoto = null);
+        List<string>? Locais = null, int? DiasSemFoto = null, string? PastaDaObra = null, DateTime? UltimaLeituraDaPasta = null);
 
     private sealed record Relatorio(int Numero, DateTime GeradoEm, DateOnly De, DateOnly Ate, int Fotos);
 }

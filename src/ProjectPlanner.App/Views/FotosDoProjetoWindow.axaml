@@ -126,14 +126,27 @@
                 <DockPanel Margin="0,8,0,0">
                     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
                         <TextBlock TextWrapping="Wrap" Opacity="0.75"
-                                   Text="Escolha (ou solte aqui) as fotos de vários dias. Cada uma vai para a tarefa prevista na data em que foi tirada; confira a tabela, troque o que precisar e clique em Importar." />
+                                   Text="Escolha (ou solte aqui) as fotos de vários dias, ou busque as novas na pasta da obra. Cada uma vai para a tarefa prevista na data em que foi tirada; com Classificar com IA, a IA olha as fotos e escolhe a tarefa, a legenda, o local e o %. Confira a tabela, troque o que precisar e clique em Importar." />
                         <WrapPanel ItemSpacing="8" LineSpacing="6">
                             <Button x:Name="EscolherFotos" Classes="accent" Content="Escolher fotos…" Command="{Binding EscolherFotosCommand}" />
+                            <!-- Bloco 42 -->
+                            <Button x:Name="BuscarNaPasta" Content="Buscar na pasta da obra…" Command="{Binding BuscarNaPastaDaObraCommand}"
+                                    ToolTip.Tip="As fotos novas da pasta onde elas chegam (a do celular sincronizada, por exemplo); já classifica com a IA" />
+                            <Button x:Name="ClassificarComIa" Content="Classificar com IA" Command="{Binding ClassificarComIaCommand}"
+                                    ToolTip.Tip="A IA olha cada foto e escolhe a tarefa, a legenda, o local e o % concluído que ela mostra" />
+                            <Button Content="Cancelar" Command="{Binding CancelarClassificacaoCommand}" IsVisible="{Binding Classificando}" />
                             <TextBlock Text="Local para todas" VerticalAlignment="Center" />
                             <AutoCompleteBox x:Name="LocalDoLote" Text="{Binding LocalDoLote}" ItemsSource="{Binding SugestoesDeLocal}"
                                              FilterMode="Contains" MinimumPrefixLength="0" Width="260" MaxLength="200"
                                              PlaceholderText="(opcional)" />
+                            <CheckBox x:Name="AtualizarPercentual" Content="Subir o % das tarefas pelo que as fotos mostram" IsChecked="{Binding AtualizarPercentualPelasFotos}"
+                                      ToolTip.Tip="Ao importar, o % concluído de cada tarefa sobe para o % que a IA viu na foto (nunca desce)" />
                         </WrapPanel>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Trocar pasta…" Command="{Binding TrocarPastaDaObraCommand}" FontSize="12" Padding="8,2" />
+                            <TextBlock Text="{Binding TextoDaPasta}" FontSize="12" Opacity="0.7" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding Classificando}" />
                     </StackPanel>
 
                     <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
@@ -151,7 +164,7 @@
                         <TextBlock Text="Nenhuma foto escolhida." Opacity="0.6" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"
                                    IsVisible="{Binding !TemLote}" />
                         <DataGrid x:Name="TabelaDoLote" ItemsSource="{Binding Lote}" IsVisible="{Binding TemLote}" AutoGenerateColumns="False"
-                                  CanUserReorderColumns="False" CanUserSortColumns="False" HeadersVisibility="Column" RowHeight="64"
+                                  CanUserReorderColumns="False" CanUserSortColumns="False" HeadersVisibility="Column" RowHeight="74"
                                   GridLinesVisibility="Horizontal">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="" Width="84" IsReadOnly="True">
@@ -161,27 +174,66 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Arquivo" Binding="{Binding Arquivo}" Width="170" IsReadOnly="True" />
-                                <DataGridTextColumn Header="Data da foto" Binding="{Binding Data}" Width="260" IsReadOnly="True" />
-                                <DataGridTemplateColumn Header="Tarefa" Width="280">
+                                <DataGridTemplateColumn Header="Arquivo e data" Width="170" IsReadOnly="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="vm:LinhaDaImportacao">
-                                            <ComboBox ItemsSource="{Binding Tarefas}" SelectedItem="{Binding TarefaEscolhida}" IsEnabled="{Binding PodeEscolher}"
-                                                      HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="4,0" />
+                                            <StackPanel VerticalAlignment="Center" Margin="6,0" Spacing="2">
+                                                <TextBlock Text="{Binding Arquivo}" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Arquivo}" />
+                                                <TextBlock Text="{Binding Data}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                            </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Situação" Width="*">
+                                <DataGridTemplateColumn Header="Tarefa" Width="260">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate x:DataType="vm:LinhaDaImportacao">
-                                            <TextBlock Text="{Binding Situacao}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="6,0" FontSize="12"
-                                                       Classes.recusada="{Binding Recusada}">
-                                                <TextBlock.Styles>
-                                                    <Style Selector="TextBlock.recusada">
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
-                                                    </Style>
-                                                </TextBlock.Styles>
-                                            </TextBlock>
+                                            <StackPanel VerticalAlignment="Center" Margin="4,0" Spacing="2">
+                                                <ComboBox ItemsSource="{Binding Tarefas}" SelectedItem="{Binding TarefaEscolhida}" IsEnabled="{Binding PodeEscolher}"
+                                                          HorizontalAlignment="Stretch" />
+                                                <TextBlock Text="{Binding Confianca}" FontSize="11" Classes.duvidosa="{Binding Duvidosa}" ToolTip.Tip="{Binding Justificativa}"
+                                                           IsVisible="{Binding Confianca, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                                    <TextBlock.Styles>
+                                                        <Style Selector="TextBlock.duvidosa">
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+                                                        </Style>
+                                                    </TextBlock.Styles>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <!-- Bloco 42: a legenda, o local e o % (sugeridos pela IA, editáveis) -->
+                                <DataGridTemplateColumn Header="Legenda" Width="*" MinWidth="200">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:LinhaDaImportacao">
+                                            <TextBox Text="{Binding Legenda}" TextWrapping="Wrap" AcceptsReturn="False" FontSize="12" Margin="4,4" IsEnabled="{Binding PodeEscolher}"
+                                                     PlaceholderText="(sem legenda)" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Local" Width="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:LinhaDaImportacao">
+                                            <TextBox Text="{Binding Local}" FontSize="12" Margin="4,0" VerticalAlignment="Center" IsEnabled="{Binding PodeEscolher}"
+                                                     PlaceholderText="(o do lote)" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="% na foto" Binding="{Binding TextoDoPercentual}" Width="104" IsReadOnly="True" />
+                                <DataGridTemplateColumn Header="Situação" Width="200">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:LinhaDaImportacao">
+                                            <StackPanel VerticalAlignment="Center" Margin="6,0" Spacing="2">
+                                                <TextBlock Text="{Binding Situacao}" TextWrapping="Wrap" FontSize="12" Classes.recusada="{Binding Recusada}">
+                                                    <TextBlock.Styles>
+                                                        <Style Selector="TextBlock.recusada">
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
+                                                        </Style>
+                                                    </TextBlock.Styles>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding AvisoDeData}" IsVisible="{Binding TemAvisoDeData}" TextWrapping="Wrap" FontSize="11"
+                                                           Foreground="{DynamicResource TextoDeAviso}" />
+                                            </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

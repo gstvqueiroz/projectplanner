@@ -318,6 +318,17 @@ public sealed class DialogosFalsos : IDialogosService
 
     public Task<string?> EscolherPlanilhaAsync() => Task.FromResult(PlanilhaEscolhida);
 
+    /// <summary>Bloco 42: a pasta que o "escolher pasta" devolve; nula cancela.</summary>
+    public string? PastaEscolhida { get; set; }
+
+    public List<string> PedidosDePasta { get; } = [];
+
+    public Task<string?> EscolherPastaAsync(string titulo)
+    {
+        PedidosDePasta.Add(titulo);
+        return Task.FromResult(PastaEscolhida);
+    }
+
     public List<RecursosViewModel> Recursos { get; } = [];
 
     public Task MostrarRecursosAsync(RecursosViewModel recursos)
@@ -794,5 +805,20 @@ public sealed class AnalistaFalso : IAnalistaDeFotos
     {
         PedidosDeTexto.Add(pedido);
         return Responder(() => Texto(pedido), cancelamento);
+    }
+
+    // ---- Bloco 42 ----
+
+    public List<PedidoDeClassificacao> PedidosDeClassificacao { get; } = [];
+
+    /// <summary>Por padrão, cada foto vai para a primeira tarefa em execução, com certeza alta.</summary>
+    public Func<PedidoDeClassificacao, IReadOnlyList<ClassificacaoDaFoto>> Classificar { get; set; } =
+        p => p.Fotos.Select(f => new ClassificacaoDaFoto(f.Id, p.Tarefas.FirstOrDefault(t => t.EmExecucao)?.Id, ConfiancaDaIA.Alta,
+            $"Legenda da IA para {f.Id}", null, 50, "A foto mostra o serviço.")).ToList();
+
+    public Task<IReadOnlyList<ClassificacaoDaFoto>> ClassificarFotosAsync(PedidoDeClassificacao pedido, CancellationToken cancelamento)
+    {
+        PedidosDeClassificacao.Add(pedido);
+        return Responder(() => Classificar(pedido), cancelamento);
     }
 }

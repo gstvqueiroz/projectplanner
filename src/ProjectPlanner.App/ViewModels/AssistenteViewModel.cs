@@ -235,6 +235,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         string? pedidoDeOrcamento = null;
         CartaoDeAtualizacoes? cartao = null;
         TelaParaAbrir? tela = null;
+        string? importarFotos = null;
         try
         {
             var retrato = _cronograma.Retrato();
@@ -278,6 +279,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
                 if (r.Atualizacoes.Count > 0)
                     cartao = new CartaoDeAtualizacoes(_cronograma.ConferirAtualizacoes(r.Atualizacoes, _cronograma.Retrato()));
                 tela = r.Abrir;
+                importarFotos = r.ImportarFotos;
             }
             resposta = new MensagemChat(AutorMensagem.Assistente, r.Texto, _relogio.GetLocalNow(), [], Resposta: r.Estruturada ? r : null);
         }
@@ -299,6 +301,13 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         // Bloco 41: a tela que o usuário pediu para ver.
         if (tela is not null && !resposta.EhErro && geracao == _geracao)
             await _cronograma.AbrirTelaAsync(tela);
+        // Bloco 42: as fotos anexadas a esta mensagem (ou as da pasta da obra) vão para a importação, com a IA classificando.
+        if (importarFotos is not null && !resposta.EhErro && geracao == _geracao)
+        {
+            var fotos = anexos.Select(a => a.CaminhoLocal).Where(c => ViewModels.FotosDoProjetoViewModel.ExtensoesDeFoto.Contains(Path.GetExtension(c).ToLowerInvariant())).ToList();
+            if (importarFotos == OrigensDasFotos.Pasta || fotos.Count > 0)
+                await _cronograma.ImportarFotosAsync(importarFotos, fotos);
+        }
         // Bloco 38: o assistente pediu sugestões de orçamento: elas aparecem em Projeto > Orçamento…, para o usuário aceitar.
         if (pedidoDeOrcamento is not null && !resposta.EhErro && geracao == _geracao)
             await _cronograma.AbrirSugestoesDeOrcamentoAsync(pedidoDeOrcamento);

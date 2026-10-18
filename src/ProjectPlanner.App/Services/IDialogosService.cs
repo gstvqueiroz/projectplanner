@@ -97,6 +97,9 @@ public interface IDialogosService
     /// <summary>Bloco 35: onde salvar um arquivo exportado ("pdf", "csv", "docx" ou "xlsx"); nulo se cancelar.</summary>
     Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao);
 
+    /// <summary>Bloco 42: uma pasta (a das fotos da obra); nula se cancelar.</summary>
+    Task<string?> EscolherPastaAsync(string titulo);
+
     /// <summary>Bloco 35: uma planilha (.xlsx ou .csv) para importar valores; nula se cancelar.</summary>
     Task<string?> EscolherPlanilhaAsync();
 }

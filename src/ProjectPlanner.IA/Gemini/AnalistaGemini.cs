@@ -170,6 +170,73 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
         });
     }
 
+    // ---- Bloco 42: onde cada foto se encaixa ----
+
+    internal const string InstrucoesDaClassificacao =
+        "Para cada foto, diga em que tarefa do cronograma ela se encaixa, olhando o que aparece na imagem (o serviço, a etapa, " +
+        "o material) e a data dela comparada com o período previsto das tarefas; as marcadas como em execução no período são " +
+        "as mais prováveis, mas a imagem manda. Responda com o id da tarefa exatamente como recebido (T1, T2…) ou sem tarefa " +
+        "quando não der para saber. confianca: alta (o serviço da foto é claramente o da tarefa), media (provável) ou baixa " +
+        "(palpite). Escreva uma legenda curta (até 200 caracteres) do que aparece, sem repetir a data nem o nome da tarefa. Se " +
+        "dá para saber o local e ele está na lista de locais da obra, mande-o exatamente como na lista. Se a foto mostra o " +
+        "avanço do serviço, estime o % concluído da tarefa (0 a 100, múltiplos de 5). Na justificativa (até 200 caracteres), " +
+        "diga o que na foto sustenta a escolha. Responda com o id de cada foto exatamente como recebido.";
+
+    public async Task<IReadOnlyList<ClassificacaoDaFoto>> ClassificarFotosAsync(PedidoDeClassificacao pedido, CancellationToken cancelamento)
+    {
+        ArgumentNullException.ThrowIfNull(pedido);
+        if (pedido.Fotos.Count == 0)
+            return [];
+        var resposta = await ChamarAsync(MontarClassificacao(pedido), cancelamento);
+        var fotos = pedido.Fotos.Select(f => f.Id).ToHashSet();
+        var tarefas = pedido.Tarefas.Select(t => t.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var classificacoes = new List<ClassificacaoDaFoto>();
+        foreach (var item in Lista(resposta, "fotos"))
+        {
+            if (Texto(item, "id") is not { } id || !fotos.Remove(id))
+                continue;
+            var tarefa = Texto(item, "tarefa")?.Trim() is { Length: > 0 } t && tarefas.Contains(t) ? pedido.Tarefas.First(x => string.Equals(x.Id, t, StringComparison.OrdinalIgnoreCase)).Id : null;
+            var confianca = (Texto(item, "confianca") ?? "").Trim().ToLowerInvariant() switch
+            {
+                "alta" => ConfiancaDaIA.Alta,
+                "media" or "média" => ConfiancaDaIA.Media,
+                _ => ConfiancaDaIA.Baixa,
+            };
+            var local = Texto(item, "local")?.Trim() is { Length: > 0 } l
+                ? pedido.Locais.FirstOrDefault(x => string.Equals(x, l, StringComparison.CurrentCultureIgnoreCase))
+                : null;
+            int? percentual = item.TryGetProperty("percentual", out var p) && p.ValueKind == JsonValueKind.Number && p.TryGetDouble(out var v)
+                ? (int)Math.Clamp(Math.Round(v), 0, 100) : null;
+            classificacoes.Add(new ClassificacaoDaFoto(id, tarefa, tarefa is null ? ConfiancaDaIA.Baixa : confianca, Limitar(Texto(item, "legenda"), TamanhoDaLegenda),
+                local, percentual, Limitar(Texto(item, "justificativa"), TamanhoDaLegenda) ?? ""));
+        }
+        return classificacoes;
+    }
+
+    internal static JsonObject MontarClassificacao(PedidoDeClassificacao pedido)
+    {
+        var dados = new StringBuilder()
+            .AppendLine($"Obra: {pedido.Obra}. Hoje: {Data(pedido.Hoje)}. {pedido.Fotos.Count} foto(s) para classificar.")
+            .AppendLine(pedido.Locais.Count == 0 ? "Locais da obra: (nenhum cadastrado)" : "Locais da obra: " + string.Join("; ", pedido.Locais))
+            .AppendLine("Tarefas (id | EDT nome | em | previsto | % concluído | em execução no período das fotos):");
+        foreach (var t in pedido.Tarefas)
+            dados.AppendLine($"{t.Id} | {t.Edt} {t.Nome} | {(t.Caminho.Length == 0 ? "-" : t.Caminho)} | {Data(t.Inicio)} a {Data(t.Termino)} | " +
+                             $"{t.Percentual}% | {(t.EmExecucao ? "sim" : "não")}");
+        var partes = new JsonArray { Nota(dados.ToString()) };
+        foreach (var foto in pedido.Fotos)
+            AdicionarFoto(partes, foto);
+        return Corpo(InstrucoesGerais + "\n\n" + InstrucoesDaClassificacao, partes, Esquema("fotos", new JsonObject
+        {
+            ["id"] = Tipo("STRING"),
+            ["tarefa"] = Tipo("STRING"),
+            ["confianca"] = new JsonObject { ["type"] = "STRING", ["enum"] = new JsonArray("alta", "media", "baixa") },
+            ["legenda"] = Tipo("STRING"),
+            ["local"] = Tipo("STRING"),
+            ["percentual"] = Tipo("INTEGER"),
+            ["justificativa"] = Tipo("STRING"),
+        }, "id", "confianca", "legenda", "justificativa"));
+    }
+
     // ---- Comum ----
 
     private Task<JsonElement> ChamarAsync(JsonObject corpo, CancellationToken cancelamento) =>

@@ -89,6 +89,9 @@ public static class FormatoDaResposta
                 Ficha = Ficha(raiz),
                 Atualizacoes = tipo == TipoDeResposta.Resposta ? Atualizacoes(raiz) : [],
                 Abrir = tipo == TipoDeResposta.Resposta ? Abrir(raiz) : null,
+                ImportarFotos = tipo == TipoDeResposta.Resposta
+                    ? OrigensDasFotos.Todas.FirstOrDefault(o => string.Equals(o, Texto(raiz, "importarFotos")?.Trim(), StringComparison.OrdinalIgnoreCase))
+                    : null,
                 PedidoDeOrcamento = tipo == TipoDeResposta.Resposta && Texto(raiz, "orcamento")?.Trim() is { Length: > 0 } orcamento
                     ? (orcamento.Length > TamanhoMaximoDoPedidoDeOrcamento ? orcamento[..TamanhoMaximoDoPedidoDeOrcamento] : orcamento)
                     : null,
@@ -139,6 +142,8 @@ public static class FormatoDaResposta
             json["orcamento"] = pedido;
         if (resposta.Abrir is { } tela)
             json["abrir"] = new JsonObject { ["tela"] = tela.Tela, ["aba"] = tela.Aba };
+        if (resposta.ImportarFotos is { } origem)
+            json["importarFotos"] = origem;
         // As atualizações propostas não voltam (o resultado delas está no retrato e na mensagem); só quantas foram.
         if (resposta.Atualizacoes.Count > 0)
             json["atualizacoesPropostas"] = resposta.Atualizacoes.Count;
@@ -218,7 +223,8 @@ public static class FormatoDaResposta
         var aba = TelasDoPrograma.Abas.TryGetValue(tela, out var abas)
             ? abas.FirstOrDefault(a => string.Equals(a, Texto(abrir, "aba")?.Trim(), StringComparison.OrdinalIgnoreCase))
             : null;
-        return new TelaParaAbrir(tela, aba, Inteiro(abrir, "medicao"), Texto(abrir, "de")?.Trim(), Texto(abrir, "ate")?.Trim());
+        return new TelaParaAbrir(tela, aba, Inteiro(abrir, "medicao"), Texto(abrir, "de")?.Trim(), Texto(abrir, "ate")?.Trim(),
+            tela == TelasDoPrograma.RelatorioFotografico && abrir.TryGetProperty("texto", out var texto) && texto.ValueKind == JsonValueKind.True);
     }
 
     private static decimal? Decimal(JsonElement objeto, string nome)

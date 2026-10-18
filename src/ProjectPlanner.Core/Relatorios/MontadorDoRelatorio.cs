@@ -291,14 +291,17 @@ public static class MontadorDoRelatorio
     }
 
     /// <summary>
-    /// O período que começa no dia seguinte ao fim do último relatório (ou no início do projeto, no primeiro) e vai até
-    /// hoje; se o último já chega até hoje, só hoje.
+    /// O período que começa no dia seguinte ao fim do último relatório (no primeiro, no início do projeto ou, se houver
+    /// foto tirada antes dele, no dia da foto mais antiga) e vai até hoje; se o último já chega até hoje, só hoje.
     /// </summary>
     public static (DateOnly De, DateOnly Ate) DesdeOUltimo(Cronograma cronograma, DateOnly hoje)
     {
         ArgumentNullException.ThrowIfNull(cronograma);
+        var primeiraFoto = cronograma.Tarefas.SelectMany(t => t.Fotos).Where(f => f.NoRelatorio)
+            .Select(f => (DateOnly?)DateOnly.FromDateTime(f.DataFoto)).Min();
+        var inicio = DateOnly.FromDateTime(cronograma.DataInicio);
         var de = cronograma.Relatorios.Count == 0
-            ? DateOnly.FromDateTime(cronograma.DataInicio)
+            ? primeiraFoto is { } foto && foto < inicio ? foto : inicio // Bloco 42: as fotos de antes do início entram no primeiro
             : cronograma.Relatorios.Max(r => r.Ate).AddDays(1);
         return de > hoje ? (hoje, hoje) : (de, hoje);
     }

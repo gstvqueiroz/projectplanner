@@ -265,6 +265,14 @@ os relatórios. A resposta ganhou dois campos opcionais:
   descobre o problema de cada um aplicando-o sozinho numa cópia. "Aplicar" aplica as válidas numa cópia e, se tudo vale,
   troca o cronograma: um passo do Desfazer, "Atualizações do assistente". O estado do cartão fica na conversa como texto.
 
+## Fotos com IA (Bloco 42)
+
+`IAnalistaDeFotos.ClassificarFotosAsync`: até 10 fotos por pedido (o App divide o lote), com as tarefas (até 150, as em
+execução no período das fotos primeiro, marcadas) e os locais da obra. Resposta `{fotos: [{id, tarefa, confianca,
+legenda, local, percentual, justificativa}]}`, conferida: tarefas e locais só do pedido, % de 0 a 100, sem tarefa a
+confiança vira baixa. O resultado preenche a tabela da importação em lote (Fotos do projeto); nada é importado antes do
+clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.texto` (o relatório já pedindo o texto).
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".

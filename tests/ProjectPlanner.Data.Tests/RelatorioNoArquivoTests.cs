@@ -79,4 +79,26 @@ public sealed class RelatorioNoArquivoTests : TesteComArquivo
         aberto.Tarefas.SelectMany(t => t.Fotos).Should().HaveCount(3).And.OnlyContain(f => f.NoRelatorio && !f.Destaque);
         (aberto.Obra.Vazio, aberto.Relatorios.Count).Should().Be((true, 0));
     }
+
+    // Bloco 42: a pasta das fotos da obra e a última leitura voltam iguais; sem elas, nada muda no arquivo.
+    [Fact]
+    public void PastaDaObra_VoltaComALeitura()
+    {
+        var obra = new Cronograma("Obra", Segunda);
+        obra.DefinirConfiguracaoDasFotos(new Core.Fotos.ConfiguracaoDasFotos(["Bloco A"], 7)
+        {
+            PastaDaObra = "/Users/eu/Fotos/Obra", UltimaLeituraDaPasta = new DateTime(2026, 10, 18, 9, 30, 0),
+        });
+
+        Repositorio.Salvar(obra, Caminho);
+        var aberto = Repositorio.Abrir(Caminho);
+
+        (aberto.ConfiguracaoDasFotos.PastaDaObra, aberto.ConfiguracaoDasFotos.UltimaLeituraDaPasta, aberto.ConfiguracaoDasFotos.Locais.Single())
+            .Should().Be(("/Users/eu/Fotos/Obra", new DateTime(2026, 10, 18, 9, 30, 0), "Bloco A"));
+
+        var sem = new Cronograma("Obra", Segunda);
+        sem.DefinirConfiguracaoDasFotos(new Core.Fotos.ConfiguracaoDasFotos([], 7) { PastaDaObra = "/x" });
+        Repositorio.Salvar(sem, Caminho);
+        Contar("RelatorioDoProjeto").Should().Be(1, "só a pasta já é algo a gravar");
+    }
 }

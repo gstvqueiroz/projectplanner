@@ -209,7 +209,7 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
     private static readonly HashSet<string> NaoMudamAPrevia =
         [nameof(Previa), nameof(AvisoDeParecidas), nameof(Erro), nameof(Mensagem), nameof(Gerando), nameof(UltimoArquivo),
          nameof(EscolheRamo), nameof(ImagemDoLogotipo), nameof(TemLogotipo), nameof(Logotipo),
-         nameof(IaOcupada), nameof(AvisoDaIa)];
+         nameof(IaOcupada), nameof(AvisoDaIa), nameof(TemFotosForaDoPeriodo)];
 
     private void Mudou(object? sender, PropertyChangedEventArgs e)
     {
@@ -246,7 +246,13 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
         try
         {
             _relatorio = Montar();
-            Erro = _relatorio.TotalDeFotos == 0 ? "Nenhuma foto no período com essas escolhas." : "";
+            if (_relatorio.TotalDeFotos > 0 && _fotosForaDoPeriodo is not null)
+            {
+                _fotosForaDoPeriodo = null;
+                OnPropertyChanged(nameof(TemFotosForaDoPeriodo));
+                IncluirTodasAsFotosCommand.NotifyCanExecuteChanged();
+            }
+            Erro = _relatorio.TotalDeFotos == 0 ? SemFotosNoPeriodo() : "";
             Previa = $"Relatório nº {_relatorio.Numero} · {Quantas(_relatorio.TotalDeFotos, "foto", "fotos")} · " +
                      Quantas(_relatorio.TotalDePaginas, "página", "páginas");
             AvisoDeParecidas = _relatorio.Parecidas.Count switch
@@ -268,6 +274,41 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
     }
 
     private static string Quantas(int n, string um, string varios) => n == 1 ? $"1 {um}" : $"{n} {varios}";
+
+    // ---- Bloco 42: onde estão as fotos quando o período não pega nenhuma ----
+
+    private (DateOnly De, DateOnly Ate, int Quantas)? _fotosForaDoPeriodo;
+
+    /// <summary>Há fotos (que podem ir ao relatório) fora do período escolhido: o botão as inclui.</summary>
+    public bool TemFotosForaDoPeriodo => _fotosForaDoPeriodo is not null;
+
+    // "Nenhuma foto no período com essas escolhas." e, se há fotos fora do período, quantas e de quando (a data da câmera).
+    private string SemFotosNoPeriodo()
+    {
+        const string semFotos = "Nenhuma foto no período com essas escolhas.";
+        var datas = _cronograma.Tarefas.SelectMany(t => t.Fotos).Where(f => f.NoRelatorio).Select(f => DateOnly.FromDateTime(f.DataFoto)).ToList();
+        var (de, ate) = (De is { } d ? DateOnly.FromDateTime(d) : DateOnly.MinValue, Ate is { } a ? DateOnly.FromDateTime(a) : DateOnly.MaxValue);
+        var fora = datas.Where(d => d < de || d > ate).ToList();
+        _fotosForaDoPeriodo = fora.Count == 0 ? null : (fora.Min(), fora.Max(), fora.Count);
+        OnPropertyChanged(nameof(TemFotosForaDoPeriodo));
+        IncluirTodasAsFotosCommand.NotifyCanExecuteChanged();
+        if (_fotosForaDoPeriodo is not { } f)
+            return semFotos;
+        var quando = f.De == f.Ate ? $"em {f.De:dd/MM/yyyy}" : $"de {f.De:dd/MM/yyyy} a {f.Ate:dd/MM/yyyy}";
+        return $"{semFotos} {(f.Quantas == 1 ? "1 foto do projeto foi tirada" : $"{f.Quantas} fotos do projeto foram tiradas")} fora dele, {quando} " +
+               "(a data da câmera): use Incluir todas as fotos.";
+    }
+
+    /// <summary>Estende o período para pegar as fotos que estão fora dele.</summary>
+    [RelayCommand(CanExecute = nameof(TemFotosForaDoPeriodo))]
+    private void IncluirTodasAsFotos()
+    {
+        if (_fotosForaDoPeriodo is not { } f)
+            return;
+        var de = De is { } d && DateOnly.FromDateTime(d) < f.De ? DateOnly.FromDateTime(d) : f.De;
+        var ate = Ate is { } a && DateOnly.FromDateTime(a) > f.Ate ? DateOnly.FromDateTime(a) : f.Ate;
+        (De, Ate) = (de.ToDateTime(TimeOnly.MinValue), ate.ToDateTime(TimeOnly.MinValue));
+    }
 
     private RelatorioFotografico Montar()
     {

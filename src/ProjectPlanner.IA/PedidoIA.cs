@@ -54,6 +54,12 @@ public sealed record RespostaIA(string Texto)
     /// <summary>Bloco 41: a tela que o usuário pediu para ver; nula quando não pediu.</summary>
     public TelaParaAbrir? Abrir { get; init; }
 
+    /// <summary>
+    /// Bloco 42: importar fotos com a IA classificando: "anexos" (as imagens anexadas à mensagem) ou "pasta" (as novas da
+    /// pasta da obra). O App abre Fotos do projeto > Importar em lote com a tabela para conferir. Nulo quando não pediu.
+    /// </summary>
+    public string? ImportarFotos { get; init; }
+
     /// <summary>Tem algo além do texto e das alterações (tipo, perguntas, plano, ficha).</summary>
     public bool Estruturada => Tipo != TipoDeResposta.Resposta || Ficha.Count > 0;
 }

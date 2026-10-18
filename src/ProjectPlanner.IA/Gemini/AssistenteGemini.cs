@@ -136,10 +136,12 @@ public sealed class AssistenteGemini : IAssistenteIA
                     ["medicao"] = Tipo("INTEGER"),
                     ["de"] = Tipo("STRING"),
                     ["ate"] = Tipo("STRING"),
+                    ["texto"] = Tipo("BOOLEAN"),
                 }, "tela"),
+                ["importarFotos"] = Tipo("STRING", [.. OrigensDasFotos.Todas]), // Bloco 42
             },
             ["required"] = new JsonArray("mensagem", "alteracoes"),
-            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes", "orcamento", "atualizacoes", "abrir"),
+            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes", "orcamento", "atualizacoes", "abrir", "importarFotos"),
         };
     }
 

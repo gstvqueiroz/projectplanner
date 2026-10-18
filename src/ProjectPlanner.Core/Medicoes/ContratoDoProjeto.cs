@@ -56,6 +56,14 @@ public sealed class ContratoDoProjeto
     /// <summary>O total das medições aprovadas.</summary>
     public decimal MedidoAprovado => _medicoes.Where(m => m.Travada).Sum(m => m.Resumo!.MedidoNoPeriodo);
 
+    /// <summary>Há tarefas com Valor (itens do contrato) para medir.</summary>
+    public bool TemItens => Itens().Count > 0;
+
+    /// <summary>Por que uma tarefa sem Valor não se mede, e como resolver.</summary>
+    public static string SemValor(string? tarefa) =>
+        $"{(tarefa is null ? "A tarefa" : $"\"{tarefa}\"")} não tem Valor, então não é item do contrato: preencha a coluna Valor " +
+        "(ou aplique o orçamento em Projeto > Orçamento…) para medi-la.";
+
     public const string MotivoDoTravamento =
         "O contrato já tem medição aprovada: o valor, a quantidade e a unidade dos itens mudam por um aditivo (Projeto > Medições…, aba Aditivos).";
 
@@ -189,7 +197,7 @@ public sealed class ContratoDoProjeto
     {
         var medicao = Rascunho(numero);
         var item = Itens().FirstOrDefault(i => i.TarefaId == tarefaId)
-                   ?? throw new DomainValidationException(nameof(Medicao.Itens), "A tarefa não é um item do contrato: ela precisa de um valor.");
+                   ?? throw new DomainValidationException(nameof(Medicao.Itens), SemValor(_cronograma.Tarefas.FirstOrDefault(t => t.Id == tarefaId)?.Nome));
         var q = Math.Round(quantidade ?? 0, Casas(item), MidpointRounding.AwayFromZero);
         if (q < 0)
             throw new DomainValidationException(nameof(Medicao.Itens), "O medido não pode ser negativo.");

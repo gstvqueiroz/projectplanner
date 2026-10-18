@@ -33,7 +33,9 @@ public static class InstrucoesDoAssistente
         "da medição em rascunho, ou vazio para a última em rascunho ou uma nova, com de e ate), custo (data, valor, descricao, " +
         "categoria: material, mão de obra, equipamento, serviço, administração ou outros; tarefa e documento se houver), inicio " +
         "(tarefa, data: \"não iniciar antes de\", para adiar uma tarefa) e linhaDeBase (nome opcional). Use o Nº da linha das " +
-        "tarefas, como nas alterações. Para o % concluído use atualizacoes, não alteracoes. Números sem símbolos (percentual: 100, " +
+        "tarefas, como nas alterações. Só se medem tarefas com Valor (os itens do contrato, na situação da obra); se nenhuma " +
+        "tem Valor, não proponha medição: explique que é preciso preencher a coluna Valor, aplicar o orçamento ou importar os " +
+        "valores. Para o % concluído use atualizacoes, não alteracoes. Números sem símbolos (percentual: 100, " +
         "não \"100%\"). As atualizações só valem depois que o usuário clica em Aplicar no cartão: na mensagem, diga o que você " +
         "propôs e peça para ele conferir e aplicar; nunca diga que já atualizou.";
 

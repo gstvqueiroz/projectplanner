@@ -24,6 +24,15 @@ public sealed partial class MainWindowViewModel
         var c = _cronograma;
         var hoje = DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime);
         var linhas = new List<string>();
+        // 0.41.2: o que dá para medir (as tarefas com Valor são os itens do contrato) e as quantidades.
+        var edtDasTarefas = c.NumeracaoEdt();
+        var folhas = c.Tarefas.Where(t => !t.EhResumo).ToList();
+        if (!folhas.Any(t => t.Valor > 0))
+            linhas.Add("Itens do contrato: nenhuma tarefa tem Valor, então não há o que medir (o usuário precisa preencher a coluna Valor, " +
+                       "aplicar o orçamento ou importar os valores).");
+        foreach (var t in folhas.Where(t => t.Valor > 0 || t.Quantidade is not null))
+            linhas.Add($"Tarefa {edtDasTarefas[t.Id]} {t.Nome}: " + (t.Valor > 0 ? $"valor {Moeda.ComSimbolo(t.Valor!.Value)} (item do contrato)" : "sem valor (não se mede)") +
+                       (t.Quantidade is { } q ? $"; quantidade {q.ToString("0.####", Brasil)} {t.Unidade}".TrimEnd() : "; medida em %") + ".");
         try
         {
             var painel = PainelDeIndicadores.Montar(c, hoje, Periodicidade.Mensal);

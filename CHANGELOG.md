@@ -3,6 +3,17 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.41.2
+
+Correção: medição num projeto sem Valor nas tarefas.
+
+- A medição mede os itens do contrato, que são as tarefas com Valor. Sem Valor em nenhuma tarefa, "Sugerir pelo %
+  concluído" e o chat não mediam nada e a mensagem falava de outra coisa. Agora Projeto > Medições… avisa no topo que
+  falta o Valor e como preencher (coluna Valor, aplicar o orçamento ou importar os valores).
+- "Sugerir pelo % concluído" diz o motivo certo: falta Valor, falta % concluído, ou tudo já foi medido.
+- Medir uma tarefa sem Valor (na tela ou pelo cartão do chat) explica o que fazer.
+- O assistente passa a ver quais tarefas têm Valor e quantidade, e não propõe medição sem itens no contrato.
+
 ## 0.41.1
 
 Correção do Bloco 41.

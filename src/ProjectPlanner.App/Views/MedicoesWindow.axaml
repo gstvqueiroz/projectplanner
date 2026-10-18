@@ -51,6 +51,11 @@
             <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
         </DockPanel>
 
+        <!-- Sem nenhuma tarefa com Valor, não há o que medir: o aviso diz como resolver (0.41.2). -->
+        <Border DockPanel.Dock="Top" x:Name="AvisoSemItens" Background="{DynamicResource FundoDeAviso}" CornerRadius="4" Padding="10,6" Margin="0,0,0,8"
+                IsVisible="{Binding SemItensNoContrato}">
+            <TextBlock Text="{x:Static vm:MedicoesViewModel.TextoSemItens}" TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
+        </Border>
         <TabControl x:Name="Abas" SelectedIndex="{Binding AbaEscolhida}">
             <!-- ================= Medições ================= -->
             <TabItem Header="Medições">

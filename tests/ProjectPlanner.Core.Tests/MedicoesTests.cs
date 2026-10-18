@@ -196,7 +196,7 @@ public class MedicoesTests
         ((Action)(() => c.Contrato.Medir(1, t["Sapatas"].Id, 101))).Should().Throw<DomainValidationException>()
             .WithMessage("\"Sapatas\": 101% passa do saldo do contrato (100%).*");
         ((Action)(() => c.Contrato.Medir(1, t["Sapatas"].Id, -1))).Should().Throw<DomainValidationException>().WithMessage("O medido não pode ser negativo.");
-        ((Action)(() => c.Contrato.Medir(1, t["Entrega"].Id, 1))).Should().Throw<DomainValidationException>().WithMessage("*precisa de um valor*");
+        ((Action)(() => c.Contrato.Medir(1, t["Entrega"].Id, 1))).Should().Throw<DomainValidationException>().WithMessage("\"Entrega\" não tem Valor, então não é item do contrato*"); // 0.41.2: a mensagem diz como resolver
         ((Action)(() => c.Contrato.Medir(1, t["Fundação"].Id, 1))).Should().Throw<DomainValidationException>();
 
         c.Contrato.Medir(1, t["Sapatas"].Id, 0);

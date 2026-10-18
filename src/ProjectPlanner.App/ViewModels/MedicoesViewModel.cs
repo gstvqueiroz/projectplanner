@@ -148,6 +148,14 @@ public sealed partial class MedicoesViewModel : ViewModelBase
 
     public bool SemMedicoes => Lista.Count == 0;
 
+    /// <summary>Nenhuma tarefa tem Valor: não há o que medir (a medição mede os itens do contrato).</summary>
+    public bool SemItensNoContrato => !Contrato.TemItens;
+
+    public const string TextoSemItens =
+        "Nenhuma tarefa tem Valor, então o contrato não tem itens para medir. Preencha a coluna Valor das tarefas (Exibir > " +
+        "Colunas), aplique o orçamento (Projeto > Orçamento… > Aplicar aos valores e recursos) ou importe os valores de uma " +
+        "planilha (Projeto > Importar valores…).";
+
     public const string TextoSemMedicoes =
         "Nenhuma medição ainda. Use Nova medição para abrir a nº 01: o período vem do plano de medições (aba Contrato).";
 
@@ -424,9 +432,13 @@ public sealed partial class MedicoesViewModel : ViewModelBase
         if (!Tentar(() => itens = Contrato.SugerirPeloPercentualConcluido(medicao.Numero), $"Sugerir a {medicao.Rotulo.ToLower(Brasil)} pelo % concluído"))
             return;
         AtualizarBoletim();
-        Mensagem = itens == 0
-            ? "Nada a sugerir: o % concluído das tarefas não passa do que já foi medido."
-            : $"{(itens == 1 ? "1 item medido" : $"{itens} itens medidos")} pelo % concluído (o que falta para chegar a ele). Confira e ajuste antes de aprovar.";
+        var comPercentual = Contrato.Itens().Count(i => _cronograma.Tarefas.FirstOrDefault(t => t.Id == i.TarefaId)?.PercentualConcluido > 0);
+        Mensagem = itens > 0
+            ? $"{(itens == 1 ? "1 item medido" : $"{itens} itens medidos")} pelo % concluído (o que falta para chegar a ele). Confira e ajuste antes de aprovar."
+            : !Contrato.TemItens ? TextoSemItens
+            : comPercentual == 0
+                ? "Nada a sugerir: nenhuma tarefa com Valor tem % concluído. Atualize o % concluído (na grid ou pelo chat) e sugira de novo."
+                : "Nada a sugerir: o % concluído das tarefas não passa do que já foi medido.";
     }
 
     [RelayCommand(CanExecute = nameof(EhRascunho))]

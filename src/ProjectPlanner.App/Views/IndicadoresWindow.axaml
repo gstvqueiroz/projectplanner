@@ -9,11 +9,14 @@
         Width="1280" Height="800" MinWidth="980" MinHeight="600"
         WindowStartupLocation="CenterOwner">
 
-    <!-- Bloco 37: o painel de indicadores numa data de status. -->
+    <!-- Bloco 37: o painel de indicadores numa data de status; Bloco 43: custos e margem, medições e caixa, alertas e análise. -->
     <Window.Styles>
         <Style Selector="TextBlock.secao">
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style Selector="TextBlock.forte">
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style Selector="TextBlock.alerta">
             <Setter Property="Foreground" Value="{DynamicResource TextoDeErro}" />
@@ -54,64 +57,358 @@
             </Border>
         </StackPanel>
 
-        <!-- Os oito indicadores -->
-        <ItemsControl DockPanel.Dock="Top" x:Name="Cartoes" ItemsSource="{Binding Cartoes}" Margin="0,0,0,10">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <UniformGrid Columns="4" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="r:CartaoDeIndicador">
-                    <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10,8" Margin="0,0,8,8">
-                        <StackPanel Spacing="1">
-                            <TextBlock Text="{Binding Rotulo}" FontSize="12" Opacity="0.75" />
-                            <TextBlock Text="{Binding Valor}" FontSize="20" FontWeight="SemiBold" Classes.alerta="{Binding Alerta}" />
-                            <TextBlock Text="{Binding Detalhe}" FontSize="11" Opacity="0.7" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detalhe}" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <Grid ColumnDefinitions="5*,16,6*">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Curva S física e financeira (% acumulado)" />
-                <v:CurvaSView x:Name="CurvaS" Curva="{Binding Curva}" />
-            </DockPanel>
-            <DockPanel Grid.Column="2">
-                <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,10,0,0">
-                    <TextBlock Classes="secao" Text="{Binding TituloDosAtrasos}" />
-                    <TextBlock Text="Nenhuma tarefa atrasada na data." FontSize="12" Opacity="0.7" IsVisible="{Binding SemAtrasos}" />
-                    <ItemsControl x:Name="Atrasos" ItemsSource="{Binding Atrasos}">
+        <TabControl x:Name="Abas" SelectedIndex="{Binding AbaEscolhida}">
+            <TabItem Header="Visão geral">
+                <DockPanel Margin="0,8,0,0">
+                    <!-- Os oito indicadores -->
+                    <ItemsControl DockPanel.Dock="Top" x:Name="Cartoes" ItemsSource="{Binding Cartoes}" Margin="0,0,0,10">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="x:String">
-                                <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" TextWrapping="Wrap" />
+                            <DataTemplate x:DataType="r:CartaoDeIndicador">
+                                <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10,8" Margin="0,0,8,8">
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Text="{Binding Rotulo}" FontSize="12" Opacity="0.75" />
+                                        <TextBlock Text="{Binding Valor}" FontSize="20" FontWeight="SemiBold" Classes.alerta="{Binding Alerta}" />
+                                        <TextBlock Text="{Binding Detalhe}" FontSize="11" Opacity="0.7" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detalhe}" />
+                                    </StackPanel>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </StackPanel>
-                <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Etapas" />
-                <DataGrid x:Name="Etapas" ItemsSource="{Binding Etapas}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
-                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Etapa" Width="*" MinWidth="130" Binding="{Binding Nome}" x:DataType="vm:EtapaDoPainelNaTela" />
-                        <DataGridTextColumn Header="Orçamento" Width="96" Binding="{Binding Orcamento}" x:DataType="vm:EtapaDoPainelNaTela" />
-                        <DataGridTextColumn Header="Previsto" Width="78" Binding="{Binding Previsto}" x:DataType="vm:EtapaDoPainelNaTela" />
-                        <DataGridTextColumn Header="Realizado" Width="80" Binding="{Binding Realizado}" x:DataType="vm:EtapaDoPainelNaTela" />
-                        <DataGridTextColumn Header="Medido" Width="78" Binding="{Binding Medido}" x:DataType="vm:EtapaDoPainelNaTela" />
-                        <DataGridTextColumn Header="Custo real" Width="94" Binding="{Binding CustoReal}" x:DataType="vm:EtapaDoPainelNaTela" />
-                        <DataGridTemplateColumn Header="VA − VP" Width="94">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate x:DataType="vm:EtapaDoPainelNaTela">
-                                    <TextBlock Text="{Binding Desvio}" Classes.alerta="{Binding Atrasada}" VerticalAlignment="Center" Margin="12,0"
-                                               ToolTip.Tip="Valor agregado menos o planejado: negativo, a etapa está atrás do planejado" />
+
+                    <Grid ColumnDefinitions="5*,16,6*">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Curva S física e financeira (% acumulado)" />
+                            <v:CurvaSView x:Name="CurvaS" Curva="{Binding Curva}" />
+                        </DockPanel>
+                        <DockPanel Grid.Column="2">
+                            <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,10,0,0">
+                                <TextBlock Classes="secao" Text="{Binding TituloDosAtrasos}" />
+                                <TextBlock Text="Nenhuma tarefa atrasada na data." FontSize="12" Opacity="0.7" IsVisible="{Binding SemAtrasos}" />
+                                <ItemsControl x:Name="Atrasos" ItemsSource="{Binding Atrasos}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Etapas" />
+                            <DataGrid x:Name="Etapas" ItemsSource="{Binding Etapas}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Etapa" Width="*" MinWidth="130" Binding="{Binding Nome}" x:DataType="vm:EtapaDoPainelNaTela" />
+                                    <DataGridTextColumn Header="Orçamento" Width="96" Binding="{Binding Orcamento}" x:DataType="vm:EtapaDoPainelNaTela" />
+                                    <DataGridTextColumn Header="Previsto" Width="78" Binding="{Binding Previsto}" x:DataType="vm:EtapaDoPainelNaTela" />
+                                    <DataGridTextColumn Header="Realizado" Width="80" Binding="{Binding Realizado}" x:DataType="vm:EtapaDoPainelNaTela" />
+                                    <DataGridTextColumn Header="Medido" Width="78" Binding="{Binding Medido}" x:DataType="vm:EtapaDoPainelNaTela" />
+                                    <DataGridTextColumn Header="Custo real" Width="94" Binding="{Binding CustoReal}" x:DataType="vm:EtapaDoPainelNaTela" />
+                                    <DataGridTemplateColumn Header="VA − VP" Width="94">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:EtapaDoPainelNaTela">
+                                                <TextBlock Text="{Binding Desvio}" Classes.alerta="{Binding Atrasada}" VerticalAlignment="Center" Margin="12,0"
+                                                           ToolTip.Tip="Valor agregado menos o planejado: negativo, a etapa está atrás do planejado" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===== Bloco 43: Custos e margem ===== -->
+            <TabItem Header="Custos e margem">
+                <DockPanel Margin="0,8,0,0">
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDeAviso}" CornerRadius="4" Padding="10,6" Margin="0,0,0,8"
+                            IsVisible="{Binding SemCustoOrcado}">
+                        <TextBlock Text="{Binding AvisoSemCustoOrcado}" TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
+                    </Border>
+                    <ItemsControl DockPanel.Dock="Top" x:Name="CartoesDeCusto" ItemsSource="{Binding CartoesDeCusto}" Margin="0,0,0,10">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="r:CartaoDeIndicador">
+                            <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10,8" Margin="0,0,8,8">
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="{Binding Rotulo}" FontSize="12" Opacity="0.75" />
+                                    <TextBlock Text="{Binding Valor}" FontSize="20" FontWeight="SemiBold" Classes.alerta="{Binding Alerta}" />
+                                    <TextBlock Text="{Binding Detalhe}" FontSize="11" Opacity="0.7" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detalhe}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Por etapa: do orçado ao realizado (custo final e margem projetados pelo desempenho de custo de cada etapa)" TextWrapping="Wrap" />
+                    <DataGrid x:Name="Custos" ItemsSource="{Binding Custos}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Etapa" Width="*" MinWidth="170">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[0]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Contratado" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[1]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Custo orçado" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[2]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Margem prevista" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[3]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Orçado do feito" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[4]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Custo real" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[5]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Desvio" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[6]}" Classes.forte="{Binding Destaque}" Classes.alerta="{Binding Alerta}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Custo final proj." Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[7]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Margem proj." Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[8]}" Classes.forte="{Binding Destaque}" Classes.alerta="{Binding Alerta2}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ===== Bloco 43: Medições e caixa ===== -->
+            <TabItem Header="Medições e caixa">
+                <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="0,8,0,0">
+                    <ItemsControl Grid.Row="0" x:Name="Contrato" ItemsSource="{Binding Contrato}" Margin="0,0,0,8">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                                <StackPanel Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Rotulo}" FontSize="11" Opacity="0.7" />
+                                    <TextBlock Text="{Binding Valor}" FontSize="13" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <DockPanel Grid.Row="1">
+                        <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Medições × físico por etapa (positivo: medido à frente do executado)" />
+                        <DataGrid x:Name="Medicoes" ItemsSource="{Binding Medicoes}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Etapa" Width="*" MinWidth="170">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[0]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Contratado" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[1]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Físico" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[2]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Medido" Width="170">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[3]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Medido − físico" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[4]}" Classes.forte="{Binding Destaque}" Classes.alerta="{Binding Alerta}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Executado a medir" Width="140">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[5]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <TextBlock Grid.Row="2" Classes="secao" Text="Fluxo de caixa: previsto, medido (líquido) e custo real por período, e o saldo acumulado" Margin="0,10,0,4" />
+                    <Grid Grid.Row="3" ColumnDefinitions="5*,12,6*" Height="250">
+                        <Image x:Name="GraficoDoCaixa" Source="{Binding ImagemDoCaixa, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" HorizontalAlignment="Left" />
+                        <DataGrid Grid.Column="2" x:Name="Caixa" ItemsSource="{Binding Caixa}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Período" Width="*" MinWidth="170">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[0]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Previsto" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[1]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Medido" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[2]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Custo" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[3]}" Classes.forte="{Binding Destaque}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Saldo" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[4]}" Classes.forte="{Binding Destaque}" Classes.alerta="{Binding Alerta}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Acumulado" Width="95">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:LinhaDosIndicadores">
+                                        <TextBlock Text="{Binding Celulas[5]}" Classes.forte="{Binding Destaque}" Classes.alerta="{Binding Alerta2}"
+                                                   VerticalAlignment="Center" Margin="8,0" FontSize="12" HorizontalAlignment="Right" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- ===== Bloco 43: Alertas e análise ===== -->
+            <TabItem Header="Alertas e análise">
+                <Grid ColumnDefinitions="2*,16,3*" Margin="0,8,0,0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Classes="secao" Text="Semáforo da obra" />
+                        <ItemsControl x:Name="Alertas" ItemsSource="{Binding Alertas}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AlertaNaTela">
+                                    <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10,8" Margin="0,0,0,8">
+                                        <DockPanel>
+                                            <Ellipse DockPanel.Dock="Left" Width="14" Height="14" Fill="{Binding Cor}" VerticalAlignment="Top" Margin="0,3,10,0" />
+                                            <StackPanel Spacing="2">
+                                                <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
+                                                    <Run Text="{Binding Area}" /><Run Text=" · " /><Run Text="{Binding Nivel}" /><Run Text=" · " /><Run Text="{Binding Titulo}" />
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Detalhe}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
                                 </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </DockPanel>
-        </Grid>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                    <DockPanel Grid.Column="2">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="Analisar" Classes="accent" Content="Analisar com IA" Command="{Binding AnalisarCommand}"
+                                        ToolTip.Tip="A IA lê os indicadores e escreve o resumo, os pontos de atenção e as recomendações (você revisa antes de exportar)" />
+                                <Button Content="Cancelar" Command="{Binding CancelarAnaliseCommand}" IsVisible="{Binding Analisando}" />
+                            </StackPanel>
+                            <TextBlock Classes="secao" Text="Análise (vai no PDF e no Word quando preenchida)" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding Analisando}" Margin="0,0,0,6" />
+                        <TextBlock DockPanel.Dock="Top" x:Name="AvisoDaAnalise" Text="{Binding AvisoDaAnalise}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" Margin="0,0,0,6"
+                                   IsVisible="{Binding AvisoDaAnalise, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <Grid RowDefinitions="Auto,2*,Auto,*,Auto,*">
+                            <TextBlock Text="Resumo" FontSize="12" Opacity="0.75" />
+                            <TextBox Grid.Row="1" x:Name="ResumoDaAnalise" Text="{Binding ResumoDaAnalise}" AcceptsReturn="True" TextWrapping="Wrap"
+                                     PlaceholderText="Clique em Analisar com IA, ou escreva o resumo da situação da obra." />
+                            <TextBlock Grid.Row="2" Text="Pontos de atenção (um por linha)" FontSize="12" Opacity="0.75" Margin="0,8,0,2" />
+                            <TextBox Grid.Row="3" Text="{Binding PontosDaAnalise}" AcceptsReturn="True" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="4" Text="Recomendações (uma por linha)" FontSize="12" Opacity="0.75" Margin="0,8,0,2" />
+                            <TextBox Grid.Row="5" Text="{Binding RecomendacoesDaAnalise}" AcceptsReturn="True" TextWrapping="Wrap" />
+                        </Grid>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

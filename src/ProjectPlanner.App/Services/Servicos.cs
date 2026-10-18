@@ -47,6 +47,8 @@ public static class Servicos
         .AddSingleton<IAnalistaDeFotos>(s => new AnalistaConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
         // Bloco 38: a IA que sugere o orçamento, com a mesma chave e o mesmo modelo.
         .AddSingleton<IConsultorDeOrcamento>(s => new ConsultorConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
+        // Bloco 43: a IA que analisa os indicadores da obra.
+        .AddSingleton<IAnalistaDaObra>(s => new AnalistaDaObraConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
         .AddTransient<MainWindowViewModel>()
         .BuildServiceProvider();
 }

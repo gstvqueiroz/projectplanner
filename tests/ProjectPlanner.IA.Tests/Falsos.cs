@@ -87,6 +87,14 @@ internal sealed class ProvedorDeTeste : IProvedorIA
         return new ConsultorIndisponivel();
     }
 
+    public List<(string Chave, string Modelo)> AnalistasDaObraCriados { get; } = [];
+
+    public IAnalistaDaObra CriarAnalistaDaObra(string chave, string modelo)
+    {
+        AnalistasDaObraCriados.Add((chave, modelo));
+        return new AnalistaDaObraIndisponivel();
+    }
+
     public Task TestarAsync(string chave, string modelo, CancellationToken cancelamento) => Task.CompletedTask;
 
     private sealed class AssistenteDeTeste(string chave, string modelo) : IAssistenteIA

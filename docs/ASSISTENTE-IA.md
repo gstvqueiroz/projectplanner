@@ -243,6 +243,14 @@ orçamento (até 200 serviços) para o assistente responder sobre custos.
 `gemini-2.5-flash`. **Calibrar:** a qualidade das escolhas e das estimativas só se vê com a chave e uma base SINAPI de
 verdade; ajuste `ConsultorGemini.Instrucoes` e a busca das candidatas (`TabelaDeReferencia.Candidatas`) depois de testar.
 
+## A IA analisando os indicadores (Bloco 43)
+
+`IAnalistaDaObra` usa a mesma chave e o mesmo modelo. O App manda os indicadores já em texto
+(`TextosDaAnalise.ParaAIA`: prazo, cartões de custo e margem, contrato, etapas, caixa e o semáforo) e a ficha do
+assistente; o Gemini responde `{resumo, pontos, recomendacoes}` (até 6 itens de 300 caracteres cada). O texto vai para
+campos editáveis em Indicadores > Alertas e análise e, quando preenchido, para o PDF e o Word. Não muda nada no projeto
+e não é guardado no .pplan (vale para a exportação daquele momento). Calibrar: `AnalistaDaObraGemini.Instrucoes`.
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".

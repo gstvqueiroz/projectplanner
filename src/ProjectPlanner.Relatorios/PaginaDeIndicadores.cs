@@ -262,10 +262,13 @@ internal static class IndicadoresNoWord
     }
 }
 
-/// <summary>Bloco 37: Projeto > Indicadores… exportado em PDF (A4 paisagem, uma página: o painel inteiro).</summary>
+/// <summary>Bloco 37: Projeto > Indicadores… exportado em PDF (A4 paisagem: o painel numa página; Bloco 43: e as páginas da análise).</summary>
 public sealed class GeradorIndicadoresPdf
 {
-    public void Gerar(PainelDeIndicadores painel, string obra, DateTime geradoEm, Stream destino)
+    /// <param name="analise">Bloco 43: os indicadores ampliados, em mais três páginas (custos e margem, medições e caixa, alertas).</param>
+    /// <param name="escrita">Bloco 43: a análise escrita, na página dos alertas.</param>
+    public void Gerar(PainelDeIndicadores painel, string obra, DateTime geradoEm, Stream destino, AnaliseFinanceira? analise = null,
+        AnaliseEscrita? escrita = null)
     {
         ArgumentNullException.ThrowIfNull(painel);
         ArgumentNullException.ThrowIfNull(destino);
@@ -275,14 +278,23 @@ public sealed class GeradorIndicadoresPdf
         {
             Title = $"Indicadores · {obra}", Creator = "ProjectPlanner", Producer = "ProjectPlanner", Creation = geradoEm, Modified = geradoEm,
         });
-        var c = documento.BeginPage(largura, altura);
-        using (var tinta = new SKPaint { Color = new SKColor(0x6B, 0x6B, 0x6B), IsAntialias = true })
+        var aberta = false;
+        SKCanvas NovaPagina()
         {
+            if (aberta)
+                documento.EndPage();
+            var c = documento.BeginPage(largura, altura);
+            aberta = true;
+            using var tinta = new SKPaint { Color = new SKColor(0x6B, 0x6B, 0x6B), IsAntialias = true };
             c.DrawText($"PAINEL DE INDICADORES · {obra}", margem, margem + 6, SKTextAlign.Left, fontes.Negrito(9), tinta);
             var gerado = $"Gerado em {geradoEm.ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo("pt-BR"))}";
             c.DrawText(gerado, largura - margem, margem + 6, SKTextAlign.Right, fontes.Normal(8), tinta);
+            return c;
         }
-        PaginaDeIndicadoresPdf.Desenhar(c, painel, new SKRect(margem, margem + 12, largura - margem, altura - margem), fontes);
+        var area = new SKRect(margem, margem + 12, largura - margem, altura - margem);
+        PaginaDeIndicadoresPdf.Desenhar(NovaPagina(), painel, area, fontes);
+        if (analise is not null)
+            PaginasDaAnalisePdf.Desenhar(NovaPagina, () => area, analise, escrita, fontes);
         documento.EndPage();
         documento.Close();
     }
@@ -291,7 +303,10 @@ public sealed class GeradorIndicadoresPdf
 /// <summary>Bloco 37: Projeto > Indicadores… exportado em Word (.docx, A4 paisagem).</summary>
 public sealed class GeradorIndicadoresWord
 {
-    public void Gerar(PainelDeIndicadores painel, string obra, DateTime geradoEm, Stream destino)
+    /// <param name="analise">Bloco 43: os indicadores ampliados (custos e margem, medições e caixa, alertas).</param>
+    /// <param name="escrita">Bloco 43: a análise escrita.</param>
+    public void Gerar(PainelDeIndicadores painel, string obra, DateTime geradoEm, Stream destino, AnaliseFinanceira? analise = null,
+        AnaliseEscrita? escrita = null)
     {
         ArgumentNullException.ThrowIfNull(painel);
         ArgumentNullException.ThrowIfNull(destino);
@@ -305,6 +320,8 @@ public sealed class GeradorIndicadoresWord
         corpo.Append(Paragrafo($"Gerado em {geradoEm.ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo("pt-BR"))}", 8, cor: Cinza, depois: 120));
         uint desenho = 1;
         IndicadoresNoWord.Adicionar(corpo, principal, painel, larguraUtil, () => desenho++);
+        if (analise is not null)
+            AnaliseNoWord.Adicionar(corpo, principal, analise, escrita, larguraUtil, () => desenho++);
         corpo.Append(new SectionProperties(
             new PageSize { Width = 16838, Height = 11906, Orient = PageOrientationValues.Landscape },
             new PageMargin { Top = margem, Bottom = margem, Left = margem, Right = margem, Footer = 360, Header = 360, Gutter = 0 }));

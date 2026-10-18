@@ -20,6 +20,6 @@ public sealed partial class MainWindowViewModel
     private Task Indicadores()
     {
         Recalcular(); // o valor agregado e os atrasos vêm do cálculo
-        return _dialogos.MostrarIndicadoresAsync(new IndicadoresViewModel(_cronograma, _dialogos, _relogio));
+        return _dialogos.MostrarIndicadoresAsync(new IndicadoresViewModel(_cronograma, _dialogos, _relogio, _analistaDaObra));
     }
 }

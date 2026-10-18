@@ -42,8 +42,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IAssistenteIA assistente, IPreferenciasInterface preferenciasInterface, IProcessadorDeImagens processadorDeImagens,
         IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null,
         IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null,
-        IConsultorDeOrcamento? consultorDeOrcamento = null)
+        IConsultorDeOrcamento? consultorDeOrcamento = null, IAnalistaDaObra? analistaDaObra = null)
     {
+        _analistaDaObra = analistaDaObra ?? new AnalistaDaObraIndisponivel();
         _consultor = consultorDeOrcamento ?? new ConsultorIndisponivel();
         _biblioteca = bibliotecaDeReferencias ?? new BibliotecaDeReferenciasEmMemoria();
         _catalogoDeRecursos = catalogoDeRecursos ?? new CatalogoDeRecursosEmMemoria();

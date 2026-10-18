@@ -3,6 +3,21 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.40.0
+
+Bloco 43: indicadores ampliados (a versão segue a ordem de entrega).
+
+- Projeto > Indicadores… ganhou três abas além da Visão geral (o painel de antes).
+- Custos e margem: por etapa, do orçado ao realizado: contratado, custo orçado (do orçamento ou, sem ele, dos
+  recursos), margem prevista, orçado do feito, custo real, desvio de custo, custo final e margem projetados (pelo
+  desempenho de custo de cada etapa) e quanto falta gastar. A margem compara só as tarefas que têm custo orçado.
+- Medições e caixa: o contrato na data (original, aditivos, atual, medido, líquido, retido, saldo); medido × físico por
+  etapa, com o executado a medir e o medido à frente; e o fluxo de caixa por período (previsto, medido líquido, custo
+  real, saldo e saldo acumulado), com gráfico.
+- Alertas e análise: o semáforo da obra (prazo, custo, medição, recursos e fotos) e "Analisar com IA": a IA escreve o
+  resumo, os pontos de atenção e as recomendações, que você revisa e edita.
+- O PDF e o Word dos indicadores trazem as três páginas novas (e a análise, quando escrita).
+
 ## 0.39.0
 
 Bloco 39: a barra de ícones ampliada.
@@ -329,5 +344,9 @@ começar):
 - Bloco 38 (feito, na 0.38): a IA no orçamento (composições, preços estimados, quantidades, revisão e equipes, também
   pelo chat).
 - Bloco 39 (feito, na 0.39): a barra de ícones ampliada e personalizável, com o "»" para janelas estreitas.
+- Bloco 43 (feito, na 0.40): indicadores ampliados (custos e margem, medições e caixa, alertas e análise da IA).
+- A seguir: Bloco 41 (o chat como central da obra: consultar, abrir telas e atualizar com cartão de confirmação) e
+  Bloco 42 (fotos com IA: classificar pelo chat, pela importação em lote e por uma pasta). Bloco 40 (baixar a SINAPI da
+  Caixa) espera um arquivo real para o formato novo.
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

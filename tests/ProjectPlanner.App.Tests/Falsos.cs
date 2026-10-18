@@ -461,10 +461,13 @@ public sealed class Ambiente
     /// <summary>Bloco 38: a IA das sugestões de orçamento.</summary>
     public ConsultorFalso Consultor { get; } = new();
 
+    /// <summary>Bloco 43: a IA que analisa os indicadores.</summary>
+    public AnalistaDaObraFalso AnalistaDaObra { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
             analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
-            consultorDeOrcamento: Consultor);
+            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -677,6 +680,8 @@ public sealed class ProvedorFalso : IProvedorIA
 
     public IConsultorDeOrcamento CriarConsultor(string chave, string modelo) => new ConsultorFalso();
 
+    public IAnalistaDaObra CriarAnalistaDaObra(string chave, string modelo) => new AnalistaDaObraFalso();
+
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
         Testes.Add((chave, modelo));
@@ -684,6 +689,32 @@ public sealed class ProvedorFalso : IProvedorIA
             await segurado.Task.WaitAsync(cancelamento);
         if (ErroNoTeste is not null)
             throw ErroNoTeste;
+    }
+}
+
+/// <summary>Bloco 43: a IA que analisa os indicadores, nos testes: guarda os pedidos e responde o que o teste mandar.</summary>
+public sealed class AnalistaDaObraFalso : IAnalistaDaObra
+{
+    public bool EstaConfigurado { get; set; } = true;
+
+    public List<PedidoDeAnaliseDaObra> Pedidos { get; } = [];
+
+    public Exception? Erro { get; set; }
+
+    public TaskCompletionSource? Segurar { get; set; }
+
+    public Func<PedidoDeAnaliseDaObra, AnaliseDaObraIA> Responder { get; set; } =
+        _ => new AnaliseDaObraIA("A obra está no prazo e dentro do custo.", ["Atenção à estrutura."], ["Lançar os custos da semana."]);
+
+    public async Task<AnaliseDaObraIA> AnalisarAsync(PedidoDeAnaliseDaObra pedido, CancellationToken cancelamento)
+    {
+        Pedidos.Add(pedido);
+        if (Segurar is { } segurar)
+            await segurar.Task.WaitAsync(cancelamento);
+        cancelamento.ThrowIfCancellationRequested();
+        if (Erro is not null)
+            throw Erro;
+        return Responder(pedido);
     }
 }
 

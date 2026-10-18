@@ -15,7 +15,8 @@ public sealed record EtapaDoPainelNaTela(string Nome, string Orcamento, string P
 /// <summary>
 /// Bloco 37: Projeto > Indicadores…: numa data de status, o valor agregado (VP, VA, CR, IDP, IDC, estimativa no término e
 /// término pela tendência), o físico × o financeiro, a Curva S (prevista × atual × medida × custo real, com o realizado), as
-/// etapas e as tarefas mais atrasadas; exporta em PDF e Word. Só mostra.
+/// etapas e as tarefas mais atrasadas; exporta em PDF e Word. Só mostra. Bloco 43: as abas Custos e margem, Medições e
+/// caixa, e Alertas e análise (com o resumo escrito pela IA).
 /// </summary>
 public sealed partial class IndicadoresViewModel : ViewModelBase
 {
@@ -24,8 +25,10 @@ public sealed partial class IndicadoresViewModel : ViewModelBase
     private readonly TimeProvider _relogio;
     private readonly bool _pronta;
 
-    public IndicadoresViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio)
+    /// <param name="analista">Bloco 43: a IA que escreve a análise (sem ela, o botão avisa que falta configurar).</param>
+    public IndicadoresViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio, IA.IAnalistaDaObra? analista = null)
     {
+        _analista = analista ?? new IA.AnalistaDaObraIndisponivel();
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(dialogos);
         ArgumentNullException.ThrowIfNull(relogio);
@@ -103,6 +106,7 @@ public sealed partial class IndicadoresViewModel : ViewModelBase
         {
             (Painel, Erro) = (null, ex.Message);
         }
+        AtualizarAnalise();
         Cartoes = Painel is { } p ? TextosDosIndicadores.Cartoes(p) : [];
         Etapas = Painel is { } q
             ? [.. TextosDosIndicadores.Etapas(q).Select((e, i) => new EtapaDoPainelNaTela(e[0], e[1], e[2], e[3], e[4], e[5], e[6], i < q.Etapas.Count && q.Etapas[i].Desvio < 0))]
@@ -125,10 +129,12 @@ public sealed partial class IndicadoresViewModel : ViewModelBase
     private string NomeDoArquivo => $"Indicadores {Painel!.Data:yyyy-MM-dd} - {_cronograma.Nome}";
 
     [RelayCommand(CanExecute = nameof(TemPainel))]
-    private Task ExportarPdf() => Exportar("pdf", "PDF", (p, destino) => new GeradorIndicadoresPdf().Gerar(p, _cronograma.Nome, _relogio.GetLocalNow().DateTime, destino));
+    private Task ExportarPdf() => Exportar("pdf", "PDF", (p, destino) =>
+        new GeradorIndicadoresPdf().Gerar(p, _cronograma.Nome, _relogio.GetLocalNow().DateTime, destino, Analise, EscritaParaExportar));
 
     [RelayCommand(CanExecute = nameof(TemPainel))]
-    private Task ExportarWord() => Exportar("docx", "Word", (p, destino) => new GeradorIndicadoresWord().Gerar(p, _cronograma.Nome, _relogio.GetLocalNow().DateTime, destino));
+    private Task ExportarWord() => Exportar("docx", "Word", (p, destino) =>
+        new GeradorIndicadoresWord().Gerar(p, _cronograma.Nome, _relogio.GetLocalNow().DateTime, destino, Analise, EscritaParaExportar));
 
     private async Task Exportar(string extensao, string formato, Action<PainelDeIndicadores, Stream> gerar)
     {

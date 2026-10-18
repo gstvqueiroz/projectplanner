@@ -7,6 +7,9 @@ public sealed partial class MainWindowViewModel
 {
     public BarraDeIconesViewModel Barra { get; }
 
+    // Bloco 43: a IA que escreve a análise dos indicadores.
+    private readonly IA.IAnalistaDaObra _analistaDaObra;
+
     [RelayCommand]
     private void AlternarCaminhoCritico() => Gantt.MostrarCaminhoCritico = !Gantt.MostrarCaminhoCritico;
 

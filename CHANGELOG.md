@@ -3,6 +3,15 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.41.1
+
+Correção do Bloco 41.
+
+- O cartão do chat recusava o % concluído ("o % precisa ir de 0 a 100") quando a IA mandava o número como "100%" ou em
+  outro campo: agora o % chega nesses formatos comuns.
+- O assistente não diz mais que "atualizou" ao propor: a mensagem pede para conferir e aplicar no cartão.
+- Sem nenhuma atualização válida, o botão do cartão diz "Nada para aplicar" (em vez de "Aplicar as 0 válidas").
+
 ## 0.41.0
 
 Bloco 41: o chat como central da obra.

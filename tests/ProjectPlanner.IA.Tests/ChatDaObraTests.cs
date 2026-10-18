@@ -29,6 +29,31 @@ public sealed class ChatDaObraTests
         FormatoDaResposta.ComoJson(r).Should().Contain("\"atualizacoesPropostas\":5");
     }
 
+    // A correção da 0.41.1: o % vinha como "100%" ou no "valor", e o cartão recusava ("o % precisa ir de 0 a 100").
+    [Theory]
+    [InlineData("\"percentual\": \"100%\"")]
+    [InlineData("\"percentual\": \" 100 % \"")]
+    [InlineData("\"valor\": 100")]
+    [InlineData("\"percentualConcluido\": 100")]
+    [InlineData("\"concluido\": \"100\"")]
+    [InlineData("\"quantidade\": 100")]
+    public void Percentual_EmQualquerFormatoComum_Chega(string campo)
+    {
+        var json = "{\"mensagem\": \"Proponho.\", \"alteracoes\": [], \"atualizacoes\": [{\"tipo\": \"percentual\", \"tarefa\": \"2\", " + campo + "}]}";
+
+        FormatoDaResposta.Interpretar(json).Atualizacoes.Single().Percentual.Should().Be(100);
+    }
+
+    [Fact]
+    public void Valor_SoViraPercentualNumaAtualizacaoDePercentual()
+    {
+        var r = FormatoDaResposta.Interpretar(
+            "{\"mensagem\": \"x\", \"alteracoes\": [], \"atualizacoes\": [{\"tipo\": \"custo\", \"valor\": \"R$ 3.200,50\", \"descricao\": \"Aço\"}]}");
+
+        (r.Atualizacoes.Single().Valor, r.Atualizacoes.Single().Percentual).Should().Be((3200.50m, null));
+        InstrucoesDoAssistente.Obra.Should().Contain("nunca diga que já atualizou").And.Contain("não \"100%\"");
+    }
+
     [Fact]
     public void Abrir_TelaEAbaConhecidas_SoNaRespostaComum()
     {

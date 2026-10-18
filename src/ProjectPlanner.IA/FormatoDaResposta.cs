@@ -196,7 +196,10 @@ public static class FormatoDaResposta
             var tipo = TiposDeAtualizacao.Todos.FirstOrDefault(t => string.Equals(t, Texto(item, "tipo")?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (tipo is null)
                 continue;
-            lista.Add(new AtualizacaoDaObra(tipo, Curto(item, "tarefa"), Decimal(item, "percentual"), Decimal(item, "quantidade"), Inteiro(item, "medicao"),
+            // O % às vezes vem com outro nome ou no "valor" (o campo dos custos): numa atualização de %, vale o que vier.
+            var percentual = Decimal(item, "percentual") ?? Decimal(item, "percentualConcluido") ?? Decimal(item, "concluido")
+                ?? (tipo == TiposDeAtualizacao.Percentual ? Decimal(item, "valor") ?? Decimal(item, "quantidade") : null);
+            lista.Add(new AtualizacaoDaObra(tipo, Curto(item, "tarefa"), percentual, Decimal(item, "quantidade"), Inteiro(item, "medicao"),
                 Curto(item, "de"), Curto(item, "ate"), Curto(item, "data"), Curto(item, "categoria"), Curto(item, "descricao"), Decimal(item, "valor"),
                 Curto(item, "documento"), Curto(item, "nome")));
             if (lista.Count == MaximoDeAtualizacoes)
@@ -226,7 +229,8 @@ public static class FormatoDaResposta
             return numero;
         if (valor.ValueKind == JsonValueKind.String)
         {
-            var texto = valor.GetString()!.Trim();
+            // "100%", "R$ 3.200,50", " 12,5 ": o símbolo e os espaços saem.
+            var texto = valor.GetString()!.Replace("%", "").Replace("R$", "").Trim();
             if (!texto.Contains(',') && decimal.TryParse(texto, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var lido))
                 return lido;
             if (decimal.TryParse(texto, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.GetCultureInfo("pt-BR"), out lido))

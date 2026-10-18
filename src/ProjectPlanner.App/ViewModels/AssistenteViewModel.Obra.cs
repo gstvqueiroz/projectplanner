@@ -59,7 +59,13 @@ public sealed partial class CartaoDeAtualizacoes : ObservableObject
 
     public string Titulo => Itens.Count == 1 ? "Atualização proposta" : $"{Itens.Count} atualizações propostas";
 
-    public string TextoDoBotao => Validos == Itens.Count ? "Aplicar" : Validos == 1 ? "Aplicar a válida" : $"Aplicar as {Validos} válidas";
+    public string TextoDoBotao => Validos switch
+    {
+        0 => "Nada para aplicar",
+        _ when Validos == Itens.Count => "Aplicar",
+        1 => "Aplicar a válida",
+        _ => $"Aplicar as {Validos} válidas",
+    };
 
     public string TextoDoEstado => Estado switch
     {

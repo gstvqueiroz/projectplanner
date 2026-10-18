@@ -80,6 +80,15 @@ public sealed class ChatCentralDaObraTests
         _vm.Conversa.Mensagens[^1].ResultadoDasAlteracoes.Should().StartWith("Atualizações propostas (não aplicadas): 1 Escavação: 0% → 60% concluído;");
     }
 
+    // A correção da 0.41.1: com nenhuma válida, o botão não promete "Aplicar as 0 válidas".
+    [Fact]
+    public async Task SemNenhumaValida_NadaParaAplicar()
+    {
+        var cartao = (await Enviar("x", ComAtualizacoes(new AtualizacaoDaObra("percentual", "1")))).Cartao!;
+
+        (cartao.Validos, cartao.TemValidos, cartao.TextoDoBotao).Should().Be((0, false, "Nada para aplicar"));
+    }
+
     [Fact]
     public async Task Aplicar_TudoNumPassoDoDesfazer_EDesfazerPeloCartao()
     {

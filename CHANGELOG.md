@@ -3,6 +3,16 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.43.1
+
+Preparação para publicar o servidor.
+
+- O servidor aceita a connection string do PostgreSQL também no formato de URL (`postgresql://…`), o que o Neon mostra.
+- `render.yaml`: o servidor no Render num passo só, com as chaves do JWT e de admin geradas pelo próprio Render.
+- `scripts/testar-servidor.sh`: confere um servidor publicado de ponta a ponta (conta, código por e-mail, plano e um
+  pedido de IA).
+- README do projeto, com a licença AGPL-3.0.
+
 ## 0.43.0
 
 Bloco 44: o servidor de contas e IA (primeira parte da IA por assinatura).

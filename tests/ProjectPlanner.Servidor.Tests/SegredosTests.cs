@@ -40,5 +40,14 @@ public sealed class SegredosTests
     public void Banco_PelaConnectionString()
     {
         (Dados.Banco.EhPostgres("Host=db;Database=pp"), Dados.Banco.EhPostgres("Data Source=x.db")).Should().Be((true, false));
+        Dados.Banco.EhPostgres("postgresql://u:s@h/db").Should().BeTrue();
+        Dados.Banco.ParaNpgsql("Host=db;Database=pp").Should().Be("Host=db;Database=pp");
+        // O formato que o Neon mostra (com senha que precisa de escape).
+        var npgsql = new Npgsql.NpgsqlConnectionStringBuilder(Dados.Banco.ParaNpgsql(
+            "postgresql://neondb_owner:s%40nh%3Aa@ep-azul-123.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"));
+        (npgsql.Host, npgsql.Port, npgsql.Database, npgsql.Username, npgsql.Password, npgsql.SslMode, npgsql.ChannelBinding).Should().Be(
+            ("ep-azul-123.us-east-1.aws.neon.tech", 5432, "neondb", "neondb_owner", "s@nh:a", Npgsql.SslMode.Require, Npgsql.ChannelBinding.Require));
+        new Npgsql.NpgsqlConnectionStringBuilder(Dados.Banco.ParaNpgsql("postgres://eu@localhost:6543/pp")).Should().Match<Npgsql.NpgsqlConnectionStringBuilder>(
+            b => b.Port == 6543 && b.Password == null && b.Database == "pp");
     }
 }

@@ -97,7 +97,7 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | Variável | O quê |
 |---|---|
 | `ASPNETCORE_ENVIRONMENT` | `Production` na nuvem |
-| `ConnectionStrings__Banco` | `Host=...;Database=...;Username=...;Password=...` (PostgreSQL) |
+| `ConnectionStrings__Banco` | PostgreSQL: `Host=...;Database=...;Username=...;Password=...` ou `postgresql://usuario:senha@servidor/banco?sslmode=require` |
 | `Jwt__Chave` | 32 bytes ou mais, aleatória (por exemplo, `openssl rand -base64 48`). Sem ela, em produção, o servidor não sobe |
 | `Gemini__Chave` | A chave do Gemini da empresa. Sem ela, a IA responde 503 |
 | `Gemini__Modelos__0`, `__1`… | Opcional: os modelos liberados |
@@ -126,36 +126,62 @@ Para rodar os mesmos testes num PostgreSQL (cada teste cria um banco temporário
 PP_SERVIDOR_POSTGRES="Host=/tmp;Username=$USER" dotnet test tests/ProjectPlanner.Servidor.Tests
 ```
 
-### Publicar na nuvem
+### Publicar no Render + Neon + Brevo
 
-1. Crie um PostgreSQL gerenciado (Neon, Supabase, Render, Railway, Azure, Google Cloud SQL…) e anote a connection string.
-2. Crie a imagem a partir da raiz do repositório:
+O caminho escolhido: o servidor no **Render** (Docker, a partir do GitHub, com HTTPS), o banco no **Neon** (PostgreSQL)
+e os e-mails pelo **Brevo** (SMTP). Começa no plano grátis dos três. O arquivo `render.yaml` na raiz descreve o serviço; as
+chaves do JWT e de admin o Render gera sozinho.
+
+1. **GitHub:** crie o repositório público (vazio, sem README nem licença) e envie o código.
+2. **Neon** (neon.tech): crie o projeto na região **AWS US East (N. Virginia)**, a mesma do Render. Em Connect, copie a
+   connection string **sem** "pooled" (o formato `postgresql://…?sslmode=require` serve; o servidor converte).
+3. **Brevo** (brevo.com):
+   - em Remetentes, cadastre e confirme o e-mail que vai mandar os códigos;
+   - em SMTP e API > SMTP, anote o login (algo como `…@smtp-brevo.com`) e gere uma chave SMTP.
+
+   O `render.yaml` já usa `smtp-relay.brevo.com` na porta 2525, que não é bloqueada como a 587 costuma ser em
+   hospedagens gratuitas.
+4. **Gemini:** no Google AI Studio, crie uma chave nova só para o servidor. No Google Cloud do mesmo projeto, ative o
+   faturamento e crie um alerta de orçamento (Faturamento > Orçamentos e alertas).
+5. **Render** (render.com): entre com o GitHub, New > Blueprint e escolha o repositório. O Render pede:
+   - `ConnectionStrings__Banco`: a do Neon;
+   - `Gemini__Chave`: a chave do passo 4;
+   - `Email__Usuario`: o login SMTP do Brevo;
+   - `Email__Senha`: a chave SMTP do Brevo;
+   - `Email__Remetente`: `ProjectPlanner <o-email-confirmado-no-brevo>`;
+   - `Google__ClientIds__0`: pode ficar em branco até o Bloco 45.
+6. **Licença:** no GitHub, Add file > Create new file, nome `LICENSE`, "Choose a license template" > GNU Affero General
+   Public License v3.0 > Commit. Depois, aqui: `git pull`.
+7. **Conferir:**
 
    ```bash
-   docker build -f src/ProjectPlanner.Servidor/Dockerfile -t projectplanner-servidor .
+   scripts/testar-servidor.sh https://projectplanner-servidor.onrender.com seu-email@exemplo.com
    ```
 
-   Ou aponte o serviço de nuvem (Render, Railway, Fly.io, Google Cloud Run, Azure Container Apps) para o Dockerfile. A
-   imagem escuta na porta 8080.
-3. Configure as variáveis da tabela acima. No mínimo `ASPNETCORE_ENVIRONMENT=Production`, `ConnectionStrings__Banco`,
-   `Jwt__Chave`, `Gemini__Chave`, `Limites__AtrasDeProxy=true` e o SMTP.
-4. Na primeira subida, o servidor aplica as migrações sozinho.
-5. Use HTTPS (o serviço de nuvem dá o certificado) e um domínio, por exemplo `api.seudominio.com`: é esse endereço que vai
-   no app no Bloco 45.
-6. Confira: `GET /` responde `{"servico":"ProjectPlanner.Servidor","versao":"0.43.0"}`. Crie uma conta e veja o código
-   chegar por e-mail.
-7. Para liberar o plano pago à mão:
+   O script cria uma conta, pede o código que chegou por e-mail, mostra o plano e faz um pedido pequeno de IA.
 
-   ```bash
-   curl -X POST https://api.seudominio.com/v1/admin/usuarios/ana@exemplo.com/plano -H "X-Chave-Admin: $CHAVE_ADMIN" -H "Content-Type: application/json" -d '{"plano":"profissional"}'
-   ```
+No plano grátis, o Render desliga o servidor depois de 15 minutos sem uso: o primeiro pedido depois disso leva cerca de 1
+minuto. Para vender, passe para o Starter (US$ 7/mês). A chave de admin fica no Render, em Environment.
 
-**Chave do Gemini:** crie uma chave nova no Google AI Studio só para o servidor, num projeto do Google Cloud com
-faturamento e um alerta de orçamento. Não reaproveite a chave pessoal. A cota de cada plano é o que segura o gasto.
+Para liberar o plano pago à mão:
 
-**Client ID do Google:** no Google Cloud Console, em APIs e serviços > Credenciais, crie um "ID do cliente OAuth" do tipo
-"App para computador" (para o app do Bloco 45) e ponha o ID em `Google__ClientIds__0`. A tela de consentimento pede o
-nome do app, o e-mail de suporte e os escopos `openid`, `email` e `profile`.
+```bash
+curl -X POST https://projectplanner-servidor.onrender.com/v1/admin/usuarios/ana@exemplo.com/plano -H "X-Chave-Admin: $CHAVE_ADMIN" -H "Content-Type: application/json" -d '{"plano":"profissional"}'
+```
+
+Outra nuvem? Qualquer uma que rode o Dockerfile serve:
+
+```bash
+docker build -f src/ProjectPlanner.Servidor/Dockerfile -t projectplanner-servidor .
+```
+
+A imagem escuta na porta 8080. Configure as variáveis da tabela acima (no mínimo `ASPNETCORE_ENVIRONMENT=Production`,
+`ConnectionStrings__Banco`, `Jwt__Chave`, `Gemini__Chave`, `Limites__AtrasDeProxy=true` e o SMTP). Na primeira subida, o
+servidor aplica as migrações.
+
+**Client ID do Google** (para o "Entrar com Google", no Bloco 45): no Google Cloud Console, APIs e serviços > Credenciais,
+crie um "ID do cliente OAuth" do tipo "App para computador" e ponha o ID em `Google__ClientIds__0`. A tela de consentimento
+pede o nome do app, o e-mail de suporte e os escopos `openid`, `email` e `profile`.
 
 ## Bloco 45: login no app
 

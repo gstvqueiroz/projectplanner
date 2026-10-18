@@ -1,0 +1,46 @@
+# Bloco 44: o servidor de contas e IA no Render (Blueprint). No Render: New > Blueprint > este repositório.
+# Os segredos não ficam aqui: os marcados com "sync: false" o Render pede na criação; os com "generateValue" ele mesmo gera.
+# Ver docs/SERVIDOR.md, "Publicar no Render + Neon + Brevo".
+services:
+  - type: web
+    name: projectplanner-servidor
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./src/ProjectPlanner.Servidor/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - src/ProjectPlanner.Servidor/**
+        - Directory.Build.props
+        - global.json
+        - render.yaml
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: PORT
+        value: "8080"
+      - key: Limites__AtrasDeProxy
+        value: "true"
+      - key: Jwt__Chave
+        generateValue: true
+      - key: Admin__Chave
+        generateValue: true
+      - key: ConnectionStrings__Banco
+        sync: false
+      - key: Gemini__Chave
+        sync: false
+      - key: Email__Smtp
+        value: smtp-relay.brevo.com
+      - key: Email__Porta
+        value: "2525"
+      - key: Email__Usuario
+        sync: false
+      - key: Email__Senha
+        sync: false
+      - key: Email__Remetente
+        sync: false
+      - key: Google__ClientIds__0
+        sync: false

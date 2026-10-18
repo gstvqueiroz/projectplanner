@@ -112,9 +112,34 @@ public sealed class AssistenteGemini : IAssistenteIA
                 }, "etapas"),
                 ["alteracoes"] = new JsonObject { ["type"] = "ARRAY", ["items"] = alteracao },
                 ["orcamento"] = Tipo("STRING"), // Bloco 38: o pedido de sugestões de orçamento
+                // Bloco 41: as atualizações da obra (cartão para confirmar) e a tela para abrir.
+                ["atualizacoes"] = Lista(Objeto(new JsonObject
+                {
+                    ["tipo"] = Tipo("STRING", [.. TiposDeAtualizacao.Todos]),
+                    ["tarefa"] = Tipo("STRING"),
+                    ["percentual"] = Tipo("NUMBER"),
+                    ["quantidade"] = Tipo("NUMBER"),
+                    ["medicao"] = Tipo("INTEGER"),
+                    ["de"] = Tipo("STRING"),
+                    ["ate"] = Tipo("STRING"),
+                    ["data"] = Tipo("STRING"),
+                    ["categoria"] = Tipo("STRING"),
+                    ["descricao"] = Tipo("STRING"),
+                    ["valor"] = Tipo("NUMBER"),
+                    ["documento"] = Tipo("STRING"),
+                    ["nome"] = Tipo("STRING"),
+                }, "tipo")),
+                ["abrir"] = Objeto(new JsonObject
+                {
+                    ["tela"] = Tipo("STRING", [.. TelasDoPrograma.Todas]),
+                    ["aba"] = Tipo("STRING"),
+                    ["medicao"] = Tipo("INTEGER"),
+                    ["de"] = Tipo("STRING"),
+                    ["ate"] = Tipo("STRING"),
+                }, "tela"),
             },
             ["required"] = new JsonArray("mensagem", "alteracoes"),
-            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes", "orcamento"),
+            ["propertyOrdering"] = new JsonArray("tipo", "mensagem", "ficha", "perguntas", "plano", "alteracoes", "orcamento", "atualizacoes", "abrir"),
         };
     }
 

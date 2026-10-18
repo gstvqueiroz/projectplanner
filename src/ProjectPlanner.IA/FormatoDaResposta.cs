@@ -21,6 +21,8 @@ public static class FormatoDaResposta
     public const int MaximoDePremissas = 20;
     public const int MaximoDeItensNaFicha = 60;
     public const int TamanhoMaximoDoPedidoDeOrcamento = 300;
+    public const int MaximoDeAtualizacoes = 100;
+    public const int TamanhoMaximoDoTextoDaAtualizacao = 200;
 
     private const string NotaDeCorte = "\n\n(Resposta cortada: ficou longa demais.)";
 
@@ -85,6 +87,8 @@ public static class FormatoDaResposta
                 Perguntas = tipo == TipoDeResposta.Perguntas ? perguntas : [],
                 Plano = tipo == TipoDeResposta.Plano ? plano : null,
                 Ficha = Ficha(raiz),
+                Atualizacoes = tipo == TipoDeResposta.Resposta ? Atualizacoes(raiz) : [],
+                Abrir = tipo == TipoDeResposta.Resposta ? Abrir(raiz) : null,
                 PedidoDeOrcamento = tipo == TipoDeResposta.Resposta && Texto(raiz, "orcamento")?.Trim() is { Length: > 0 } orcamento
                     ? (orcamento.Length > TamanhoMaximoDoPedidoDeOrcamento ? orcamento[..TamanhoMaximoDoPedidoDeOrcamento] : orcamento)
                     : null,
@@ -133,6 +137,11 @@ public static class FormatoDaResposta
             };
         if (resposta.PedidoDeOrcamento is { } pedido)
             json["orcamento"] = pedido;
+        if (resposta.Abrir is { } tela)
+            json["abrir"] = new JsonObject { ["tela"] = tela.Tela, ["aba"] = tela.Aba };
+        // As atualizações propostas não voltam (o resultado delas está no retrato e na mensagem); só quantas foram.
+        if (resposta.Atualizacoes.Count > 0)
+            json["atualizacoesPropostas"] = resposta.Atualizacoes.Count;
         // As alterações não voltam no histórico (seriam centenas de itens a cada envio): o resultado delas já está no
         // retrato do cronograma, e a mensagem as resume.
         json["alteracoes"] = new JsonArray();
@@ -173,6 +182,57 @@ public static class FormatoDaResposta
             return null;
         var termino = Texto(plano, "termino")?.Trim();
         return new PlanoIA(etapas, string.IsNullOrEmpty(termino) ? null : termino, [.. Textos(plano, "premissas").Take(MaximoDePremissas)]);
+    }
+
+    // Bloco 41: as atualizações da obra (tipos conhecidos, textos curtos, números dos dois jeitos).
+    private static IReadOnlyList<AtualizacaoDaObra> Atualizacoes(JsonElement raiz)
+    {
+        string? Curto(JsonElement item, string nome) => Texto(item, nome)?.Trim() is { Length: > 0 } t
+            ? t.Length > TamanhoMaximoDoTextoDaAtualizacao ? t[..TamanhoMaximoDoTextoDaAtualizacao] : t
+            : null;
+        var lista = new List<AtualizacaoDaObra>();
+        foreach (var item in Objetos(raiz, "atualizacoes"))
+        {
+            var tipo = TiposDeAtualizacao.Todos.FirstOrDefault(t => string.Equals(t, Texto(item, "tipo")?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (tipo is null)
+                continue;
+            lista.Add(new AtualizacaoDaObra(tipo, Curto(item, "tarefa"), Decimal(item, "percentual"), Decimal(item, "quantidade"), Inteiro(item, "medicao"),
+                Curto(item, "de"), Curto(item, "ate"), Curto(item, "data"), Curto(item, "categoria"), Curto(item, "descricao"), Decimal(item, "valor"),
+                Curto(item, "documento"), Curto(item, "nome")));
+            if (lista.Count == MaximoDeAtualizacoes)
+                break;
+        }
+        return lista;
+    }
+
+    private static TelaParaAbrir? Abrir(JsonElement raiz)
+    {
+        if (!raiz.TryGetProperty("abrir", out var abrir) || abrir.ValueKind != JsonValueKind.Object)
+            return null;
+        var tela = TelasDoPrograma.Todas.FirstOrDefault(t => string.Equals(t, Texto(abrir, "tela")?.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (tela is null)
+            return null;
+        var aba = TelasDoPrograma.Abas.TryGetValue(tela, out var abas)
+            ? abas.FirstOrDefault(a => string.Equals(a, Texto(abrir, "aba")?.Trim(), StringComparison.OrdinalIgnoreCase))
+            : null;
+        return new TelaParaAbrir(tela, aba, Inteiro(abrir, "medicao"), Texto(abrir, "de")?.Trim(), Texto(abrir, "ate")?.Trim());
+    }
+
+    private static decimal? Decimal(JsonElement objeto, string nome)
+    {
+        if (!objeto.TryGetProperty(nome, out var valor))
+            return null;
+        if (valor.ValueKind == JsonValueKind.Number && valor.TryGetDecimal(out var numero))
+            return numero;
+        if (valor.ValueKind == JsonValueKind.String)
+        {
+            var texto = valor.GetString()!.Trim();
+            if (!texto.Contains(',') && decimal.TryParse(texto, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var lido))
+                return lido;
+            if (decimal.TryParse(texto, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.GetCultureInfo("pt-BR"), out lido))
+                return lido;
+        }
+        return null;
     }
 
     private static IReadOnlyList<ItemDeFicha> Ficha(JsonElement raiz) =>

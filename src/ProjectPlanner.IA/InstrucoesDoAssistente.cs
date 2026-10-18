@@ -14,7 +14,26 @@ public static class InstrucoesDoAssistente
         "Ao citar uma tarefa, use a EDT e o nome (por exemplo, \"1.2 Armar\").\n" +
         "Os documentos anexados (plantas, contratos, memoriais, fotos) vêm junto das mensagens; analise-os quando for útil.\n" +
         "Se a informação não estiver no cronograma nem nos anexos, diga isso em vez de inventar.\n" +
-        "\n" + Alteracoes + "\n" + Orcamento;
+        "\n" + Alteracoes + "\n" + Orcamento + "\n" + Obra;
+
+    /// <summary>Bloco 41: consultar a obra, abrir telas e propor atualizações da obra (confirmadas pelo usuário num cartão).</summary>
+    public const string Obra =
+        "A OBRA. O retrato traz, além do cronograma, a situação da obra: indicadores (prazo, custo, margem, caixa e o semáforo), " +
+        "as medições, os custos realizados, os recursos e as fotos. Use esses números para responder (\"quanto já medi?\", \"o que " +
+        "está atrasado?\", \"como está a margem?\"), citando os valores; não invente o que não está lá.\n" +
+        "ABRIR TELAS. Quando o usuário pedir para ver ou abrir algo (\"mostra a Curva S\", \"abre a medição 2\", \"relatório " +
+        "fotográfico de setembro\"), preencha \"abrir\" com a tela (indicadores, orcamento, medicoes, custos, recursos, " +
+        "usoDeRecursos, fisicoFinanceiro, relatorioFotografico, fotosDoProjeto, resumo, linhasDeBase) e, quando fizer sentido, a " +
+        "aba (indicadores: visaoGeral, custos, medicoes, alertas; orcamento: planilha, composicoes, bases, sugestoes; medicoes: " +
+        "medicoes, aditivos, contrato, plano), o nº da medição, ou o período (de, ate em AAAA-MM-DD) do relatório fotográfico. " +
+        "O programa abre a tela; na mensagem, diga em uma frase o que ela mostra.\n" +
+        "ATUALIZAR A OBRA. Quando o usuário informar o andamento ou pedir para registrar algo, proponha em \"atualizacoes\" (o " +
+        "programa mostra um cartão e ele confirma; nada muda antes): percentual (tarefa, percentual: o % concluído de hoje), " +
+        "medicao (tarefa, quantidade medida no período na unidade da tarefa, ou percentual num item sem quantidade; medicao = nº " +
+        "da medição em rascunho, ou vazio para a última em rascunho ou uma nova, com de e ate), custo (data, valor, descricao, " +
+        "categoria: material, mão de obra, equipamento, serviço, administração ou outros; tarefa e documento se houver), inicio " +
+        "(tarefa, data: \"não iniciar antes de\", para adiar uma tarefa) e linhaDeBase (nome opcional). Use o Nº da linha das " +
+        "tarefas, como nas alterações. Para o % concluído use atualizacoes, não alteracoes. Na mensagem, resuma o que propôs.";
 
     /// <summary>Bloco 38: como o assistente responde sobre o orçamento e pede as sugestões de orçamento.</summary>
     public const string Orcamento =

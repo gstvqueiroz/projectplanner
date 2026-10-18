@@ -30,6 +30,15 @@ public interface ICronogramaDoAssistente
     /// <summary>Bloco 38: abre o orçamento na aba Sugestões da IA, pedindo sugestões com este foco, e espera a janela fechar.</summary>
     Task AbrirSugestoesDeOrcamentoAsync(string pedido);
 
+    /// <summary>Bloco 41: confere as atualizações da obra propostas (os Nº pelo <paramref name="retrato"/>), para o cartão.</summary>
+    IReadOnlyList<ItemDoCartao> ConferirAtualizacoes(IReadOnlyList<AtualizacaoDaObra> atualizacoes, ContextoDoProjeto retrato);
+
+    /// <summary>Bloco 41: aplica as operações do cartão, todas ou nenhuma, num passo do Desfazer.</summary>
+    Task<ResultadoDaAplicacao> AplicarAtualizacoesAsync(IReadOnlyList<OperacaoDaObra> operacoes, string resumo);
+
+    /// <summary>Bloco 41: abre a tela pedida e espera ela fechar.</summary>
+    Task AbrirTelaAsync(TelaParaAbrir tela);
+
     /// <summary>Aplica as alterações, achando as tarefas existentes pelo <paramref name="retrato"/> mandado com o pedido.</summary>
     Task<ResultadoDaAplicacao> AplicarAsync(IReadOnlyList<AlteracaoDoCronograma> alteracoes, ContextoDoProjeto retrato);
 

@@ -48,6 +48,12 @@ public sealed record RespostaIA(string Texto)
     /// </summary>
     public string? PedidoDeOrcamento { get; init; }
 
+    /// <summary>Bloco 41: as atualizações da obra propostas (%, medição, custos, início, linha de base), para o cartão.</summary>
+    public IReadOnlyList<AtualizacaoDaObra> Atualizacoes { get; init; } = [];
+
+    /// <summary>Bloco 41: a tela que o usuário pediu para ver; nula quando não pediu.</summary>
+    public TelaParaAbrir? Abrir { get; init; }
+
     /// <summary>Tem algo além do texto e das alterações (tipo, perguntas, plano, ficha).</summary>
     public bool Estruturada => Tipo != TipoDeResposta.Resposta || Ficha.Count > 0;
 }

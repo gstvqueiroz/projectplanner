@@ -39,9 +39,13 @@ public sealed record TarefaNoContexto(
 /// <c>Cronograma</c> do domínio: só este texto, que vai nas instruções do pedido.
 /// </summary>
 /// <param name="Orcamento">Bloco 38: o resumo do orçamento, uma linha por item (vazio sem orçamento).</param>
+/// <param name="Obra">Bloco 41: a situação da obra (indicadores, medições, custos, recursos, fotos), uma linha por dado.</param>
 public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Termino, DateOnly Hoje, IReadOnlyList<TarefaNoContexto> Tarefas,
-    IReadOnlyList<string>? Orcamento = null)
+    IReadOnlyList<string>? Orcamento = null, IReadOnlyList<string>? Obra = null)
 {
+    /// <summary>Linhas da situação da obra no retrato, no máximo.</summary>
+    public const int LinhasDaObra = 250;
+
     /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
     public const int LinhasDoOrcamento = 200;
 
@@ -92,6 +96,14 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
                 texto.AppendLine("- " + Limpar(linha));
             if (orcamento.Count > LinhasDoOrcamento)
                 texto.AppendLine($"- (mais {orcamento.Count - LinhasDoOrcamento} serviços)");
+        }
+        if (Obra is { Count: > 0 } obra)
+        {
+            texto.AppendLine("Situação da obra:");
+            foreach (var linha in obra.Take(LinhasDaObra))
+                texto.AppendLine("- " + Limpar(linha));
+            if (obra.Count > LinhasDaObra)
+                texto.AppendLine($"- (mais {obra.Count - LinhasDaObra} linhas)");
         }
         return texto.ToString().TrimEnd();
     }

@@ -139,6 +139,9 @@ public sealed partial class MedicoesViewModel : ViewModelBase
 
     [ObservableProperty] public partial string Mensagem { get; private set; } = "";
 
+    /// <summary>Bloco 41: a aba aberta (0 Medições, 1 Aditivos, 2 Contrato, 3 Plano); o chat abre numa delas.</summary>
+    [ObservableProperty] public partial int AbaEscolhida { get; set; }
+
     // ---- A lista ----
 
     public ObservableCollection<MedicaoNaLista> Lista { get; } = [];

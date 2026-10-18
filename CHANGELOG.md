@@ -3,6 +3,22 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.41.0
+
+Bloco 41: o chat como central da obra.
+
+- Consultar: o assistente passa a ver a obra inteira, além do cronograma: os indicadores e o semáforo (prazo, custo,
+  margem, caixa), as medições, os custos realizados (por categoria e os últimos), os recursos e as superalocações, as fotos
+  e os relatórios. Pergunte "quanto já medi?", "onde estou gastando mais?", "quem está superalocado?".
+- Abrir telas: "mostra a Curva S", "abre a medição 2", "relatório fotográfico de setembro". O assistente abre a tela na
+  aba certa (Indicadores, Orçamento, Medições), com a medição selecionada ou o período do relatório; a mensagem ganha um
+  botão para abrir de novo.
+- Atualizar a obra por um cartão: o assistente propõe e você confirma. Dá para atualizar o % concluído, medir (na medição
+  em rascunho ou numa nova), lançar um custo, adiar o início de uma tarefa ("não iniciar antes de") e salvar uma linha de
+  base. Cada item mostra o que muda ("2.2 Sapatas: 70% → 85% concluído"); os que não valem aparecem com o motivo.
+  "Aplicar" põe as válidas num passo só do Desfazer (com o Desfazer no próprio cartão); "Descartar" não muda nada.
+- O % concluído pedido ao chat agora vem no cartão para confirmar (antes era aplicado direto).
+
 ## 0.40.0
 
 Bloco 43: indicadores ampliados (a versão segue a ordem de entrega).
@@ -345,8 +361,8 @@ começar):
   pelo chat).
 - Bloco 39 (feito, na 0.39): a barra de ícones ampliada e personalizável, com o "»" para janelas estreitas.
 - Bloco 43 (feito, na 0.40): indicadores ampliados (custos e margem, medições e caixa, alertas e análise da IA).
-- A seguir: Bloco 41 (o chat como central da obra: consultar, abrir telas e atualizar com cartão de confirmação) e
-  Bloco 42 (fotos com IA: classificar pelo chat, pela importação em lote e por uma pasta). Bloco 40 (baixar a SINAPI da
+- Bloco 41 (feito, na 0.41): o chat como central da obra (consultar, abrir telas e atualizar com cartão de confirmação).
+- A seguir: Bloco 42 (fotos com IA: classificar pelo chat, pela importação em lote e por uma pasta). Bloco 40 (baixar a SINAPI da
   Caixa) espera um arquivo real para o formato novo.
 - Depois: localizar e filtrar; feriados; entregas
   (Gantt em PNG, Excel, importar CSV, modelos de obra); Gantt virtualizado; salvamento automático, rótulos e cores.

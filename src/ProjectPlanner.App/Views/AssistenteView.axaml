@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ProjectPlanner.App.ViewModels"
+             xmlns:v="using:ProjectPlanner.App.Views"
              xmlns:ia="using:ProjectPlanner.IA"
              x:Class="ProjectPlanner.App.Views.AssistenteView"
              x:DataType="vm:AssistenteViewModel">
@@ -330,6 +331,52 @@
                                                         AutomationProperties.Name="Desfazer as alterações do assistente" />
                                             </StackPanel>
                                         </Border>
+                                        <!-- Bloco 41: as atualizações da obra propostas, para aplicar ou descartar. -->
+                                        <Border Classes="cartao" IsVisible="{Binding TemCartao}">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{Binding Cartao.Titulo, FallbackValue=''}" FontWeight="SemiBold" FontSize="12" />
+                                                <ItemsControl ItemsSource="{Binding Cartao.Itens, FallbackValue={x:Null}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ItemDoCartaoNaTela">
+                                                            <StackPanel Margin="0,1">
+                                                                <TextBlock Text="{Binding Texto, StringFormat='• {0}'}" FontSize="12" TextWrapping="Wrap"
+                                                                           Opacity="{Binding TemProblema, Converter={x:Static v:Conversores.MeiaOpacidadeSeVerdadeiro}}" />
+                                                                <TextBlock Text="{Binding Problema}" IsVisible="{Binding TemProblema}" FontSize="11"
+                                                                           Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap" Margin="10,0,0,0" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="{Binding Cartao.TextoDoEstado, FallbackValue=''}" FontSize="12" TextWrapping="Wrap"
+                                                           IsVisible="{Binding Cartao.TextoDoEstado, FallbackValue='', Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" Margin="0,4,0,0"
+                                                            IsVisible="{Binding Cartao.Pendente, FallbackValue=False}">
+                                                    <Button Content="Descartar" FontSize="12"
+                                                            Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).DescartarCartaoCommand}"
+                                                            CommandParameter="{Binding Cartao}" AutomationProperties.Name="Descartar as atualizações" />
+                                                    <Button Content="{Binding Cartao.TextoDoBotao, FallbackValue='Aplicar'}" Classes="accent" FontSize="12"
+                                                            IsEnabled="{Binding Cartao.TemValidos, FallbackValue=False}"
+                                                            Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).AplicarCartaoCommand}"
+                                                            CommandParameter="{Binding Cartao}" ToolTip.Tip="Aplica as atualizações válidas (um passo do Desfazer)"
+                                                            AutomationProperties.Name="Aplicar as atualizações" />
+                                                </StackPanel>
+                                                <Border Classes="alteracoes aplicadas" IsVisible="{Binding Cartao.TemAplicacao, FallbackValue=False}"
+                                                        CornerRadius="6" Padding="8,5">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{Binding Cartao.Aplicacao.Texto, FallbackValue=''}" TextWrapping="Wrap" FontSize="12" />
+                                                        <Button Content="Desfazer" FontSize="12" Padding="8,2" HorizontalAlignment="Left"
+                                                                IsVisible="{Binding Cartao.Aplicacao.PodeDesfazer, FallbackValue=False}"
+                                                                Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).DesfazerCommand}"
+                                                                CommandParameter="{Binding Cartao.Aplicacao}" AutomationProperties.Name="Desfazer as atualizações" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                        <!-- Bloco 41: a tela que o assistente abriu, para abrir de novo. -->
+                                        <Button Content="{Binding Tela.Rotulo, FallbackValue=''}" IsVisible="{Binding TemTela}" FontSize="12" Padding="8,2"
+                                                HorizontalAlignment="Left" Margin="0,4,0,0"
+                                                Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).AbrirTelaCommand}"
+                                                CommandParameter="{Binding Tela}" AutomationProperties.Name="Abrir a tela" />
                                         <TextBlock Text="{Binding Hora}" FontSize="10" Opacity="0.55" HorizontalAlignment="Right" />
                                     </StackPanel>
                                 </Border>

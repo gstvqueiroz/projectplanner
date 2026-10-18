@@ -20,6 +20,9 @@ public sealed partial class AlteracoesNaConversa(ResultadoDaAplicacao resultado)
 
     public bool Aplicadas => Resultado.Situacao == SituacaoDaAplicacao.Aplicada;
 
+    /// <summary>"Cronograma alterado" (Bloco 24) ou "Obra atualizada" (o cartão do Bloco 41).</summary>
+    public string Prefixo { get; init; } = "Cronograma alterado";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Texto))]
     public partial bool Desfeitas { get; set; }
@@ -32,7 +35,7 @@ public sealed partial class AlteracoesNaConversa(ResultadoDaAplicacao resultado)
         : Resultado.Situacao switch
         {
             SituacaoDaAplicacao.Aplicada when Resultado.Marca is null => "Nenhuma mudança no cronograma.",
-            SituacaoDaAplicacao.Aplicada => $"Cronograma alterado: {Resultado.Texto}",
+            SituacaoDaAplicacao.Aplicada => $"{Prefixo}: {Resultado.Texto}",
             SituacaoDaAplicacao.Recusada => $"Nada foi alterado. {Resultado.Texto}",
             _ => Resultado.Texto,
         });
@@ -66,10 +69,20 @@ public sealed record MensagemNaTela(MensagemChat Mensagem, AlteracoesNaConversa?
     public bool TemPlano => Plano is not null;
 
     /// <summary>Tem botões (o cartão do modo, as perguntas ou o plano): o balão ocupa a largura do painel.</summary>
-    public bool Interativa => EscolheModo || TemPerguntas || TemPlano;
+    public bool Interativa => EscolheModo || TemPerguntas || TemPlano || Cartao is not null;
 
     /// <summary>A posição desta mensagem na conversa guardada no projeto; nula num aviso local.</summary>
     public int? IndiceNaConversa { get; init; }
+
+    /// <summary>Bloco 41: as atualizações da obra propostas nesta resposta, para aplicar ou descartar.</summary>
+    public CartaoDeAtualizacoes? Cartao { get; init; }
+
+    public bool TemCartao => Cartao is not null;
+
+    /// <summary>Bloco 41: a tela que o assistente abriu (o botão para abrir de novo).</summary>
+    public TelaParaAbrir? Tela { get; init; }
+
+    public bool TemTela => Tela is not null;
 }
 
 /// <summary>
@@ -220,6 +233,8 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         MensagemChat resposta;
         AlteracoesNaConversa? alteracoes = null;
         string? pedidoDeOrcamento = null;
+        CartaoDeAtualizacoes? cartao = null;
+        TelaParaAbrir? tela = null;
         try
         {
             var retrato = _cronograma.Retrato();
@@ -259,6 +274,10 @@ public sealed partial class AssistenteViewModel : ViewModelBase
             {
                 Conduzir(r, alteracoes);
                 pedidoDeOrcamento = r.PedidoDeOrcamento;
+                // Bloco 41: as atualizações da obra viram um cartão (conferido pelo retrato desta resposta).
+                if (r.Atualizacoes.Count > 0)
+                    cartao = new CartaoDeAtualizacoes(_cronograma.ConferirAtualizacoes(r.Atualizacoes, _cronograma.Retrato()));
+                tela = r.Abrir;
             }
             resposta = new MensagemChat(AutorMensagem.Assistente, r.Texto, _relogio.GetLocalNow(), [], Resposta: r.Estruturada ? r : null);
         }
@@ -276,7 +295,10 @@ public sealed partial class AssistenteViewModel : ViewModelBase
             Aguardando = false;
         }
         if (geracao == _geracao)
-            Acrescentar(resposta, resposta.EhErro ? null : alteracoes);
+            Acrescentar(resposta, resposta.EhErro ? null : alteracoes, resposta.EhErro ? null : cartao, resposta.EhErro ? null : tela);
+        // Bloco 41: a tela que o usuário pediu para ver.
+        if (tela is not null && !resposta.EhErro && geracao == _geracao)
+            await _cronograma.AbrirTelaAsync(tela);
         // Bloco 38: o assistente pediu sugestões de orçamento: elas aparecem em Projeto > Orçamento…, para o usuário aceitar.
         if (pedidoDeOrcamento is not null && !resposta.EhErro && geracao == _geracao)
             await _cronograma.AbrirSugestoesDeOrcamentoAsync(pedidoDeOrcamento);
@@ -304,6 +326,12 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     // Desfazer e o Refazer gerais (Cmd/Ctrl+Z). Uma resposta que saiu do histórico continua como estava.
     private void AtualizarDesfazer()
     {
+        foreach (var aplicacao in Mensagens.Select(m => m.Cartao?.Aplicacao).OfType<AlteracoesNaConversa>().Where(a => a.Resultado.Marca is not null))
+        {
+            var marcaDoCartao = aplicacao.Resultado.Marca!;
+            aplicacao.Desfeitas = _cronograma.FoiDesfeita(marcaDoCartao) || (!_cronograma.PodeDesfazer(marcaDoCartao) && aplicacao.Desfeitas);
+            aplicacao.PodeDesfazer = _cronograma.PodeDesfazer(marcaDoCartao);
+        }
         foreach (var mensagem in Mensagens.Where(m => m.Alteracoes?.Resultado.Marca is not null))
         {
             var alteracoes = mensagem.Alteracoes!;
@@ -315,7 +343,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
                 alteracoes.Desfeitas = desfeitas;
                 // A conversa guardada mostra o "Desfeito" ao reabrir.
                 if (mensagem.IndiceNaConversa is { } i && i < _conversa.Mensagens.Count)
-                    _conversa.Substituir(i, _conversa.Mensagens[i] with { ResultadoDasAlteracoes = alteracoes.Texto });
+                    _conversa.Substituir(i, _conversa.Mensagens[i] with { ResultadoDasAlteracoes = TextoGuardado(alteracoes, mensagem.Cartao) });
             }
             alteracoes.PodeDesfazer = feita;
         }
@@ -396,15 +424,18 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     // ---- Bloco 26: a conversa guardada no projeto ----
 
     // Acrescenta a mensagem no painel e, se não for um aviso local, na conversa do projeto.
-    private void Acrescentar(MensagemChat mensagem, AlteracoesNaConversa? alteracoes = null)
+    private void Acrescentar(MensagemChat mensagem, AlteracoesNaConversa? alteracoes = null, CartaoDeAtualizacoes? cartao = null, TelaParaAbrir? tela = null)
     {
         int? indice = null;
         if (!mensagem.EhErro)
         {
-            _conversa.Acrescentar(ParaAConversa(mensagem, alteracoes));
+            _conversa.Acrescentar(ParaAConversa(mensagem, alteracoes) with
+            {
+                ResultadoDasAlteracoes = TextoGuardado(alteracoes, cartao),
+            });
             indice = _conversa.Mensagens.Count - 1;
         }
-        Mensagens.Add(new MensagemNaTela(mensagem, alteracoes) { IndiceNaConversa = indice });
+        Mensagens.Add(new MensagemNaTela(mensagem, alteracoes) { IndiceNaConversa = indice, Cartao = cartao, Tela = tela });
         AtualizarEstudo();
     }
 

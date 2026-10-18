@@ -251,6 +251,20 @@ assistente; o Gemini responde `{resumo, pontos, recomendacoes}` (até 6 itens de
 campos editáveis em Indicadores > Alertas e análise e, quando preenchido, para o PDF e o Word. Não muda nada no projeto
 e não é guardado no .pplan (vale para a exportação daquele momento). Calibrar: `AnalistaDaObraGemini.Instrucoes`.
 
+## O chat como central da obra (Bloco 41)
+
+O retrato do pedido ganhou a seção **Situação da obra** (`MainWindowViewModel.SituacaoDaObra`, até 250 linhas): os
+indicadores e o semáforo (`TextosDaAnalise.ParaAIA`), as medições, os custos, os recursos, as superalocações, as fotos e
+os relatórios. A resposta ganhou dois campos opcionais:
+
+- `abrir: {tela, aba, medicao, de, ate}`: o App abre a tela (`MainWindowViewModel.AbrirTelaAsync`) e põe na mensagem o
+  botão "Abrir …". Telas e abas em `TelasDoPrograma`.
+- `atualizacoes: [{tipo, tarefa, percentual, quantidade, medicao, de, ate, data, categoria, descricao, valor, documento,
+  nome}]`, com `tipo` entre percentual, medicao, custo, inicio e linhaDeBase. Elas **não** entram direto: viram um cartão
+  (`CartaoDeAtualizacoes`). `AtualizacoesDoAssistente.Conferir` resolve as tarefas pelo Nº do retrato, escreve cada item e
+  descobre o problema de cada um aplicando-o sozinho numa cópia. "Aplicar" aplica as válidas numa cópia e, se tudo vale,
+  troca o cronograma: um passo do Desfazer, "Atualizações do assistente". O estado do cartão fica na conversa como texto.
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".

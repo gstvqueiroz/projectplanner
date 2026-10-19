@@ -101,7 +101,7 @@ public partial class MenuPrincipalTests
         var a = Abrir();
 
         a.Janela.MenuPrincipal.Items.OfType<MenuItem>().Select(m => m.Header)
-            .Should().Equal("Arquivo", "Editar", "Exibir", "Inserir", "Tarefa", "Projeto", "Ajuda");
+            .Should().Equal("Arquivo", "Editar", "Exibir", "Inserir", "Tarefa", "Projeto", "Conta", "Ajuda");
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
         Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…",
@@ -117,6 +117,7 @@ public partial class MenuPrincipalTests
             Linha, "Gerenciar fotos…", "Recursos da tarefa…");
         Titulos(a.Item("Projeto")).Should().Equal("Salvar linha de base…", "Linhas de base…", Linha,
             "Cronograma físico-financeiro…", "Importar valores…", Linha, "Orçamento…", "Recursos…", "Uso de recursos…", Linha, "Medições…", "Custos realizados…", "Indicadores…");
+        Titulos(a.Item("Conta")).Should().Equal("Entrar ou criar conta…", "Sair da conta"); // Bloco 45
         Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Sobre o ProjectPlanner…");
     });
 

@@ -100,6 +100,8 @@ public sealed class DialogosAvalonia : IDialogosService
     public Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao) =>
         new ConfiguracaoAssistenteWindow(configuracao).ShowDialog(JanelaPrincipal);
 
+    public Task MostrarContaAsync(ViewModels.ContaViewModel conta) => new ContaWindow(conta).ShowDialog(JanelaAtiva);
+
     public Task MostrarSobreAsync(ViewModels.SobreViewModel sobre) => new SobreWindow(sobre).ShowDialog(JanelaPrincipal);
 
     public Task MostrarResumoDoProjetoAsync(ViewModels.ResumoDoProjetoViewModel resumo) =>

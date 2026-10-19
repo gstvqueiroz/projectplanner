@@ -7,6 +7,7 @@ using System.Text;
 using ProjectPlanner.Core;
 using ProjectPlanner.Core.Fotos;
 using ProjectPlanner.IA;
+using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Tests;
 
@@ -387,6 +388,20 @@ public sealed class DialogosFalsos : IDialogosService
         return AoMostrarMedicoes?.Invoke(medicoes) ?? Task.CompletedTask;
     }
 
+    /// <summary>Bloco 45: as telas da conta abertas, e o que o usuário faz nelas antes de fechar.</summary>
+    public List<ContaViewModel> Contas { get; } = [];
+
+    public Func<ContaViewModel, Task>? AoMostrarConta { get; set; }
+
+    public async Task MostrarContaAsync(ContaViewModel conta)
+    {
+        Contas.Add(conta);
+        await conta.AbrirAsync();
+        if (AoMostrarConta is not null)
+            await AoMostrarConta(conta);
+        conta.Fechando();
+    }
+
     public Task MostrarConfiguracaoAssistenteAsync(ConfiguracaoAssistenteViewModel configuracao)
     {
         ConfiguracoesDoAssistente.Add(configuracao);
@@ -475,10 +490,13 @@ public sealed class Ambiente
     /// <summary>Bloco 43: a IA que analisa os indicadores.</summary>
     public AnalistaDaObraFalso AnalistaDaObra { get; } = new();
 
+    /// <summary>Bloco 45: a conta ProjectPlanner.</summary>
+    public ContaFalsa Conta { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
             analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
-            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra);
+            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -626,6 +644,10 @@ public sealed class ConfiguracaoAssistenteFalsa : IConfiguracaoAssistente
     // Bloco 26
     public PreferenciaDeModo PreferenciaDeModo { get; set; } = PreferenciaDeModo.Perguntar;
     public void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia) => PreferenciaDeModo = preferencia;
+
+    // Bloco 45
+    public ProvedorDoAssistente Provedor { get; set; } = ProvedorDoAssistente.ChavePropria;
+    public void SalvarProvedor(ProvedorDoAssistente provedor) => Provedor = provedor;
 }
 
 /// <summary>Um cofre em memória (Bloco 23); <see cref="Falha"/> faz toda operação falhar como um cofre bloqueado.</summary>
@@ -821,4 +843,109 @@ public sealed class AnalistaFalso : IAnalistaDeFotos
         PedidosDeClassificacao.Add(pedido);
         return Responder(() => Classificar(pedido), cancelamento);
     }
+}
+
+/// <summary>
+/// Bloco 45: a conta nos testes das telas: guarda o que foi pedido e responde como o servidor, sem rede. Senha certa:
+/// "senha-boa-123"; código certo: "123456". <see cref="Erro"/> faz o próximo pedido falhar com essa mensagem.
+/// </summary>
+public sealed class ContaFalsa : IContaProjectPlanner
+{
+    public const string SenhaCerta = "senha-boa-123";
+    public const string CodigoCerto = "123456";
+
+    public PerfilDaConta? Perfil { get; set; }
+    public bool Conectada => Perfil is not null;
+    public string? ProblemaNoCofre => null;
+    public event EventHandler? Mudou;
+    public List<string> Pedidos { get; } = [];
+    public ErroDaContaException? Erro { get; set; }
+    public TaskCompletionSource? Segurar { get; set; }
+    public UsoDaConta? Uso { get; set; }
+    public bool PendenteDeConfirmacao { get; set; }
+
+    public void Conectar(string nome = "Ana", string email = "ana@exemplo.com", string plano = "gratis")
+    {
+        Perfil = new PerfilDaConta(email, nome, plano, true, false);
+        Mudou?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task Passo(string pedido, CancellationToken cancelamento)
+    {
+        Pedidos.Add(pedido);
+        if (Segurar is { } segurar)
+            await segurar.Task.WaitAsync(cancelamento);
+        if (Erro is { } erro)
+        {
+            Erro = null;
+            throw erro;
+        }
+    }
+
+    public async Task<string> CriarContaAsync(string nome, string email, string senha, CancellationToken cancelamento)
+    {
+        await Passo($"criar {nome} {email}", cancelamento);
+        return "Se o e-mail puder ser usado, mandamos um código para ele.";
+    }
+
+    public async Task ConfirmarAsync(string email, string codigo, string senha, CancellationToken cancelamento)
+    {
+        await Passo($"confirmar {email} {codigo}", cancelamento);
+        if (codigo != CodigoCerto || senha != SenhaCerta)
+            throw new ErroDaContaException("Código inválido ou vencido. Peça outro.", 400);
+        Conectar(email: email);
+    }
+
+    public async Task<string> ReenviarCodigoAsync(string email, CancellationToken cancelamento)
+    {
+        await Passo($"reenviar {email}", cancelamento);
+        return "Se o e-mail puder ser usado, mandamos um código para ele.";
+    }
+
+    public async Task EntrarAsync(string email, string senha, CancellationToken cancelamento)
+    {
+        await Passo($"entrar {email}", cancelamento);
+        if (senha != SenhaCerta)
+            throw new ErroDaContaException("E-mail ou senha incorretos.", 401);
+        if (PendenteDeConfirmacao)
+            throw new ErroDaContaException("Confirme o e-mail antes de entrar: digite o código que mandamos (ou peça outro).", 403);
+        Conectar(email: email);
+    }
+
+    public async Task EntrarComGoogleAsync(CancellationToken cancelamento)
+    {
+        await Passo("google", cancelamento);
+        Perfil = new PerfilDaConta("bia@gmail.com", "Bia", "gratis", false, true);
+        Mudou?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async Task<string> EsqueciASenhaAsync(string email, CancellationToken cancelamento)
+    {
+        await Passo($"esqueci {email}", cancelamento);
+        return "Se houver uma conta com esse e-mail, mandamos um código para trocar a senha.";
+    }
+
+    public async Task RedefinirSenhaAsync(string email, string codigo, string novaSenha, CancellationToken cancelamento)
+    {
+        await Passo($"redefinir {email} {codigo}", cancelamento);
+        if (codigo != CodigoCerto)
+            throw new ErroDaContaException("Código inválido ou vencido. Peça outro.", 400);
+        Conectar(email: email);
+    }
+
+    public async Task<UsoDaConta> UsoAsync(CancellationToken cancelamento)
+    {
+        await Passo("uso", cancelamento);
+        return Uso ?? new UsoDaConta(Perfil!, 1500, 300_000);
+    }
+
+    public async Task SairAsync(CancellationToken cancelamento)
+    {
+        await Passo("sair", cancelamento);
+        Perfil = null;
+        Mudou?.Invoke(this, EventArgs.Empty);
+    }
+
+    public Task<string> AcessoAsync(bool renovar, CancellationToken cancelamento) =>
+        Perfil is null ? Task.FromException<string>(new ErroDoAssistenteException("sem conta")) : Task.FromResult("acesso-falso");
 }

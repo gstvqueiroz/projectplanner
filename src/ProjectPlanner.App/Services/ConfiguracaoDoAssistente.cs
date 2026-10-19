@@ -1,5 +1,6 @@
 using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.IA;
+using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Services;
 
@@ -49,7 +50,12 @@ public interface IConfiguracaoAssistente
     /// <exception cref="ArgumentOutOfRangeException">Preferência desconhecida.</exception>
     void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia);
 
-    /// <summary>Testa a chave digitada (ou, sem ela, a que está em uso) com o modelo.</summary>
+    /// <summary>Bloco 45: por onde a IA vai. Sem escolha salva: a chave própria, se houver; senão a conta, se conectada.</summary>
+    ProvedorDoAssistente Provedor { get; }
+
+    void SalvarProvedor(ProvedorDoAssistente provedor);
+
+    /// <summary>Testa a chave digitada (ou, sem ela, a que está em uso: a chave própria ou a conta) com o modelo.</summary>
     /// <exception cref="ArgumentException">Sem chave, ou chave ou modelo inválidos.</exception>
     /// <exception cref="ErroDoAssistenteException">A chave não vale, o modelo não existe ou não há conexão.</exception>
     Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento);
@@ -60,6 +66,11 @@ public interface IConfiguracaoAssistente
 /// ela, vale a variável de ambiente <see cref="VariavelDeAmbiente"/>, para desenvolvimento. O modelo fica em
 /// <c>assistente.json</c>. O cofre é lido uma vez, na primeira vez que a chave é pedida.
 /// </summary>
+/// <remarks>
+/// Bloco 45: com a conta ProjectPlanner escolhida (e conectada), a "chave" que a IA recebe é a marca
+/// <see cref="ProvedorDaConta.Credencial"/>, e o provedor do programa (<see cref="ProvedorConformeCredencial"/>) manda os
+/// pedidos pelo servidor. A chave própria continua guardada e volta a valer quando a pessoa a escolher.
+/// </remarks>
 public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfiguracaoIA
 {
     /// <summary>O nome do segredo no cofre (a "conta" nas Chaves do macOS).</summary>
@@ -73,14 +84,16 @@ public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfigu
     private readonly IPreferenciasAssistente _preferencias;
     private readonly IProvedorIA _provedor;
     private readonly Func<string, string?> _lerVariavel;
+    private readonly IContaProjectPlanner _conta;
     private bool _cofreLido;
     private string? _chaveDoCofre;
     private string? _modelo;
     private string? _problemaNoCofre;
 
     public ConfiguracaoDoAssistente(ICofreDeSegredos cofre, IPreferenciasAssistente preferencias, IProvedorIA provedor,
-        Func<string, string?> lerVariavel)
+        Func<string, string?> lerVariavel, IContaProjectPlanner? conta = null)
     {
+        _conta = conta ?? new SemContaProjectPlanner();
         ArgumentNullException.ThrowIfNull(cofre);
         ArgumentNullException.ThrowIfNull(preferencias);
         ArgumentNullException.ThrowIfNull(provedor);
@@ -105,13 +118,28 @@ public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfigu
         }
     }
 
-    public string? ChaveApi => ChaveDoCofre() ?? ChaveDaVariavel();
+    /// <summary>A credencial da IA: a chave própria, ou a marca da conta (se ela foi escolhida e está conectada).</summary>
+    public string? ChaveApi => Provedor == ProvedorDoAssistente.Conta
+        ? _conta.Conectada ? ProvedorDaConta.Credencial : null
+        : ChaveDoGemini();
+
+    public ProvedorDoAssistente Provedor => _preferencias.Carregar()?.Provedor
+        ?? (ChaveDoGemini() is null && _conta.Conectada ? ProvedorDoAssistente.Conta : ProvedorDoAssistente.ChavePropria);
+
+    public void SalvarProvedor(ProvedorDoAssistente provedor)
+    {
+        if (!Enum.IsDefined(provedor))
+            throw new ArgumentOutOfRangeException(nameof(provedor), provedor, "Provedor desconhecido.");
+        _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasAssistente(Modelo)) with { Provedor = provedor });
+    }
+
+    private string? ChaveDoGemini() => ChaveDoCofre() ?? ChaveDaVariavel();
 
     public OrigemDaChave Origem => ChaveDoCofre() is not null ? OrigemDaChave.Cofre
         : ChaveDaVariavel() is not null ? OrigemDaChave.VariavelDeAmbiente
         : OrigemDaChave.Nenhuma;
 
-    public string? FinalDaChave => ChaveApi is { Length: >= 8 } chave ? "…" + chave[^4..] : null;
+    public string? FinalDaChave => ChaveDoGemini() is { Length: >= 8 } chave ? "…" + chave[^4..] : null;
 
     public string Modelo => _modelo ??= ModeloSalvo() ?? _provedor.ModeloPadrao;
 
@@ -146,9 +174,10 @@ public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfigu
 
     public Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento)
     {
-        var usada = string.IsNullOrWhiteSpace(chave)
-            ? ChaveApi ?? throw new ArgumentException("Cole a chave de API para testar (ou salve uma antes).")
-            : Validar(chave);
+        var usada = !string.IsNullOrWhiteSpace(chave) ? Validar(chave)
+            : Provedor == ProvedorDoAssistente.Conta
+                ? ChaveApi ?? throw new ArgumentException("Entre na sua conta ProjectPlanner (menu Conta) para testar.")
+                : ChaveApi ?? throw new ArgumentException("Cole a chave de API para testar (ou salve uma antes).");
         return _provedor.TestarAsync(usada, _provedor.NormalizarModelo(modelo), cancelamento);
     }
 

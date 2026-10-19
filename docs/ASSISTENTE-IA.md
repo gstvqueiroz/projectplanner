@@ -87,8 +87,10 @@ Para vender com a IA incluída (sem o cliente precisar de chave), o caminho é u
    cliente, não uma chave de IA.
 
 Desde o Bloco 44 esse servidor existe, neste repositório: `src/ProjectPlanner.Servidor`, com contas, planos e cota, e o
-ponto de IA no mesmo caminho do Gemini. O provedor do programa ("Conta ProjectPlanner") vem no Bloco 45. Ver
-`docs/SERVIDOR.md`.
+ponto de IA no mesmo caminho do Gemini. Desde o Bloco 45, o programa usa a "Conta ProjectPlanner" (menu Conta e
+configurações do assistente) como outra forma de chegar ao Gemini. As mesmas classes `AssistenteGemini`, `AnalistaGemini`,
+`ConsultorGemini` e `AnalistaDaObraGemini` recebem um `AcessoAoGemini`: `AcessoPorChave` vai direto ao Google, e
+`AcessoPelaConta` vai pelo servidor, com o token. Ver `docs/SERVIDOR.md`.
 
 Outros pontos para a versão comercial: assinar o programa (Developer ID e notarização no Mac, certificado de assinatura
 de código no Windows), usar a camada paga da API (os dados não são usados para treino) e mostrar os termos de uso de IA

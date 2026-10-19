@@ -44,8 +44,24 @@ public sealed class OpcoesDoGemini
 
 public sealed class OpcoesDoGoogle
 {
-    /// <summary>Os client IDs OAuth aceitos no "Entrar com Google" (o do app de computador e, depois, o do Telegram).</summary>
+    /// <summary>Outros client IDs OAuth aceitos no idToken do "Entrar com Google" (por exemplo, o do Telegram, depois).</summary>
     public string[] ClientIds { get; set; } = [];
+
+    /// <summary>
+    /// Bloco 45: o client ID OAuth do tipo "App para computador" que o programa usa para abrir o login no navegador. O app o
+    /// recebe do servidor (<c>GET /v1/google</c>); sem ele (ou sem o segredo), o login com Google fica desligado.
+    /// </summary>
+    public string? ClientIdDoApp { get; set; }
+
+    /// <summary>O segredo desse client ID: só no servidor, que troca o código do navegador pelo idToken.</summary>
+    public string? SegredoDoApp { get; set; }
+
+    public string EnderecoDoToken { get; set; } = "https://oauth2.googleapis.com/token";
+
+    /// <summary>Os client IDs aceitos como audiência do idToken.</summary>
+    public string[] Audiencias => [.. ClientIds.Append(ClientIdDoApp).Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c!).Distinct()];
+
+    public bool LoginDoAppLigado => !string.IsNullOrWhiteSpace(ClientIdDoApp) && !string.IsNullOrWhiteSpace(SegredoDoApp);
 }
 
 public sealed class OpcoesDosPlanos

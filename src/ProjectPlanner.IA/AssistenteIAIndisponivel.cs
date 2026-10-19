@@ -37,7 +37,7 @@ public sealed class AssistenteIAIndisponivel(TimeSpan espera) : IAssistenteIA
             var n => $" (nem os {n} anexos, que não foram lidos)",
         };
         return new RespostaIA($"{Resposta}{anexos}. Para o assistente responder de verdade (sobre o cronograma e os " +
-                              "documentos anexados), configure uma chave de API do Gemini em Configurações do assistente " +
-                              "(a engrenagem no topo do painel).");
+                              "documentos anexados), entre na sua conta ProjectPlanner (menu Conta) ou configure uma chave " +
+                              "de API do Gemini em Configurações do assistente (a engrenagem no topo do painel).");
     }
 }

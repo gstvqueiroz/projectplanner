@@ -234,6 +234,12 @@
                     <MenuItem Header="Indicadores…" Command="{Binding IndicadoresCommand}"
                               ToolTip.Tip="Valor agregado (IDP e IDC), físico × financeiro, Curva S prevista × medida × realizada, etapas e atrasos" />
                 </MenuItem>
+                <!-- Bloco 45 -->
+                <MenuItem Header="Conta">
+                    <MenuItem Header="{Binding TextoDoMenuDaConta}" Command="{Binding ContaCommand}"
+                              ToolTip.Tip="A conta ProjectPlanner: o assistente de IA sem chave do Gemini, com a cota do plano" />
+                    <MenuItem Header="Sair da conta" Command="{Binding SairDaContaCommand}" />
+                </MenuItem>
                 <MenuItem Header="Ajuda">
                     <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"
                               ToolTip.Tip="Os erros inesperados ficam registrados ali, um arquivo por mês" />
@@ -441,6 +447,8 @@
                     <TextBlock x:Name="StatusTarefas" Text="{Binding TextoTarefasNaBarra}" />
                     <TextBlock x:Name="StatusPeriodo" Text="{Binding TextoPeriodoNaBarra}"
                                IsVisible="{Binding TextoPeriodoNaBarra, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock x:Name="StatusConta" Text="{Binding TextoDaContaNaBarra}"
+                               IsVisible="{Binding TextoDaContaNaBarra, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <TextBlock x:Name="StatusVersao" Text="{Binding TextoVersaoNaBarra}" />
                 </StackPanel>
                 <TextBlock x:Name="StatusMensagem" Text="{Binding MensagemNaBarra}" ToolTip.Tip="{Binding Mensagem}"

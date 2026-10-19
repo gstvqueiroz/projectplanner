@@ -158,13 +158,24 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     public bool EstaConfigurado => _assistente.EstaConfigurado;
 
     /// <summary>"Gemini (Google) · gemini-2.5-flash" no cabeçalho, com uma chave configurada.</summary>
-    public string DescricaoDoModelo => EstaConfigurado ? $"{_configuracao.NomeDoProvedor} · {_configuracao.Modelo}" : "";
+    public string DescricaoDoModelo => EstaConfigurado
+        ? $"{(_configuracao.Provedor == ProvedorDoAssistente.Conta ? "Conta ProjectPlanner" : _configuracao.NomeDoProvedor)} · {_configuracao.Modelo}"
+        : "";
+
+    /// <summary>Bloco 45: a conta ProjectPlanner (a tela de configurações deixa escolher entre ela e a chave própria).</summary>
+    internal IContaProjectPlanner Conta { get; set; } = new SemContaProjectPlanner();
 
     /// <summary>Abre as configurações do assistente (chave e modelo); o painel reflete a mudança na hora.</summary>
     [RelayCommand]
     private async Task Configurar()
     {
-        await _dialogos.MostrarConfiguracaoAssistenteAsync(new ConfiguracaoAssistenteViewModel(_configuracao, _dialogos));
+        await _dialogos.MostrarConfiguracaoAssistenteAsync(new ConfiguracaoAssistenteViewModel(_configuracao, _dialogos, Conta));
+        AtualizarConfiguracao();
+    }
+
+    /// <summary>A configuração mudou (a chave, a conta, o provedor): o cabeçalho do painel acompanha.</summary>
+    internal void AtualizarConfiguracao()
+    {
         OnPropertyChanged(nameof(EstaConfigurado));
         OnPropertyChanged(nameof(DescricaoDoModelo));
     }

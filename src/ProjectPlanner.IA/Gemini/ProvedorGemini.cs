@@ -53,12 +53,11 @@ public sealed partial class ProvedorGemini : IProvedorIA
 
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
-        ChamadaGemini.ValidarChave(chave);
+        var acesso = new AcessoPorChave(chave);
         var nome = NormalizarModelo(modelo);
-        using var pedido = ChamadaGemini.Pedido(HttpMethod.Get, $"models/{nome}", chave);
-        using var _ = await ChamadaGemini.ExecutarAsync(_http, pedido, chave, nome, cancelamento);
+        using var _ = await ChamadaGemini.ExecutarAsync(_http, acesso, HttpMethod.Get, $"models/{nome}", null, nome, cancelamento);
     }
 
     [GeneratedRegex("^[a-z0-9][a-z0-9.\\-]*$")]
-    private static partial Regex NomeDeModelo();
+    internal static partial Regex NomeDeModelo();
 }

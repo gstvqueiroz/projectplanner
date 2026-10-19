@@ -18,14 +18,19 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
     private static readonly CultureInfo Brasil = CultureInfo.GetCultureInfo("pt-BR");
 
     private readonly HttpClient _http;
-    private readonly string _chave;
+    private readonly AcessoAoGemini _acesso;
 
-    public AnalistaGemini(HttpClient http, string chave, string modelo)
+    public AnalistaGemini(HttpClient http, string chave, string modelo) : this(http, new AcessoPorChave(chave), modelo)
+    {
+    }
+
+    /// <summary>Bloco 45: pelo acesso escolhido (a chave própria ou a conta ProjectPlanner).</summary>
+    public AnalistaGemini(HttpClient http, AcessoAoGemini acesso, string modelo)
     {
         ArgumentNullException.ThrowIfNull(http);
-        ChamadaGemini.ValidarChave(chave);
+        ArgumentNullException.ThrowIfNull(acesso);
         ArgumentException.ThrowIfNullOrWhiteSpace(modelo);
-        (_http, _chave, Modelo) = (http, chave, modelo);
+        (_http, _acesso, Modelo) = (http, acesso, modelo);
     }
 
     public string Modelo { get; }
@@ -240,15 +245,14 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
     // ---- Comum ----
 
     private Task<JsonElement> ChamarAsync(JsonObject corpo, CancellationToken cancelamento) =>
-        ChamarJsonAsync(_http, _chave, Modelo, corpo, "A resposta do Gemini ficou grande demais e veio cortada. Tente com menos fotos.", cancelamento);
+        ChamarJsonAsync(_http, _acesso, Modelo, corpo, "A resposta do Gemini ficou grande demais e veio cortada. Tente com menos fotos.", cancelamento);
 
     /// <summary>Uma chamada que responde em JSON (o objeto da raiz); também a do consultor de orçamento (Bloco 38).</summary>
-    internal static async Task<JsonElement> ChamarJsonAsync(HttpClient http, string chave, string modelo, JsonObject corpo, string seCortada,
+    internal static async Task<JsonElement> ChamarJsonAsync(HttpClient http, AcessoAoGemini acesso, string modelo, JsonObject corpo, string seCortada,
         CancellationToken cancelamento)
     {
-        using var mensagem = ChamadaGemini.Pedido(HttpMethod.Post, $"models/{modelo}:generateContent", chave);
-        mensagem.Content = new StringContent(corpo.ToJsonString(), Encoding.UTF8, "application/json");
-        using var resposta = await ChamadaGemini.ExecutarAsync(http, mensagem, chave, modelo, cancelamento);
+        using var resposta = await ChamadaGemini.ExecutarAsync(http, acesso, HttpMethod.Post, $"models/{modelo}:generateContent",
+            corpo.ToJsonString(), modelo, cancelamento);
         var (texto, fim) = AssistenteGemini.LerResposta(resposta.RootElement);
         try
         {

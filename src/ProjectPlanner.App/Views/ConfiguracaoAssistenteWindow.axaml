@@ -12,11 +12,27 @@
     <StackPanel Margin="20" Spacing="14">
         <StackPanel Spacing="2">
             <TextBlock Text="Assistente de IA" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding NomeDoProvedor, StringFormat='Provedor: {0}'}" Opacity="0.7" />
+            <TextBlock x:Name="Provedor" Text="{Binding TextoDoProvedor, StringFormat='Provedor: {0}'}" Opacity="0.7" />
+        </StackPanel>
+
+        <!-- Bloco 45: a chave própria ou a conta ProjectPlanner -->
+        <StackPanel Spacing="6">
+            <TextBlock Text="Usar a IA por" FontWeight="SemiBold" />
+            <RadioButton x:Name="UsarChavePropria" GroupName="Provedor" IsChecked="{Binding UsarChavePropria}"
+                         Content="Minha chave do Gemini (grátis no Google AI Studio)" />
+            <RadioButton x:Name="UsarConta" GroupName="Provedor" IsChecked="{Binding UsarConta}"
+                         Content="Conta ProjectPlanner (sem chave; cota do plano)" />
+            <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8" IsVisible="{Binding UsarConta}">
+                <DockPanel>
+                    <Button x:Name="AbrirConta" DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center"
+                            Content="{Binding TextoDoBotaoDaConta}" Command="{Binding AbrirContaCommand}" />
+                    <TextBlock x:Name="SituacaoDaConta" Text="{Binding SituacaoDaConta}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
         </StackPanel>
 
         <!-- A chave em uso (só o fim dela) -->
-        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8">
+        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8" IsVisible="{Binding UsarChavePropria}">
             <StackPanel Spacing="6">
                 <TextBlock x:Name="Situacao" Text="{Binding Situacao}" TextWrapping="Wrap" />
                 <TextBlock x:Name="ProblemaNoCofre" Text="{Binding ProblemaNoCofre}" IsVisible="{Binding TemProblemaNoCofre}"
@@ -26,7 +42,7 @@
             </StackPanel>
         </Border>
 
-        <StackPanel Spacing="4">
+        <StackPanel Spacing="4" IsVisible="{Binding UsarChavePropria}">
             <TextBlock Text="Chave de API" FontWeight="SemiBold" />
             <TextBox x:Name="Chave" Text="{Binding ChaveDigitada}" PasswordChar="●" RevealPassword="False"
                      PlaceholderText="Cole aqui a chave (ela não aparece depois de salva)"
@@ -57,7 +73,7 @@
             </ComboBox>
         </StackPanel>
 
-        <TextBlock Text="{x:Static vm:ConfiguracaoAssistenteViewModel.AvisoDePrivacidade}" TextWrapping="Wrap" FontSize="12"
+        <TextBlock x:Name="Aviso" Text="{Binding Aviso}" TextWrapping="Wrap" FontSize="12"
                    Foreground="{DynamicResource TextoDeAviso}" />
 
         <!-- Resultado da última ação -->

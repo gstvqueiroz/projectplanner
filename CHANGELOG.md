@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.44.0
+
+Bloco 45: a conta ProjectPlanner no programa.
+
+- Menu **Conta**: entre com e-mail e senha ou com o Google, ou crie a conta (o código de confirmação chega por e-mail).
+  Também dá para trocar a senha esquecida, ver o plano e o uso de IA do mês, e sair. O nome da conta aparece na barra de
+  status.
+- O assistente funciona **sem chave do Gemini**: nas configurações do assistente, escolha "Conta ProjectPlanner". O chat,
+  as fotos, o orçamento e a análise dos indicadores passam a usar a conta, com a cota do plano (grátis: 300 mil tokens por
+  mês).
+- Quem já usa a própria chave continua igual: a chave tem prioridade até você escolher a conta. Dá para trocar a qualquer
+  hora.
+- A sessão fica no cofre do sistema (Chaves do macOS, Gerenciador de Credenciais do Windows), como a chave, e se renova
+  sozinha. Sem uso por 30 dias, é preciso entrar de novo.
+- O "Entrar com Google" abre o navegador e volta ao programa; ele passa a funcionar quando o servidor tiver o cliente do
+  Google configurado (`docs/SERVIDOR.md`).
+
 ## 0.43.1
 
 Preparação para publicar o servidor.

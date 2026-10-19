@@ -5,6 +5,7 @@ using ProjectPlanner.Data;
 using ProjectPlanner.Core.Fotos;
 using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.IA;
+using ProjectPlanner.IA.Conta;
 using ProjectPlanner.IA.Gemini;
 using ProjectPlanner.Imagens;
 
@@ -30,8 +31,13 @@ public static class Servicos
         // Assistente de IA (Blocos 19 e 23): o Gemini pela API REST, com a chave no cofre do sistema (Chaves do macOS,
         // Gerenciador de Credenciais do Windows) e GEMINI_API_KEY para desenvolvimento; sem chave, respostas simuladas.
         .AddSingleton(_ => ProvedorGemini.CriarHttpClient())
-        .AddSingleton<IProvedorIA>(s => new ProvedorGemini(s.GetRequiredService<HttpClient>()))
         .AddSingleton(_ => CofreDoSistema.Criar())
+        // Bloco 45: a conta ProjectPlanner (sessão no cofre) e a IA por ela, pelo servidor; a credencial decide o caminho.
+        .AddSingleton(s => new ClienteDaConta(s.GetRequiredService<HttpClient>(), ContaProjectPlanner.Servidor(Environment.GetEnvironmentVariable)))
+        .AddSingleton<IContaProjectPlanner>(s => new ContaProjectPlanner(s.GetRequiredService<ClienteDaConta>(), s.GetRequiredService<ICofreDeSegredos>(),
+            s.GetRequiredService<TimeProvider>(), endereco => s.GetRequiredService<IDialogosService>().AbrirEnderecoAsync(endereco)))
+        .AddSingleton<IProvedorIA>(s => new ProvedorConformeCredencial(new ProvedorGemini(s.GetRequiredService<HttpClient>()),
+            new ProvedorDaConta(s.GetRequiredService<HttpClient>(), s.GetRequiredService<ClienteDaConta>().Servidor, s.GetRequiredService<IContaProjectPlanner>())))
         .AddSingleton<IPreferenciasAssistente, ArquivoPreferenciasAssistente>()
         .AddSingleton<IPreferenciasRelatorio, ArquivoPreferenciasRelatorio>()
         // Bloco 32: o catálogo pessoal de recursos (recursos.json).
@@ -39,7 +45,8 @@ public static class Servicos
         // Bloco 33: as bases de preços (SINAPI…) importadas, na pasta referencias.
         .AddSingleton<IBibliotecaDeReferencias, ArquivoBibliotecaDeReferencias>()
         .AddSingleton(s => new ConfiguracaoDoAssistente(s.GetRequiredService<ICofreDeSegredos>(),
-            s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(), Environment.GetEnvironmentVariable))
+            s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(), Environment.GetEnvironmentVariable,
+            s.GetRequiredService<IContaProjectPlanner>()))
         .AddSingleton<IConfiguracaoIA>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())
         .AddSingleton<IConfiguracaoAssistente>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())
         .AddSingleton(s => FabricaAssistenteIA.Criar(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))

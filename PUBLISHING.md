@@ -214,6 +214,12 @@ ls -lh publicacao/*.exe
 
 **Assistente de IA no binário publicado (Bloco 23):** no `.app`, abra o painel do assistente, clique na engrenagem, cole uma chave do Gemini, **Testar conexão** e **Salvar**, mande uma pergunta sobre o cronograma e peça um cronograma ("monte o cronograma de uma residência de 100 m²"): as tarefas aparecem na grid e no Gantt, e o Desfazer da conversa volta ao cronograma de antes (Bloco 24). A chave fica nas **Chaves do macOS** (app Acesso às Chaves, item `ProjectPlanner`). Depois de publicar uma versão nova, o macOS pode perguntar se o programa pode usar esse item (o `.app` é assinado sem identidade de desenvolvedor): "Permitir sempre". Ver `docs/ASSISTENTE-IA.md`.
 
+**Novidades da 0.44 no binário publicado (Bloco 45):** em **Conta > Entrar ou criar conta…**, entre com a conta do
+servidor (a criada no teste do servidor, por exemplo): a barra de status mostra "Conta: Nome" e Minha conta mostra o plano
+e o uso. Nas configurações do assistente (engrenagem), escolha **Conta ProjectPlanner** e mande uma pergunta: a resposta
+vem pelo servidor, e o uso do mês sobe. Volte para **Minha chave do Gemini**: tudo continua como antes. Com o servidor
+dormindo (plano grátis do Render), o primeiro pedido pode levar cerca de 1 minuto.
+
 **Novidades da 0.43 (Bloco 44):** o programa não muda (só a versão e as novidades em Ajuda > Sobre). A novidade é o
 servidor de contas e IA, que não vai nos pacotes do programa: ele roda na nuvem, com Docker. Ver `docs/SERVIDOR.md`.
 

@@ -13,53 +13,62 @@ internal static class ChamadaGemini
             throw new ArgumentException("A chave do Gemini está vazia ou tem espaços.");
     }
 
-    public static HttpRequestMessage Pedido(HttpMethod metodo, string caminho, string chave)
-    {
-        var pedido = new HttpRequestMessage(metodo, new Uri(ProvedorGemini.Endereco, caminho));
-        pedido.Headers.Add("x-goog-api-key", chave);
-        return pedido;
-    }
-
-    /// <summary>Manda o pedido e devolve o JSON da resposta.</summary>
+    /// <summary>Manda o pedido (com a credencial do acesso) e devolve o JSON da resposta.</summary>
+    /// <remarks>
+    /// Se o acesso diz que a credencial venceu (o token da conta), pede de novo uma vez, com uma credencial renovada.
+    /// </remarks>
     /// <exception cref="OperationCanceledException">O usuário cancelou.</exception>
     /// <exception cref="ErroDoAssistenteException">Qualquer outra falha, com a mensagem para o usuário.</exception>
-    public static async Task<JsonDocument> ExecutarAsync(HttpClient http, HttpRequestMessage pedido, string chave, string modelo,
-        CancellationToken cancelamento)
+    public static async Task<JsonDocument> ExecutarAsync(HttpClient http, AcessoAoGemini acesso, HttpMethod metodo, string caminho,
+        string? corpoJson, string modelo, CancellationToken cancelamento)
     {
-        HttpResponseMessage resposta;
-        try
+        for (var tentativa = 0; ; tentativa++)
         {
-            resposta = await http.SendAsync(pedido, cancelamento);
-        }
-        catch (OperationCanceledException) when (cancelamento.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OperationCanceledException ex) // o tempo limite do HttpClient
-        {
-            throw new ErroDoAssistenteException(
-                $"O Gemini demorou mais de {Duracao(http.Timeout)} para responder. Tente de novo (com anexos menores, se houver).", ex);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new ErroDoAssistenteException("Sem conexão com o Gemini. Verifique a internet e tente de novo.", ex);
-        }
-
-        using (resposta)
-        {
-            var corpo = await resposta.Content.ReadAsStringAsync(cancelamento);
-            if (!resposta.IsSuccessStatusCode)
-                throw Traduzir(resposta.StatusCode, corpo, chave, modelo);
+            using var pedido = new HttpRequestMessage(metodo, new Uri(acesso.Endereco, caminho));
+            if (corpoJson is not null)
+                pedido.Content = new StringContent(corpoJson, System.Text.Encoding.UTF8, "application/json");
+            await acesso.AutenticarAsync(pedido, renovar: tentativa > 0, cancelamento);
+            HttpResponseMessage resposta;
             try
             {
-                return JsonDocument.Parse(corpo);
+                resposta = await http.SendAsync(pedido, cancelamento);
             }
-            catch (JsonException ex)
+            catch (OperationCanceledException) when (cancelamento.IsCancellationRequested)
             {
-                throw new ErroDoAssistenteException("O Gemini mandou uma resposta que não deu para entender. Tente de novo.", ex);
+                throw;
+            }
+            catch (OperationCanceledException ex) // o tempo limite do HttpClient
+            {
+                throw new ErroDoAssistenteException(
+                    $"{Maiuscula(acesso.Destino)} demorou mais de {Duracao(http.Timeout)} para responder. Tente de novo (com anexos menores, se houver).", ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new ErroDoAssistenteException($"Sem conexão com {acesso.Destino}. Verifique a internet e tente de novo.", ex);
+            }
+
+            using (resposta)
+            {
+                var corpo = await resposta.Content.ReadAsStringAsync(cancelamento);
+                if (!resposta.IsSuccessStatusCode)
+                {
+                    if (tentativa == 0 && acesso.RenovarDepoisDe(resposta.StatusCode))
+                        continue;
+                    throw acesso.Traduzir(resposta.StatusCode, corpo, modelo);
+                }
+                try
+                {
+                    return JsonDocument.Parse(corpo);
+                }
+                catch (JsonException ex)
+                {
+                    throw new ErroDoAssistenteException($"{Maiuscula(acesso.Destino)} mandou uma resposta que não deu para entender. Tente de novo.", ex);
+                }
             }
         }
     }
+
+    private static string Maiuscula(string texto) => texto.Length == 0 ? texto : char.ToUpperInvariant(texto[0]) + texto[1..];
 
     /// <summary>A mensagem para o usuário de uma resposta de erro da API (sem a chave, mesmo que o Google a repita).</summary>
     internal static ErroDoAssistenteException Traduzir(HttpStatusCode status, string corpo, string chave, string modelo)

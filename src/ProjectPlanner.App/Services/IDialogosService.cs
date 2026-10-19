@@ -30,6 +30,9 @@ public interface IDialogosService
     Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria);
 
     /// <summary>Mostra as configurações do assistente (chave e modelo, Bloco 23) e espera ser fechada.</summary>
+    /// <summary>Bloco 45: a tela da conta ProjectPlanner (por cima da janela ativa: a principal ou as configurações do assistente).</summary>
+    Task MostrarContaAsync(ViewModels.ContaViewModel conta);
+
     Task MostrarConfiguracaoAssistenteAsync(ViewModels.ConfiguracaoAssistenteViewModel configuracao);
 
     /// <summary>Abre a pasta no Finder ou no Explorador de Arquivos (Bloco 25), criando-a se ainda não existe.</summary>

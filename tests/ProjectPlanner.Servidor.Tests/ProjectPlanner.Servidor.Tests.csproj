@@ -23,6 +23,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ProjectPlanner.Servidor\ProjectPlanner.Servidor.csproj" />
+    <!-- Bloco 45: o cliente da conta do programa, conversando com o servidor de verdade -->
+    <ProjectReference Include="..\..\src\ProjectPlanner.IA\ProjectPlanner.IA.csproj" />
   </ItemGroup>
 
 </Project>

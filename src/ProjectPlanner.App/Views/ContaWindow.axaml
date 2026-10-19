@@ -1,0 +1,112 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.ContaWindow"
+        x:DataType="vm:ContaViewModel"
+        Title="{Binding Titulo, StringFormat='Conta ProjectPlanner: {0}'}"
+        Width="460" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 45: entrar, criar a conta (com o código do e-mail), trocar a senha e, conectado, o plano e o uso do mês. -->
+    <StackPanel Margin="20" Spacing="12">
+        <StackPanel Spacing="2">
+            <TextBlock Text="Conta ProjectPlanner" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock x:Name="Titulo" Text="{Binding Titulo}" Opacity="0.7" />
+        </StackPanel>
+
+        <TextBlock Text="{x:Static vm:ContaViewModel.Explicacao}" TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                   IsVisible="{Binding EmEntrar}" />
+
+        <!-- Os campos (cada parte mostra só os seus) -->
+        <StackPanel Spacing="4" IsVisible="{Binding EmCriar}">
+            <TextBlock Text="Nome" FontWeight="SemiBold" />
+            <TextBox x:Name="Nome" Text="{Binding Nome}" AutomationProperties.Name="Nome" MaxLength="120" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding PedeEmail}">
+            <TextBlock Text="E-mail" FontWeight="SemiBold" />
+            <TextBox x:Name="Email" Text="{Binding Email}" AutomationProperties.Name="E-mail" MaxLength="254" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding PedeSenha}">
+            <TextBlock Text="Senha" FontWeight="SemiBold" />
+            <TextBox x:Name="Senha" Text="{Binding Senha}" PasswordChar="●" RevealPassword="False" AutomationProperties.Name="Senha" MaxLength="200" />
+            <TextBlock Text="Pelo menos 10 caracteres." FontSize="12" Opacity="0.7" IsVisible="{Binding EmCriar}" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding EmConfirmar}">
+            <TextBlock Text="{Binding Email, StringFormat='Digite o código de 6 dígitos que mandamos para {0}.'}" TextWrapping="Wrap" />
+            <TextBox x:Name="CodigoDeConfirmacao" Text="{Binding Codigo}" AutomationProperties.Name="Código" MaxLength="12" />
+            <StackPanel IsVisible="{Binding Senha, Converter={x:Static StringConverters.IsNullOrEmpty}}" Spacing="4">
+                <TextBlock Text="A senha do cadastro" FontWeight="SemiBold" />
+                <TextBox x:Name="SenhaDoCadastro" Text="{Binding Senha}" PasswordChar="●" RevealPassword="False" AutomationProperties.Name="Senha do cadastro" />
+            </StackPanel>
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding EmRedefinir}">
+            <TextBlock Text="{Binding Email, StringFormat='Digite o código que mandamos para {0} e a nova senha.'}" TextWrapping="Wrap" />
+            <TextBox x:Name="CodigoDaSenha" Text="{Binding Codigo}" AutomationProperties.Name="Código" MaxLength="12" />
+            <TextBlock Text="Nova senha (pelo menos 10 caracteres)" FontWeight="SemiBold" />
+            <TextBox x:Name="NovaSenha" Text="{Binding NovaSenha}" PasswordChar="●" RevealPassword="False" AutomationProperties.Name="Nova senha" MaxLength="200" />
+        </StackPanel>
+
+        <!-- Minha conta -->
+        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="12,10" IsVisible="{Binding EmPerfil}">
+            <StackPanel Spacing="6">
+                <TextBlock x:Name="NomeDaConta" Text="{Binding NomeDaConta}" FontWeight="SemiBold" />
+                <TextBlock x:Name="EmailDaConta" Text="{Binding EmailDaConta}" Opacity="0.8" />
+                <TextBlock Text="Conta do Google" FontSize="12" Opacity="0.7" IsVisible="{Binding EntrouComGoogle}" />
+                <TextBlock x:Name="Plano" Text="{Binding Plano, StringFormat='Plano: {0}'}"
+                           IsVisible="{Binding Plano, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <ProgressBar Value="{Binding PercentualDoUso}" Maximum="100" Height="6"
+                             IsVisible="{Binding TextoDoUso, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock x:Name="Uso" Text="{Binding TextoDoUso}" TextWrapping="Wrap" FontSize="12" />
+            </StackPanel>
+        </Border>
+
+        <!-- Resultado da última ação -->
+        <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap"
+                   IsVisible="{Binding Mensagem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Classes.erro="{Binding MensagemEhErro}">
+            <TextBlock.Styles>
+                <Style Selector="TextBlock.erro">
+                    <Setter Property="Foreground" Value="{DynamicResource TextoDeErroForte}" />
+                </Style>
+            </TextBlock.Styles>
+        </TextBlock>
+
+        <!-- Os botões de cada parte -->
+        <StackPanel Spacing="8" IsVisible="{Binding EmEntrar}">
+            <Button x:Name="Entrar" Content="Entrar" Classes="accent" Command="{Binding EntrarCommand}" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" IsDefault="True" />
+            <Button x:Name="EntrarComGoogle" Content="Entrar com Google" Command="{Binding EntrarComGoogleCommand}" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <Button x:Name="IrParaCriar" Content="Criar conta" Command="{Binding IrParaCriarCommand}" />
+                <Button x:Name="IrParaEsqueci" Content="Esqueci a senha" Command="{Binding IrParaEsqueciCommand}" />
+            </StackPanel>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding EmCriar}">
+            <Button Content="Já tenho conta" Command="{Binding IrParaEntrarCommand}" />
+            <Button x:Name="Criar" Content="Criar conta" Classes="accent" Command="{Binding CriarCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding EmConfirmar}">
+            <Button x:Name="Reenviar" Content="Mandar outro código" Command="{Binding ReenviarCodigoCommand}" />
+            <Button x:Name="Confirmar" Content="Confirmar" Classes="accent" Command="{Binding ConfirmarCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding EmEsqueci}">
+            <Button Content="Voltar" Command="{Binding IrParaEntrarCommand}" />
+            <Button x:Name="PedirCodigo" Content="Mandar o código" Classes="accent" Command="{Binding PedirCodigoDaSenhaCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding EmRedefinir}">
+            <Button Content="Voltar" Command="{Binding IrParaEntrarCommand}" />
+            <Button x:Name="Redefinir" Content="Trocar a senha" Classes="accent" Command="{Binding RedefinirCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding EmPerfil}">
+            <Button x:Name="AtualizarUso" Content="Atualizar" Command="{Binding AtualizarUsoCommand}" />
+            <Button x:Name="Sair" Content="Sair da conta" Command="{Binding SairCommand}" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button x:Name="Cancelar" Content="Cancelar" Command="{Binding CancelarCommand}" IsVisible="{Binding Ocupado}" />
+            <Button x:Name="FecharJanela" Content="Fechar" Click="Fechar" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -47,6 +47,18 @@ public sealed class GoogleDeTeste : IValidadorDoGoogle
     public Task<ContaGoogle?> ValidarAsync(string idToken) => Task.FromResult(Tokens.GetValueOrDefault(idToken));
 }
 
+/// <summary>Bloco 45: o Google trocando o código do navegador pelo idToken (o código "bom-…" vira o idToken "token-…").</summary>
+public sealed class TrocaDeTeste : ITrocaDoCodigoDoGoogle
+{
+    public List<(string Codigo, string Verificador, string Redirecionamento)> Trocas { get; } = [];
+
+    public Task<string?> TrocarAsync(string codigo, string verificador, string redirecionamento, CancellationToken cancelamento)
+    {
+        Trocas.Add((codigo, verificador, redirecionamento));
+        return Task.FromResult(codigo.StartsWith("bom-") ? "token-" + codigo["bom-".Length..] : null);
+    }
+}
+
 public sealed record PedidoAoGemini(HttpMethod Metodo, Uri Endereco, string? Chave, bool TemAuthorization, string Corpo);
 
 /// <summary>O Gemini de mentira: guarda os pedidos e responde o que o teste mandar.</summary>
@@ -91,6 +103,7 @@ public sealed class Servidor : WebApplicationFactory<Program>
     public EmailsDeTeste Emails { get; } = new();
     public GoogleDeTeste Google { get; } = new();
     public GeminiDeTeste Gemini { get; } = new();
+    public TrocaDeTeste Troca { get; } = new();
 
     public Servidor(Dictionary<string, string?>? config = null)
     {
@@ -117,6 +130,7 @@ public sealed class Servidor : WebApplicationFactory<Program>
             s.AddSingleton<TimeProvider>(Relogio);
             s.AddSingleton<IEnviadorDeEmail>(Emails);
             s.AddSingleton<IValidadorDoGoogle>(Google);
+            s.AddSingleton<ITrocaDoCodigoDoGoogle>(Troca);
             s.AddHttpClient(Ia.ClienteDoGemini).ConfigurePrimaryHttpMessageHandler(() => Gemini);
         });
     }

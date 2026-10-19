@@ -17,14 +17,19 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
     private static readonly CultureInfo Brasil = CultureInfo.GetCultureInfo("pt-BR");
 
     private readonly HttpClient _http;
-    private readonly string _chave;
+    private readonly AcessoAoGemini _acesso;
 
-    public ConsultorGemini(HttpClient http, string chave, string modelo)
+    public ConsultorGemini(HttpClient http, string chave, string modelo) : this(http, new AcessoPorChave(chave), modelo)
+    {
+    }
+
+    /// <summary>Bloco 45: pelo acesso escolhido (a chave própria ou a conta ProjectPlanner).</summary>
+    public ConsultorGemini(HttpClient http, AcessoAoGemini acesso, string modelo)
     {
         ArgumentNullException.ThrowIfNull(http);
-        ChamadaGemini.ValidarChave(chave);
+        ArgumentNullException.ThrowIfNull(acesso);
         ArgumentException.ThrowIfNullOrWhiteSpace(modelo);
-        (_http, _chave, Modelo) = (http, chave, modelo);
+        (_http, _acesso, Modelo) = (http, acesso, modelo);
     }
 
     public string Modelo { get; }
@@ -68,7 +73,7 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
     public async Task<RespostaDoConsultor> SugerirAsync(PedidoDeOrcamento pedido, CancellationToken cancelamento)
     {
         ArgumentNullException.ThrowIfNull(pedido);
-        var resposta = await ChamarJsonAsync(_http, _chave, Modelo, Montar(pedido),
+        var resposta = await ChamarJsonAsync(_http, _acesso, Modelo, Montar(pedido),
             "A resposta do Gemini ficou grande demais e veio cortada. Peça uma parte do orçamento por vez (use o foco).", cancelamento);
         return Interpretar(resposta, pedido);
     }

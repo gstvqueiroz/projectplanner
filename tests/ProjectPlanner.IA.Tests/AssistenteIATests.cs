@@ -65,7 +65,8 @@ public class AssistenteIATests
             .Where(t => t.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
                 .Any(f => (f.FieldType.FullName ?? "").StartsWith("System.Net")))
             .Select(t => t.Namespace);
-        comRede.Should().NotBeEmpty().And.OnlyContain(n => n == "ProjectPlanner.IA.Gemini");
+        // Bloco 45: e o cliente da conta ProjectPlanner (as rotas de conta do servidor).
+        comRede.Should().NotBeEmpty().And.OnlyContain(n => n == "ProjectPlanner.IA.Gemini" || n == "ProjectPlanner.IA.Conta");
         assembly.GetReferencedAssemblies().Select(a => a.Name).Should().NotContain(n => n!.StartsWith("ProjectPlanner"),
             "a camada de IA não depende do domínio: recebe o retrato do cronograma pronto");
     }

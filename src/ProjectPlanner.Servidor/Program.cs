@@ -20,6 +20,8 @@ builder.Services.AddDbContext<BancoDoServidor>((s, o) =>
     Banco.Configurar(o, s.GetRequiredService<IConfiguration>().GetConnectionString("Banco") ?? Banco.Padrao));
 builder.Services.AddScoped<EmissorDeTokens>();
 builder.Services.AddSingleton<IValidadorDoGoogle, ValidadorDoGoogle>();
+builder.Services.AddSingleton<ITrocaDoCodigoDoGoogle, TrocaDoCodigoDoGoogle>();
+builder.Services.AddHttpClient(TrocaDoCodigoDoGoogle.Cliente, c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddSingleton<EmailNoLog>();
 builder.Services.AddSingleton<EmailPorSmtp>();
 builder.Services.AddSingleton<IEnviadorDeEmail>(s =>

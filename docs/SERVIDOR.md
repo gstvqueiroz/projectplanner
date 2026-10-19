@@ -69,6 +69,8 @@ Erros sempre como `{"erro": "mensagem para o usuário"}`.
 | `POST /v1/contas/reenviar` | `{email}`: um código novo (com a senha do último cadastro); 202 sempre |
 | `POST /v1/sessoes` | Login `{email, senha}`: devolve a sessão `{acesso, acessoExpiraEm, renovacao, renovacaoExpiraEm, usuario}`. "E-mail ou senha incorretos." nos dois casos; 403 se falta confirmar o e-mail (só com a senha certa); 5 erros bloqueiam por 15 min (429) |
 | `POST /v1/sessoes/google` | `{idToken}`: valida no Google (audiência = os client IDs configurados) e cria a conta ou vincula a que tem o mesmo e-mail (só com o e-mail verificado pelo Google) |
+| `GET /v1/google` | Bloco 45: o client ID do Google do programa (404 se o Google não está configurado) |
+| `POST /v1/sessoes/google/codigo` | Bloco 45: `{codigo, verificador, redirecionamento}`: o login com Google do programa. O servidor troca o código pelo idToken com o segredo, que fica só nele, e segue como a rota acima. O redirecionamento precisa ser `http://127.0.0.1:porta/` |
 | `POST /v1/sessoes/renovar` | `{renovacao}`: um acesso novo e um token de renovação novo (o velho deixa de valer) |
 | `POST /v1/sessoes/sair` | `{renovacao}`: encerra aquela sessão (204) |
 | `POST /v1/senha/esqueci` | `{email}`: manda o código de troca; 202 sempre |
@@ -101,7 +103,8 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Jwt__Chave` | 32 bytes ou mais, aleatória (por exemplo, `openssl rand -base64 48`). Sem ela, em produção, o servidor não sobe |
 | `Gemini__Chave` | A chave do Gemini da empresa. Sem ela, a IA responde 503 |
 | `Gemini__Modelos__0`, `__1`… | Opcional: os modelos liberados |
-| `Google__ClientIds__0`, `__1`… | Os client IDs OAuth aceitos no "Entrar com Google". Sem eles, o login com Google fica recusado |
+| `Google__ClientIdDoApp`, `Google__SegredoDoApp` | Bloco 45: o client ID OAuth do tipo "App para computador" e o segredo dele. Sem os dois, o "Entrar com Google" do programa fica desligado (o resto funciona) |
+| `Google__ClientIds__0`, `__1`… | Opcional: outros client IDs aceitos no idToken (por exemplo, o do Telegram, depois) |
 | `Email__Smtp`, `Email__Porta`, `Email__Usuario`, `Email__Senha`, `Email__Remetente` | O SMTP do serviço de e-mail. Sem `Email__Smtp`, os e-mails vão só para o log |
 | `Admin__Chave` | A chave da rota de admin. Sem ela, a rota fica fechada |
 | `Planos__GratisTokensPorMes`, `Planos__ProfissionalTokensPorMes` | As cotas (padrão 300 mil e 10 milhões de tokens) |
@@ -149,7 +152,7 @@ chaves do JWT e de admin o Render gera sozinho.
    - `Email__Usuario`: o login SMTP do Brevo;
    - `Email__Senha`: a chave SMTP do Brevo;
    - `Email__Remetente`: `ProjectPlanner <o-email-confirmado-no-brevo>`;
-   - `Google__ClientIds__0`: pode ficar em branco até o Bloco 45.
+   - `Google__ClientIdDoApp` e `Google__SegredoDoApp`: podem ficar em branco até criar o cliente do Google (abaixo).
 6. **Licença:** no GitHub, Add file > Create new file, nome `LICENSE`, "Choose a license template" > GNU Affero General
    Public License v3.0 > Commit. Depois, aqui: `git pull`.
 7. **Conferir:**
@@ -179,16 +182,44 @@ A imagem escuta na porta 8080. Configure as variáveis da tabela acima (no míni
 `ConnectionStrings__Banco`, `Jwt__Chave`, `Gemini__Chave`, `Limites__AtrasDeProxy=true` e o SMTP). Na primeira subida, o
 servidor aplica as migrações.
 
-**Client ID do Google** (para o "Entrar com Google", no Bloco 45): no Google Cloud Console, APIs e serviços > Credenciais,
-crie um "ID do cliente OAuth" do tipo "App para computador" e ponha o ID em `Google__ClientIds__0`. A tela de consentimento
-pede o nome do app, o e-mail de suporte e os escopos `openid`, `email` e `profile`.
+**Cliente do Google** (para o "Entrar com Google" do programa):
 
-## Bloco 45: login no app
+1. No Google Cloud Console (console.cloud.google.com), no projeto `projectplanner-servidor`, abra APIs e serviços > Tela de
+   permissão OAuth (ou "Google Auth Platform"):
+   - tipo **Externo**, nome **ProjectPlanner**, e-mail de suporte e e-mail do desenvolvedor;
+   - escopos `openid`, `email` e `profile` (não precisam de verificação do Google);
+   - publique o app ("Em produção"). Em "Teste", só os e-mails da lista de testadores conseguem entrar.
+2. Em Clientes (ou Credenciais) > Criar cliente OAuth, escolha o tipo **App para computador**, com o nome
+   `ProjectPlanner (programa)`.
+3. Copie o **ID do cliente** para `Google__ClientIdDoApp` e a **chave secreta do cliente** para `Google__SegredoDoApp`, no
+   Render (Environment). O Render reinicia o servidor sozinho.
 
-- Telas de Entrar, Criar conta e Esqueci a senha, com o botão do Google: abre o navegador e recebe a volta por um endereço local.
-- O token de renovação fica no cofre do sistema (`ICofreDeSegredos`).
-- Um provedor "Conta ProjectPlanner" ao lado do Gemini com a chave própria, escolhido nas configurações do assistente.
-- Plano e uso do mês aparecem na tela.
+O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no código do programa.
+
+## Bloco 45 (0.44.0, feito): a conta no programa
+
+- **Menu Conta:** "Entrar ou criar conta…" (ou, conectado, "Minha conta…") e "Sair da conta". A tela da conta tem:
+  - entrar com e-mail e senha, ou com o Google;
+  - criar conta, com o código do e-mail;
+  - esqueci a senha;
+  - Minha conta, com o plano e o uso do mês numa barra.
+- **Rodapé:** "Conta: Nome".
+- **Configurações do assistente:** "Usar a IA por" ( ) Minha chave do Gemini / ( ) Conta ProjectPlanner. Sem escolha
+  salva: a chave própria, se houver; senão a conta, se conectada. Quem já usa a chave não sente diferença ao atualizar. A
+  escolha fica em `assistente.json` (`"provedor": "chave" | "conta"`).
+- **Sessão:** o token de renovação e o perfil ficam no cofre do sistema (item `conta-projectplanner`, ao lado do
+  `gemini-api-key`). O token de acesso fica só na memória e é renovado quando falta 1 minuto para vencer, ou quando o
+  servidor o recusa (o pedido é repetido uma vez). Se a renovação for recusada, a sessão é apagada e o assistente pede para
+  entrar de novo.
+- **Google:** o programa pede o client ID ao servidor e abre o login no navegador, com PKCE e a volta em
+  `http://127.0.0.1:porta/`. O servidor troca o código pelo idToken com o segredo, que fica só nele.
+- **Código:**
+  - IA: `Conta/ClienteDaConta.cs` (as rotas), `Conta/ProvedorDaConta.cs` (`ProvedorDaConta`,
+    `ProvedorConformeCredencial`) e `Gemini/AcessoAoGemini.cs` (`AcessoPorChave` e `AcessoPelaConta`). As classes do Gemini
+    recebem o acesso e montam o mesmo corpo.
+  - App: `Services/ContaProjectPlanner.cs`, `Services/LoginComGoogle.cs`, `ContaViewModel`/`ContaWindow` e
+    `MainWindowViewModel.Conta.cs`.
+- **Para testar com um servidor local:** a variável de ambiente `PROJECTPLANNER_SERVIDOR=http://localhost:5199`.
 
 ## Bloco 46: assinatura
 

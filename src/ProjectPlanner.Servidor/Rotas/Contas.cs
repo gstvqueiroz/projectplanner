@@ -13,6 +13,7 @@ public sealed record PedidoDeConfirmacao(string? Email, string? Codigo, string? 
 public sealed record PedidoDeEmail(string? Email);
 public sealed record PedidoDeLogin(string? Email, string? Senha);
 public sealed record PedidoDoGoogle(string? IdToken);
+public sealed record PedidoDoCodigoDoGoogle(string? Codigo, string? Verificador, string? Redirecionamento);
 public sealed record PedidoDeRenovacao(string? Renovacao);
 public sealed record PedidoDeNovaSenha(string? Email, string? Codigo, string? NovaSenha);
 public sealed record Resposta(string Mensagem);
@@ -50,6 +51,8 @@ public static class Contas
         contas.MapPost("/contas/reenviar", Reenviar);
         contas.MapPost("/sessoes", Entrar);
         contas.MapPost("/sessoes/google", EntrarComGoogle);
+        contas.MapPost("/sessoes/google/codigo", EntrarComCodigoDoGoogle);
+        contas.MapGet("/google", ClienteDoGoogle);
         contas.MapPost("/sessoes/renovar", Renovar);
         contas.MapPost("/sessoes/sair", Sair);
         contas.MapPost("/senha/esqueci", EsqueciASenha);
@@ -216,11 +219,42 @@ public static class Contas
 
     private static readonly string HashFalso = Hasher.HashPassword(new Usuario(), "senha-que-ninguem-usa-" + Guid.NewGuid());
 
+    public const string GoogleRecusado = "Não foi possível confirmar a conta Google. Tente de novo.";
+
     private static async Task<IResult> EntrarComGoogle(PedidoDoGoogle pedido, BancoDoServidor banco, EmissorDeTokens tokens, IValidadorDoGoogle google,
         TimeProvider relogio)
     {
         if (string.IsNullOrWhiteSpace(pedido.IdToken) || await google.ValidarAsync(pedido.IdToken) is not { } conta)
-            return Falha(401, "Não foi possível confirmar a conta Google. Tente de novo.");
+            return Falha(401, GoogleRecusado);
+        return await SessaoDoGoogle(conta, banco, tokens, relogio);
+    }
+
+    /// <summary>Bloco 45: o client ID do app para o login no navegador (404 se o Google não está configurado no servidor).</summary>
+    private static IResult ClienteDoGoogle(IOptions<OpcoesDoServidor> opcoes) => opcoes.Value.Google.LoginDoAppLigado
+        ? Results.Ok(new { clientId = opcoes.Value.Google.ClientIdDoApp })
+        : Falha(404, "O login com Google ainda não está disponível. Use e-mail e senha.");
+
+    /// <summary>
+    /// Bloco 45: o login com Google do programa. O navegador volta ao app com um código (PKCE, redirecionamento para o
+    /// próprio computador); o app manda o código e o verificador, e o servidor, que tem o segredo, troca pelo idToken.
+    /// </summary>
+    private static async Task<IResult> EntrarComCodigoDoGoogle(PedidoDoCodigoDoGoogle pedido, BancoDoServidor banco, EmissorDeTokens tokens,
+        IValidadorDoGoogle google, ITrocaDoCodigoDoGoogle troca, TimeProvider relogio, IOptions<OpcoesDoServidor> opcoes, CancellationToken c)
+    {
+        if (!opcoes.Value.Google.LoginDoAppLigado)
+            return Falha(404, "O login com Google ainda não está disponível. Use e-mail e senha.");
+        if (string.IsNullOrWhiteSpace(pedido.Codigo) || string.IsNullOrWhiteSpace(pedido.Verificador)
+            || !Uri.TryCreate(pedido.Redirecionamento, UriKind.Absolute, out var volta) || volta.Scheme != Uri.UriSchemeHttp || !volta.IsLoopback)
+            return Falha(400, "Pedido de login com Google incompleto. Tente de novo.");
+        if (await troca.TrocarAsync(pedido.Codigo, pedido.Verificador, pedido.Redirecionamento!, c) is not { } idToken
+            || await google.ValidarAsync(idToken) is not { } conta)
+            return Falha(401, GoogleRecusado);
+        return await SessaoDoGoogle(conta, banco, tokens, relogio);
+    }
+
+    // Acha a conta pelo Google (ou pelo e-mail verificado, vinculando), cria se não há, e abre a sessão.
+    private static async Task<IResult> SessaoDoGoogle(ContaGoogle conta, BancoDoServidor banco, EmissorDeTokens tokens, TimeProvider relogio)
+    {
         var usuario = await banco.Usuarios.FirstOrDefaultAsync(u => u.GoogleId == conta.Id);
         if (usuario is null)
         {

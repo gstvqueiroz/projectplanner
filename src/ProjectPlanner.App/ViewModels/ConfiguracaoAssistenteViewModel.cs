@@ -12,6 +12,7 @@ public sealed record OpcaoDeModo(PreferenciaDeModo Valor, string Texto);
 /// <summary>
 /// A tela Configurações do assistente (Bloco 23): colar a chave de API (que vai para o cofre do sistema), escolher o
 /// modelo, testar a conexão e remover a chave. A chave digitada nunca é mostrada de volta: só o fim da que está em uso.
+/// Bloco 45: escolher entre a chave própria e a conta ProjectPlanner (e abrir a tela da conta para entrar).
 /// </summary>
 public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
 {
@@ -20,16 +21,23 @@ public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
         "Na camada gratuita da API, o Google pode usar esses dados para melhorar os produtos dele: não envie o que não " +
         "pode sair da empresa.";
 
+    /// <summary>Bloco 45: o aviso quando a IA vai pela conta.</summary>
+    public const string AvisoDaConta =
+        "Ao usar o assistente pela conta, o texto das mensagens, o cronograma aberto e os anexos passam pelo servidor do " +
+        "ProjectPlanner, que não guarda o conteúdo (só conta os tokens do seu plano), e vão ao Google (Gemini).";
+
     private readonly IConfiguracaoAssistente _configuracao;
     private readonly IDialogosService _dialogos;
+    private readonly IContaProjectPlanner _conta;
     private CancellationTokenSource? _teste;
 
-    public ConfiguracaoAssistenteViewModel(IConfiguracaoAssistente configuracao, IDialogosService dialogos)
+    public ConfiguracaoAssistenteViewModel(IConfiguracaoAssistente configuracao, IDialogosService dialogos, IContaProjectPlanner? conta = null)
     {
         ArgumentNullException.ThrowIfNull(configuracao);
         ArgumentNullException.ThrowIfNull(dialogos);
-        (_configuracao, _dialogos) = (configuracao, dialogos);
+        (_configuracao, _dialogos, _conta) = (configuracao, dialogos, conta ?? new SemContaProjectPlanner());
         Modelo = configuracao.Modelo;
+        UsarConta = configuracao.Provedor == ProvedorDoAssistente.Conta;
         ModoEscolhido = OpcoesDeModo.FirstOrDefault(o => o.Valor == configuracao.PreferenciaDeModo) ?? OpcoesDeModo[0];
         _pronta = true;
     }
@@ -57,6 +65,60 @@ public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
     }
 
     public string NomeDoProvedor => _configuracao.NomeDoProvedor;
+
+    // ---- Bloco 45: a chave própria ou a conta ProjectPlanner ----
+
+    /// <summary>Usar a conta ProjectPlanner (senão, a chave própria); muda na hora (não precisa de Salvar).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UsarChavePropria), nameof(TextoDoProvedor), nameof(Aviso))]
+    [NotifyCanExecuteChangedFor(nameof(TestarCommand))]
+    public partial bool UsarConta { get; set; }
+
+    public bool UsarChavePropria
+    {
+        get => !UsarConta;
+        set => UsarConta = !value;
+    }
+
+    partial void OnUsarContaChanged(bool value)
+    {
+        if (!_pronta)
+            return;
+        _configuracao.SalvarProvedor(value ? ProvedorDoAssistente.Conta : ProvedorDoAssistente.ChavePropria);
+        Mostrar(value
+            ? _conta.Conectada
+                ? "O assistente passa a usar a sua conta ProjectPlanner."
+                : "O assistente vai usar a conta ProjectPlanner: entre na conta para ele funcionar."
+            : TemChave
+                ? "O assistente passa a usar a sua chave do Gemini."
+                : "O assistente vai usar a sua chave do Gemini: cole a chave e salve.", erro: false);
+    }
+
+    public bool ContaConectada => _conta.Conectada;
+
+    public string TextoDoProvedor => UsarConta ? "Conta ProjectPlanner (Gemini pelo servidor)" : NomeDoProvedor;
+
+    /// <summary>Para onde vão os dados, conforme a escolha.</summary>
+    public string Aviso => UsarConta ? AvisoDaConta : AvisoDePrivacidade;
+
+    /// <summary>Quem entrou na conta, para a área da conta.</summary>
+    public string SituacaoDaConta => _conta.Perfil is { } p
+        ? $"Conectado como {p.Nome} ({p.Email}), plano {ContaViewModel.NomeDoPlano(p.Plano)}."
+        : "Você não entrou na conta ProjectPlanner.";
+
+    public string TextoDoBotaoDaConta => _conta.Conectada ? "Minha conta…" : "Entrar ou criar conta…";
+
+    /// <summary>Abre a tela da conta (entrar, criar, ver o plano); na volta, a situação é atualizada.</summary>
+    [RelayCommand]
+    private async Task AbrirConta()
+    {
+        var tela = new ContaViewModel(_conta);
+        await _dialogos.MostrarContaAsync(tela);
+        OnPropertyChanged(nameof(ContaConectada));
+        OnPropertyChanged(nameof(SituacaoDaConta));
+        OnPropertyChanged(nameof(TextoDoBotaoDaConta));
+        TestarCommand.NotifyCanExecuteChanged();
+    }
 
     public string ModeloPadrao => _configuracao.ModeloPadrao;
 
@@ -148,7 +210,9 @@ public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
         try
         {
             await _configuracao.TestarAsync(ChaveDigitada, Modelo ?? "", teste.Token);
-            Mostrar($"Conexão OK: a chave funciona com o modelo {(Modelo ?? "").Trim()}.", erro: false);
+            Mostrar(UsarConta && string.IsNullOrWhiteSpace(ChaveDigitada)
+                ? $"Conexão OK: a conta ProjectPlanner funciona com o modelo {(Modelo ?? "").Trim()}."
+                : $"Conexão OK: a chave funciona com o modelo {(Modelo ?? "").Trim()}.", erro: false);
         }
         catch (OperationCanceledException)
         {
@@ -165,7 +229,7 @@ public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
         }
     }
 
-    private bool PodeTestar() => !Ocupado && (!string.IsNullOrWhiteSpace(ChaveDigitada) || TemChave);
+    private bool PodeTestar() => !Ocupado && (!string.IsNullOrWhiteSpace(ChaveDigitada) || (UsarConta ? _conta.Conectada : TemChave));
 
     /// <summary>Apaga a chave do cofre, depois de confirmar.</summary>
     [RelayCommand(CanExecute = nameof(PodeRemover))]

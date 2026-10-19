@@ -16,14 +16,19 @@ public sealed class AnalistaDaObraGemini : IAnalistaDaObra
     public const int TamanhoDoItem = 300;
 
     private readonly HttpClient _http;
-    private readonly string _chave;
+    private readonly AcessoAoGemini _acesso;
 
-    public AnalistaDaObraGemini(HttpClient http, string chave, string modelo)
+    public AnalistaDaObraGemini(HttpClient http, string chave, string modelo) : this(http, new AcessoPorChave(chave), modelo)
+    {
+    }
+
+    /// <summary>Bloco 45: pelo acesso escolhido (a chave própria ou a conta ProjectPlanner).</summary>
+    public AnalistaDaObraGemini(HttpClient http, AcessoAoGemini acesso, string modelo)
     {
         ArgumentNullException.ThrowIfNull(http);
-        ChamadaGemini.ValidarChave(chave);
+        ArgumentNullException.ThrowIfNull(acesso);
         ArgumentException.ThrowIfNullOrWhiteSpace(modelo);
-        (_http, _chave, Modelo) = (http, chave, modelo);
+        (_http, _acesso, Modelo) = (http, acesso, modelo);
     }
 
     public string Modelo { get; }
@@ -42,7 +47,7 @@ public sealed class AnalistaDaObraGemini : IAnalistaDaObra
     public async Task<AnaliseDaObraIA> AnalisarAsync(PedidoDeAnaliseDaObra pedido, CancellationToken cancelamento)
     {
         ArgumentNullException.ThrowIfNull(pedido);
-        var resposta = await ChamarJsonAsync(_http, _chave, Modelo, Montar(pedido),
+        var resposta = await ChamarJsonAsync(_http, _acesso, Modelo, Montar(pedido),
             "A resposta do Gemini ficou grande demais e veio cortada. Tente de novo.", cancelamento);
         return Interpretar(resposta);
     }

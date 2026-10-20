@@ -272,8 +272,10 @@ public sealed class TelegramTests : IDisposable
 
         (await Aviso(null, Oi)).Should().Be(HttpStatusCode.Unauthorized);
         (await Aviso("errado", Oi)).Should().Be(HttpStatusCode.Unauthorized);
-        (await Aviso(Servidor.SegredoDoTelegram, "não é json")).Should().Be(HttpStatusCode.BadRequest);
-        (await Aviso(Servidor.SegredoDoTelegram, Oi)).Should().Be(HttpStatusCode.OK);
+        var segredo = new OpcoesDoTelegram { Segredo = Servidor.SegredoDoTelegram }.SegredoParaOTelegram!;
+        (await Aviso(Servidor.SegredoDoTelegram, Oi)).Should().Be(HttpStatusCode.Unauthorized, "o Telegram manda o segredo derivado, não o configurado");
+        (await Aviso(segredo, "não é json")).Should().Be(HttpStatusCode.BadRequest);
+        (await Aviso(segredo, Oi)).Should().Be(HttpStatusCode.OK);
 
         for (var i = 0; i < 50 && !_s.Telegram.Mensagens.Any(m => m.Chat == 4242); i++)
             await Task.Delay(100);
@@ -294,5 +296,26 @@ public sealed class TelegramTests : IDisposable
         var aviso = new HttpRequestMessage(HttpMethod.Post, "/v1/telegram/webhook") { Content = new StringContent("{}") };
         aviso.Headers.Add(Rotas.Telegram.CabecalhoDoSegredo, Servidor.SegredoDoTelegram);
         (await s.CreateClient().SendAsync(aviso)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public void Segredo_ComoOTelegramAceita_MesmoOGeradoPeloRender()
+    {
+        var gerado = new OpcoesDoTelegram { Segredo = "nyYlRYj0cmIKgXhaJ41kQfwfy9pVh8/xRuIqMslvEmQ=" }.SegredoParaOTelegram!;
+        gerado.Should().MatchRegex("^[A-Za-z0-9_-]{1,256}$", "o Telegram só aceita esses caracteres no secret_token");
+        gerado.Should().HaveLength(64);
+        new OpcoesDoTelegram { Segredo = " " }.SegredoParaOTelegram.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AoSubir_RegistraOWebhookComOSegredoDerivado()
+    {
+        _s.Dispose();
+        using var s = new Servidor(new() { ["Telegram:UrlPublica"] = "https://servidor.teste/" });
+        _ = s.CreateClient(); // sobe o servidor (e os serviços de início)
+        for (var i = 0; i < 50 && s.Telegram.Webhooks.IsEmpty; i++)
+            await Task.Delay(50);
+        s.Telegram.Webhooks.Single().Should().Be(("https://servidor.teste/v1/telegram/webhook",
+            new OpcoesDoTelegram { Segredo = Servidor.SegredoDoTelegram }.SegredoParaOTelegram!));
     }
 }

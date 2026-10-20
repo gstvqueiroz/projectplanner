@@ -3,6 +3,15 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.47.1
+
+Correção do Telegram: o bot não respondia.
+
+- O segredo do webhook que o Render gera tem "/", "+" e "=", e o Telegram só aceita letras, números, "_" e "-". Por isso
+  ele recusava o registro, e as mensagens não chegavam ao servidor. Agora o servidor manda ao Telegram uma versão do
+  segredo só com caracteres aceitos, e qualquer valor funciona.
+- Se o Telegram recusar o registro, o motivo aparece nos logs do servidor. Só o servidor mudou.
+
 ## 0.47.0
 
 Bloco 49: o assistente da obra no Telegram (plano Profissional).

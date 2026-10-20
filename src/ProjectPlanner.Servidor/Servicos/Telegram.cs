@@ -59,7 +59,10 @@ public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<Opco
     {
         using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("setWebhook"),
             new { url, secret_token = segredo, allowed_updates = new[] { "message" }, drop_pending_updates = false }, c);
-        log.LogInformation("Webhook do Telegram registrado: {Status}", (int)r.StatusCode);
+        if (r.IsSuccessStatusCode)
+            log.LogInformation("Webhook do Telegram registrado em {Url}", url);
+        else // o motivo vem no corpo (o token não aparece nele)
+            log.LogError("O Telegram recusou o webhook ({Status}): {Motivo}", (int)r.StatusCode, await r.Content.ReadAsStringAsync(c));
     }
 }
 
@@ -103,7 +106,7 @@ public sealed class RegistroDoWebhook(IOptions<OpcoesDoServidor> opcoes, IClient
             return;
         try
         {
-            await telegram.RegistrarWebhookAsync($"{config.UrlPublica.TrimEnd('/')}/v1/telegram/webhook", config.Segredo!, c);
+            await telegram.RegistrarWebhookAsync($"{config.UrlPublica.TrimEnd('/')}/v1/telegram/webhook", config.SegredoParaOTelegram!, c);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {

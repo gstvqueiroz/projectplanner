@@ -40,7 +40,7 @@ public static class Telegram
     private static async Task<IResult> Webhook(HttpRequest http, FilaDoTelegram fila, IOptions<OpcoesDoServidor> opcoes, CancellationToken c)
     {
         var config = opcoes.Value.Telegram;
-        if (!config.Ligado || !Segredos.Iguais(config.Segredo, http.Headers[CabecalhoDoSegredo].ToString()))
+        if (!config.Ligado || !Segredos.Iguais(config.SegredoParaOTelegram, http.Headers[CabecalhoDoSegredo].ToString()))
             return Results.Unauthorized();
         try
         {

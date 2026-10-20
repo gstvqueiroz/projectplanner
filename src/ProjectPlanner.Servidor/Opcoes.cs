@@ -226,4 +226,10 @@ public sealed class OpcoesDoTelegram
     public int MensagensPorMinuto { get; set; } = 20;
 
     public bool Ligado => !string.IsNullOrWhiteSpace(Token) && !string.IsNullOrWhiteSpace(Segredo);
+
+    /// <summary>
+    /// O segredo como o Telegram aceita (só A-Z, a-z, 0-9, _ e -, até 256): o SHA-256 dele em hexadecimal. Assim qualquer
+    /// valor em <see cref="Segredo"/> funciona (o que o Render gera tem "/", "+" e "=", que o Telegram recusa). 0.47.1.
+    /// </summary>
+    public string? SegredoParaOTelegram => string.IsNullOrWhiteSpace(Segredo) ? null : Servicos.Segredos.Hash(Segredo);
 }

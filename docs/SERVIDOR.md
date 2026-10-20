@@ -127,7 +127,7 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Financeiro__AlertaMensalEmReais` | O custo de IA do mês que dispara o alerta (padrão 100; 0 desliga) |
 | `Telegram__Token` | Bloco 49: o token do bot (do @BotFather). Sem ele (ou sem o segredo), o Telegram fica desligado |
 | `Telegram__NomeDoBot` | O nome do bot, sem o @ (para o link que o programa mostra) |
-| `Telegram__Segredo` | O segredo do webhook (o Render gera sozinho) |
+| `Telegram__Segredo` | O segredo do webhook (o Render gera sozinho). O Telegram recebe o SHA-256 dele em hexadecimal, porque só aceita A-Z, a-z, 0-9, `_` e `-` (0.47.1) |
 | `Telegram__UrlPublica` | O endereço público do servidor; ao subir, o servidor registra o webhook do Telegram nele |
 | `Telegram__MegabytesPorFoto`, `Telegram__FotosPendentesPorConta`, `Telegram__MensagensPorMinuto` | Os limites (padrão 10, 50 e 20) |
 | `Planos__GratisCreditosPorMes`, `Planos__ProfissionalCreditosPorMes` | Os créditos por mês (padrão 300 e 6.000) |

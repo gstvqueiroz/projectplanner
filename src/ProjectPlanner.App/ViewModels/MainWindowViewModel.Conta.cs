@@ -7,6 +7,7 @@ namespace ProjectPlanner.App.ViewModels;
 public sealed partial class MainWindowViewModel
 {
     private readonly IContaProjectPlanner _conta;
+    private bool _contaConectadaNoTelegram;
 
     public bool ContaConectada => _conta.Conectada;
 
@@ -37,5 +38,10 @@ public sealed partial class MainWindowViewModel
         OnPropertyChanged(nameof(TextoDaContaNaBarra));
         SairDaContaCommand.NotifyCanExecuteChanged();
         Assistente.AtualizarConfiguracao();
+        if (_telegram is not null && _conta.Conectada != _contaConectadaNoTelegram)
+        {
+            _contaConectadaNoTelegram = _conta.Conectada;
+            _ = AtualizarTelegramAsync(); // Bloco 49: entrou ou saiu
+        }
     }
 }

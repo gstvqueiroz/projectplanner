@@ -36,6 +36,8 @@ public static class Servicos
         .AddSingleton(s => new ClienteDaConta(s.GetRequiredService<HttpClient>(), ContaProjectPlanner.Servidor(Environment.GetEnvironmentVariable)))
         .AddSingleton<IContaProjectPlanner>(s => new ContaProjectPlanner(s.GetRequiredService<ClienteDaConta>(), s.GetRequiredService<ICofreDeSegredos>(),
             s.GetRequiredService<TimeProvider>(), endereco => s.GetRequiredService<IDialogosService>().AbrirEnderecoAsync(endereco)))
+        // Bloco 49: o Telegram pela conta (obras marcadas, caixa de entrada, ligação do chat).
+        .AddSingleton<ITelegramDaConta>(s => new TelegramDaConta(s.GetRequiredService<ClienteDaConta>(), s.GetRequiredService<IContaProjectPlanner>()))
         .AddSingleton<IProvedorIA>(s => new ProvedorConformeCredencial(new ProvedorGemini(s.GetRequiredService<HttpClient>()),
             new ProvedorDaConta(s.GetRequiredService<HttpClient>(), s.GetRequiredService<ClienteDaConta>().Servidor, s.GetRequiredService<IContaProjectPlanner>())))
         .AddSingleton<IPreferenciasAssistente, ArquivoPreferenciasAssistente>()

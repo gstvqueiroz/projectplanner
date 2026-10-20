@@ -59,6 +59,37 @@ public sealed class TrocaDeTeste : ITrocaDoCodigoDoGoogle
     }
 }
 
+/// <summary>Bloco 49: o Telegram de mentira: guarda o que o servidor mandou e entrega as fotos do teste.</summary>
+public sealed class TelegramDeTeste : IClienteDoTelegram
+{
+    public ConcurrentQueue<(long Chat, string Texto)> Mensagens { get; } = new();
+    public ConcurrentDictionary<string, byte[]> Arquivos { get; } = new();
+    public ConcurrentQueue<(string Url, string Segredo)> Webhooks { get; } = new();
+    public int Digitando;
+
+    public Task EnviarAsync(long chat, string texto, CancellationToken c)
+    {
+        Mensagens.Enqueue((chat, texto));
+        return Task.CompletedTask;
+    }
+
+    public Task DigitandoAsync(long chat, CancellationToken c)
+    {
+        Interlocked.Increment(ref Digitando);
+        return Task.CompletedTask;
+    }
+
+    public Task<byte[]?> BaixarAsync(string arquivo, CancellationToken c) => Task.FromResult(Arquivos.GetValueOrDefault(arquivo));
+
+    public Task RegistrarWebhookAsync(string url, string segredo, CancellationToken c)
+    {
+        Webhooks.Enqueue((url, segredo));
+        return Task.CompletedTask;
+    }
+
+    public string Ultima => Mensagens.Last().Texto;
+}
+
 public sealed record PedidoAoGemini(HttpMethod Metodo, Uri Endereco, string? Chave, bool TemAuthorization, string Corpo);
 
 /// <summary>O Gemini de mentira: guarda os pedidos e responde o que o teste mandar.</summary>
@@ -116,6 +147,8 @@ public sealed class Servidor : WebApplicationFactory<Program>
          "stop_reason":"tool_use","usage":{"input_tokens":1000,"output_tokens":200,"cache_read_input_tokens":500}}
         """;
     public TrocaDeTeste Troca { get; } = new();
+    public TelegramDeTeste Telegram { get; } = new();
+    public const string SegredoDoTelegram = "segredo-do-webhook-de-teste";
 
     public Servidor(Dictionary<string, string?>? config = null)
     {
@@ -126,6 +159,9 @@ public sealed class Servidor : WebApplicationFactory<Program>
             ["Gemini:Chave"] = ChaveDoGemini,
             ["Anthropic:Chave"] = ChaveDaAnthropic,
             ["Admin:Chave"] = ChaveDeAdmin,
+            ["Telegram:Token"] = "123:token-de-teste",
+            ["Telegram:Segredo"] = SegredoDoTelegram,
+            ["Telegram:NomeDoBot"] = "ProjectPlannerTesteBot",
             ["Limites:PedidosDeContaPorMinuto"] = "1000",
             ["Limites:PedidosDeIaPorMinuto"] = "1000",
         };
@@ -144,6 +180,8 @@ public sealed class Servidor : WebApplicationFactory<Program>
             s.AddSingleton<IEnviadorDeEmail>(Emails);
             s.AddSingleton<IValidadorDoGoogle>(Google);
             s.AddSingleton<ITrocaDoCodigoDoGoogle>(Troca);
+            s.AddSingleton<IClienteDoTelegram>(Telegram);
+            s.AddHttpClient(MedidorDeTokens.Cliente).ConfigurePrimaryHttpMessageHandler(() => Gemini);
             s.AddHttpClient(Ia.ClienteDoGemini).ConfigurePrimaryHttpMessageHandler(() => Gemini);
             s.AddHttpClient(Ia.ClienteDaAnthropic).ConfigurePrimaryHttpMessageHandler(() => Claude);
         });

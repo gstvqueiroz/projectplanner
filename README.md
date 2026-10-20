@@ -16,6 +16,9 @@ O assistente funciona pela **conta ProjectPlanner** (menu Conta): sem chave, com
 Padrão. Os pedidos passam pelo servidor deste repositório ([src/ProjectPlanner.Servidor](src/ProjectPlanner.Servidor), ver
 [docs/SERVIDOR.md](docs/SERVIDOR.md)), que não guarda o conteúdo das conversas.
 
+No **Telegram** (plano Profissional), o assistente responde sobre a obra e recebe atualizações e fotos do canteiro, que
+chegam ao programa para conferir e aplicar (Conta > Conectar o Telegram…).
+
 **Para quem compila o código:** com a variável de ambiente `GEMINI_API_KEY` (uma chave grátis do Google AI Studio), o
 assistente vai direto ao Google, sem conta. Também dá para rodar o próprio servidor (`docs/SERVIDOR.md`) e apontar o
 programa para ele com `PROJECTPLANNER_SERVIDOR`.

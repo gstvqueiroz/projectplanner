@@ -29,6 +29,16 @@ builder.Services.AddSingleton<IEnviadorDeEmail>(s =>
 builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddHttpClient(Ia.ClienteDaAnthropic, c => c.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddSingleton<CatalogoDeModelos>();
+// Bloco 49: o Telegram (webhook → fila → atendente, que usa o assistente do programa com o Gemini medido).
+builder.Services.AddHttpClient(ClienteDoTelegram.Cliente, c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddTransient<MedidorDeTokens>();
+builder.Services.AddHttpClient(MedidorDeTokens.Cliente, c => c.Timeout = TimeSpan.FromMinutes(5)).AddHttpMessageHandler<MedidorDeTokens>();
+builder.Services.AddSingleton<IClienteDoTelegram, ClienteDoTelegram>();
+builder.Services.AddSingleton<FilaDoTelegram>();
+builder.Services.AddSingleton<ConversasDoTelegram>();
+builder.Services.AddScoped<AtendenteDoTelegram>();
+builder.Services.AddHostedService<ProcessadorDoTelegram>();
+builder.Services.AddHostedService<RegistroDoWebhook>();
 builder.Services.AddRateLimiter(_ => { });
 builder.Services.AddOptions<RateLimiterOptions>().Configure<IOptions<OpcoesDoServidor>>((o, opcoes) => LimitesDeUso.Configurar(o, opcoes.Value.Limites));
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -104,6 +114,7 @@ Contas.Mapear(app);
 Ia.Mapear(app);
 Admin.Mapear(app);
 PainelFinanceiro.Mapear(app);
+Telegram.Mapear(app);
 
 app.Run();
 

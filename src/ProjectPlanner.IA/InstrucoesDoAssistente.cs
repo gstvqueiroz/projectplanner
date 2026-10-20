@@ -92,10 +92,23 @@ public static class InstrucoesDoAssistente
     public static string Montar(ContextoDoProjeto? contexto) => Montar(contexto, null);
 
     /// <summary>As instruções com a condução da conversa (Bloco 26) entre a base e o retrato do cronograma.</summary>
-    public static string Montar(ContextoDoProjeto? contexto, ConducaoDaConversa? conducao) =>
+    public static string Montar(ContextoDoProjeto? contexto, ConducaoDaConversa? conducao) => Montar(contexto, conducao, null);
+
+    /// <summary>Bloco 49: com o canal (no Telegram, as regras de lá vêm antes do retrato).</summary>
+    public static string Montar(ContextoDoProjeto? contexto, ConducaoDaConversa? conducao, string? canal) =>
         Base
         + (conducao is null ? "" : "\n\n" + Conducao(conducao))
+        + (canal == CanaisDaConversa.Telegram ? "\n\n" + Telegram : "")
         + (contexto is null ? "\n\nNenhum projeto está aberto no momento." : "\n\nCRONOGRAMA ABERTO:\n" + contexto.ComoTexto());
+
+    /// <summary>Bloco 49: a conversa pelo Telegram, do canteiro.</summary>
+    public const string Telegram =
+        "TELEGRAM. Esta conversa é pelo Telegram, normalmente do canteiro de obras, e o programa não está aberto. Responda curto " +
+        "(até 6 linhas), em texto simples, sem tabelas. Responda perguntas sobre a obra pelo retrato abaixo. Mande sempre " +
+        "\"alteracoes\" vazia e não use \"abrir\", \"importarFotos\", perguntas nem plano: daqui não dá para mudar a estrutura do " +
+        "cronograma nem abrir telas (se pedirem, diga que isso se faz no programa). Atualizações da obra (% concluído, medição, " +
+        "custo, não iniciar antes de, linha de base) vão em \"atualizacoes\", como sempre: elas ficam guardadas e o usuário " +
+        "confere e aplica quando abrir a obra no programa. Na mensagem, diga o que foi anotado.";
 
     /// <summary>Os campos opcionais da resposta (Bloco 26): tipo, ficha, perguntas e plano.</summary>
     public const string RespostasEstruturadas =

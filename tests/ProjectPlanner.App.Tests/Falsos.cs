@@ -388,6 +388,15 @@ public sealed class DialogosFalsos : IDialogosService
         return AoMostrarMedicoes?.Invoke(medicoes) ?? Task.CompletedTask;
     }
 
+    /// <summary>Bloco 49: as telas Conectar o Telegram abertas.</summary>
+    public List<TelegramViewModel> Telegrams { get; } = [];
+
+    public async Task MostrarTelegramAsync(TelegramViewModel telegram)
+    {
+        Telegrams.Add(telegram);
+        await telegram.AbrirAsync();
+    }
+
     /// <summary>Bloco 45: as telas da conta abertas, e o que o usuário faz nelas antes de fechar.</summary>
     public List<ContaViewModel> Contas { get; } = [];
 
@@ -493,10 +502,13 @@ public sealed class Ambiente
     /// <summary>Bloco 45: a conta ProjectPlanner.</summary>
     public ContaFalsa Conta { get; } = new();
 
+    /// <summary>Bloco 49: o Telegram pela conta.</summary>
+    public TelegramFalso Telegram { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
             analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
-            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta);
+            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta, telegram: Telegram);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -971,4 +983,82 @@ public sealed class ContaFalsa : IContaProjectPlanner
 
     public Task<string> AcessoAsync(bool renovar, CancellationToken cancelamento) =>
         Perfil is null ? Task.FromException<string>(new ErroDoAssistenteException("sem conta")) : Task.FromResult("acesso-falso");
+}
+
+/// <summary>Bloco 49: o Telegram da conta nos testes: as obras marcadas, a caixa de entrada e o que foi pedido.</summary>
+public sealed class TelegramFalso : ITelegramDaConta
+{
+    public SituacaoDoTelegram Situacao { get; set; } = new(true, false, null, "ProjectPlannerBot");
+    public Dictionary<Guid, (string Nome, ContextoDoProjeto Retrato)> Marcadas { get; } = [];
+    public Dictionary<Guid, List<ItemDoTelegram>> Caixas { get; } = [];
+    public Dictionary<Guid, byte[]> Fotos { get; } = [];
+    public List<string> Pedidos { get; } = [];
+    public ErroDaContaException? Erro { get; set; }
+
+    private Task Passo(string pedido)
+    {
+        Pedidos.Add(pedido);
+        if (Erro is { } erro)
+        {
+            Erro = null;
+            return Task.FromException(erro);
+        }
+        return Task.CompletedTask;
+    }
+
+    public async Task<SituacaoDoTelegram> SituacaoAsync(CancellationToken c)
+    {
+        await Passo("situacao");
+        return Situacao;
+    }
+
+    public async Task<CodigoParaOTelegram> CodigoAsync(CancellationToken c)
+    {
+        await Passo("codigo");
+        return new CodigoParaOTelegram("ABCD2345", "https://t.me/ProjectPlannerBot?start=ABCD2345", "ProjectPlannerBot", 15);
+    }
+
+    public async Task DesligarAsync(CancellationToken c)
+    {
+        await Passo("desligar");
+        Situacao = Situacao with { Ligado = false, Nome = null };
+    }
+
+    public async Task<IReadOnlyList<ObraNoTelegram>> ObrasAsync(CancellationToken c)
+    {
+        await Passo("obras");
+        return [.. Marcadas.Select(m => new ObraNoTelegram(m.Key, m.Value.Nome, DateTime.UtcNow, Caixas.GetValueOrDefault(m.Key)?.Count ?? 0))];
+    }
+
+    public async Task MarcarAsync(Guid projeto, string nome, ContextoDoProjeto retrato, CancellationToken c)
+    {
+        await Passo($"marcar {nome}");
+        Marcadas[projeto] = (nome, retrato);
+    }
+
+    public async Task DesmarcarAsync(Guid projeto, CancellationToken c)
+    {
+        await Passo("desmarcar");
+        Marcadas.Remove(projeto);
+        Caixas.Remove(projeto);
+    }
+
+    public async Task<IReadOnlyList<ItemDoTelegram>> CaixaAsync(Guid projeto, CancellationToken c)
+    {
+        await Passo("caixa");
+        return [.. Caixas.GetValueOrDefault(projeto) ?? []];
+    }
+
+    public async Task<byte[]> FotoAsync(Guid item, CancellationToken c)
+    {
+        await Passo("foto");
+        return Fotos.TryGetValue(item, out var bytes) ? bytes : throw new ErroDaContaException("Essa foto não está mais na caixa.", 404);
+    }
+
+    public async Task LevarAsync(Guid item, CancellationToken c)
+    {
+        await Passo("levar");
+        foreach (var caixa in Caixas.Values)
+            caixa.RemoveAll(i => i.Id == item);
+    }
 }

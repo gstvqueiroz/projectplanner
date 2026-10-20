@@ -293,6 +293,16 @@ clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.t
 - **O saldo:** chega no cabeçalho `X-Creditos-Restantes` de cada resposta (`AcessoPelaConta.Recebeu` →
   `ISessaoDaConta.AtualizarSaldo`) e aparece ao lado do seletor.
 
+## O assistente no Telegram (Bloco 49)
+
+- **O mesmo assistente:** o servidor usa o `AssistenteGemini` com o retrato que o programa mandou da obra marcada, e o
+  pedido vai com `Canal = CanaisDaConversa.Telegram`.
+- **Instruções do canal:** `InstrucoesDoAssistente.Telegram`, entre a condução e o retrato. Pedem respostas curtas,
+  `alteracoes` vazia, nada de abrir telas, e as atualizações em `atualizacoes`, que vão para a caixa de entrada.
+- **A conversa:** o servidor guarda as últimas 8 mensagens de cada chat, só na memória.
+- **No programa:** Conta > Buscar do Telegram mostra cada mensagem com atualizações como um cartão
+  (`AssistenteViewModel.MostrarDoTelegram`), conferido pelas tarefas do retrato daquele momento.
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".

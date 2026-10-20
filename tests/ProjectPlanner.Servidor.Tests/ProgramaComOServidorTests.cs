@@ -132,4 +132,53 @@ public sealed class ProgramaComOServidorTests : IDisposable
             .Should().ThrowAsync<ErroDaContaException>();
         sessaoAcabou.Which.SessaoRecusada.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Telegram_OProgramaMarcaAObra_EOQueChegaPeloBotVoltaComOsMesmosTipos()
+    {
+        var sessao = await CriarConta();
+        await AdminTests.TrocarPlano(_s, "ana@exemplo.com", "profissional", Servidor.ChaveDeAdmin);
+        var projeto = Guid.NewGuid();
+        var alvenaria = Guid.NewGuid();
+        var retrato = new ContextoDoProjeto("Casa da Ana", new DateOnly(2026, 10, 1), new DateOnly(2026, 12, 1), new DateOnly(2026, 10, 18),
+            [new TarefaNoContexto(1, "1", "Alvenaria", 0, TipoNoContexto.Tarefa, 10, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 14), 40, "", 0, true, null, 0, alvenaria)],
+            Obra: ["Prazo: IDP 0,95"]);
+        await _cliente.MarcarObraAsync(sessao.Acesso, projeto, "Casa da Ana", retrato, default);
+        (await _cliente.ObrasAsync(sessao.Acesso, default)).Single().Should().Match<ObraNoTelegram>(o => o.Projeto == projeto && o.Nome == "Casa da Ana" && o.Pendentes == 0);
+        var codigo = await _cliente.CodigoDoTelegramAsync(sessao.Acesso, default);
+        codigo.Link.Should().Be($"https://t.me/ProjectPlannerTesteBot?start={codigo.Codigo}");
+
+        async Task Mandar(string texto, string? foto = null)
+        {
+            var mensagem = new System.Text.Json.Nodes.JsonObject { ["chat"] = new System.Text.Json.Nodes.JsonObject { ["id"] = 5 } };
+            if (foto is null)
+                mensagem["text"] = texto;
+            else
+                (mensagem["caption"], mensagem["photo"]) = (texto, new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject { ["file_id"] = foto }));
+            using var escopo = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(_s.Services);
+            await Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Servicos.AtendenteDoTelegram>(escopo.ServiceProvider)
+                .AtenderAsync(System.Text.Json.JsonDocument.Parse(new System.Text.Json.Nodes.JsonObject { ["message"] = mensagem }.ToJsonString()).RootElement, default);
+        }
+        await Mandar($"/start {codigo.Codigo}");
+        (await _cliente.TelegramAsync(sessao.Acesso, default)).Ligado.Should().BeTrue();
+
+        _s.Gemini.Resposta = """
+            {"candidates":[{"content":{"parts":[{"text":"{\"mensagem\":\"Anotado.\",\"alteracoes\":[],\"atualizacoes\":[{\"tipo\":\"percentual\",\"tarefa\":\"1\",\"percentual\":70}]}"}]},"finishReason":"STOP"}]}
+            """;
+        await Mandar("alvenaria 70%");
+        _s.Telegram.Arquivos["f1"] = [9, 8, 7];
+        await Mandar("fachada", foto: "f1");
+
+        var caixa = await _cliente.CaixaAsync(sessao.Acesso, projeto, default);
+        caixa.Select(i => i.Tipo).Should().Equal(ItemDoTelegram.DeAtualizacoes, ItemDoTelegram.DeFoto);
+        caixa[0].Atualizacoes!.Single().Should().Be(new AtualizacaoDaObra("percentual", "1", Percentual: 70));
+        caixa[0].Tarefas!.Single().Should().Be(new TarefaDoTelegram(1, alvenaria));
+        (await _cliente.FotoDaCaixaAsync(sessao.Acesso, caixa[1].Id, default)).Should().Equal(9, 8, 7);
+        foreach (var item in caixa)
+            await _cliente.LevarDaCaixaAsync(sessao.Acesso, item.Id, default);
+        (await _cliente.CaixaAsync(sessao.Acesso, projeto, default)).Should().BeEmpty();
+        await _cliente.DesmarcarObraAsync(sessao.Acesso, projeto, default);
+        await _cliente.DesligarTelegramAsync(sessao.Acesso, default);
+        ((await _cliente.ObrasAsync(sessao.Acesso, default)).Count, (await _cliente.TelegramAsync(sessao.Acesso, default)).Ligado).Should().Be((0, false));
+    }
 }

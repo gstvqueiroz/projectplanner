@@ -5,7 +5,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY global.json Directory.Build.props ./
 COPY src/ProjectPlanner.Servidor/ProjectPlanner.Servidor.csproj src/ProjectPlanner.Servidor/
+# Bloco 49: o assistente do Telegram usa a camada de IA do programa (sem o domínio nem a interface).
+COPY src/ProjectPlanner.IA/ProjectPlanner.IA.csproj src/ProjectPlanner.IA/
 RUN dotnet restore src/ProjectPlanner.Servidor/ProjectPlanner.Servidor.csproj
+COPY src/ProjectPlanner.IA/ src/ProjectPlanner.IA/
 COPY src/ProjectPlanner.Servidor/ src/ProjectPlanner.Servidor/
 RUN dotnet publish src/ProjectPlanner.Servidor/ProjectPlanner.Servidor.csproj -c Release -o /app --no-restore
 

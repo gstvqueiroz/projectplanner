@@ -21,7 +21,7 @@ public partial class MenuPrincipalTests
         a.Ambiente.Conta.Conectar("Ana Souza");
         Dispatcher.UIThread.RunJobs();
         (status.IsVisible, status.Text).Should().Be((true, "Conta: Ana Souza"));
-        Titulos(a.Item("Conta")).Should().Equal("Minha conta…", "Sair da conta");
+        Titulos(a.Item("Conta")).Should().StartWith(["Minha conta…", "Sair da conta"]); // depois, os itens do Telegram (Bloco 49)
         a.Item("Conta", "Sair da conta").IsEffectivelyEnabled.Should().BeTrue();
 
         a.Clicar("Conta", "Minha conta…");

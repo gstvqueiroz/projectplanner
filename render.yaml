@@ -14,6 +14,7 @@ services:
     buildFilter:
       paths:
         - src/ProjectPlanner.Servidor/**
+        - src/ProjectPlanner.IA/**
         - Directory.Build.props
         - global.json
         - render.yaml
@@ -46,6 +47,14 @@ services:
         sync: false
       - key: Admin__Email
         sync: false
+      - key: Telegram__Token
+        sync: false
+      - key: Telegram__NomeDoBot
+        sync: false
+      - key: Telegram__Segredo
+        generateValue: true
+      - key: Telegram__UrlPublica
+        value: https://projectplanner-servidor.onrender.com
       - key: Google__ClientIdDoApp
         sync: false
       - key: Google__SegredoDoApp

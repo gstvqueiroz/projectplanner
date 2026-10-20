@@ -86,6 +86,98 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.ToTable("CodigosDeEmail");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.CodigoDoTelegram", b =>
+                {
+                    b.Property<string>("Hash")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Hash");
+
+                    b.ToTable("CodigosDoTelegram");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.ItemDaCaixa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Conteudo")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Foto")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("NomeDaFoto")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ObraId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tarefas")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "ObraId");
+
+                    b.ToTable("CaixaDeEntrada");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.ObraNoServidor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("Projeto")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Retrato")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "Projeto")
+                        .IsUnique();
+
+                    b.ToTable("Obras");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.TokenDeRenovacao", b =>
                 {
                     b.Property<Guid>("Id")
@@ -213,6 +305,33 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                         .IsUnique();
 
                     b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.VinculoDoTelegram", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nome")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid?>("ObraAtiva")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UsuarioId");
+
+                    b.HasIndex("ChatId")
+                        .IsUnique();
+
+                    b.ToTable("VinculosDoTelegram");
                 });
 #pragma warning restore 612, 618
         }

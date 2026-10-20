@@ -3,6 +3,26 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.47.0
+
+Bloco 49: o assistente da obra no Telegram (plano Profissional).
+
+- Conta > **Usar esta obra no Telegram**: o assistente do Telegram passa a enxergar a obra (as tarefas, o %, as datas, as
+  medições, os custos e os indicadores). Ela é atualizada a cada vez que você salva.
+- Conta > **Conectar o Telegram…**: gera o código e abre o bot; um toque em Iniciar liga a sua conta.
+- No Telegram, do canteiro:
+  - **Perguntas:** "quanto já medi?", "o que está atrasado?".
+  - **Atualizações:** "a alvenaria está em 60%", "gastei R$ 1.200 de cimento na fundação".
+  - **Fotos,** com legenda.
+  - **Comandos:** /obra troca de obra; /ajuda; /sair.
+- As atualizações e as fotos esperam no servidor. Ao abrir a obra, a barra de status avisa, e Conta > **Buscar do
+  Telegram** traz tudo:
+  - as atualizações viram cartões no chat, para conferir e aplicar, com Desfazer;
+  - as fotos vão para a importação em lote, com a IA classificando.
+
+  Nada muda na obra sem você confirmar.
+- As perguntas no Telegram gastam os créditos do plano, como no programa.
+
 ## 0.46.0
 
 Bloco 48: painel financeiro (no servidor).

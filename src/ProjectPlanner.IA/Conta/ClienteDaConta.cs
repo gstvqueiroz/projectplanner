@@ -41,6 +41,26 @@ public sealed record ModeloDaConta(string Id, string Nivel, string Nome, bool Li
     };
 }
 
+/// <summary>Bloco 49: uma obra marcada para o Telegram e quantos itens esperam na caixa dela.</summary>
+public sealed record ObraNoTelegram(Guid Projeto, string Nome, DateTime AtualizadoEm, int Pendentes);
+
+/// <summary>Bloco 49: uma tarefa do retrato do momento em que a mensagem chegou (o Nº que a IA usou e o id).</summary>
+public sealed record TarefaDoTelegram(int Numero, Guid Id);
+
+/// <summary>Bloco 49: o que chegou pelo Telegram: atualizações (para o cartão) ou uma foto.</summary>
+public sealed record ItemDoTelegram(Guid Id, string Tipo, DateTime CriadoEm, string Texto, string? NomeDaFoto,
+    IReadOnlyList<AtualizacaoDaObra>? Atualizacoes, IReadOnlyList<TarefaDoTelegram>? Tarefas)
+{
+    public const string DeAtualizacoes = "atualizacoes";
+    public const string DeFoto = "foto";
+}
+
+/// <summary>Bloco 49: se o servidor tem o Telegram e se esta conta está ligada a um chat.</summary>
+public sealed record SituacaoDoTelegram(bool Disponivel, bool Ligado, string? Nome, string? Bot);
+
+/// <summary>Bloco 49: o código para ligar o Telegram (vale alguns minutos) e o link que abre o bot com ele.</summary>
+public sealed record CodigoParaOTelegram(string Codigo, string? Link, string? Bot, int Minutos);
+
 /// <summary>Uma falha numa rota de conta, com a mensagem para o usuário. <see cref="Status"/> 0: sem resposta do servidor.</summary>
 public sealed class ErroDaContaException(string mensagem, int status, Exception? causa = null) : Exception(mensagem, causa)
 {
@@ -124,6 +144,44 @@ public sealed class ClienteDaConta
 
     public Task<UsoDaConta> UsoAsync(string acesso, CancellationToken cancelamento) =>
         PedirAsync<UsoDaConta>(HttpMethod.Get, "v1/eu", null, acesso, cancelamento);
+
+    // ---- Bloco 49: o Telegram ----
+
+    public Task<SituacaoDoTelegram> TelegramAsync(string acesso, CancellationToken c) =>
+        PedirAsync<SituacaoDoTelegram>(HttpMethod.Get, "v1/telegram", null, acesso, c);
+
+    public Task<CodigoParaOTelegram> CodigoDoTelegramAsync(string acesso, CancellationToken c) =>
+        PedirAsync<CodigoParaOTelegram>(HttpMethod.Post, "v1/telegram/codigo", null, acesso, c);
+
+    public async Task DesligarTelegramAsync(string acesso, CancellationToken c) =>
+        await PedirAsync<JsonElement?>(HttpMethod.Delete, "v1/telegram", null, acesso, c);
+
+    public async Task<IReadOnlyList<ObraNoTelegram>> ObrasAsync(string acesso, CancellationToken c) =>
+        await PedirAsync<List<ObraNoTelegram>>(HttpMethod.Get, "v1/obras", null, acesso, c);
+
+    /// <summary>Marca a obra (ou atualiza o retrato dela) para o Telegram.</summary>
+    public async Task MarcarObraAsync(string acesso, Guid projeto, string nome, ContextoDoProjeto retrato, CancellationToken c) =>
+        await PedirAsync<JsonElement>(HttpMethod.Put, $"v1/obras/{projeto}", new { nome, retrato }, acesso, c);
+
+    public async Task DesmarcarObraAsync(string acesso, Guid projeto, CancellationToken c) =>
+        await PedirAsync<JsonElement?>(HttpMethod.Delete, $"v1/obras/{projeto}", null, acesso, c);
+
+    public async Task<IReadOnlyList<ItemDoTelegram>> CaixaAsync(string acesso, Guid projeto, CancellationToken c) =>
+        await PedirAsync<List<ItemDoTelegram>>(HttpMethod.Get, $"v1/obras/{projeto}/caixa", null, acesso, c);
+
+    public async Task<byte[]> FotoDaCaixaAsync(string acesso, Guid item, CancellationToken c)
+    {
+        using var pedido = new HttpRequestMessage(HttpMethod.Get, new Uri(Servidor, $"v1/caixa/{item}/foto"));
+        pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", acesso);
+        using var resposta = await _http.SendAsync(pedido, c);
+        if (!resposta.IsSuccessStatusCode)
+            throw new ErroDaContaException(LerErro(await resposta.Content.ReadAsStringAsync(c)) ?? "Não deu para baixar a foto do Telegram.", (int)resposta.StatusCode);
+        return await resposta.Content.ReadAsByteArrayAsync(c);
+    }
+
+    /// <summary>O programa levou o item: ele some do servidor.</summary>
+    public async Task LevarDaCaixaAsync(string acesso, Guid item, CancellationToken c) =>
+        await PedirAsync<JsonElement?>(HttpMethod.Delete, $"v1/caixa/{item}", null, acesso, c);
 
     /// <summary>Bloco 46: os modelos de cada nível para esta conta.</summary>
     public async Task<IReadOnlyList<ModeloDaConta>> ModelosAsync(string acesso, CancellationToken cancelamento) =>

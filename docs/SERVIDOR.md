@@ -80,6 +80,10 @@ Erros sempre como `{"erro": "mensagem para o usuário"}`.
 | `GET /v1/ia/models/{modelo}` | Testar a conexão: confere o login, o modelo, o plano e a chave do servidor, sem ir à IA |
 | `GET /v1/modelos` | Bloco 46: os modelos de cada nível, se o plano libera, se o servidor tem a chave e os créditos de um pedido típico |
 | `POST /v1/admin/usuarios/{email}/plano` | `{plano}` com o cabeçalho `X-Chave-Admin`: troca o plano (gratis ou profissional) |
+| `POST /v1/telegram/webhook` | Bloco 49: os avisos do Telegram (confere o segredo `X-Telegram-Bot-Api-Secret-Token`; o atendimento é numa fila) |
+| `GET /v1/telegram`, `POST /v1/telegram/codigo`, `DELETE /v1/telegram` | Bloco 49: se a conta está ligada a um chat; o código (8 letras, 15 min) e o link `t.me/…?start=`; desligar |
+| `GET /v1/obras`, `PUT /v1/obras/{projeto}`, `DELETE /v1/obras/{projeto}` | Bloco 49: as obras marcadas para o Telegram (com o retrato que o programa manda) e quantos itens esperam |
+| `GET /v1/obras/{projeto}/caixa`, `GET /v1/caixa/{id}/foto`, `DELETE /v1/caixa/{id}` | Bloco 49: a caixa de entrada (atualizações e fotos), a foto e "o programa levou" |
 | `GET /admin` | Bloco 48: a página do painel financeiro (sem dados; pede a chave de admin) |
 | `GET /v1/admin/painel?de=AAAA-MM-DD&ate=AAAA-MM-DD` | Bloco 48: com `X-Chave-Admin`, os números do período (padrão: o mês até hoje; até 366 dias) |
 
@@ -121,6 +125,11 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Financeiro__PercentualDeImpostosETaxas` | Impostos e taxa do meio de pagamento sobre a receita (padrão 11) |
 | `Financeiro__PrecoProfissionalEmReais` | O preço do Profissional, para a receita estimada (padrão 59) |
 | `Financeiro__AlertaMensalEmReais` | O custo de IA do mês que dispara o alerta (padrão 100; 0 desliga) |
+| `Telegram__Token` | Bloco 49: o token do bot (do @BotFather). Sem ele (ou sem o segredo), o Telegram fica desligado |
+| `Telegram__NomeDoBot` | O nome do bot, sem o @ (para o link que o programa mostra) |
+| `Telegram__Segredo` | O segredo do webhook (o Render gera sozinho) |
+| `Telegram__UrlPublica` | O endereço público do servidor; ao subir, o servidor registra o webhook do Telegram nele |
+| `Telegram__MegabytesPorFoto`, `Telegram__FotosPendentesPorConta`, `Telegram__MensagensPorMinuto` | Os limites (padrão 10, 50 e 20) |
 | `Planos__GratisCreditosPorMes`, `Planos__ProfissionalCreditosPorMes` | Os créditos por mês (padrão 300 e 6.000) |
 | `Planos__DolaresPorCredito` | Quanto de custo vale 1 crédito (padrão 0,0005, meio milésimo de dólar) |
 | `Planos__NiveisDoGratis` | Os níveis do plano Grátis, separados por vírgula (padrão `padrao`) |
@@ -306,9 +315,58 @@ Mercado Pago (ou Asaas ou Stripe), com Pix e cartão:
 - **Código:** `Servicos/Painel.cs` (o cálculo), `Rotas/PainelFinanceiro.cs` (as rotas) e `Painel/` (a página e o
   script, embutidos na dll).
 
-## Bloco 49: Telegram
+## Bloco 49 (0.47.0, feito): o assistente no Telegram
 
-O assistente da obra pelo Telegram, com a mesma conta e os mesmos créditos.
+Decisões do usuário:
+- o bot responde perguntas e manda as atualizações para uma caixa de entrada;
+- ele só enxerga as obras marcadas no programa;
+- as fotos ficam no servidor até o programa baixar;
+- o Telegram é só do plano Profissional.
+
+**Como funciona:**
+1. **Marcar a obra:** no programa, Conta > Usar esta obra no Telegram manda ao servidor o retrato da obra, o mesmo que o
+   assistente usa: tarefas com Nº e %, datas, medições, custos e indicadores. O retrato é atualizado a cada vez que a obra
+   é salva.
+2. **Ligar o chat:** Conta > Conectar o Telegram… gera um código de 8 letras (15 minutos) e o link
+   `t.me/Bot?start=CÓDIGO`. Iniciar o bot liga o chat à conta.
+3. **No Telegram:**
+   - **perguntas** são respondidas pelo **mesmo assistente do programa**, com o retrato da obra e as instruções de canal
+     (`InstrucoesDoAssistente.Telegram`: respostas curtas, nada de mudar a estrutura nem abrir telas), no nível Padrão.
+     O custo vai para os créditos e para o painel financeiro, medido por `MedidorDeTokens`;
+   - **atualizações** (%, medição, custo, "não iniciar antes de", linha de base) vão para a **caixa de entrada**, com o
+     Nº e o id de cada tarefa do retrato daquele momento;
+   - **fotos** também vão para a caixa, com a legenda;
+   - comandos: `/obra` lista e troca a obra; `/ajuda`; `/sair` desliga o chat.
+4. **No programa:** ao abrir uma obra marcada, a barra de status diz quantos itens esperam. Conta > Buscar do Telegram
+   (N) traz tudo:
+   - cada mensagem com atualizações vira um **cartão** no chat (o mesmo do Bloco 41), para conferir e aplicar, com
+     Desfazer; a tarefa é achada pelo id, mesmo se a numeração mudou;
+   - as fotos vão para Fotos do projeto > Importar em lote, com a IA classificando.
+
+   O que foi trazido some do servidor.
+
+**Limites:** 20 mensagens por minuto por chat, fotos de até 10 MB, 50 fotos esperando por conta, e retratos de até 4 MB.
+
+**Código:**
+- servidor: `Servicos/Telegram.cs` (cliente, fila, processador, registro do webhook e medidor),
+  `Servicos/AtendenteDoTelegram.cs` e `Rotas/Telegram.cs`;
+- programa: `Services/TelegramDaConta.cs`, `MainWindowViewModel.Telegram.cs`, `TelegramViewModel` e `TelegramWindow`.
+
+**Ligar no servidor (com você):**
+1. No Telegram, abra o **@BotFather** e mande `/newbot`.
+   - **Nome:** `ProjectPlanner Assistente`, por exemplo.
+   - **Usuário:** terminando em `bot`, como `ProjectPlannerObraBot`.
+
+   O BotFather devolve o **token**. Não mande o token a ninguém.
+2. No Render, em Environment, ponha `Telegram__Token` (o token) e `Telegram__NomeDoBot` (o usuário, sem o @).
+   `Telegram__Segredo` e `Telegram__UrlPublica` já vêm do `render.yaml`. Se não aparecerem, crie: `Telegram__Segredo` com
+   um texto aleatório longo, e `Telegram__UrlPublica` com `https://projectplanner-servidor.onrender.com`.
+3. Salve. O servidor reinicia e registra o webhook sozinho.
+4. No programa (plano Profissional): Conta > Usar esta obra no Telegram, e depois Conta > Conectar o Telegram… > Abrir o
+   Telegram > Iniciar.
+
+No plano grátis do Render, a primeira mensagem depois de um tempo parado pode levar cerca de 1 minuto: o Telegram espera
+o servidor acordar.
 
 ## Depois
 

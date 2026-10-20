@@ -87,6 +87,17 @@ public sealed partial class CartaoDeAtualizacoes : ObservableObject
 // Bloco 41: o cartão das atualizações e as telas abertas pelo assistente.
 public sealed partial class AssistenteViewModel
 {
+    /// <summary>
+    /// Bloco 49: uma mensagem que chegou pelo Telegram, com as atualizações que o assistente propôs lá, como um cartão para
+    /// conferir e aplicar (igual ao do chat).
+    /// </summary>
+    public void MostrarDoTelegram(string texto, DateTime chegouEm, IReadOnlyList<ItemDoCartao> itens)
+    {
+        var quando = new DateTimeOffset(DateTime.SpecifyKind(chegouEm, DateTimeKind.Utc)).ToLocalTime();
+        Acrescentar(new MensagemChat(AutorMensagem.Assistente, $"Do Telegram, em {quando:dd/MM HH:mm}: \"{texto}\"", quando, []),
+            cartao: new CartaoDeAtualizacoes(itens));
+    }
+
     /// <summary>Aplica as atualizações válidas do cartão (todas juntas, num passo do Desfazer).</summary>
     [RelayCommand]
     private async Task AplicarCartao(CartaoDeAtualizacoes? cartao)

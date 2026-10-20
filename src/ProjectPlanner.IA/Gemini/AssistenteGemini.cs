@@ -204,7 +204,7 @@ public sealed class AssistenteGemini : IAssistenteIA
         {
             ["systemInstruction"] = new JsonObject
             {
-                ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucoesDoAssistente.Montar(pedido.Contexto, pedido.Conducao) }),
+                ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucoesDoAssistente.Montar(pedido.Contexto, pedido.Conducao, pedido.Canal) }),
             },
             ["contents"] = conteudos,
             ["generationConfig"] = new JsonObject

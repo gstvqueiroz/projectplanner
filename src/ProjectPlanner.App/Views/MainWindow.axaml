@@ -239,6 +239,14 @@
                     <MenuItem Header="{Binding TextoDoMenuDaConta}" Command="{Binding ContaCommand}"
                               ToolTip.Tip="A conta ProjectPlanner: o assistente de IA sem chave do Gemini, com a cota do plano" />
                     <MenuItem Header="Sair da conta" Command="{Binding SairDaContaCommand}" />
+                    <Separator />
+                    <!-- Bloco 49 -->
+                    <MenuItem Header="{Binding TextoDoMenuDaObraNoTelegram}" Command="{Binding UsarObraNoTelegramCommand}"
+                              ToolTip.Tip="O assistente no Telegram passa a enxergar esta obra (o retrato é atualizado a cada vez que você salva)" />
+                    <MenuItem Header="{Binding TextoDoMenuBuscarDoTelegram}" Command="{Binding BuscarDoTelegramCommand}"
+                              ToolTip.Tip="As atualizações e as fotos mandadas pelo Telegram para esta obra" />
+                    <MenuItem Header="Conectar o Telegram…" Command="{Binding ConectarTelegramCommand}"
+                              ToolTip.Tip="Liga a sua conta a um chat do Telegram (plano Profissional)" />
                 </MenuItem>
                 <MenuItem Header="Ajuda">
                     <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"

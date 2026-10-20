@@ -20,6 +20,9 @@ public sealed class OpcoesDoServidor
 
     /// <summary>Bloco 48: câmbio, impostos, preço e alerta, para o painel financeiro.</summary>
     public OpcoesFinanceiras Financeiro { get; set; } = new();
+
+    /// <summary>Bloco 49: o bot do Telegram.</summary>
+    public OpcoesDoTelegram Telegram { get; set; } = new();
 }
 
 public sealed class OpcoesDoJwt
@@ -199,4 +202,28 @@ public sealed class OpcoesFinanceiras
 
     /// <summary>O custo em reais (com o IOF) de milionésimos de dólar.</summary>
     public decimal Reais(long microdolares) => microdolares / 1_000_000m * ReaisPorDolar * (1 + PercentualSobreODolar / 100);
+}
+
+/// <summary>Bloco 49: o bot do Telegram (criado no @BotFather). Sem o token, o Telegram fica desligado.</summary>
+public sealed class OpcoesDoTelegram
+{
+    /// <summary>O token do bot (do @BotFather): só no servidor.</summary>
+    public string? Token { get; set; }
+
+    /// <summary>O nome do bot, sem o @ (para o link de conexão, t.me/NomeDoBot).</summary>
+    public string? NomeDoBot { get; set; }
+
+    /// <summary>O segredo que o Telegram manda em cada aviso (X-Telegram-Bot-Api-Secret-Token); confere que o aviso veio dele.</summary>
+    public string? Segredo { get; set; }
+
+    /// <summary>O endereço público do servidor (https://…onrender.com), para registrar o webhook ao subir.</summary>
+    public string? UrlPublica { get; set; }
+
+    public string Endereco { get; set; } = "https://api.telegram.org/";
+
+    public int MegabytesPorFoto { get; set; } = 10;
+    public int FotosPendentesPorConta { get; set; } = 50;
+    public int MensagensPorMinuto { get; set; } = 20;
+
+    public bool Ligado => !string.IsNullOrWhiteSpace(Token) && !string.IsNullOrWhiteSpace(Segredo);
 }

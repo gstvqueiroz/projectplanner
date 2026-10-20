@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.TelegramWindow"
+        x:DataType="vm:TelegramViewModel"
+        Title="Conectar o Telegram"
+        Width="480" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 49: ligar a conta a um chat do Telegram (código e link) e desligar. -->
+    <StackPanel Margin="20" Spacing="12">
+        <StackPanel Spacing="2">
+            <TextBlock Text="Assistente no Telegram" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="Plano Profissional" Opacity="0.7" />
+        </StackPanel>
+        <TextBlock Text="{x:Static vm:TelegramViewModel.ComoUsar}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
+
+        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8">
+            <TextBlock x:Name="Situacao" Text="{Binding TextoDaSituacao}" TextWrapping="Wrap" />
+        </Border>
+
+        <StackPanel Spacing="6" IsVisible="{Binding TemCodigo}">
+            <TextBlock x:Name="Codigo" Text="{Binding Codigo.Codigo}" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock x:Name="InstrucaoDoCodigo" Text="{Binding InstrucaoDoCodigo}" TextWrapping="Wrap" FontSize="12" />
+        </StackPanel>
+
+        <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap"
+                   IsVisible="{Binding Mensagem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Classes.erro="{Binding MensagemEhErro}">
+            <TextBlock.Styles>
+                <Style Selector="TextBlock.erro">
+                    <Setter Property="Foreground" Value="{DynamicResource TextoDeErroForte}" />
+                </Style>
+            </TextBlock.Styles>
+        </TextBlock>
+
+        <WrapPanel HorizontalAlignment="Right">
+            <Button x:Name="Desligar" Content="Desligar" Command="{Binding DesligarCommand}" IsVisible="{Binding PodeDesligar}" Margin="0,0,8,8" />
+            <Button x:Name="GerarCodigo" Content="Gerar o código" Command="{Binding GerarCodigoCommand}" IsVisible="{Binding !PodeDesligar}" Margin="0,0,8,8" />
+            <Button x:Name="AbrirTelegram" Content="Abrir o Telegram" Classes="accent" Command="{Binding AbrirTelegramCommand}" IsVisible="{Binding TemCodigo}" Margin="0,0,8,8" />
+            <Button x:Name="Verificar" Content="Verificar" Command="{Binding VerificarCommand}" IsVisible="{Binding TemCodigo}" Margin="0,0,8,8" />
+            <Button x:Name="FecharJanela" Content="Fechar" Click="Fechar" IsCancel="True" Margin="0,0,0,8" />
+        </WrapPanel>
+    </StackPanel>
+</Window>

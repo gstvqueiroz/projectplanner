@@ -19,7 +19,17 @@ public sealed record PedidoIA(
     IReadOnlyList<AnexoIA> Anexos,
     IReadOnlyList<MensagemChat> Historico,
     ContextoDoProjeto? Contexto = null,
-    ConducaoDaConversa? Conducao = null);
+    ConducaoDaConversa? Conducao = null)
+{
+    /// <summary>Bloco 49: por onde a conversa chega (nulo: o painel do programa; <see cref="CanaisDaConversa.Telegram"/>).</summary>
+    public string? Canal { get; init; }
+}
+
+/// <summary>Bloco 49: os canais da conversa fora do programa.</summary>
+public static class CanaisDaConversa
+{
+    public const string Telegram = "telegram";
+}
 
 /// <summary>A resposta do assistente: o texto para o usuário e, desde o Bloco 24, as alterações do cronograma.</summary>
 public sealed record RespostaIA(string Texto)

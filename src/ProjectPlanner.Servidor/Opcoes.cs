@@ -17,6 +17,9 @@ public sealed class OpcoesDoServidor
     public OpcoesDeEmail Email { get; set; } = new();
     public OpcoesDosLimites Limites { get; set; } = new();
     public OpcoesDeAdmin Admin { get; set; } = new();
+
+    /// <summary>Bloco 48: câmbio, impostos, preço e alerta, para o painel financeiro.</summary>
+    public OpcoesFinanceiras Financeiro { get; set; } = new();
 }
 
 public sealed class OpcoesDoJwt
@@ -170,4 +173,30 @@ public sealed class OpcoesDeAdmin
 {
     /// <summary>A chave das rotas de administração (cabeçalho X-Chave-Admin); sem ela, as rotas ficam fechadas.</summary>
     public string? Chave { get; set; }
+
+    /// <summary>Bloco 48: para onde vai o alerta de custo do mês; sem ele, o alerta só aparece no painel.</summary>
+    public string? Email { get; set; }
+}
+
+/// <summary>
+/// Bloco 48: o que o painel financeiro usa para passar de dólar a real e estimar a margem. A receita é estimada pelo preço
+/// do plano Profissional até os pagamentos de verdade (Bloco 47).
+/// </summary>
+public sealed class OpcoesFinanceiras
+{
+    public decimal ReaisPorDolar { get; set; } = 5.50m;
+
+    /// <summary>O IOF e o spread do cartão internacional sobre a conta do Google e da Anthropic.</summary>
+    public decimal PercentualSobreODolar { get; set; } = 3.5m;
+
+    /// <summary>Impostos (Simples Nacional) e a taxa do meio de pagamento, sobre a receita.</summary>
+    public decimal PercentualDeImpostosETaxas { get; set; } = 11m;
+
+    public decimal PrecoProfissionalEmReais { get; set; } = 59m;
+
+    /// <summary>O custo de IA do mês (em reais) a partir do qual o alerta é mandado; 0 desliga.</summary>
+    public decimal AlertaMensalEmReais { get; set; } = 100m;
+
+    /// <summary>O custo em reais (com o IOF) de milionésimos de dólar.</summary>
+    public decimal Reais(long microdolares) => microdolares / 1_000_000m * ReaisPorDolar * (1 + PercentualSobreODolar / 100);
 }

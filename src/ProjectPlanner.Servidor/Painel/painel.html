@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel financeiro · ProjectPlanner</title>
+<style>
+  :root {
+    --fundo: #f6f7f9; --cartao: #ffffff; --texto: #1d2330; --suave: #5d6677; --borda: #e2e5ea;
+    --destaque: #2f6fdb; --bom: #1f8a4c; --ruim: #c0392b; --aviso-fundo: #fff4e5; --aviso-texto: #8a4b00; --barra: #2f6fdb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fundo: #14171c; --cartao: #1c2027; --texto: #e7eaf0; --suave: #9aa3b2; --borda: #2c323c;
+      --destaque: #6aa0ff; --bom: #4cc27c; --ruim: #ff7466; --aviso-fundo: #3a2a12; --aviso-texto: #ffc77a; --barra: #6aa0ff; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; } h1 span { color: var(--suave); font-weight: 400; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .controles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  select, input, button { font: inherit; color: var(--texto); background: var(--cartao); border: 1px solid var(--borda); border-radius: 6px; padding: 6px 10px; }
+  button { cursor: pointer; } button.principal { background: var(--destaque); color: #fff; border-color: var(--destaque); }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .kpi { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 14px; }
+  .kpi .rotulo { color: var(--suave); font-size: 13px; } .kpi .valor { font-size: 22px; font-weight: 600; margin-top: 2px; }
+  .kpi .nota { color: var(--suave); font-size: 12px; margin-top: 2px; }
+  .bom { color: var(--bom); } .ruim { color: var(--ruim); }
+  .aviso { background: var(--aviso-fundo); color: var(--aviso-texto); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+  .erro { color: var(--ruim); margin-top: 8px; }
+  .tabela { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; } th { color: var(--suave); font-weight: 500; }
+  .grafico svg { width: 100%; height: auto; max-height: 220px; display: block; }
+  .grafico rect { fill: var(--barra); } .grafico text { fill: var(--suave); font-size: 24px; }
+  .premissas { color: var(--suave); font-size: 13px; }
+  .entrar { max-width: 420px; margin: 60px auto; }
+  .entrar input { width: 100%; margin: 8px 0 12px; }
+  [hidden] { display: none !important; }
+  .grade2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <section id="entrar" class="cartao entrar">
+    <h1>Painel financeiro <span>· ProjectPlanner</span></h1>
+    <p>Digite a chave de admin (no Render, em Environment, a variável <code>Admin__Chave</code>). Ela fica só nesta aba do navegador.</p>
+    <form id="formEntrar">
+      <input id="chave" type="password" autocomplete="off" placeholder="Chave de admin" aria-label="Chave de admin" required>
+      <button class="principal" type="submit">Entrar</button>
+    </form>
+    <div id="erroEntrar" class="erro" hidden></div>
+  </section>
+
+  <section id="painel" hidden>
+    <header>
+      <h1>Painel financeiro <span>· ProjectPlanner</span></h1>
+      <div class="controles">
+        <select id="periodo" aria-label="Período">
+          <option value="mes">Este mês</option>
+          <option value="anterior">Mês passado</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="outro">Outro período…</option>
+        </select>
+        <input id="de" type="date" aria-label="De" hidden>
+        <input id="ate" type="date" aria-label="Até" hidden>
+        <button id="atualizar" class="principal">Atualizar</button>
+        <button id="sair">Sair</button>
+      </div>
+    </header>
+    <div id="alerta" class="aviso" hidden></div>
+    <div id="erro" class="erro" hidden></div>
+    <div id="kpis" class="kpis"></div>
+    <section class="cartao grafico">
+      <h2>Custo de IA por dia (R$)</h2>
+      <div id="grafico"></div>
+    </section>
+    <div class="grade2">
+      <section class="cartao"><h2>Por modelo</h2><div class="tabela" id="porModelo"></div></section>
+      <section class="cartao"><h2>Por plano</h2><div class="tabela" id="porPlano"></div></section>
+    </div>
+    <section class="cartao"><h2>Quem mais gasta</h2><div class="tabela" id="quemMaisGasta"></div></section>
+    <p class="premissas" id="premissas"></p>
+  </section>
+</main>
+<script src="/admin/painel.js"></script>
+</body>
+</html>

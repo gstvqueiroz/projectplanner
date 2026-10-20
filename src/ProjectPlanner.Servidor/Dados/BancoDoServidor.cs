@@ -72,6 +72,17 @@ public sealed class UsoDeIa
     public long CustoEmMicrodolares { get; set; }
 }
 
+/// <summary>Bloco 48: o alerta de custo já mandado num mês ("2026-10"), para não mandar de novo.</summary>
+public sealed class AlertaDeCusto
+{
+    public string Mes { get; set; } = "";
+    public DateTime EnviadoEm { get; set; }
+    public long CustoEmMicrodolares { get; set; }
+
+    /// <summary>Para quem o e-mail foi; nulo se não havia e-mail do admin configurado (o alerta ficou só no painel).</summary>
+    public string? EnviadoPara { get; set; }
+}
+
 /// <summary>Bloco 44: o banco do servidor (SQLite em desenvolvimento e nos testes; PostgreSQL em produção).</summary>
 public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : DbContext(opcoes)
 {
@@ -79,6 +90,7 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
     public DbSet<TokenDeRenovacao> TokensDeRenovacao => Set<TokenDeRenovacao>();
     public DbSet<CodigoDeEmail> CodigosDeEmail => Set<CodigoDeEmail>();
     public DbSet<UsoDeIa> UsosDeIa => Set<UsoDeIa>();
+    public DbSet<AlertaDeCusto> AlertasDeCusto => Set<AlertaDeCusto>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -102,5 +114,12 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
             c.Property(x => x.Nome).HasMaxLength(120);
         });
         modelo.Entity<UsoDeIa>().HasIndex(x => new { x.UsuarioId, x.Quando });
+        modelo.Entity<UsoDeIa>().HasIndex(x => x.Quando);
+        modelo.Entity<AlertaDeCusto>(a =>
+        {
+            a.HasKey(x => x.Mes);
+            a.Property(x => x.Mes).HasMaxLength(7);
+            a.Property(x => x.EnviadoPara).HasMaxLength(254);
+        });
     }
 }

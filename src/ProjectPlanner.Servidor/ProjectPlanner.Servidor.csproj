@@ -24,4 +24,10 @@
     <InternalsVisibleTo Include="ProjectPlanner.Servidor.Tests" />
   </ItemGroup>
 
+  <!-- Bloco 48: a página do painel financeiro, embutida (a imagem Docker leva só a dll) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Painel\painel.html" LogicalName="ProjectPlanner.Servidor.Painel.painel.html" />
+    <EmbeddedResource Include="Painel\painel.js" LogicalName="ProjectPlanner.Servidor.Painel.painel.js" />
+  </ItemGroup>
+
 </Project>

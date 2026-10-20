@@ -80,6 +80,8 @@ Erros sempre como `{"erro": "mensagem para o usuário"}`.
 | `GET /v1/ia/models/{modelo}` | Testar a conexão: confere o login, o modelo, o plano e a chave do servidor, sem ir à IA |
 | `GET /v1/modelos` | Bloco 46: os modelos de cada nível, se o plano libera, se o servidor tem a chave e os créditos de um pedido típico |
 | `POST /v1/admin/usuarios/{email}/plano` | `{plano}` com o cabeçalho `X-Chave-Admin`: troca o plano (gratis ou profissional) |
+| `GET /admin` | Bloco 48: a página do painel financeiro (sem dados; pede a chave de admin) |
+| `GET /v1/admin/painel?de=AAAA-MM-DD&ate=AAAA-MM-DD` | Bloco 48: com `X-Chave-Admin`, os números do período (padrão: o mês até hoje; até 366 dias) |
 
 Os códigos por e-mail: no máximo 5 de cada tipo por conta, por hora. Passado isso, a resposta é a mesma e nada é mandado,
 o que segura quem tentasse encher a caixa de alguém ou adivinhar o código.
@@ -113,7 +115,12 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Google__ClientIdDoApp`, `Google__SegredoDoApp` | Bloco 45: o client ID OAuth do tipo "App para computador" e o segredo dele. Sem os dois, o "Entrar com Google" do programa fica desligado (o resto funciona) |
 | `Google__ClientIds__0`, `__1`… | Opcional: outros client IDs aceitos no idToken (por exemplo, o do Telegram, depois) |
 | `Email__Smtp`, `Email__Porta`, `Email__Usuario`, `Email__Senha`, `Email__Remetente` | O SMTP do serviço de e-mail. Sem `Email__Smtp`, os e-mails vão só para o log |
-| `Admin__Chave` | A chave da rota de admin. Sem ela, a rota fica fechada |
+| `Admin__Chave` | A chave da rota de admin e do painel financeiro. Sem ela, os dois ficam fechados |
+| `Admin__Email` | Bloco 48: para onde vai o alerta de custo do mês. Sem ele, o alerta só aparece no painel |
+| `Financeiro__ReaisPorDolar`, `Financeiro__PercentualSobreODolar` | Bloco 48: o câmbio e o IOF/spread do cartão sobre as contas de IA (padrão 5,50 e 3,5) |
+| `Financeiro__PercentualDeImpostosETaxas` | Impostos e taxa do meio de pagamento sobre a receita (padrão 11) |
+| `Financeiro__PrecoProfissionalEmReais` | O preço do Profissional, para a receita estimada (padrão 59) |
+| `Financeiro__AlertaMensalEmReais` | O custo de IA do mês que dispara o alerta (padrão 100; 0 desliga) |
 | `Planos__GratisCreditosPorMes`, `Planos__ProfissionalCreditosPorMes` | Os créditos por mês (padrão 300 e 6.000) |
 | `Planos__DolaresPorCredito` | Quanto de custo vale 1 crédito (padrão 0,0005, meio milésimo de dólar) |
 | `Planos__NiveisDoGratis` | Os níveis do plano Grátis, separados por vírgula (padrão `padrao`) |
@@ -276,13 +283,28 @@ Mercado Pago (ou Asaas ou Stripe), com Pix e cartão:
 - o aviso do pagamento (webhook), a liberação automática, a renovação e o cancelamento;
 - a página do plano no programa (Conta > Minha conta > Assinar).
 
-## Bloco 48: painel financeiro
+## Bloco 48 (0.46.0, feito): painel financeiro
 
-Uma página de administração no servidor, protegida, com:
-- pedidos, tokens, custo, receita e margem, por dia, mês, modelo e plano;
-- os usuários que mais gastam e quantos são grátis e quantos pagam;
-- o custo médio real por pedido (para recalibrar os preços);
-- um alerta quando o custo do mês passar de um limite.
+- **A página:** `https://projectplanner-servidor.onrender.com/admin` (funciona no celular, no modo claro e no escuro). Ela
+  pede a chave de admin, que fica só naquela aba do navegador. A página não tem dado nenhum: os números vêm de
+  `/v1/admin/painel` com a chave no cabeçalho. Os dados entram como texto, nunca como HTML, e a página tem
+  Content-Security-Policy restrita.
+- **Os números do período** (este mês, mês passado, últimos 30 dias ou outro período, até 366 dias):
+  - **Cartões:** o custo de IA (em R$, com o IOF, e em US$), a receita estimada, a margem (R$ e %), os pedidos e o custo
+    médio, as contas (ativas, Profissional, novas) e os tokens.
+  - **Gráfico:** o custo de cada dia.
+  - **Tabelas:**
+    - por modelo: pedidos, custo, custo médio e créditos médios por pedido (para recalibrar os preços);
+    - por plano: contas, ativas, custo, receita e margem;
+    - as 10 contas que mais gastam.
+- **Receita estimada:** contas no Profissional × preço (`Financeiro__PrecoProfissionalEmReais`) × dias do período / 30.
+  Os pagamentos de verdade chegam no Bloco 47.
+- **Margem:** receita − impostos e taxas − custo de IA em reais.
+- **Alerta:** depois de cada pedido de IA, se o custo do mês passou de `Financeiro__AlertaMensalEmReais`, o servidor
+  manda um e-mail a `Admin__Email`, uma vez por mês (tabela `AlertasDeCusto`). O painel mostra a faixa de aviso e para
+  quem o e-mail foi.
+- **Código:** `Servicos/Painel.cs` (o cálculo), `Rotas/PainelFinanceiro.cs` (as rotas) e `Painel/` (a página e o
+  script, embutidos na dll).
 
 ## Bloco 49: Telegram
 

@@ -77,7 +77,7 @@ public static class Ia
     }
 
     private static async Task<IResult> Gerar(string modelo, HttpContext http, ClaimsPrincipal quem, BancoDoServidor banco, CatalogoDeModelos catalogo,
-        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, CancellationToken c)
+        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, IEnviadorDeEmail email, CancellationToken c)
     {
         var config = opcoes.Value;
         var planos = config.Planos;
@@ -108,6 +108,7 @@ public static class Ia
             TokensDeSaida = (int)resultado.Saida, TokensTotais = (int)(resultado.Entrada + resultado.Saida), CustoEmMicrodolares = custo,
         });
         await banco.SaveChangesAsync(c);
+        await Painel.ConferirAlertaAsync(banco, config, email, relogio.GetUtcNow().UtcDateTime, log, c); // Bloco 48
         var cultura = System.Globalization.CultureInfo.InvariantCulture;
         http.Response.Headers[CabecalhoDosCreditosUsados] = Math.Round(planos.Creditos(custo), 1, MidpointRounding.AwayFromZero).ToString(cultura);
         http.Response.Headers[CabecalhoDosCreditosRestantes] = Math.Max(0, Math.Round(limite - planos.Creditos(gastos + custo), 1, MidpointRounding.AwayFromZero)).ToString(cultura);

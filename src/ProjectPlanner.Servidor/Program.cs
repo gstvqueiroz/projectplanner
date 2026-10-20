@@ -103,6 +103,7 @@ app.MapGet("/", () => Results.Ok(new { servico = "ProjectPlanner.Servidor", vers
 Contas.Mapear(app);
 Ia.Mapear(app);
 Admin.Mapear(app);
+PainelFinanceiro.Mapear(app);
 
 app.Run();
 

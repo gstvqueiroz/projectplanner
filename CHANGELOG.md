@@ -3,6 +3,21 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.46.0
+
+Bloco 48: painel financeiro (no servidor).
+
+- Uma página de administração em `https://projectplanner-servidor.onrender.com/admin`, protegida pela chave de admin, que
+  funciona no computador e no celular.
+- Ela mostra o custo de IA (em reais, com o IOF, e em dólares), a receita estimada pelos planos, a margem, os pedidos, as
+  contas e os tokens. Tem o gráfico do custo por dia e as tabelas por modelo, por plano e das contas que mais gastam, para
+  este mês, o mês passado, os últimos 30 dias ou outro período.
+- Alerta de custo: quando o custo de IA do mês passa do limite (R$ 100 por padrão), o servidor manda um e-mail ao admin,
+  uma vez por mês, e o painel mostra o aviso.
+- O câmbio, o IOF, os impostos, o preço do Profissional e o limite do alerta se ajustam no Render, sem versão nova. Até os
+  pagamentos de verdade (Bloco 47), a receita é estimada pelo preço do plano.
+- O programa não mudou.
+
 ## 0.45.2
 
 O nível Avançado passa a usar o Gemini 3.1 Pro.

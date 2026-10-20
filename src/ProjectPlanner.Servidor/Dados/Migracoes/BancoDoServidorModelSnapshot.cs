@@ -22,6 +22,27 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.AlertaDeCusto", b =>
+                {
+                    b.Property<string>("Mes")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<long>("CustoEmMicrodolares")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("EnviadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EnviadoPara")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.HasKey("Mes");
+
+                    b.ToTable("AlertasDeCusto");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.CodigoDeEmail", b =>
                 {
                     b.Property<Guid>("Id")
@@ -131,6 +152,8 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Quando");
 
                     b.HasIndex("UsuarioId", "Quando");
 

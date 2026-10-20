@@ -214,6 +214,9 @@ ls -lh publicacao/*.exe
 
 **Assistente de IA no binário publicado (Bloco 23):** no `.app`, abra o painel do assistente, clique na engrenagem, cole uma chave do Gemini, **Testar conexão** e **Salvar**, mande uma pergunta sobre o cronograma e peça um cronograma ("monte o cronograma de uma residência de 100 m²"): as tarefas aparecem na grid e no Gantt, e o Desfazer da conversa volta ao cronograma de antes (Bloco 24). A chave fica nas **Chaves do macOS** (app Acesso às Chaves, item `ProjectPlanner`). Depois de publicar uma versão nova, o macOS pode perguntar se o programa pode usar esse item (o `.app` é assinado sem identidade de desenvolvedor): "Permitir sempre". Ver `docs/ASSISTENTE-IA.md`.
 
+**Novidades da 0.46 (Bloco 48):** o programa não muda. A novidade é o painel financeiro do servidor, em
+`/admin` (ver `docs/SERVIDOR.md`).
+
 **Novidades da 0.45 no binário publicado (Bloco 46):** com a conta conectada, abra o painel do assistente: no topo
 aparece o seletor de nível (Padrão, Avançado, Máximo). No plano Grátis, Avançado e Máximo aparecem apagados. Mande uma
 pergunta: ao lado do seletor aparece o saldo de créditos do mês. Nas configurações (engrenagem) não há mais campo de

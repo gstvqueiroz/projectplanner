@@ -44,6 +44,8 @@ services:
         sync: false
       - key: Email__Remetente
         sync: false
+      - key: Admin__Email
+        sync: false
       - key: Google__ClientIdDoApp
         sync: false
       - key: Google__SegredoDoApp

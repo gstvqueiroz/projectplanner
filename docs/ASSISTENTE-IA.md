@@ -283,7 +283,7 @@ clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.t
 
 ## Níveis e créditos (Bloco 46)
 
-- **Os níveis:** Padrão (Gemini 2.5 Flash), Avançado (Gemini 2.5 Pro) e Máximo (Claude Opus 5.5). O programa só conhece
+- **Os níveis:** Padrão (Gemini 2.5 Flash), Avançado (Gemini 3.1 Pro, desde a 0.45.2) e Máximo (Claude Opus 5.5). O programa só conhece
   o id do modelo, salvo em `assistente.json`: o catálogo e os preços ficam no servidor (`GET /v1/modelos`).
 - **Onde escolher:** nas configurações do assistente ou no seletor no topo do painel. Os níveis fora do plano aparecem
   apagados, com "do plano Profissional".

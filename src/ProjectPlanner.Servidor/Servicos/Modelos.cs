@@ -12,8 +12,9 @@ public sealed class CatalogoDeModelos(IOptions<OpcoesDoServidor> opcoes)
     [
         new() { Id = "gemini-2.5-flash", Nivel = Niveis.Padrao, Provedor = Provedores.Gemini, Nome = "Gemini 2.5 Flash",
             DolaresPorMilhaoDeEntrada = 0.30m, DolaresPorMilhaoDeSaida = 2.50m },
-        new() { Id = "gemini-2.5-pro", Nivel = Niveis.Avancado, Provedor = Provedores.Gemini, Nome = "Gemini 2.5 Pro",
-            DolaresPorMilhaoDeEntrada = 1.25m, DolaresPorMilhaoDeSaida = 10.00m },
+        // 0.45.2: o 2.5 Pro responde 404 para chaves de projetos novos; o 3.1 Pro (prévia) é o Pro que a chave do servidor tem.
+        new() { Id = "gemini-3.1-pro-preview", Nivel = Niveis.Avancado, Provedor = Provedores.Gemini, Nome = "Gemini 3.1 Pro",
+            DolaresPorMilhaoDeEntrada = 2.00m, DolaresPorMilhaoDeSaida = 12.00m },
         new() { Id = "claude-opus-5-5", Nivel = Niveis.Maximo, Provedor = Provedores.Anthropic, Nome = "Claude Opus 5.5",
             DolaresPorMilhaoDeEntrada = 4.00m, DolaresPorMilhaoDeSaida = 20.00m },
     ];

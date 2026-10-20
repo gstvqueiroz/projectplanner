@@ -109,7 +109,7 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Jwt__Chave` | 32 bytes ou mais, aleatória (por exemplo, `openssl rand -base64 48`). Sem ela, em produção, o servidor não sobe |
 | `Gemini__Chave` | A chave do Gemini da empresa. Sem ela, a IA responde 503 |
 | `Anthropic__Chave` | Bloco 46: a chave da API da Anthropic (o nível Máximo). Sem ela, o Máximo aparece como "indisponível no momento" |
-| `Modelos__0__Id`, `Modelos__0__Nivel`, `Modelos__0__Provedor`, `Modelos__0__Nome`, `Modelos__0__DolaresPorMilhaoDeEntrada`, `Modelos__0__DolaresPorMilhaoDeSaida` (e `__1`, `__2`…) | Opcional: o catálogo de modelos. Sem ele, os padrão: Gemini 2.5 Flash (padrao), Gemini 2.5 Pro (avancado) e Claude Opus 5.5 (maximo). Configurado, substitui a lista inteira |
+| `Modelos__0__Id`, `Modelos__0__Nivel`, `Modelos__0__Provedor`, `Modelos__0__Nome`, `Modelos__0__DolaresPorMilhaoDeEntrada`, `Modelos__0__DolaresPorMilhaoDeSaida` (e `__1`, `__2`…) | Opcional: o catálogo de modelos. Sem ele, os padrão: Gemini 2.5 Flash (padrao), Gemini 3.1 Pro (avancado) e Claude Opus 5.5 (maximo). Configurado, substitui a lista inteira |
 | `Google__ClientIdDoApp`, `Google__SegredoDoApp` | Bloco 45: o client ID OAuth do tipo "App para computador" e o segredo dele. Sem os dois, o "Entrar com Google" do programa fica desligado (o resto funciona) |
 | `Google__ClientIds__0`, `__1`… | Opcional: outros client IDs aceitos no idToken (por exemplo, o do Telegram, depois) |
 | `Email__Smtp`, `Email__Porta`, `Email__Usuario`, `Email__Senha`, `Email__Remetente` | O SMTP do serviço de e-mail. Sem `Email__Smtp`, os e-mails vão só para o log |
@@ -246,7 +246,7 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   | Nível | Modelo | US$ por milhão (entrada / saída) | Planos |
   |---|---|---|---|
   | Padrão | Gemini 2.5 Flash | 0,30 / 2,50 | Grátis e Profissional |
-  | Avançado | Gemini 2.5 Pro | 1,25 / 10,00 | Profissional |
+  | Avançado | Gemini 3.1 Pro (`gemini-3.1-pro-preview`; até a 0.45.1, o 2.5 Pro, que responde 404 para chaves de projetos novos) | 2,00 / 12,00 | Profissional |
   | Máximo | Claude Opus 5.5 | 4,00 / 20,00 | Profissional |
 
 - **Claude:** o servidor traduz o pedido do formato do Gemini para o da Anthropic e a resposta de volta. A tradução cobre
@@ -257,7 +257,7 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   pela tabela de preços do modelo), guardado no banco. 1 crédito = US$ 0,0005 de custo. Um pedido típico (10 mil tokens de
   entrada e 1,5 mil de saída) gasta cerca de:
   - 14 créditos no Padrão;
-  - 55 no Avançado;
+  - 76 no Avançado;
   - 140 no Máximo.
 - **Créditos por mês:** Grátis 300 (cerca de 20 pedidos no Padrão); Profissional 6.000 (custo máximo de cerca de US$ 3).
 - **Trocar o modelo de um nível** (quando o Google aposentar o 2.5 Flash, por exemplo): no Render, em Environment,

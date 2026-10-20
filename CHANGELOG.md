@@ -3,6 +3,14 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.45.2
+
+O nível Avançado passa a usar o Gemini 3.1 Pro.
+
+- O Gemini 2.5 Pro não está mais disponível para chaves de projetos novos do Google (responde "não encontrado"). Com isso, o
+  nível Avançado dava "problema de configuração". Agora ele usa o Gemini 3.1 Pro (prévia), testado com a chave do servidor.
+- Um pedido típico no Avançado gasta cerca de 76 créditos (era 55 no 2.5 Pro). Só o servidor mudou.
+
 ## 0.45.1
 
 Correção do nível Máximo (Claude Opus 5.5).

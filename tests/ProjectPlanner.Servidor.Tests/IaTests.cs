@@ -59,7 +59,7 @@ public sealed class IaTests : IDisposable
         semLogin.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var modelo = await Gerar(sessao.Acesso, "/v1/ia/models/gemini-ultra-caro:generateContent");
         (modelo.StatusCode, await Servidor.Erro(modelo)).Should().Be((HttpStatusCode.BadRequest,
-            "O modelo \"gemini-ultra-caro\" não está disponível. Use um destes: gemini-2.5-flash, gemini-2.5-pro, claude-opus-5-5."));
+            "O modelo \"gemini-ultra-caro\" não está disponível. Use um destes: gemini-2.5-flash, gemini-3.1-pro-preview, claude-opus-5-5."));
         _s.Gemini.Pedidos.Should().BeEmpty();
     }
 

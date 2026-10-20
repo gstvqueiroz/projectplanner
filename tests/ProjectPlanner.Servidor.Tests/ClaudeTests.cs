@@ -12,7 +12,7 @@ namespace ProjectPlanner.Servidor.Tests;
 public sealed class ClaudeTests : IDisposable
 {
     private const string RotaDoClaude = "/v1/ia/models/claude-opus-5-5:generateContent";
-    private const string RotaDoPro = "/v1/ia/models/gemini-2.5-pro:generateContent";
+    private const string RotaDoPro = "/v1/ia/models/gemini-3.1-pro-preview:generateContent";
 
     // Um pedido como o programa monta: instruções, conversa com foto e PDF, e a resposta estruturada.
     private const string PedidoDoPrograma = """
@@ -137,16 +137,16 @@ public sealed class ClaudeTests : IDisposable
 
         var pro = await Gerar(sessao.Acesso, RotaDoPro, PedidoDoPrograma);
         (pro.StatusCode, await Servidor.Erro(pro)).Should().Be((HttpStatusCode.Forbidden,
-            "O nível Avançado (Gemini 2.5 Pro) é do plano Profissional. Assine em Conta > Minha conta, ou volte ao nível Padrão."));
+            "O nível Avançado (Gemini 3.1 Pro) é do plano Profissional. Assine em Conta > Minha conta, ou volte ao nível Padrão."));
         (await Gerar(sessao.Acesso, RotaDoClaude, PedidoDoPrograma)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await _s.Get("/v1/ia/models/claude-opus-5-5", sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (_s.Gemini.Pedidos.Count, _s.Claude.Pedidos.Count).Should().Be((0, 0));
 
         await AdminTests.TrocarPlano(_s, "ana@exemplo.com", Planos.Profissional, Servidor.ChaveDeAdmin);
         (await Gerar(sessao.Acesso, RotaDoPro, PedidoDoPrograma)).StatusCode.Should().Be(HttpStatusCode.OK);
-        _s.Gemini.Pedidos.Single().Endereco.AbsolutePath.Should().EndWith("/models/gemini-2.5-pro:generateContent");
-        // 100 de entrada a US$ 1,25 e 50 (40 + 10 de raciocínio) de saída a US$ 10 = 625 milionésimos.
-        _s.NoBanco(b => b.UsosDeIa.Single().CustoEmMicrodolares).Should().Be(625);
+        _s.Gemini.Pedidos.Single().Endereco.AbsolutePath.Should().EndWith("/models/gemini-3.1-pro-preview:generateContent");
+        // 100 de entrada a US$ 2 e 50 (40 + 10 de raciocínio) de saída a US$ 12 = 800 milionésimos.
+        _s.NoBanco(b => b.UsosDeIa.Single().CustoEmMicrodolares).Should().Be(800);
         var teste = await _s.Get("/v1/ia/models/claude-opus-5-5", sessao.Acesso);
         JsonDocument.Parse(await teste.Content.ReadAsStringAsync()).RootElement.GetProperty("displayName").GetString().Should().Be("Claude Opus 5.5");
     }
@@ -159,7 +159,7 @@ public sealed class ClaudeTests : IDisposable
 
         lista.EnumerateArray().Select(m => (m.GetProperty("id").GetString(), m.GetProperty("nome").GetString(), m.GetProperty("liberado").GetBoolean(),
                 m.GetProperty("disponivel").GetBoolean(), m.GetProperty("creditosPorPedido").GetInt32()))
-            .Should().Equal(("gemini-2.5-flash", "Gemini 2.5 Flash", true, true, 14), ("gemini-2.5-pro", "Gemini 2.5 Pro", false, true, 55),
+            .Should().Equal(("gemini-2.5-flash", "Gemini 2.5 Flash", true, true, 14), ("gemini-3.1-pro-preview", "Gemini 3.1 Pro", false, true, 76),
                 ("claude-opus-5-5", "Claude Opus 5.5", false, true, 140));
         (await _s.Get("/v1/modelos")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }

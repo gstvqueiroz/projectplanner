@@ -61,7 +61,7 @@ public sealed class ProgramaComOServidorTests : IDisposable
         uso.Should().Be(new UsoDaConta(login.Usuario, 0, 0, 300));
         uso.CreditosRestantes.Should().Be(300);
         (await _cliente.ModelosAsync(login.Acesso, default)).Select(m => (m.Id, m.Nivel, m.Liberado, m.CreditosPorPedido)).Should().Equal(
-            ("gemini-2.5-flash", "padrao", true, 14), ("gemini-2.5-pro", "avancado", false, 55), ("claude-opus-5-5", "maximo", false, 140));
+            ("gemini-2.5-flash", "padrao", true, 14), ("gemini-3.1-pro-preview", "avancado", false, 76), ("claude-opus-5-5", "maximo", false, 140));
 
         var renovada = await _cliente.RenovarAsync(login.Renovacao, default);
         renovada.Renovacao.Should().NotBe(login.Renovacao);

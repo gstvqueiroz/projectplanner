@@ -108,6 +108,9 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("CustoEmMicrodolares")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Modelo")
                         .IsRequired()
                         .HasColumnType("text");

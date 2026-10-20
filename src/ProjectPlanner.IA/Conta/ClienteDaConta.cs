@@ -11,6 +11,11 @@ public interface ISessaoDaConta
     /// <summary>Um token de acesso válido. <paramref name="renovar"/>: o anterior foi recusado, renove antes.</summary>
     /// <exception cref="ErroDoAssistenteException">Sem conta conectada, ou a sessão acabou (é preciso entrar de novo).</exception>
     Task<string> AcessoAsync(bool renovar, CancellationToken cancelamento);
+
+    /// <summary>Bloco 46: o servidor disse quantos créditos restam no mês (depois de um pedido de IA).</summary>
+    void AtualizarSaldo(decimal creditosRestantes)
+    {
+    }
 }
 
 /// <summary>O dono da conta, como o servidor descreve.</summary>
@@ -19,8 +24,22 @@ public sealed record PerfilDaConta(string Email, string Nome, string Plano, bool
 /// <summary>Uma sessão: o token de acesso (curto, 15 min) e o de renovação (longo, 30 dias), com o perfil.</summary>
 public sealed record SessaoDaConta(string Acesso, DateTime AcessoExpiraEm, string Renovacao, DateTime RenovacaoExpiraEm, PerfilDaConta Usuario);
 
-/// <summary>O plano e o uso de IA do mês.</summary>
-public sealed record UsoDaConta(PerfilDaConta Perfil, long TokensUsadosNoMes, long TokensDoPlano);
+/// <summary>O plano e o uso de IA do mês (Bloco 46: em créditos; cada pedido gasta o custo real dele).</summary>
+public sealed record UsoDaConta(PerfilDaConta Perfil, long TokensUsadosNoMes, decimal CreditosUsadosNoMes, long CreditosDoPlano)
+{
+    public decimal CreditosRestantes => Math.Max(0, CreditosDoPlano - CreditosUsadosNoMes);
+}
+
+/// <summary>Bloco 46: um modelo do servidor: o nível (padrao, avancado, maximo), se o plano libera e o gasto de um pedido típico.</summary>
+public sealed record ModeloDaConta(string Id, string Nivel, string Nome, bool Liberado, bool Disponivel, int CreditosPorPedido)
+{
+    public string NomeDoNivel => Nivel switch
+    {
+        "avancado" => "Avançado",
+        "maximo" => "Máximo",
+        _ => "Padrão",
+    };
+}
 
 /// <summary>Uma falha numa rota de conta, com a mensagem para o usuário. <see cref="Status"/> 0: sem resposta do servidor.</summary>
 public sealed class ErroDaContaException(string mensagem, int status, Exception? causa = null) : Exception(mensagem, causa)
@@ -105,6 +124,10 @@ public sealed class ClienteDaConta
 
     public Task<UsoDaConta> UsoAsync(string acesso, CancellationToken cancelamento) =>
         PedirAsync<UsoDaConta>(HttpMethod.Get, "v1/eu", null, acesso, cancelamento);
+
+    /// <summary>Bloco 46: os modelos de cada nível para esta conta.</summary>
+    public async Task<IReadOnlyList<ModeloDaConta>> ModelosAsync(string acesso, CancellationToken cancelamento) =>
+        await PedirAsync<List<ModeloDaConta>>(HttpMethod.Get, "v1/modelos", null, acesso, cancelamento);
 
     private async Task<string> MensagemAsync(string caminho, object corpo, CancellationToken cancelamento)
     {

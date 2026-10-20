@@ -58,7 +58,10 @@ public sealed class ProgramaComOServidorTests : IDisposable
 
         var login = await _cliente.EntrarAsync("ana@exemplo.com", "senha-boa-123", default);
         var uso = await _cliente.UsoAsync(login.Acesso, default);
-        uso.Should().Be(new UsoDaConta(login.Usuario, 0, 300_000));
+        uso.Should().Be(new UsoDaConta(login.Usuario, 0, 0, 300));
+        uso.CreditosRestantes.Should().Be(300);
+        (await _cliente.ModelosAsync(login.Acesso, default)).Select(m => (m.Id, m.Nivel, m.Liberado, m.CreditosPorPedido)).Should().Equal(
+            ("gemini-2.5-flash", "padrao", true, 14), ("gemini-2.5-pro", "avancado", false, 55), ("claude-opus-5-5", "maximo", false, 140));
 
         var renovada = await _cliente.RenovarAsync(login.Renovacao, default);
         renovada.Renovacao.Should().NotBe(login.Renovacao);
@@ -114,7 +117,7 @@ public sealed class ProgramaComOServidorTests : IDisposable
 
         var modelo = await FluentActions.Invoking(() => provedor.TestarAsync(ProvedorDaConta.Credencial, "gemini-velho", default))
             .Should().ThrowAsync<ErroDoAssistenteException>();
-        modelo.Which.Message.Should().StartWith("O modelo \"gemini-velho\" não está liberado.");
+        modelo.Which.Message.Should().StartWith("O modelo \"gemini-velho\" não está disponível.");
 
         (_s.Gemini.Status, _s.Gemini.Resposta) = (HttpStatusCode.TooManyRequests, "{}");
         var ocupado = await FluentActions.Invoking(() => provedor.CriarAnalistaDaObra(ProvedorDaConta.Credencial, "gemini-2.5-flash")

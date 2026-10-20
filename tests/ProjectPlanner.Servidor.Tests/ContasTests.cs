@@ -42,8 +42,9 @@ public sealed class ContasTests : IDisposable
         var eu = await _s.Get("/v1/eu", sessao.Acesso);
         eu.StatusCode.Should().Be(HttpStatusCode.OK);
         var json = JsonDocument.Parse(await eu.Content.ReadAsStringAsync()).RootElement;
-        (json.GetProperty("perfil").GetProperty("nome").GetString(), json.GetProperty("tokensUsadosNoMes").GetInt64(), json.GetProperty("tokensDoPlano").GetInt64())
-            .Should().Be(("Ana Souza", 0L, 300_000L));
+        (json.GetProperty("perfil").GetProperty("nome").GetString(), json.GetProperty("tokensUsadosNoMes").GetInt64(),
+                json.GetProperty("creditosUsadosNoMes").GetDecimal(), json.GetProperty("creditosDoPlano").GetInt64())
+            .Should().Be(("Ana Souza", 0L, 0m, 300L));
 
         var login = await Sessao(await _s.Post("/v1/sessoes", new { email = "ANA@exemplo.com", senha = "senha-boa-123" }));
         login.Renovacao.Should().NotBe(sessao.Renovacao);

@@ -624,30 +624,25 @@ public sealed class ProcessadorFalso : IProcessadorDeImagens
     public static string Descrever(byte[]? bytes) => bytes is null ? "(nenhuma)" : Encoding.UTF8.GetString(bytes);
 }
 
-/// <summary>A configuração do assistente para os testes do painel (Bloco 23): só guarda o que a tela mudaria.</summary>
+/// <summary>A configuração do assistente para os testes do painel (Blocos 23 e 46): só guarda o que a tela mudaria.</summary>
 public sealed class ConfiguracaoAssistenteFalsa : IConfiguracaoAssistente
 {
-    public string NomeDoProvedor => "Gemini (Google)";
-    public string NomeDoCofre => "Chaves do macOS";
-    public bool CofreDisponivel => true;
     public string ModeloPadrao => "gemini-2.5-flash";
     public string Modelo { get; set; } = "gemini-2.5-flash";
-    public string? Chave { get; set; }
-    public OrigemDaChave Origem => Chave is null ? OrigemDaChave.Nenhuma : OrigemDaChave.Cofre;
-    public string? FinalDaChave => Chave is null ? null : "…" + Chave[^4..];
-    public string? ProblemaNoCofre => null;
-    public void SalvarChave(string chave) => Chave = chave;
-    public void RemoverChave() => Chave = null;
     public void SalvarModelo(string modelo) => Modelo = modelo;
-    public Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento) => Task.CompletedTask;
+    public bool ChaveDeDesenvolvimento { get; set; }
+    public List<string> Testes { get; } = [];
+    public Exception? ErroNoTeste { get; set; }
+
+    public Task TestarAsync(string modelo, CancellationToken cancelamento)
+    {
+        Testes.Add(modelo);
+        return ErroNoTeste is null ? Task.CompletedTask : Task.FromException(ErroNoTeste);
+    }
 
     // Bloco 26
     public PreferenciaDeModo PreferenciaDeModo { get; set; } = PreferenciaDeModo.Perguntar;
     public void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia) => PreferenciaDeModo = preferencia;
-
-    // Bloco 45
-    public ProvedorDoAssistente Provedor { get; set; } = ProvedorDoAssistente.ChavePropria;
-    public void SalvarProvedor(ProvedorDoAssistente provedor) => Provedor = provedor;
 }
 
 /// <summary>Um cofre em memória (Bloco 23); <see cref="Falha"/> faz toda operação falhar como um cofre bloqueado.</summary>
@@ -857,6 +852,32 @@ public sealed class ContaFalsa : IContaProjectPlanner
     public PerfilDaConta? Perfil { get; set; }
     public bool Conectada => Perfil is not null;
     public string? ProblemaNoCofre => null;
+
+    // Bloco 46
+    public static readonly IReadOnlyList<ModeloDaConta> ModelosDoGratis =
+    [
+        new("gemini-2.5-flash", "padrao", "Gemini 2.5 Flash", true, true, 14),
+        new("gemini-2.5-pro", "avancado", "Gemini 2.5 Pro", false, true, 55),
+        new("claude-opus-5-5", "maximo", "Claude Opus 5.5", false, true, 140),
+    ];
+
+    public IReadOnlyList<ModeloDaConta> Modelos { get; private set; } = [];
+    public IReadOnlyList<ModeloDaConta> ModelosDoServidor { get; set; } = ModelosDoGratis;
+    public decimal? CreditosRestantes { get; private set; }
+
+    public async Task<IReadOnlyList<ModeloDaConta>> CarregarModelosAsync(CancellationToken cancelamento)
+    {
+        await Passo("modelos", cancelamento);
+        Modelos = ModelosDoServidor;
+        Mudou?.Invoke(this, EventArgs.Empty);
+        return Modelos;
+    }
+
+    public void AtualizarSaldo(decimal creditosRestantes)
+    {
+        CreditosRestantes = creditosRestantes;
+        Mudou?.Invoke(this, EventArgs.Empty);
+    }
     public event EventHandler? Mudou;
     public List<string> Pedidos { get; } = [];
     public ErroDaContaException? Erro { get; set; }
@@ -936,13 +957,15 @@ public sealed class ContaFalsa : IContaProjectPlanner
     public async Task<UsoDaConta> UsoAsync(CancellationToken cancelamento)
     {
         await Passo("uso", cancelamento);
-        return Uso ?? new UsoDaConta(Perfil!, 1500, 300_000);
+        var uso = Uso ?? new UsoDaConta(Perfil!, 12_000, 25.5m, 300);
+        CreditosRestantes = uso.CreditosRestantes;
+        return uso;
     }
 
     public async Task SairAsync(CancellationToken cancelamento)
     {
         await Passo("sair", cancelamento);
-        Perfil = null;
+        (Perfil, Modelos, CreditosRestantes) = (null, [], null);
         Mudou?.Invoke(this, EventArgs.Empty);
     }
 

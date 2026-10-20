@@ -48,7 +48,7 @@ public sealed class ServidorDeContasFalso : HttpMessageHandler
         "GET /v1/google" when ClienteDoGoogle is { } id => (HttpStatusCode.OK, $$"""{"clientId":"{{id}}"}"""),
         "GET /v1/google" => (HttpStatusCode.NotFound, """{"erro":"O login com Google ainda não está disponível. Use e-mail e senha."}"""),
         "GET /v1/eu" => (HttpStatusCode.OK,
-            """{"perfil":{"email":"ana@exemplo.com","nome":"Ana","plano":"profissional","temSenha":true,"google":false},"tokensUsadosNoMes":1200,"tokensDoPlano":10000000}"""),
+            """{"perfil":{"email":"ana@exemplo.com","nome":"Ana","plano":"profissional","temSenha":true,"google":false},"tokensUsadosNoMes":1200,"creditosUsadosNoMes":250.5,"creditosDoPlano":6000}"""),
         _ => (HttpStatusCode.NotFound, """{"erro":"rota desconhecida"}"""),
     };
 }
@@ -184,7 +184,8 @@ public sealed class ContaProjectPlannerTests
 
         var uso = await conta.UsoAsync(default);
 
-        (uso.TokensUsadosNoMes, uso.TokensDoPlano, conta.Perfil!.Plano, _mudancas).Should().Be((1200L, 10_000_000L, "profissional", 2));
+        (uso.TokensUsadosNoMes, uso.CreditosUsadosNoMes, uso.CreditosDoPlano, conta.Perfil!.Plano, conta.CreditosRestantes, _mudancas)
+            .Should().Be((1200L, 250.5m, 6000L, "profissional", 5749.5m, 3), "entrou, mudou o plano e chegou o saldo");
         Guardada.Should().Contain("profissional");
         _servidor.Pedidos[^1].Corpo.Should().EndWith("[acesso-1]");
     }

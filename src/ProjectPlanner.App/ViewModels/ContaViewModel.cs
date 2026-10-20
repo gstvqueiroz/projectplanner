@@ -226,9 +226,9 @@ public sealed partial class ContaViewModel : ViewModelBase
     {
         var uso = await _conta.UsoAsync(c);
         Plano = NomeDoPlano(uso.Perfil.Plano);
-        PercentualDoUso = uso.TokensDoPlano <= 0 ? 0 : Math.Min(100, 100.0 * uso.TokensUsadosNoMes / uso.TokensDoPlano);
-        TextoDoUso = $"{uso.TokensUsadosNoMes.ToString("N0", Brasil)} de {uso.TokensDoPlano.ToString("N0", Brasil)} tokens de IA usados " +
-                     $"este mês ({PercentualDoUso.ToString("0.#", Brasil)}%). A cota volta no dia 1º.";
+        PercentualDoUso = uso.CreditosDoPlano <= 0 ? 0 : Math.Min(100, (double)(100 * uso.CreditosUsadosNoMes / uso.CreditosDoPlano));
+        TextoDoUso = $"{uso.CreditosUsadosNoMes.ToString("N0", Brasil)} de {uso.CreditosDoPlano.ToString("N0", Brasil)} créditos de IA usados " +
+                     $"este mês ({PercentualDoUso.ToString("0.#", Brasil)}%). Eles voltam no dia 1º.";
         OnPropertyChanged(nameof(NomeDaConta));
         Mostrar("", erro: false);
     });

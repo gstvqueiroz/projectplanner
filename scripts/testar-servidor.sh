@@ -32,7 +32,9 @@ if [ -z "$ACESSO" ]; then echo "Não deu para entrar: $SESSAO"; exit 1; fi
 echo "   Entrou."
 
 echo "3. Plano e uso do mês:"
-pedir "$URL/v1/eu" -H "Authorization: Bearer $ACESSO" | json '"%s · plano %s · %s de %s tokens" % (d["perfil"]["email"], d["perfil"]["plano"], d["tokensUsadosNoMes"], d["tokensDoPlano"])'
+pedir "$URL/v1/eu" -H "Authorization: Bearer $ACESSO" | json '"%s · plano %s · %s de %s créditos" % (d["perfil"]["email"], d["perfil"]["plano"], d.get("creditosUsadosNoMes"), d.get("creditosDoPlano"))'
+echo "   Modelos:"
+pedir "$URL/v1/modelos" -H "Authorization: Bearer $ACESSO" | json '"\n".join("   %s (%s): %s, cerca de %s créditos por pedido" % (m["nome"], m["nivel"], "liberado" if m["liberado"] else "do plano Profissional", m["creditosPorPedido"]) for m in d)'
 
 echo "4. Um pedido pequeno de IA (gasta poucos tokens):"
 pedir -X POST "$URL/v1/ia/models/gemini-2.5-flash:generateContent" -H "Authorization: Bearer $ACESSO" \

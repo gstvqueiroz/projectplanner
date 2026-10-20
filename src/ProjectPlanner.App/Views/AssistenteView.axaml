@@ -68,7 +68,7 @@
                             Command="{Binding FecharCommand}" ToolTip.Tip="Ocultar o painel do assistente"
                             AutomationProperties.Name="Ocultar o assistente" />
                     <Button x:Name="Configurar" DockPanel.Dock="Right" Classes="plano" Content="⚙" FontSize="15"
-                            Command="{Binding ConfigurarCommand}" ToolTip.Tip="Configurações do assistente (chave de API e modelo)"
+                            Command="{Binding ConfigurarCommand}" ToolTip.Tip="Configurações do assistente (conta e nível do modelo)"
                             AutomationProperties.Name="Configurações do assistente" />
                     <Button DockPanel.Dock="Right" Classes="plano" Content="Limpar conversa" FontSize="12"
                             Command="{Binding LimparConversaCommand}" IsVisible="{Binding !ConversaVazia}" />
@@ -80,14 +80,37 @@
                 </DockPanel>
             </Border>
 
-            <!-- Sem chave de API: respostas simuladas. -->
+            <!-- Bloco 46: o nível do modelo e o saldo de créditos do mês -->
+            <Border x:Name="BarraDoNivel" DockPanel.Dock="Top" Padding="10,4" BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" IsVisible="{Binding MostrarSeletorDeNivel}">
+                <StackPanel Spacing="2">
+                    <DockPanel>
+                        <TextBlock x:Name="Saldo" DockPanel.Dock="Right" Text="{Binding TextoDoSaldo}" FontSize="11" Opacity="0.7"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" ToolTip.Tip="Os créditos de IA que restam neste mês" />
+                        <ComboBox x:Name="SeletorDeNivel" ItemsSource="{Binding Niveis}" SelectedItem="{Binding NivelEscolhido}"
+                                  HorizontalAlignment="Stretch" FontSize="12" AutomationProperties.Name="Nível do modelo"
+                                  ToolTip.Tip="Padrão para o dia a dia; Avançado e Máximo para pedidos mais difíceis (gastam mais créditos)">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:OpcaoDeNivel">
+                                    <TextBlock Text="{Binding TextoCompleto}" Opacity="{Binding Opacidade}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </DockPanel>
+                    <TextBlock x:Name="AvisoDoNivel" Text="{Binding AvisoDoNivel}" FontSize="11" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextoDeAviso}"
+                               IsVisible="{Binding AvisoDoNivel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Sem conta: respostas simuladas. -->
             <Border x:Name="AvisoNaoConfigurado" DockPanel.Dock="Top" Background="{DynamicResource FundoDeAviso}" Padding="10,6"
                     IsVisible="{Binding !EstaConfigurado}">
                 <StackPanel Spacing="2">
-                    <TextBlock Text="Integração com IA não configurada — respostas simuladas." FontSize="12"
+                    <TextBlock Text="Sem conta ProjectPlanner: respostas simuladas." FontSize="12"
                                TextWrapping="Wrap" Foreground="{DynamicResource TextoDeAviso}" />
-                    <Button x:Name="ConfigurarChave" Classes="plano" Padding="0" FontSize="12" Foreground="{DynamicResource TextoDeLink}"
-                            Content="Configurar a chave do Gemini…" Command="{Binding ConfigurarCommand}" />
+                    <Button x:Name="EntrarNaConta" Classes="plano" Padding="0" FontSize="12" Foreground="{DynamicResource TextoDeLink}"
+                            Content="Entrar ou criar conta (grátis)…" Command="{Binding EntrarNaContaCommand}" />
                 </StackPanel>
             </Border>
 

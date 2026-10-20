@@ -40,11 +40,7 @@ public partial class MenuPrincipalTests
     [Fact]
     public Task Conta_NoPainelDoAssistente_ACabecaMostraAConta() => Tela.Executar(() =>
     {
-        var a = Abrir(ambiente =>
-        {
-            ambiente.Assistente.EstaConfigurado = true;
-            ambiente.ConfiguracaoAssistente.Provedor = Services.ProvedorDoAssistente.Conta;
-        });
+        var a = Abrir(ambiente => ambiente.Assistente.EstaConfigurado = true);
         a.Vm.Assistente.DescricaoDoModelo.Should().Be("Conta ProjectPlanner · gemini-2.5-flash");
         var mudou = new List<string?>();
         a.Vm.Assistente.PropertyChanged += (_, e) => mudou.Add(e.PropertyName);
@@ -87,20 +83,63 @@ public partial class MenuPrincipalTests
     });
 
     [Fact]
-    public Task ConfiguracoesDoAssistente_ContaEscolhida_EscondeAChave() => Tela.Executar(() =>
+    public Task Painel_SeletorDeNivel_ESaldo_ComAConta() => Tela.Executar(() =>
     {
-        var configuracao = new ConfiguracaoAssistenteFalsa();
-        var tela = new ConfiguracaoAssistenteViewModel(configuracao, new DialogosFalsos(), new ContaFalsa());
-        var janela = new ConfiguracaoAssistenteWindow(tela);
-        janela.Show();
-        Dispatcher.UIThread.RunJobs();
-        bool Visivel(string nome) => janela.FindControl<Control>(nome)!.IsEffectivelyVisible;
+        var a = Abrir(ambiente => ambiente.Assistente.EstaConfigurado = true);
+        a.Vm.Assistente.Visivel = true;
+        Pintar(a);
+        var barra = Painel(a).FindControl<Border>("BarraDoNivel")!;
+        barra.IsVisible.Should().BeFalse("sem conta, sem seletor");
 
-        (Visivel("Chave"), Visivel("AbrirConta"), Visivel("Modelo")).Should().Be((true, false, true));
-        janela.FindControl<RadioButton>("UsarConta")!.IsChecked = true;
+        a.Ambiente.Conta.Conectar(); // ao entrar, o painel busca os níveis
         Dispatcher.UIThread.RunJobs();
-        (tela.UsarConta, Visivel("Chave"), Visivel("AbrirConta"), Visivel("SituacaoDaConta"), Visivel("Modelo")).Should().Be((true, false, true, true, true));
-        janela.FindControl<Button>("AbrirConta")!.Content.Should().Be("Entrar ou criar conta…");
-        janela.Close();
+        Pintar(a);
+        var seletor = Painel(a).FindControl<ComboBox>("SeletorDeNivel")!;
+        (barra.IsVisible, seletor.ItemCount, seletor.SelectedIndex).Should().Be((true, 3, 0));
+        a.Vm.Assistente.DescricaoDoModelo.Should().Be("Conta ProjectPlanner · Gemini 2.5 Flash");
+
+        a.Vm.Assistente.NivelEscolhido = a.Vm.Assistente.Niveis[1];
+        Dispatcher.UIThread.RunJobs();
+        (seletor.SelectedIndex, a.Ambiente.ConfiguracaoAssistente.Modelo).Should().Be((0, "gemini-2.5-flash"), "o Avançado é do Profissional");
+        Painel(a).FindControl<TextBlock>("AvisoDoNivel")!.Text.Should().Be("O nível Avançado (Gemini 2.5 Pro) é do plano Profissional.");
+
+        a.Ambiente.Conta.AtualizarSaldo(5870.4m);
+        Dispatcher.UIThread.RunJobs();
+        Painel(a).FindControl<TextBlock>("Saldo")!.Text.Should().Be("5.870 créditos");
+    });
+
+    [Fact]
+    public Task Painel_Profissional_TrocaParaOMaximo_EOCabecalhoAcompanha() => Tela.Executar(() =>
+    {
+        var a = Abrir(ambiente =>
+        {
+            ambiente.Assistente.EstaConfigurado = true;
+            ambiente.Conta.ModelosDoServidor = [.. ContaFalsa.ModelosDoGratis.Select(m => m with { Liberado = true })];
+        });
+        a.Vm.Assistente.Visivel = true;
+        a.Ambiente.Conta.Conectar(plano: "profissional");
+        Dispatcher.UIThread.RunJobs();
+
+        a.Vm.Assistente.NivelEscolhido = a.Vm.Assistente.Niveis[2];
+
+        (a.Ambiente.ConfiguracaoAssistente.Modelo, a.Vm.Assistente.AvisoDoNivel, a.Vm.Assistente.DescricaoDoModelo)
+            .Should().Be(("claude-opus-5-5", "", "Conta ProjectPlanner · Claude Opus 5.5"));
+    });
+
+    [Fact]
+    public Task Painel_ChaveDeDesenvolvimento_SemSeletor() => Tela.Executar(() =>
+    {
+        var a = Abrir(ambiente =>
+        {
+            ambiente.Assistente.EstaConfigurado = true;
+            ambiente.ConfiguracaoAssistente.ChaveDeDesenvolvimento = true;
+        });
+        a.Vm.Assistente.Visivel = true;
+        a.Ambiente.Conta.Conectar();
+        Dispatcher.UIThread.RunJobs();
+
+        (a.Vm.Assistente.MostrarSeletorDeNivel, a.Vm.Assistente.TextoDoSaldo, a.Vm.Assistente.DescricaoDoModelo)
+            .Should().Be((false, "", "Gemini (GEMINI_API_KEY) · gemini-2.5-flash"));
+        a.Ambiente.Conta.Pedidos.Should().NotContain("modelos", "com a chave de desenvolvimento, a conta não é usada para a IA");
     });
 }

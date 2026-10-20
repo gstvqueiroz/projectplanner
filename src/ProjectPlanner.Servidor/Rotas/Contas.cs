@@ -336,12 +336,14 @@ public static class Contas
     {
         if (await Usuarios.Atual(quem, banco) is not { } usuario)
             return Falha(401, "Sessão vencida: entre de novo.");
-        var usados = await Cotas.UsadosNoMes(banco, usuario.Id, relogio);
+        var (tokens, custo) = await Cotas.NoMes(banco, usuario.Id, relogio);
+        var planos = opcoes.Value.Planos;
         return Results.Ok(new
         {
             perfil = EmissorDeTokens.Perfil(usuario),
-            tokensUsadosNoMes = usados,
-            tokensDoPlano = opcoes.Value.Planos.TokensPorMes(usuario.Plano),
+            tokensUsadosNoMes = tokens,
+            creditosUsadosNoMes = Math.Round(planos.Creditos(custo), 1, MidpointRounding.AwayFromZero),
+            creditosDoPlano = planos.CreditosPorMes(usuario.Plano),
         });
     }
 }
@@ -355,11 +357,12 @@ public static class Usuarios
 
 public static class Cotas
 {
-    /// <summary>Os tokens usados no mês corrente (UTC).</summary>
-    public static async Task<long> UsadosNoMes(BancoDoServidor banco, Guid usuarioId, TimeProvider relogio)
+    /// <summary>Os tokens e o custo (em milionésimos de dólar) do mês corrente (UTC).</summary>
+    public static async Task<(long Tokens, long Microdolares)> NoMes(BancoDoServidor banco, Guid usuarioId, TimeProvider relogio)
     {
         var agora = relogio.GetUtcNow().UtcDateTime;
         var inicio = new DateTime(agora.Year, agora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        return await banco.UsosDeIa.Where(u => u.UsuarioId == usuarioId && u.Quando >= inicio).SumAsync(u => (long)u.TokensTotais);
+        var doMes = banco.UsosDeIa.Where(u => u.UsuarioId == usuarioId && u.Quando >= inicio);
+        return (await doMes.SumAsync(u => (long)u.TokensTotais), await doMes.SumAsync(u => u.CustoEmMicrodolares));
     }
 }

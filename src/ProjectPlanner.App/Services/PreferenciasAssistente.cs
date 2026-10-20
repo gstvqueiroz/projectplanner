@@ -5,18 +5,7 @@ namespace ProjectPlanner.App.Services;
 
 /// <summary>O que o assistente guarda fora do cofre (Bloco 23): o modelo. A chave de API nunca vem para cá.</summary>
 /// <param name="Modo">Bloco 26: o que fazer num pedido de cronograma (perguntar, montar direto ou estudar antes).</param>
-/// <param name="Provedor">Bloco 45: por onde a IA vai (a chave própria ou a conta); nulo enquanto a pessoa não escolheu.</param>
-public sealed record PreferenciasAssistente(string Modelo, PreferenciaDeModo Modo = PreferenciaDeModo.Perguntar, ProvedorDoAssistente? Provedor = null);
-
-/// <summary>Bloco 45: por onde o assistente fala com a IA.</summary>
-public enum ProvedorDoAssistente
-{
-    /// <summary>Direto ao Google, com a chave do Gemini da pessoa (Bloco 23).</summary>
-    ChavePropria,
-
-    /// <summary>Pelo servidor do ProjectPlanner, com a conta (sem chave; a cota é a do plano).</summary>
-    Conta,
-}
+public sealed record PreferenciasAssistente(string Modelo, PreferenciaDeModo Modo = PreferenciaDeModo.Perguntar);
 
 public interface IPreferenciasAssistente
 {
@@ -33,8 +22,8 @@ public interface IPreferenciasAssistente
 /// </summary>
 /// <remarks>
 /// O modo (Bloco 26) é um campo a mais, <c>"modo": "perguntar" | "direto" | "estudo"</c>, sem mudar a versão do formato:
-/// um arquivo sem ele, ou com um valor desconhecido, vale como "perguntar", e as versões anteriores ignoram o campo. O
-/// provedor (Bloco 45) segue a mesma regra: <c>"provedor": "chave" | "conta"</c>; sem ele, ninguém escolheu ainda.
+/// um arquivo sem ele, ou com um valor desconhecido, vale como "perguntar", e as versões anteriores ignoram o campo. O campo
+/// <c>"provedor"</c> que a 0.44 gravava (a chave própria ou a conta) deixou de existir no Bloco 46 e é ignorado.
 /// </remarks>
 public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferenciasAssistente
 {
@@ -63,7 +52,7 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
                 return null;
             var arquivo = JsonSerializer.Deserialize<Arquivo>(File.ReadAllText(Caminho), Opcoes);
             return arquivo is { Versao: VersaoDoFormato, Modelo: { Length: > 0 } modelo }
-                ? new PreferenciasAssistente(modelo, ModoDoTexto(arquivo.Modo), ProvedorDoTexto(arquivo.Provedor))
+                ? new PreferenciasAssistente(modelo, ModoDoTexto(arquivo.Modo))
                 : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
@@ -79,7 +68,7 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Caminho)!);
             File.WriteAllText(temporario, JsonSerializer.Serialize(
-                new Arquivo(VersaoDoFormato, preferencias.Modelo, TextoDoModo(preferencias.Modo), TextoDoProvedor(preferencias.Provedor)), Opcoes));
+                new Arquivo(VersaoDoFormato, preferencias.Modelo, TextoDoModo(preferencias.Modo)), Opcoes));
             File.Move(temporario, Caminho, overwrite: true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -102,19 +91,5 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
         _ => PreferenciaDeModo.Perguntar,
     };
 
-    private static string? TextoDoProvedor(ProvedorDoAssistente? provedor) => provedor switch
-    {
-        ProvedorDoAssistente.ChavePropria => "chave",
-        ProvedorDoAssistente.Conta => "conta",
-        _ => null,
-    };
-
-    private static ProvedorDoAssistente? ProvedorDoTexto(string? texto) => texto?.Trim().ToLowerInvariant() switch
-    {
-        "chave" => ProvedorDoAssistente.ChavePropria,
-        "conta" => ProvedorDoAssistente.Conta,
-        _ => null,
-    };
-
-    private sealed record Arquivo(int Versao, string? Modelo, string? Modo = null, string? Provedor = null);
+    private sealed record Arquivo(int Versao, string? Modelo, string? Modo = null);
 }

@@ -26,7 +26,9 @@ builder.Services.AddSingleton<EmailNoLog>();
 builder.Services.AddSingleton<EmailPorSmtp>();
 builder.Services.AddSingleton<IEnviadorDeEmail>(s =>
     string.IsNullOrWhiteSpace(Opcoes(s).Email.Smtp) ? s.GetRequiredService<EmailNoLog>() : s.GetRequiredService<EmailPorSmtp>());
-builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.FromMinutes(2));
+builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.FromMinutes(5));
+builder.Services.AddHttpClient(Ia.ClienteDaAnthropic, c => c.Timeout = TimeSpan.FromMinutes(5));
+builder.Services.AddSingleton<CatalogoDeModelos>();
 builder.Services.AddRateLimiter(_ => { });
 builder.Services.AddOptions<RateLimiterOptions>().Configure<IOptions<OpcoesDoServidor>>((o, opcoes) => LimitesDeUso.Configurar(o, opcoes.Value.Limites));
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -80,6 +82,8 @@ using (var escopo = app.Services.CreateScope())
         log.LogWarning("Sem Jwt:Chave: usando uma chave provisória (as sessões caem a cada reinício). Só para desenvolvimento.");
     if (string.IsNullOrWhiteSpace(configuracao.Gemini.Chave))
         log.LogWarning("Sem Gemini:Chave: os pedidos de IA vão responder que a IA não está configurada.");
+    if (string.IsNullOrWhiteSpace(configuracao.Anthropic.Chave))
+        log.LogWarning("Sem Anthropic:Chave: os modelos da Anthropic (nível Máximo) vão responder que não estão configurados.");
     if (string.IsNullOrWhiteSpace(configuracao.Email.Smtp))
         log.LogWarning("Sem Email:Smtp: os e-mails (com os códigos) vão só para o log.");
 }

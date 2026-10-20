@@ -22,8 +22,8 @@ public sealed class ContaTelaTests
         await tela.EntrarCommand.ExecuteAsync(null);
 
         (tela.Pagina, tela.Titulo, tela.NomeDaConta, tela.EmailDaConta, tela.Plano).Should().Be((PaginaDaConta.Perfil, "Minha conta", "Ana", "ana@exemplo.com", "Grátis"));
-        tela.TextoDoUso.Should().Be("1.500 de 300.000 tokens de IA usados este mês (0,5%). A cota volta no dia 1º.");
-        tela.PercentualDoUso.Should().BeApproximately(0.5, 0.001);
+        tela.TextoDoUso.Should().Be("26 de 300 créditos de IA usados este mês (8,5%). Eles voltam no dia 1º.");
+        tela.PercentualDoUso.Should().BeApproximately(8.5, 0.001);
         (tela.Mensagem, tela.MensagemEhErro, tela.Senha, tela.Ocupado).Should().Be(("Você entrou na conta.", false, "", false));
         _conta.Pedidos.Should().Equal("entrar ana@exemplo.com", "uso");
     }
@@ -113,7 +113,7 @@ public sealed class ContaTelaTests
     public async Task JaConectado_AbreEmMinhaConta_AtualizaESai()
     {
         _conta.Conectar(plano: "profissional");
-        _conta.Uso = new UsoDaConta(_conta.Perfil!, 12_000_000, 10_000_000);
+        _conta.Uso = new UsoDaConta(_conta.Perfil!, 1_200_000, 6_300m, 6_000);
         var tela = Tela();
         (tela.Pagina, tela.Email).Should().Be((PaginaDaConta.Perfil, "ana@exemplo.com"));
 

@@ -77,20 +77,26 @@ Erros sempre como `{"erro": "mensagem para o usuário"}`.
 | `POST /v1/senha/redefinir` | `{email, codigo, novaSenha}`: troca a senha, encerra as outras sessões, tira o bloqueio e devolve uma sessão nova |
 | `GET /v1/eu` | Com login: `{perfil, tokensUsadosNoMes, tokensDoPlano}` |
 | `POST /v1/ia/models/{modelo}:generateContent` | O pedido de IA (abaixo) |
-| `GET /v1/ia/models/{modelo}` | Testar a conexão: confere o login, o modelo e a chave do servidor, sem ir ao Gemini |
+| `GET /v1/ia/models/{modelo}` | Testar a conexão: confere o login, o modelo, o plano e a chave do servidor, sem ir à IA |
+| `GET /v1/modelos` | Bloco 46: os modelos de cada nível, se o plano libera, se o servidor tem a chave e os créditos de um pedido típico |
 | `POST /v1/admin/usuarios/{email}/plano` | `{plano}` com o cabeçalho `X-Chave-Admin`: troca o plano (gratis ou profissional) |
 
 Os códigos por e-mail: no máximo 5 de cada tipo por conta, por hora. Passado isso, a resposta é a mesma e nada é mandado,
 o que segura quem tentasse encher a caixa de alguém ou adivinhar o código.
 
 O ponto de IA:
-- exige login (`Authorization: Bearer <acesso>`); o token não vai ao Google;
-- aceita só os modelos liberados (`Gemini:Modelos`; padrão gemini-2.5-flash, -flash-lite e -pro);
+- exige login (`Authorization: Bearer <acesso>`); o token não vai ao Google nem à Anthropic;
+- aceita só os modelos do catálogo, e o nível precisa ser do plano (Grátis: só o Padrão), senão 403;
 - limita o corpo (15 MB) e os pedidos por minuto de cada usuário (30);
-- confere a cota do mês (UTC) antes de chamar (402 quando acabou; o pedido que passa do limite ainda é atendido);
-- registra os tokens do `usageMetadata` (entrada; saída com os de raciocínio; total);
-- traduz as falhas: chave ou modelo do servidor recusados → 502 (sem repassar o que o Google disse), 429 do Google → 503,
-  5xx → 502, sem resposta → 504; um 400 do pedido passa adiante (com a chave, se aparecer, trocada por "(chave)").
+- confere os créditos do mês (UTC) antes de chamar (402 quando acabaram; o pedido que passa do limite ainda é atendido);
+- Bloco 46: para os modelos da Anthropic, traduz o pedido do formato do Gemini (instruções, conversa, fotos JPG, PNG, GIF
+  e WebP, PDF, e a resposta estruturada como ferramenta obrigatória) e a resposta de volta. Fotos HEIC e outros anexos que
+  o Claude não lê dão 400, com a orientação de usar outro nível;
+- registra os tokens (a saída inclui os de raciocínio) e o **custo** em milionésimos de dólar, pela tabela de preços do
+  modelo, e manda nos cabeçalhos os créditos do pedido (`X-Creditos-Usados`) e o que resta no mês (`X-Creditos-Restantes`);
+- traduz as falhas: chave ou modelo do servidor recusados → 502 (sem repassar o que o Google ou a Anthropic disseram),
+  429 (e o 529 da Anthropic) → 503, 5xx → 502, sem resposta → 504; um 400 do pedido passa adiante (com a chave, se
+  aparecer, trocada por "(chave)").
 
 ### Configuração
 
@@ -102,12 +108,15 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `ConnectionStrings__Banco` | PostgreSQL: `Host=...;Database=...;Username=...;Password=...` ou `postgresql://usuario:senha@servidor/banco?sslmode=require` |
 | `Jwt__Chave` | 32 bytes ou mais, aleatória (por exemplo, `openssl rand -base64 48`). Sem ela, em produção, o servidor não sobe |
 | `Gemini__Chave` | A chave do Gemini da empresa. Sem ela, a IA responde 503 |
-| `Gemini__Modelos__0`, `__1`… | Opcional: os modelos liberados |
+| `Anthropic__Chave` | Bloco 46: a chave da API da Anthropic (o nível Máximo). Sem ela, o Máximo aparece como "indisponível no momento" |
+| `Modelos__0__Id`, `Modelos__0__Nivel`, `Modelos__0__Provedor`, `Modelos__0__Nome`, `Modelos__0__DolaresPorMilhaoDeEntrada`, `Modelos__0__DolaresPorMilhaoDeSaida` (e `__1`, `__2`…) | Opcional: o catálogo de modelos. Sem ele, os padrão: Gemini 2.5 Flash (padrao), Gemini 2.5 Pro (avancado) e Claude Opus 5.5 (maximo). Configurado, substitui a lista inteira |
 | `Google__ClientIdDoApp`, `Google__SegredoDoApp` | Bloco 45: o client ID OAuth do tipo "App para computador" e o segredo dele. Sem os dois, o "Entrar com Google" do programa fica desligado (o resto funciona) |
 | `Google__ClientIds__0`, `__1`… | Opcional: outros client IDs aceitos no idToken (por exemplo, o do Telegram, depois) |
 | `Email__Smtp`, `Email__Porta`, `Email__Usuario`, `Email__Senha`, `Email__Remetente` | O SMTP do serviço de e-mail. Sem `Email__Smtp`, os e-mails vão só para o log |
 | `Admin__Chave` | A chave da rota de admin. Sem ela, a rota fica fechada |
-| `Planos__GratisTokensPorMes`, `Planos__ProfissionalTokensPorMes` | As cotas (padrão 300 mil e 10 milhões de tokens) |
+| `Planos__GratisCreditosPorMes`, `Planos__ProfissionalCreditosPorMes` | Os créditos por mês (padrão 300 e 6.000) |
+| `Planos__DolaresPorCredito` | Quanto de custo vale 1 crédito (padrão 0,0005, meio milésimo de dólar) |
+| `Planos__NiveisDoGratis` | Os níveis do plano Grátis, separados por vírgula (padrão `padrao`) |
 | `Limites__PedidosDeIaPorMinuto`, `Limites__PedidosDeContaPorMinuto`, `Limites__MegabytesPorPedido`, `Limites__TentativasAteBloquear`, `Limites__MinutosDeBloqueio` | Os limites (padrão 30, 10, 15, 5 e 15) |
 | `Limites__AtrasDeProxy` | `true` quando a nuvem põe um proxy na frente (quase sempre): os limites por IP usam o `X-Forwarded-For` |
 
@@ -221,15 +230,75 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
     `MainWindowViewModel.Conta.cs`.
 - **Para testar com um servidor local:** a variável de ambiente `PROJECTPLANNER_SERVIDOR=http://localhost:5199`.
 
-## Bloco 46: assinatura
+## Modelo de negócio (decidido em 19/10/2026)
 
-Cobrança (Mercado Pago, Asaas ou Stripe), webhook do pagamento e liberação automática da cota.
+- O programa básico (cronograma, Gantt, orçamento, medições, relatórios) continua **grátis e aberto** (AGPL-3.0). Ele é a
+  porta de entrada.
+- O que se vende é a **assinatura ProjectPlanner Pro**: o que só funciona com o servidor. Isso inclui:
+  - a IA, com créditos e três níveis de modelo;
+  - depois, o Telegram, o backup e a sincronização na nuvem, o SINAPI atualizado e os relatórios automáticos.
+- A chave própria do Gemini sai da tela do programa (Bloco 46) e fica só para quem compila o código (`GEMINI_API_KEY`).
+
+## Bloco 46 (0.45.0, feito): modelos e créditos
+
+- **Três níveis de modelo**, configuráveis no servidor (trocar o modelo de um nível não exige versão nova do programa):
+
+  | Nível | Modelo | US$ por milhão (entrada / saída) | Planos |
+  |---|---|---|---|
+  | Padrão | Gemini 2.5 Flash | 0,30 / 2,50 | Grátis e Profissional |
+  | Avançado | Gemini 2.5 Pro | 1,25 / 10,00 | Profissional |
+  | Máximo | Claude Opus 5.5 | 4,00 / 20,00 | Profissional |
+
+- **Claude:** o servidor traduz o pedido do formato do Gemini para o da Anthropic (texto, fotos, PDF e a resposta
+  estruturada por uma ferramenta obrigatória) e a resposta de volta. O programa continua com um formato só.
+- **Créditos no lugar de tokens:** cada pedido custa o valor real (tokens de entrada e de saída, inclusive os de raciocínio,
+  pela tabela de preços do modelo), guardado no banco. 1 crédito = US$ 0,0005 de custo. Um pedido típico (10 mil tokens de
+  entrada e 1,5 mil de saída) gasta cerca de:
+  - 14 créditos no Padrão;
+  - 55 no Avançado;
+  - 140 no Máximo.
+- **Créditos por mês:** Grátis 300 (cerca de 20 pedidos no Padrão); Profissional 6.000 (custo máximo de cerca de US$ 3).
+- **Trocar o modelo de um nível** (quando o Google aposentar o 2.5 Flash, por exemplo): no Render, em Environment,
+  configure o catálogo inteiro (`Modelos__0__Id`, etc., da tabela acima). O programa não precisa de versão nova.
+- **Programa:**
+  - as configurações do assistente ficam com a conta e o nível do modelo (a chave própria saiu da tela; a chave antiga, no
+    item `gemini-api-key` do cofre, não é mais lida e pode ser apagada no app Acesso às Chaves);
+  - um seletor rápido no topo do painel do chat;
+  - o saldo de créditos depois de cada resposta (o servidor manda no cabeçalho `X-Creditos-Restantes`);
+  - os níveis fora do plano aparecem como "do plano Profissional".
+
+## Bloco 47: assinatura Pro
+
+Mercado Pago (ou Asaas ou Stripe), com Pix e cartão:
+- o plano Profissional mensal e os pacotes de créditos extras;
+- o aviso do pagamento (webhook), a liberação automática, a renovação e o cancelamento;
+- a página do plano no programa (Conta > Minha conta > Assinar).
+
+## Bloco 48: painel financeiro
+
+Uma página de administração no servidor, protegida, com:
+- pedidos, tokens, custo, receita e margem, por dia, mês, modelo e plano;
+- os usuários que mais gastam e quantos são grátis e quantos pagam;
+- o custo médio real por pedido (para recalibrar os preços);
+- um alerta quando o custo do mês passar de um limite.
+
+## Bloco 49: Telegram
+
+O assistente da obra pelo Telegram, com a mesma conta e os mesmos créditos.
+
+## Depois
+
+- Sincronização e backup dos projetos na nuvem.
+- O SINAPI atualizado pelo servidor (o Bloco 40 continua esperando o arquivo ou a permissão para baixar).
+- Relatórios automáticos.
 
 ## O que depende do usuário
 
 Contas e pagamentos, que o Claude não cria:
-- provedor de nuvem;
-- serviço de e-mail;
-- chave do Gemini da empresa;
-- cliente OAuth no Google Cloud;
-- mais adiante, o gateway de pagamento.
+- provedor de nuvem (feito: Render + Neon);
+- serviço de e-mail (feito: Brevo);
+- chave do Gemini da empresa (feito);
+- cliente OAuth no Google Cloud (pendente: liga o "Entrar com Google");
+- Bloco 46: a conta na Anthropic (console.anthropic.com), com faturamento, e a chave da API no Render (`Anthropic__Chave`);
+- Bloco 47: a conta no gateway de pagamento e o CNPJ/contador para os impostos;
+- Bloco 49: o bot do Telegram (@BotFather).

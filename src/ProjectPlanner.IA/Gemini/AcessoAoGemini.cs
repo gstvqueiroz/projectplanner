@@ -30,6 +30,11 @@ public abstract class AcessoAoGemini
 
     /// <summary>A mensagem para o usuário de uma resposta de erro (sem segredos).</summary>
     internal abstract ErroDoAssistenteException Traduzir(HttpStatusCode status, string corpo, string modelo);
+
+    /// <summary>Uma resposta de sucesso chegou (a conta lê o saldo de créditos nos cabeçalhos).</summary>
+    internal virtual void Recebeu(HttpResponseMessage resposta)
+    {
+    }
 }
 
 /// <summary>Direto ao Google, com a chave de API do usuário (Bloco 23).</summary>
@@ -83,6 +88,16 @@ public sealed class AcessoPelaConta : AcessoAoGemini
         pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _sessao.AcessoAsync(renovar, cancelamento));
 
     internal override bool RenovarDepoisDe(HttpStatusCode status) => status == HttpStatusCode.Unauthorized;
+
+    /// <summary>O cabeçalho com os créditos que restam no mês (Bloco 46).</summary>
+    public const string CabecalhoDoSaldo = "X-Creditos-Restantes";
+
+    internal override void Recebeu(HttpResponseMessage resposta)
+    {
+        if (resposta.Headers.TryGetValues(CabecalhoDoSaldo, out var valores)
+            && decimal.TryParse(valores.FirstOrDefault(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var saldo))
+            _sessao.AtualizarSaldo(saldo);
+    }
 
     internal override ErroDoAssistenteException Traduzir(HttpStatusCode status, string corpo, string modelo)
     {

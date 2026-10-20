@@ -11,6 +11,12 @@ public partial class ConfiguracaoAssistenteWindow : Window
         InitializeComponent();
         // Fechar no meio de um teste de conexão cancela o teste.
         Closing += (_, _) => (DataContext as ConfiguracaoAssistenteViewModel)?.Fechando();
+        // Bloco 46: os níveis da conta vêm do servidor ao abrir.
+        Opened += async (_, _) =>
+        {
+            if (DataContext is ConfiguracaoAssistenteViewModel configuracao)
+                await configuracao.CarregarAsync();
+        };
     }
 
     public ConfiguracaoAssistenteWindow(ConfiguracaoAssistenteViewModel configuracao) : this() => DataContext = configuracao;

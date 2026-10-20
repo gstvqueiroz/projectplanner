@@ -8,55 +8,46 @@
         CanResize="False"
         WindowStartupLocation="CenterOwner">
 
-    <!-- Bloco 23: chave de API (vai para o cofre do sistema, nunca para um arquivo), modelo, teste de conexão. -->
+    <!-- Blocos 23 e 46: a conta ProjectPlanner, o nível do modelo, o modo e o teste de conexão (sem chave própria na tela). -->
     <StackPanel Margin="20" Spacing="14">
         <StackPanel Spacing="2">
             <TextBlock Text="Assistente de IA" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock x:Name="Provedor" Text="{Binding TextoDoProvedor, StringFormat='Provedor: {0}'}" Opacity="0.7" />
+            <TextBlock Text="Pela sua conta ProjectPlanner" Opacity="0.7" />
         </StackPanel>
 
-        <!-- Bloco 45: a chave própria ou a conta ProjectPlanner -->
-        <StackPanel Spacing="6">
-            <TextBlock Text="Usar a IA por" FontWeight="SemiBold" />
-            <RadioButton x:Name="UsarChavePropria" GroupName="Provedor" IsChecked="{Binding UsarChavePropria}"
-                         Content="Minha chave do Gemini (grátis no Google AI Studio)" />
-            <RadioButton x:Name="UsarConta" GroupName="Provedor" IsChecked="{Binding UsarConta}"
-                         Content="Conta ProjectPlanner (sem chave; cota do plano)" />
-            <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8" IsVisible="{Binding UsarConta}">
-                <DockPanel>
-                    <Button x:Name="AbrirConta" DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center"
-                            Content="{Binding TextoDoBotaoDaConta}" Command="{Binding AbrirContaCommand}" />
-                    <TextBlock x:Name="SituacaoDaConta" Text="{Binding SituacaoDaConta}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                </DockPanel>
-            </Border>
-        </StackPanel>
-
-        <!-- A chave em uso (só o fim dela) -->
-        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8" IsVisible="{Binding UsarChavePropria}">
-            <StackPanel Spacing="6">
-                <TextBlock x:Name="Situacao" Text="{Binding Situacao}" TextWrapping="Wrap" />
-                <TextBlock x:Name="ProblemaNoCofre" Text="{Binding ProblemaNoCofre}" IsVisible="{Binding TemProblemaNoCofre}"
-                           TextWrapping="Wrap" Foreground="{DynamicResource TextoDeErroForte}" FontSize="12" />
-                <Button x:Name="Remover" Content="Remover chave salva" Command="{Binding RemoverChaveCommand}"
-                        IsVisible="{Binding TemChave}" FontSize="12" />
-            </StackPanel>
-        </Border>
-
-        <StackPanel Spacing="4" IsVisible="{Binding UsarChavePropria}">
-            <TextBlock Text="Chave de API" FontWeight="SemiBold" />
-            <TextBox x:Name="Chave" Text="{Binding ChaveDigitada}" PasswordChar="●" RevealPassword="False"
-                     PlaceholderText="Cole aqui a chave (ela não aparece depois de salva)"
-                     AutomationProperties.Name="Chave de API" />
-            <TextBlock Text="{Binding DicaDaChave}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
-        </StackPanel>
-
-        <StackPanel Spacing="4">
-            <TextBlock Text="Modelo" FontWeight="SemiBold" />
+        <!-- A conta -->
+        <Border Background="{DynamicResource FundoSutil}" CornerRadius="4" Padding="10,8">
             <DockPanel>
-                <Button x:Name="ModeloPadrao" DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding RestaurarModeloPadraoCommand}"
-                        Content="{Binding ModeloPadrao, StringFormat='Padrão ({0})'}" />
-                <TextBox x:Name="Modelo" Text="{Binding Modelo}" AutomationProperties.Name="Modelo" />
+                <Button x:Name="AbrirConta" DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center"
+                        Content="{Binding TextoDoBotaoDaConta}" Command="{Binding AbrirContaCommand}" />
+                <TextBlock x:Name="SituacaoDaConta" Text="{Binding SituacaoDaConta}" TextWrapping="Wrap" VerticalAlignment="Center" />
             </DockPanel>
+        </Border>
+        <TextBlock x:Name="ChaveDeDesenvolvimento" Text="{Binding TextoDaChaveDeDesenvolvimento}" IsVisible="{Binding ChaveDeDesenvolvimento}"
+                   TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextoDeAviso}" />
+
+        <!-- Bloco 46: o nível do modelo -->
+        <StackPanel Spacing="4" IsVisible="{Binding TemNiveis}">
+            <TextBlock Text="Nível do modelo" FontWeight="SemiBold" />
+            <ListBox x:Name="Niveis" ItemsSource="{Binding Niveis}" SelectedItem="{Binding NivelEscolhido}"
+                     AutomationProperties.Name="Nível do modelo">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem" x:DataType="vm:OpcaoDeNivel">
+                        <Setter Property="IsEnabled" Value="{Binding Habilitado}" />
+                        <Setter Property="Padding" Value="10,6" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OpcaoDeNivel">
+                        <StackPanel Spacing="1">
+                            <TextBlock Text="{Binding Titulo}" />
+                            <TextBlock Text="{Binding Detalhe}" FontSize="12" Opacity="0.7" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="Os créditos são descontados pelo tamanho real de cada pedido. O nível também pode ser trocado no topo do painel."
+                       TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
         </StackPanel>
 
         <!-- Bloco 26 -->
@@ -73,7 +64,7 @@
             </ComboBox>
         </StackPanel>
 
-        <TextBlock x:Name="Aviso" Text="{Binding Aviso}" TextWrapping="Wrap" FontSize="12"
+        <TextBlock x:Name="Aviso" Text="{x:Static vm:ConfiguracaoAssistenteViewModel.AvisoDePrivacidade}" TextWrapping="Wrap" FontSize="12"
                    Foreground="{DynamicResource TextoDeAviso}" />
 
         <!-- Resultado da última ação -->
@@ -89,8 +80,7 @@
 
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button x:Name="Testar" Content="Testar conexão" Command="{Binding TestarCommand}" />
-            <Button x:Name="Salvar" Content="Salvar" Classes="accent" Command="{Binding SalvarCommand}" />
-            <Button x:Name="FecharJanela" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <Button x:Name="FecharJanela" Content="Fechar" Classes="accent" Click="Fechar" IsCancel="True" IsDefault="True" />
         </StackPanel>
     </StackPanel>
 </Window>

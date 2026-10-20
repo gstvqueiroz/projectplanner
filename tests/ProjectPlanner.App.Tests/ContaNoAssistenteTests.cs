@@ -5,130 +5,29 @@ using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Tests;
 
-// Bloco 45: a escolha entre a chave própria e a conta ProjectPlanner (configuração, arquivo e tela de configurações).
+// Blocos 45 e 46: a IA pela conta (o provedor escolhido pela credencial), os níveis como as telas mostram e o assistente.json.
 public sealed class ContaNoAssistenteTests
 {
-    private const string Chave = "AIzaChaveDoCofreParaTestes0000000001234";
-
-    private readonly CofreEmMemoria _cofre = new();
-    private readonly PreferenciasAssistenteEmMemoria _preferencias = new();
-    private readonly ProvedorFalso _provedor = new();
-    private readonly ContaFalsa _conta = new();
-
-    private ConfiguracaoDoAssistente Nova() => new(_cofre, _preferencias, _provedor, _ => null, _conta);
+    private const string Chave = "AIzaChaveDeDesenvolvimento0000000001234";
 
     [Fact]
-    public void SemEscolha_ChaveTemPrioridade_SemChaveVaiPelaConta()
-    {
-        var configuracao = Nova();
-        (configuracao.Provedor, configuracao.ChaveApi).Should().Be((ProvedorDoAssistente.ChavePropria, null));
-
-        _conta.Conectar();
-        (configuracao.Provedor, configuracao.ChaveApi).Should().Be((ProvedorDoAssistente.Conta, ProvedorDaConta.Credencial));
-
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        var comChave = Nova();
-        (comChave.Provedor, comChave.ChaveApi, comChave.FinalDaChave).Should().Be((ProvedorDoAssistente.ChavePropria, Chave, "…1234"),
-            "quem já usa a chave continua igual depois de entrar na conta");
-    }
-
-    [Fact]
-    public void Escolha_Salva_ValeMesmoComAsDuas_ESemContaNaoHaCredencial()
-    {
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        var configuracao = Nova();
-
-        configuracao.SalvarProvedor(ProvedorDoAssistente.Conta);
-        (_preferencias.Salvas!.Provedor, configuracao.Provedor, configuracao.ChaveApi).Should().Be((ProvedorDoAssistente.Conta, ProvedorDoAssistente.Conta, null),
-            "escolheu a conta mas não entrou: o assistente fica sem IA (respostas simuladas)");
-        (configuracao.Origem, configuracao.FinalDaChave).Should().Be((OrigemDaChave.Cofre, "…1234"), "a chave própria continua guardada");
-        _conta.Conectar();
-        configuracao.ChaveApi.Should().Be(ProvedorDaConta.Credencial);
-
-        configuracao.SalvarProvedor(ProvedorDoAssistente.ChavePropria);
-        configuracao.ChaveApi.Should().Be(Chave);
-        FluentActions.Invoking(() => configuracao.SalvarProvedor((ProvedorDoAssistente)9)).Should().Throw<ArgumentOutOfRangeException>();
-        _preferencias.Salvas.Modelo.Should().Be("gemini-2.5-flash");
-    }
-
-    [Fact]
-    public async Task Testar_PelaConta()
-    {
-        var configuracao = Nova();
-        configuracao.SalvarProvedor(ProvedorDoAssistente.Conta);
-        (await FluentActions.Invoking(() => configuracao.TestarAsync(null, "gemini-2.5-flash", default)).Should().ThrowAsync<ArgumentException>())
-            .Which.Message.Should().Be("Entre na sua conta ProjectPlanner (menu Conta) para testar.");
-
-        _conta.Conectar();
-        await configuracao.TestarAsync("", "gemini-2.5-pro", default);
-        await configuracao.TestarAsync(Chave, "gemini-2.5-pro", default);
-        _provedor.Testes.Should().Equal((ProvedorDaConta.Credencial, "gemini-2.5-pro"), (Chave, "gemini-2.5-pro"));
-    }
-
-    [Fact]
-    public void Arquivo_GuardaOProvedor_EOAntigoSemEleContinuaValendo()
+    public void Arquivo_OCampoProvedorDa044_EIgnorado()
     {
         var pasta = Path.Combine(Path.GetTempPath(), "pp-provedor-" + Guid.NewGuid().ToString("N"));
         try
         {
             var arquivo = new ArquivoPreferenciasAssistente(Path.Combine(pasta, "assistente.json"));
-            arquivo.Salvar(new PreferenciasAssistente("gemini-2.5-flash", PreferenciaDeModo.Direto, ProvedorDoAssistente.Conta));
-            File.ReadAllText(arquivo.Caminho).Should().Contain("\"provedor\": \"conta\"");
-            arquivo.Carregar().Should().Be(new PreferenciasAssistente("gemini-2.5-flash", PreferenciaDeModo.Direto, ProvedorDoAssistente.Conta));
-
-            File.WriteAllText(arquivo.Caminho, """{"versao":1,"modelo":"gemini-2.5-pro","modo":"estudo"}""");
-            arquivo.Carregar().Should().Be(new PreferenciasAssistente("gemini-2.5-pro", PreferenciaDeModo.Estudo, null));
-            File.WriteAllText(arquivo.Caminho, """{"versao":1,"modelo":"gemini-2.5-pro","provedor":"outro"}""");
-            arquivo.Carregar()!.Provedor.Should().BeNull();
-            arquivo.Salvar(new PreferenciasAssistente("gemini-2.5-pro", Provedor: ProvedorDoAssistente.ChavePropria));
-            arquivo.Carregar()!.Provedor.Should().Be(ProvedorDoAssistente.ChavePropria);
+            Directory.CreateDirectory(pasta);
+            File.WriteAllText(arquivo.Caminho, """{"versao":1,"modelo":"gemini-2.5-pro","modo":"estudo","provedor":"chave"}""");
+            arquivo.Carregar().Should().Be(new PreferenciasAssistente("gemini-2.5-pro", PreferenciaDeModo.Estudo));
+            arquivo.Salvar(new PreferenciasAssistente("claude-opus-5-5"));
+            File.ReadAllText(arquivo.Caminho).Should().NotContain("provedor");
         }
         finally
         {
             if (Directory.Exists(pasta))
                 Directory.Delete(pasta, recursive: true);
         }
-    }
-
-    [Fact]
-    public async Task TelaDeConfiguracoes_EscolheAConta_AbreATelaDaConta_ETestaPorEla()
-    {
-        var configuracao = new ConfiguracaoAssistenteFalsa();
-        var dialogos = new DialogosFalsos { AoMostrarConta = c => c.EntrarComGoogleCommand.ExecuteAsync(null) };
-        var tela = new ConfiguracaoAssistenteViewModel(configuracao, dialogos, _conta);
-        (tela.UsarConta, tela.UsarChavePropria, tela.TestarCommand.CanExecute(null)).Should().Be((false, true, false));
-        (tela.TextoDoProvedor, tela.Aviso).Should().Be(("Gemini (Google)", ConfiguracaoAssistenteViewModel.AvisoDePrivacidade));
-
-        tela.UsarConta = true;
-        (configuracao.Provedor, tela.Mensagem).Should().Be((ProvedorDoAssistente.Conta,
-            "O assistente vai usar a conta ProjectPlanner: entre na conta para ele funcionar."));
-        (tela.TextoDoProvedor, tela.Aviso).Should().Be(("Conta ProjectPlanner (Gemini pelo servidor)", ConfiguracaoAssistenteViewModel.AvisoDaConta));
-        (tela.SituacaoDaConta, tela.TextoDoBotaoDaConta, tela.TestarCommand.CanExecute(null))
-            .Should().Be(("Você não entrou na conta ProjectPlanner.", "Entrar ou criar conta…", false));
-
-        await tela.AbrirContaCommand.ExecuteAsync(null);
-        dialogos.Contas.Should().ContainSingle();
-        (tela.ContaConectada, tela.SituacaoDaConta, tela.TextoDoBotaoDaConta, tela.TestarCommand.CanExecute(null))
-            .Should().Be((true, "Conectado como Bia (bia@gmail.com), plano Grátis.", "Minha conta…", true));
-
-        await tela.TestarCommand.ExecuteAsync(null);
-        tela.Mensagem.Should().Be("Conexão OK: a conta ProjectPlanner funciona com o modelo gemini-2.5-flash.");
-
-        tela.UsarChavePropria = true;
-        (configuracao.Provedor, tela.Mensagem).Should().Be((ProvedorDoAssistente.ChavePropria, "O assistente vai usar a sua chave do Gemini: cole a chave e salve."));
-        configuracao.Chave = Chave;
-        tela.UsarConta = true;
-        tela.Mensagem.Should().Be("O assistente passa a usar a sua conta ProjectPlanner.");
-        tela.UsarConta = false;
-        tela.Mensagem.Should().Be("O assistente passa a usar a sua chave do Gemini.");
-    }
-
-    [Fact]
-    public void TelaDeConfiguracoes_AbreComAEscolhaSalva_SemGravarDeNovo()
-    {
-        var configuracao = new ConfiguracaoAssistenteFalsa { Provedor = ProvedorDoAssistente.Conta };
-        var tela = new ConfiguracaoAssistenteViewModel(configuracao, new DialogosFalsos());
-        (tela.UsarConta, tela.Mensagem, tela.ContaConectada).Should().Be((true, "", false));
     }
 
     [Fact]
@@ -151,10 +50,26 @@ public sealed class ContaNoAssistenteTests
     }
 
     [Fact]
-    public void ProvedorDaConta_NomeEModelos()
+    public void ProvedorDaConta_NomeEModelos_InclusiveOClaude()
     {
-        var provedor = new ProvedorDaConta(new HttpClient(), new Uri("https://servidor.teste"), _conta);
-        (provedor.Nome, provedor.ModeloPadrao, provedor.NormalizarModelo(" models/gemini-2.5-pro ")).Should().Be(("Conta ProjectPlanner", "gemini-2.5-flash", "gemini-2.5-pro"));
+        var provedor = new ProvedorDaConta(new HttpClient(), new Uri("https://servidor.teste"), new ContaFalsa());
+        (provedor.Nome, provedor.ModeloPadrao, provedor.NormalizarModelo(" models/claude-opus-5-5 ")).Should().Be(("Conta ProjectPlanner", "gemini-2.5-flash", "claude-opus-5-5"));
         FluentActions.Invoking(() => provedor.CriarAssistente(ProvedorDaConta.Credencial, "Modelo Inválido!")).Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void OpcaoDeNivel_TextosEAEscolha()
+    {
+        var opcoes = OpcaoDeNivel.De([.. ContaFalsa.ModelosDoGratis, new ModeloDaConta("gemini-x", "padrao", "Gemini X", true, false, 9)]);
+
+        opcoes.Select(o => (o.TextoCompleto, o.Opacidade)).Should().Equal(
+            ("Padrão: Gemini 2.5 Flash (cerca de 14 créditos por pedido)", 1.0),
+            ("Avançado: Gemini 2.5 Pro (do plano Profissional)", 0.5),
+            ("Máximo: Claude Opus 5.5 (do plano Profissional)", 0.5),
+            ("Padrão: Gemini X (indisponível no momento)", 0.5));
+        (OpcaoDeNivel.Escolhida(opcoes, "gemini-2.5-flash")!.Id, OpcaoDeNivel.Escolhida(opcoes, "claude-opus-5-5")!.Id,
+            OpcaoDeNivel.Escolhida(opcoes, "gemini-x")!.Id, OpcaoDeNivel.Escolhida([], "gemini-2.5-flash")).Should().Be(
+            ("gemini-2.5-flash", "gemini-2.5-flash", "gemini-2.5-flash", null));
+        new ModeloDaConta("a", "outro", "A", true, true, 1).NomeDoNivel.Should().Be("Padrão");
     }
 }

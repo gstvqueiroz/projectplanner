@@ -56,6 +56,7 @@ internal static class ChamadaGemini
                         continue;
                     throw acesso.Traduzir(resposta.StatusCode, corpo, modelo);
                 }
+                acesso.Recebeu(resposta);
                 try
                 {
                     return JsonDocument.Parse(corpo);

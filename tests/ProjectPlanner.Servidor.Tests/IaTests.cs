@@ -59,20 +59,25 @@ public sealed class IaTests : IDisposable
         semLogin.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var modelo = await Gerar(sessao.Acesso, "/v1/ia/models/gemini-ultra-caro:generateContent");
         (modelo.StatusCode, await Servidor.Erro(modelo)).Should().Be((HttpStatusCode.BadRequest,
-            "O modelo \"gemini-ultra-caro\" não está liberado. Use um destes: gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro."));
+            "O modelo \"gemini-ultra-caro\" não está disponível. Use um destes: gemini-2.5-flash, gemini-2.5-pro, claude-opus-5-5."));
         _s.Gemini.Pedidos.Should().BeEmpty();
     }
 
     [Fact]
     public async Task Cota_EsgotadaNoMes_402_VoltaNoMesSeguinte_EOPlanoProfissionalLibera()
     {
+        // Bloco 46: a cota é em créditos. Cada pedido de teste custa 155 milionésimos de dólar no Flash (100 de entrada a
+        // US$ 0,30 e 50 de saída a US$ 2,50 por milhão); com 1 crédito = US$ 0,0001, são 1,55 crédito.
         _s.Dispose();
-        _s = new Servidor(new() { ["Planos:GratisTokensPorMes"] = "200", ["Planos:ProfissionalTokensPorMes"] = "1000" });
+        _s = new Servidor(new() { ["Planos:GratisCreditosPorMes"] = "3", ["Planos:ProfissionalCreditosPorMes"] = "10", ["Planos:DolaresPorCredito"] = "0.0001" });
         _s.Relogio.Agora = new DateTimeOffset(2026, 10, 31, 23, 0, 0, TimeSpan.Zero);
         var sessao = await _s.CriarConta();
 
-        (await Gerar(sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Gerar(sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.OK, "150 de 200: ainda tinha cota (o pedido que passa do limite é atendido)");
+        var primeiro = await Gerar(sessao.Acesso);
+        primeiro.StatusCode.Should().Be(HttpStatusCode.OK);
+        (primeiro.Headers.GetValues(Ia.CabecalhoDosCreditosUsados).Single(), primeiro.Headers.GetValues(Ia.CabecalhoDosCreditosRestantes).Single())
+            .Should().Be(("1.6", "1.5"));
+        (await Gerar(sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.OK, "1,55 de 3: ainda tinha créditos (o pedido que passa do limite é atendido)");
         var esgotada = await Gerar(sessao.Acesso);
         (esgotada.StatusCode, await Servidor.Erro(esgotada)).Should().Be((HttpStatusCode.PaymentRequired, Ia.CotaEsgotada));
         _s.Gemini.Pedidos.Should().HaveCount(2);
@@ -89,8 +94,9 @@ public sealed class IaTests : IDisposable
         plano.StatusCode.Should().Be(HttpStatusCode.OK);
         (await Gerar(acesso)).StatusCode.Should().Be(HttpStatusCode.OK);
         var eu = JsonDocument.Parse(await (await _s.Get("/v1/eu", acesso)).Content.ReadAsStringAsync()).RootElement;
-        (eu.GetProperty("perfil").GetProperty("plano").GetString(), eu.GetProperty("tokensUsadosNoMes").GetInt64(), eu.GetProperty("tokensDoPlano").GetInt64())
-            .Should().Be((Planos.Profissional, 450L, 1000L));
+        (eu.GetProperty("perfil").GetProperty("plano").GetString(), eu.GetProperty("tokensUsadosNoMes").GetInt64(),
+                eu.GetProperty("creditosUsadosNoMes").GetDecimal(), eu.GetProperty("creditosDoPlano").GetInt64())
+            .Should().Be((Planos.Profissional, 450L, 4.7m, 10L));
     }
 
     [Fact]
@@ -160,11 +166,11 @@ public sealed class IaTests : IDisposable
     public async Task SemChaveDoGeminiNoServidor_503_ETestarConexao()
     {
         var sessao = await _s.CriarConta();
-        var teste = await _s.Get("/v1/ia/models/gemini-2.5-pro", sessao.Acesso);
+        var teste = await _s.Get("/v1/ia/models/gemini-2.5-flash", sessao.Acesso);
         teste.StatusCode.Should().Be(HttpStatusCode.OK);
-        JsonDocument.Parse(await teste.Content.ReadAsStringAsync()).RootElement.GetProperty("name").GetString().Should().Be("models/gemini-2.5-pro");
+        JsonDocument.Parse(await teste.Content.ReadAsStringAsync()).RootElement.GetProperty("name").GetString().Should().Be("models/gemini-2.5-flash");
         (await _s.Get("/v1/ia/models/outro", sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await _s.Get("/v1/ia/models/gemini-2.5-pro")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await _s.Get("/v1/ia/models/gemini-2.5-flash")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         _s.Gemini.Pedidos.Should().BeEmpty("testar a conexão não vai ao Gemini");
 
         _s.Dispose();
@@ -172,7 +178,7 @@ public sealed class IaTests : IDisposable
         sessao = await _s.CriarConta();
         var r = await Gerar(sessao.Acesso);
         (r.StatusCode, await Servidor.Erro(r)).Should().Be((HttpStatusCode.ServiceUnavailable, Ia.SemChave));
-        (await _s.Get("/v1/ia/models/gemini-2.5-pro", sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await _s.Get("/v1/ia/models/gemini-2.5-flash", sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
 
     [Fact]

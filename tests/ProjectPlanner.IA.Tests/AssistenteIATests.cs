@@ -15,7 +15,7 @@ public class AssistenteIATests
         var resposta = await assistente.EnviarAsync(Pedido, CancellationToken.None);
 
         assistente.EstaConfigurado.Should().BeFalse();
-        resposta.Texto.Should().StartWith(AssistenteIAIndisponivel.Resposta).And.Contain("chave de API");
+        resposta.Texto.Should().StartWith(AssistenteIAIndisponivel.Resposta).And.Contain("entre na sua conta ProjectPlanner (menu Conta)");
     }
 
     [Theory]

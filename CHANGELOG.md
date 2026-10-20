@@ -3,6 +3,22 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.45.0
+
+Bloco 46: três níveis de IA e créditos.
+
+- O assistente tem três níveis: **Padrão** (Gemini 2.5 Flash), para o dia a dia; **Avançado** (Gemini 2.5 Pro); e
+  **Máximo** (Claude Opus 5.5, da Anthropic), para os pedidos mais difíceis. Escolha nas configurações do assistente ou
+  no seletor no topo do painel.
+- O uso agora é em **créditos**: cada pedido gasta o custo real dele, e os níveis mais fortes gastam mais. Um pedido típico
+  gasta cerca de 14 créditos no Padrão, 55 no Avançado e 140 no Máximo. O saldo do mês aparece no painel, depois de cada
+  resposta, e em Minha conta.
+- O plano **Grátis** tem 300 créditos por mês, só no nível Padrão. O **Profissional** tem 6.000, em todos os níveis.
+- O assistente funciona **só pela conta**: a chave própria do Gemini saiu das configurações, e o macOS deixa de pedir a
+  senha das chaves a cada versão. A chave antiga (item "ProjectPlanner — gemini-api-key") pode ser apagada no app Acesso às
+  Chaves. Quem compila o código continua podendo usar a variável `GEMINI_API_KEY`.
+- No servidor, o modelo de cada nível pode ser trocado por configuração, sem versão nova do programa.
+
 ## 0.44.0
 
 Bloco 45: a conta ProjectPlanner no programa.

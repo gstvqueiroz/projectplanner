@@ -28,8 +28,8 @@ public static class Servicos
         .AddSingleton<IPreferenciasInterface, ArquivoPreferenciasInterface>()
         // Fotos (Bloco 22): SkiaSharp + MetadataExtractor, no projeto ProjectPlanner.Imagens.
         .AddSingleton<IProcessadorDeImagens, ProcessadorSkia>()
-        // Assistente de IA (Blocos 19 e 23): o Gemini pela API REST, com a chave no cofre do sistema (Chaves do macOS,
-        // Gerenciador de Credenciais do Windows) e GEMINI_API_KEY para desenvolvimento; sem chave, respostas simuladas.
+        // Assistente de IA (Blocos 19, 23, 45 e 46): pela conta ProjectPlanner (o servidor chama o Gemini ou o Claude), com a
+        // sessão no cofre do sistema; GEMINI_API_KEY (direto ao Google) só para desenvolvimento; sem conta, respostas simuladas.
         .AddSingleton(_ => ProvedorGemini.CriarHttpClient())
         .AddSingleton(_ => CofreDoSistema.Criar())
         // Bloco 45: a conta ProjectPlanner (sessão no cofre) e a IA por ela, pelo servidor; a credencial decide o caminho.
@@ -44,9 +44,9 @@ public static class Servicos
         .AddSingleton<ICatalogoDeRecursos, ArquivoCatalogoDeRecursos>()
         // Bloco 33: as bases de preços (SINAPI…) importadas, na pasta referencias.
         .AddSingleton<IBibliotecaDeReferencias, ArquivoBibliotecaDeReferencias>()
-        .AddSingleton(s => new ConfiguracaoDoAssistente(s.GetRequiredService<ICofreDeSegredos>(),
-            s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(), Environment.GetEnvironmentVariable,
-            s.GetRequiredService<IContaProjectPlanner>()))
+        // Bloco 46: a IA pela conta; GEMINI_API_KEY só para quem compila o código.
+        .AddSingleton(s => new ConfiguracaoDoAssistente(s.GetRequiredService<IPreferenciasAssistente>(), s.GetRequiredService<IProvedorIA>(),
+            Environment.GetEnvironmentVariable, s.GetRequiredService<IContaProjectPlanner>()))
         .AddSingleton<IConfiguracaoIA>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())
         .AddSingleton<IConfiguracaoAssistente>(s => s.GetRequiredService<ConfiguracaoDoAssistente>())
         .AddSingleton(s => FabricaAssistenteIA.Criar(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))

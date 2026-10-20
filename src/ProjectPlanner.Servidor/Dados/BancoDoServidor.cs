@@ -67,6 +67,9 @@ public sealed class UsoDeIa
     public int TokensDeEntrada { get; set; }
     public int TokensDeSaida { get; set; }
     public int TokensTotais { get; set; }
+
+    /// <summary>Bloco 46: o custo do pedido em milionésimos de dólar (pela tabela de preços do modelo), base dos créditos.</summary>
+    public long CustoEmMicrodolares { get; set; }
 }
 
 /// <summary>Bloco 44: o banco do servidor (SQLite em desenvolvimento e nos testes; PostgreSQL em produção).</summary>

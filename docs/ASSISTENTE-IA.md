@@ -1,8 +1,10 @@
 # Assistente de IA
 
-O painel lateral do assistente (Bloco 19) conversa com o **Gemini, do Google** (Bloco 23), quando há uma chave de API
-configurada. Sem chave, quem responde é `AssistenteIAIndisponivel`, que só explica que a integração não está
-configurada (respostas simuladas, sem rede).
+O painel lateral do assistente (Bloco 19) conversa com o **Gemini, do Google** (Bloco 23) e, desde o Bloco 46, também
+com o **Claude, da Anthropic**, pela conta ProjectPlanner (o servidor chama a IA; ver "Níveis e créditos", abaixo). Sem
+conta, quem responde é `AssistenteIAIndisponivel`, que só explica que a integração não está configurada (respostas
+simuladas, sem rede). Os Blocos 23 a 44 usavam a chave do Gemini da própria pessoa; desde o Bloco 46 ela só vale pela
+variável `GEMINI_API_KEY`, para quem compila o código.
 
 A cada mensagem, o assistente recebe:
 
@@ -278,6 +280,18 @@ execução no período das fotos primeiro, marcadas) e os locais da obra. Respos
 legenda, local, percentual, justificativa}]}`, conferida: tarefas e locais só do pedido, % de 0 a 100, sem tarefa a
 confiança vira baixa. O resultado preenche a tabela da importação em lote (Fotos do projeto); nada é importado antes do
 clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.texto` (o relatório já pedindo o texto).
+
+## Níveis e créditos (Bloco 46)
+
+- **Os níveis:** Padrão (Gemini 2.5 Flash), Avançado (Gemini 2.5 Pro) e Máximo (Claude Opus 5.5). O programa só conhece
+  o id do modelo, salvo em `assistente.json`: o catálogo e os preços ficam no servidor (`GET /v1/modelos`).
+- **Onde escolher:** nas configurações do assistente ou no seletor no topo do painel. Os níveis fora do plano aparecem
+  apagados, com "do plano Profissional".
+- **O mesmo formato para todos:** as classes do Gemini montam o mesmo pedido para qualquer nível. Para o Claude, o
+  servidor traduz (`TradutorClaude`), e a resposta estruturada vira uma ferramenta obrigatória; as fotos HEIC não vão ao
+  Claude.
+- **O saldo:** chega no cabeçalho `X-Creditos-Restantes` de cada resposta (`AcessoPelaConta.Recebeu` →
+  `ISessaoDaConta.AtualizarSaldo`) e aparece ao lado do seletor.
 
 ## O que ainda não existe (blocos futuros)
 

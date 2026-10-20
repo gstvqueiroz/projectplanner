@@ -11,13 +11,14 @@ Silicon). As novidades de cada versão estão em [CHANGELOG.md](CHANGELOG.md).
 
 ## O assistente de IA
 
-Duas formas de usar:
+O assistente funciona pela **conta ProjectPlanner** (menu Conta): sem chave, com créditos por mês e três níveis de modelo
+(Padrão: Gemini Flash; Avançado: Gemini Pro; Máximo: Claude Opus). O plano Grátis tem 300 créditos por mês no nível
+Padrão. Os pedidos passam pelo servidor deste repositório ([src/ProjectPlanner.Servidor](src/ProjectPlanner.Servidor), ver
+[docs/SERVIDOR.md](docs/SERVIDOR.md)), que não guarda o conteúdo das conversas.
 
-- **Com a sua chave do Gemini** (grátis no Google AI Studio): ela fica no cofre do seu computador e os pedidos vão direto
-  ao Google. Ver [docs/ASSISTENTE-IA.md](docs/ASSISTENTE-IA.md).
-- **Com uma conta ProjectPlanner** (em breve): sem chave, com um plano grátis e um plano pago. Os pedidos passam pelo
-  servidor deste repositório ([src/ProjectPlanner.Servidor](src/ProjectPlanner.Servidor), ver
-  [docs/SERVIDOR.md](docs/SERVIDOR.md)).
+**Para quem compila o código:** com a variável de ambiente `GEMINI_API_KEY` (uma chave grátis do Google AI Studio), o
+assistente vai direto ao Google, sem conta. Também dá para rodar o próprio servidor (`docs/SERVIDOR.md`) e apontar o
+programa para ele com `PROJECTPLANNER_SERVIDOR`.
 
 ## Compilar
 

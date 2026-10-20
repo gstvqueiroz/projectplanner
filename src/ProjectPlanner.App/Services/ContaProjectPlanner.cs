@@ -19,8 +19,17 @@ public interface IContaProjectPlanner : ISessaoDaConta
     /// <summary>O cofre recusou a sessão guardada (bloqueado, acesso negado); nulo se está tudo bem.</summary>
     string? ProblemaNoCofre { get; }
 
-    /// <summary>Entrou, saiu, ou o perfil mudou (o plano, por exemplo).</summary>
+    /// <summary>Bloco 46: os modelos de cada nível (vazio até <see cref="CarregarModelosAsync"/>).</summary>
+    IReadOnlyList<ModeloDaConta> Modelos { get; }
+
+    /// <summary>Bloco 46: os créditos que restam no mês (do último pedido de IA ou de <see cref="UsoAsync"/>); nulo se ainda não se sabe.</summary>
+    decimal? CreditosRestantes { get; }
+
+    /// <summary>Entrou, saiu, ou mudou o perfil (o plano), os modelos ou o saldo.</summary>
     event EventHandler? Mudou;
+
+    /// <summary>Bloco 46: busca os modelos de cada nível (e se o plano libera cada um).</summary>
+    Task<IReadOnlyList<ModeloDaConta>> CarregarModelosAsync(CancellationToken cancelamento);
 
     /// <returns>A mensagem do servidor (o código foi para o e-mail).</returns>
     Task<string> CriarContaAsync(string nome, string email, string senha, CancellationToken cancelamento);
@@ -95,6 +104,38 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
 
     public bool Conectada => Perfil is not null;
 
+    public IReadOnlyList<ModeloDaConta> Modelos { get; private set; } = [];
+
+    public decimal? CreditosRestantes { get; private set; }
+
+    public async Task<IReadOnlyList<ModeloDaConta>> CarregarModelosAsync(CancellationToken cancelamento)
+    {
+        IReadOnlyList<ModeloDaConta> modelos;
+        try
+        {
+            modelos = await _cliente.ModelosAsync(await AcessoDaContaAsync(false, cancelamento), cancelamento);
+        }
+        catch (ErroDaContaException ex) when (ex.SessaoRecusada)
+        {
+            modelos = await _cliente.ModelosAsync(await AcessoDaContaAsync(true, cancelamento), cancelamento);
+        }
+        if (!modelos.SequenceEqual(Modelos))
+        {
+            Modelos = modelos;
+            Mudou?.Invoke(this, EventArgs.Empty);
+        }
+        return modelos;
+    }
+
+    /// <summary>O servidor mandou o saldo junto com uma resposta de IA.</summary>
+    public void AtualizarSaldo(decimal creditosRestantes)
+    {
+        if (CreditosRestantes == creditosRestantes)
+            return;
+        CreditosRestantes = creditosRestantes;
+        Mudou?.Invoke(this, EventArgs.Empty);
+    }
+
     public string? ProblemaNoCofre { get; private set; }
 
     public Task<string> CriarContaAsync(string nome, string email, string senha, CancellationToken cancelamento) =>
@@ -133,7 +174,11 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
             uso = await _cliente.UsoAsync(await AcessoDaContaAsync(true, cancelamento), cancelamento);
         }
         if (Ler() is { } guardada && guardada.Perfil != uso.Perfil)
+        {
             Gravar(guardada with { Perfil = uso.Perfil });
+            Modelos = []; // o plano mudou: os níveis liberados também
+        }
+        AtualizarSaldo(uso.CreditosRestantes);
         return uso;
     }
 
@@ -204,6 +249,8 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
     {
         var mudou = _guardada?.Perfil != guardada.Perfil;
         (_guardada, _cofreLido) = (guardada, true);
+        if (mudou)
+            (Modelos, CreditosRestantes) = ([], null); // outra conta, ou outro plano: os níveis e o saldo são outros
         try
         {
             _cofre.Gravar(NomeNoCofre, JsonSerializer.Serialize(guardada, Json));
@@ -221,7 +268,7 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
     private void Esquecer()
     {
         var tinha = _guardada is not null;
-        (_guardada, _cofreLido, _acesso) = (null, true, null);
+        (_guardada, _cofreLido, _acesso, Modelos, CreditosRestantes) = (null, true, null, [], null);
         try
         {
             _cofre.Remover(NomeNoCofre);
@@ -265,6 +312,9 @@ public sealed class SemContaProjectPlanner : IContaProjectPlanner
     public PerfilDaConta? Perfil => null;
     public bool Conectada => false;
     public string? ProblemaNoCofre => null;
+    public IReadOnlyList<ModeloDaConta> Modelos => [];
+    public decimal? CreditosRestantes => null;
+    public Task<IReadOnlyList<ModeloDaConta>> CarregarModelosAsync(CancellationToken cancelamento) => Falha<IReadOnlyList<ModeloDaConta>>();
 
     public event EventHandler? Mudou
     {

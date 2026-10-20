@@ -1,45 +1,16 @@
-using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.IA;
 using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Services;
 
-/// <summary>De onde vem a chave que o assistente está usando.</summary>
-public enum OrigemDaChave
-{
-    Nenhuma,
-    Cofre,
-    VariavelDeAmbiente,
-}
-
-/// <summary>A configuração do assistente como a tela de configurações a vê e muda (Bloco 23).</summary>
+/// <summary>A configuração do assistente como a tela de configurações e o painel a veem e mudam.</summary>
 public interface IConfiguracaoAssistente
 {
-    string NomeDoProvedor { get; }
-
-    /// <summary>"Chaves do macOS", "Gerenciador de Credenciais do Windows".</summary>
-    string NomeDoCofre { get; }
-
-    bool CofreDisponivel { get; }
-
+    /// <summary>O modelo do nível Padrão, usado enquanto nada foi escolhido.</summary>
     string ModeloPadrao { get; }
 
+    /// <summary>O modelo escolhido (o id do servidor, como "gemini-2.5-flash").</summary>
     string Modelo { get; }
-
-    OrigemDaChave Origem { get; }
-
-    /// <summary>O fim da chave em uso ("…rWc"), para o usuário reconhecer qual é sem ver a chave inteira.</summary>
-    string? FinalDaChave { get; }
-
-    /// <summary>O cofre recusou a leitura (bloqueado, acesso negado); nulo se está tudo bem.</summary>
-    string? ProblemaNoCofre { get; }
-
-    /// <exception cref="ArgumentException">Chave vazia, com espaços ou longa demais.</exception>
-    /// <exception cref="CofreException">O cofre não aceitou.</exception>
-    void SalvarChave(string chave);
-
-    /// <exception cref="CofreException">O cofre não deixou apagar.</exception>
-    void RemoverChave();
 
     /// <exception cref="ArgumentException">Nome de modelo inválido.</exception>
     void SalvarModelo(string modelo);
@@ -50,111 +21,58 @@ public interface IConfiguracaoAssistente
     /// <exception cref="ArgumentOutOfRangeException">Preferência desconhecida.</exception>
     void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia);
 
-    /// <summary>Bloco 45: por onde a IA vai. Sem escolha salva: a chave própria, se houver; senão a conta, se conectada.</summary>
-    ProvedorDoAssistente Provedor { get; }
+    /// <summary>
+    /// Bloco 46: a variável de ambiente <see cref="ConfiguracaoDoAssistente.VariavelDeAmbiente"/> está definida (quem compila
+    /// o código): a IA vai direto ao Google com essa chave, sem a conta.
+    /// </summary>
+    bool ChaveDeDesenvolvimento { get; }
 
-    void SalvarProvedor(ProvedorDoAssistente provedor);
-
-    /// <summary>Testa a chave digitada (ou, sem ela, a que está em uso: a chave própria ou a conta) com o modelo.</summary>
-    /// <exception cref="ArgumentException">Sem chave, ou chave ou modelo inválidos.</exception>
-    /// <exception cref="ErroDoAssistenteException">A chave não vale, o modelo não existe ou não há conexão.</exception>
-    Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento);
+    /// <summary>Confere a conta (ou a chave de desenvolvimento) com o modelo, sem gastar créditos.</summary>
+    /// <exception cref="ArgumentException">Sem conta, ou modelo inválido.</exception>
+    /// <exception cref="ErroDoAssistenteException">O modelo não é do plano, não existe ou não há conexão.</exception>
+    Task TestarAsync(string modelo, CancellationToken cancelamento);
 }
 
 /// <summary>
-/// A chave e o modelo do assistente (Bloco 23). A chave fica no cofre do sistema (nunca em arquivo do programa); sem
-/// ela, vale a variável de ambiente <see cref="VariavelDeAmbiente"/>, para desenvolvimento. O modelo fica em
-/// <c>assistente.json</c>. O cofre é lido uma vez, na primeira vez que a chave é pedida.
+/// A configuração do assistente (Blocos 23, 45 e 46). Desde o Bloco 46 a IA vai pela conta ProjectPlanner: a "chave" que a IA
+/// recebe é a marca <see cref="ProvedorDaConta.Credencial"/> (com a conta conectada), e o provedor do programa
+/// (<see cref="ProvedorConformeCredencial"/>) manda os pedidos pelo servidor. Só quem compila o código usa uma chave do Gemini,
+/// pela variável <see cref="VariavelDeAmbiente"/>. O modelo (o nível) e o modo ficam em <c>assistente.json</c>.
 /// </summary>
 /// <remarks>
-/// Bloco 45: com a conta ProjectPlanner escolhida (e conectada), a "chave" que a IA recebe é a marca
-/// <see cref="ProvedorDaConta.Credencial"/>, e o provedor do programa (<see cref="ProvedorConformeCredencial"/>) manda os
-/// pedidos pelo servidor. A chave própria continua guardada e volta a valer quando a pessoa a escolher.
+/// A chave que as versões até a 0.44 guardavam no cofre (item <c>gemini-api-key</c>) não é mais lida: assim o macOS não pede
+/// a senha das chaves a cada versão. Ela pode ser apagada no app Acesso às Chaves.
 /// </remarks>
 public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfiguracaoIA
 {
-    /// <summary>O nome do segredo no cofre (a "conta" nas Chaves do macOS).</summary>
-    public const string NomeNoCofre = "gemini-api-key";
+    /// <summary>O nome da chave que as versões até a 0.44 guardavam no cofre (só para a documentação).</summary>
+    public const string NomeAntigoNoCofre = "gemini-api-key";
 
     public const string VariavelDeAmbiente = "GEMINI_API_KEY";
 
-    public const int TamanhoMaximoDaChave = 512;
-
-    private readonly ICofreDeSegredos _cofre;
     private readonly IPreferenciasAssistente _preferencias;
     private readonly IProvedorIA _provedor;
     private readonly Func<string, string?> _lerVariavel;
     private readonly IContaProjectPlanner _conta;
-    private bool _cofreLido;
-    private string? _chaveDoCofre;
     private string? _modelo;
-    private string? _problemaNoCofre;
 
-    public ConfiguracaoDoAssistente(ICofreDeSegredos cofre, IPreferenciasAssistente preferencias, IProvedorIA provedor,
-        Func<string, string?> lerVariavel, IContaProjectPlanner? conta = null)
+    public ConfiguracaoDoAssistente(IPreferenciasAssistente preferencias, IProvedorIA provedor, Func<string, string?> lerVariavel,
+        IContaProjectPlanner? conta = null)
     {
-        _conta = conta ?? new SemContaProjectPlanner();
-        ArgumentNullException.ThrowIfNull(cofre);
         ArgumentNullException.ThrowIfNull(preferencias);
         ArgumentNullException.ThrowIfNull(provedor);
         ArgumentNullException.ThrowIfNull(lerVariavel);
-        (_cofre, _preferencias, _provedor, _lerVariavel) = (cofre, preferencias, provedor, lerVariavel);
+        (_preferencias, _provedor, _lerVariavel, _conta) = (preferencias, provedor, lerVariavel, conta ?? new SemContaProjectPlanner());
     }
-
-    public string NomeDoProvedor => _provedor.Nome;
-
-    public string NomeDoCofre => _cofre.Nome;
-
-    public bool CofreDisponivel => _cofre.Disponivel;
 
     public string ModeloPadrao => _provedor.ModeloPadrao;
 
-    public string? ProblemaNoCofre
-    {
-        get
-        {
-            ChaveDoCofre(); // o problema aparece na primeira leitura do cofre
-            return _problemaNoCofre;
-        }
-    }
+    public bool ChaveDeDesenvolvimento => ChaveDaVariavel() is not null;
 
-    /// <summary>A credencial da IA: a chave própria, ou a marca da conta (se ela foi escolhida e está conectada).</summary>
-    public string? ChaveApi => Provedor == ProvedorDoAssistente.Conta
-        ? _conta.Conectada ? ProvedorDaConta.Credencial : null
-        : ChaveDoGemini();
-
-    public ProvedorDoAssistente Provedor => _preferencias.Carregar()?.Provedor
-        ?? (ChaveDoGemini() is null && _conta.Conectada ? ProvedorDoAssistente.Conta : ProvedorDoAssistente.ChavePropria);
-
-    public void SalvarProvedor(ProvedorDoAssistente provedor)
-    {
-        if (!Enum.IsDefined(provedor))
-            throw new ArgumentOutOfRangeException(nameof(provedor), provedor, "Provedor desconhecido.");
-        _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasAssistente(Modelo)) with { Provedor = provedor });
-    }
-
-    private string? ChaveDoGemini() => ChaveDoCofre() ?? ChaveDaVariavel();
-
-    public OrigemDaChave Origem => ChaveDoCofre() is not null ? OrigemDaChave.Cofre
-        : ChaveDaVariavel() is not null ? OrigemDaChave.VariavelDeAmbiente
-        : OrigemDaChave.Nenhuma;
-
-    public string? FinalDaChave => ChaveDoGemini() is { Length: >= 8 } chave ? "…" + chave[^4..] : null;
+    /// <summary>A credencial da IA: a chave de desenvolvimento, ou a marca da conta (conectada); nula sem nenhuma.</summary>
+    public string? ChaveApi => ChaveDaVariavel() ?? (_conta.Conectada ? ProvedorDaConta.Credencial : null);
 
     public string Modelo => _modelo ??= ModeloSalvo() ?? _provedor.ModeloPadrao;
-
-    public void SalvarChave(string chave)
-    {
-        var limpa = Validar(chave);
-        _cofre.Gravar(NomeNoCofre, limpa);
-        (_chaveDoCofre, _cofreLido, _problemaNoCofre) = (limpa, true, null);
-    }
-
-    public void RemoverChave()
-    {
-        _cofre.Remover(NomeNoCofre);
-        (_chaveDoCofre, _cofreLido, _problemaNoCofre) = (null, true, null);
-    }
 
     public void SalvarModelo(string modelo)
     {
@@ -172,48 +90,13 @@ public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfigu
         _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasAssistente(Modelo)) with { Modo = preferencia });
     }
 
-    public Task TestarAsync(string? chave, string modelo, CancellationToken cancelamento)
+    public Task TestarAsync(string modelo, CancellationToken cancelamento)
     {
-        var usada = !string.IsNullOrWhiteSpace(chave) ? Validar(chave)
-            : Provedor == ProvedorDoAssistente.Conta
-                ? ChaveApi ?? throw new ArgumentException("Entre na sua conta ProjectPlanner (menu Conta) para testar.")
-                : ChaveApi ?? throw new ArgumentException("Cole a chave de API para testar (ou salve uma antes).");
-        return _provedor.TestarAsync(usada, _provedor.NormalizarModelo(modelo), cancelamento);
+        var credencial = ChaveApi ?? throw new ArgumentException("Entre na sua conta ProjectPlanner (menu Conta) para testar.");
+        return _provedor.TestarAsync(credencial, _provedor.NormalizarModelo(modelo), cancelamento);
     }
 
-    /// <summary>A chave sem os espaços das pontas (comuns ao colar), recusando espaços no meio e quebras de linha.</summary>
-    public static string Validar(string chave)
-    {
-        var limpa = (chave ?? "").Trim();
-        if (limpa.Length == 0)
-            throw new ArgumentException("Cole a chave de API.");
-        if (limpa.Any(c => char.IsWhiteSpace(c) || char.IsControl(c)))
-            throw new ArgumentException("A chave não pode ter espaços nem quebras de linha.");
-        if (limpa.Length > TamanhoMaximoDaChave)
-            throw new ArgumentException($"A chave tem {limpa.Length} caracteres; o máximo é {TamanhoMaximoDaChave}.");
-        return limpa;
-    }
-
-    private string? ChaveDoCofre()
-    {
-        if (!_cofreLido)
-        {
-            _cofreLido = true;
-            try
-            {
-                _chaveDoCofre = Limpa(_cofre.Ler(NomeNoCofre));
-            }
-            catch (CofreException ex)
-            {
-                _problemaNoCofre = ex.Message;
-            }
-        }
-        return _chaveDoCofre;
-    }
-
-    private string? ChaveDaVariavel() => Limpa(_lerVariavel(VariavelDeAmbiente));
-
-    private static string? Limpa(string? chave) => string.IsNullOrWhiteSpace(chave) ? null : chave.Trim();
+    private string? ChaveDaVariavel() => _lerVariavel(VariavelDeAmbiente) is { } chave && !string.IsNullOrWhiteSpace(chave) ? chave.Trim() : null;
 
     private string? ModeloSalvo()
     {

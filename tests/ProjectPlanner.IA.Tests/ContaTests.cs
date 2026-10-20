@@ -12,6 +12,8 @@ public sealed class ContaTests
     private sealed class SessaoFixa : ISessaoDaConta
     {
         public List<bool> Pedidos { get; } = [];
+        public List<decimal> Saldos { get; } = [];
+        public void AtualizarSaldo(decimal creditosRestantes) => Saldos.Add(creditosRestantes);
         public Task<string> AcessoAsync(bool renovar, CancellationToken cancelamento)
         {
             Pedidos.Add(renovar);
@@ -36,6 +38,23 @@ public sealed class ContaTests
             .Should().Be(("Bearer", "acesso-velho", false));
         corpo.Should().Contain("\"contents\"");
         sessao.Pedidos.Should().Equal(false);
+    }
+
+    [Fact]
+    public async Task PelaConta_OSaldoDoCabecalhoVaiParaASessao()
+    {
+        var sessao = new SessaoFixa();
+        _servidor.Responder = (_, _) =>
+        {
+            var resposta = ManipuladorFalso.Json(200, ManipuladorFalso.Resposta("Olá"));
+            resposta.Headers.Add(AcessoPelaConta.CabecalhoDoSaldo, "5870.5");
+            return Task.FromResult(resposta);
+        };
+        await Assistente(sessao).EnviarAsync(new PedidoIA("Oi", [], []), default);
+        _servidor.Responder = (_, _) => Task.FromResult(ManipuladorFalso.Json(200, ManipuladorFalso.Resposta("Sem saldo no cabeçalho")));
+        await Assistente(sessao).EnviarAsync(new PedidoIA("Oi", [], []), default);
+
+        sessao.Saldos.Should().Equal(5870.5m);
     }
 
     [Fact]

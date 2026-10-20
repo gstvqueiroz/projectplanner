@@ -8,6 +8,10 @@ public sealed class OpcoesDoServidor
 {
     public OpcoesDoJwt Jwt { get; set; } = new();
     public OpcoesDoGemini Gemini { get; set; } = new();
+    public OpcoesDaAnthropic Anthropic { get; set; } = new();
+
+    /// <summary>Bloco 46: os modelos de cada nível (vazio: os padrão).</summary>
+    public List<ModeloDeIa> Modelos { get; set; } = [];
     public OpcoesDoGoogle Google { get; set; } = new();
     public OpcoesDosPlanos Planos { get; set; } = new();
     public OpcoesDeEmail Email { get; set; } = new();
@@ -30,16 +34,53 @@ public sealed class OpcoesDoGemini
     /// <summary>A chave do Gemini da empresa: só no servidor. Sem ela, a IA responde que não está configurada.</summary>
     public string? Chave { get; set; }
     public string Endereco { get; set; } = "https://generativelanguage.googleapis.com/v1beta/";
+}
 
-    public static IReadOnlyList<string> ModelosPadrao { get; } = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"];
+/// <summary>Bloco 46: o Claude, da Anthropic (o nível Máximo).</summary>
+public sealed class OpcoesDaAnthropic
+{
+    /// <summary>A chave da API da Anthropic: só no servidor. Sem ela, os modelos da Anthropic respondem que não estão configurados.</summary>
+    public string? Chave { get; set; }
+    public string Endereco { get; set; } = "https://api.anthropic.com/v1/";
+    public string Versao { get; set; } = "2023-06-01";
 
-    /// <summary>
-    /// Os modelos que os usuários podem usar (os outros são recusados); vazio, os padrão. Começa vazio porque a configuração
-    /// soma os itens da lista aos que já houver.
-    /// </summary>
-    public string[] Modelos { get; set; } = [];
+    /// <summary>O máximo de tokens de resposta (a API da Anthropic exige um).</summary>
+    public int MaximoDeTokens { get; set; } = 16_000;
+}
 
-    public IReadOnlyList<string> Liberados => Modelos.Length > 0 ? Modelos.Distinct().ToArray() : ModelosPadrao;
+/// <summary>Bloco 46: um modelo liberado, com o nível, quem o atende e o preço (US$ por milhão de tokens).</summary>
+public sealed class ModeloDeIa
+{
+    public string Id { get; set; } = "";
+    public string Nivel { get; set; } = Niveis.Padrao;
+    public string Provedor { get; set; } = Provedores.Gemini;
+    public string Nome { get; set; } = "";
+    public decimal DolaresPorMilhaoDeEntrada { get; set; }
+    public decimal DolaresPorMilhaoDeSaida { get; set; }
+
+    /// <summary>O custo, em milionésimos de dólar (inteiro, para somar no banco sem perder centavos).</summary>
+    public long Microdolares(long entrada, long saida) =>
+        (long)Math.Ceiling(entrada * DolaresPorMilhaoDeEntrada + saida * DolaresPorMilhaoDeSaida);
+}
+
+public static class Niveis
+{
+    public const string Padrao = "padrao";
+    public const string Avancado = "avancado";
+    public const string Maximo = "maximo";
+
+    public static string Nome(string nivel) => nivel switch
+    {
+        Avancado => "Avançado",
+        Maximo => "Máximo",
+        _ => "Padrão",
+    };
+}
+
+public static class Provedores
+{
+    public const string Gemini = "gemini";
+    public const string Anthropic = "anthropic";
 }
 
 public sealed class OpcoesDoGoogle
@@ -64,12 +105,25 @@ public sealed class OpcoesDoGoogle
     public bool LoginDoAppLigado => !string.IsNullOrWhiteSpace(ClientIdDoApp) && !string.IsNullOrWhiteSpace(SegredoDoApp);
 }
 
+/// <summary>
+/// Bloco 46: os planos em créditos. Cada pedido de IA gasta o custo real dele (pela tabela de preços do modelo), convertido em
+/// créditos: 1 crédito = <see cref="DolaresPorCredito"/> de custo.
+/// </summary>
 public sealed class OpcoesDosPlanos
 {
-    public long GratisTokensPorMes { get; set; } = 300_000;
-    public long ProfissionalTokensPorMes { get; set; } = 10_000_000;
+    public long GratisCreditosPorMes { get; set; } = 300;
+    public long ProfissionalCreditosPorMes { get; set; } = 6_000;
+    public decimal DolaresPorCredito { get; set; } = 0.0005m;
 
-    public long TokensPorMes(string plano) => plano == Planos.Profissional ? ProfissionalTokensPorMes : GratisTokensPorMes;
+    /// <summary>Os níveis do plano Grátis, separados por vírgula (o Profissional usa todos).</summary>
+    public string NiveisDoGratis { get; set; } = Niveis.Padrao;
+
+    public long CreditosPorMes(string plano) => plano == Planos.Profissional ? ProfissionalCreditosPorMes : GratisCreditosPorMes;
+
+    public bool Libera(string plano, string nivel) => plano == Planos.Profissional
+        || NiveisDoGratis.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Contains(nivel);
+
+    public decimal Creditos(long microdolares) => microdolares / (DolaresPorCredito * 1_000_000m);
 }
 
 public static class Planos

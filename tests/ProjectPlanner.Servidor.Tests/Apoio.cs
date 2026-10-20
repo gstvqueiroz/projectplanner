@@ -70,14 +70,17 @@ public sealed class GeminiDeTeste : HttpMessageHandler
         """;
 
     public ConcurrentQueue<PedidoAoGemini> Pedidos { get; } = new();
+    public ConcurrentQueue<string?> Versoes { get; } = new();
     public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
     public string Resposta { get; set; } = RespostaPadrao;
     public Exception? Erro { get; set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage pedido, CancellationToken cancelamento)
     {
+        Versoes.Enqueue(pedido.Headers.TryGetValues("anthropic-version", out var versao) ? versao.Single() : null);
         Pedidos.Enqueue(new PedidoAoGemini(pedido.Method, pedido.RequestUri!,
-            pedido.Headers.TryGetValues("x-goog-api-key", out var v) ? v.Single() : null, pedido.Headers.Authorization is not null,
+            pedido.Headers.TryGetValues("x-goog-api-key", out var v) || pedido.Headers.TryGetValues("x-api-key", out v) ? v.Single() : null,
+            pedido.Headers.Authorization is not null,
             pedido.Content is null ? "" : await pedido.Content.ReadAsStringAsync(cancelamento)));
         if (Erro is not null)
             throw Erro;
@@ -103,6 +106,15 @@ public sealed class Servidor : WebApplicationFactory<Program>
     public EmailsDeTeste Emails { get; } = new();
     public GoogleDeTeste Google { get; } = new();
     public GeminiDeTeste Gemini { get; } = new();
+    public GeminiDeTeste Claude { get; } = new() { Resposta = ClaudeDeTeste };
+    public const string ChaveDaAnthropic = "chave-da-anthropic-do-servidor-0123456789";
+
+    /// <summary>Bloco 46: a resposta do Claude de mentira (a ferramenta "responder" com o JSON pedido).</summary>
+    public const string ClaudeDeTeste = """
+        {"id":"msg_1","type":"message","role":"assistant","model":"claude-opus-5-5",
+         "content":[{"type":"tool_use","id":"t1","name":"responder","input":{"mensagem":"Olá do Claude","alteracoes":[]}}],
+         "stop_reason":"tool_use","usage":{"input_tokens":1000,"output_tokens":200,"cache_read_input_tokens":500}}
+        """;
     public TrocaDeTeste Troca { get; } = new();
 
     public Servidor(Dictionary<string, string?>? config = null)
@@ -112,6 +124,7 @@ public sealed class Servidor : WebApplicationFactory<Program>
             ["ConnectionStrings:Banco"] = string.IsNullOrWhiteSpace(Postgres) ? $"Data Source={_banco}" : $"{Postgres};Database=pp_teste_{Guid.NewGuid():N}",
             ["Jwt:Chave"] = "chave-do-jwt-de-teste-com-mais-de-32-bytes",
             ["Gemini:Chave"] = ChaveDoGemini,
+            ["Anthropic:Chave"] = ChaveDaAnthropic,
             ["Admin:Chave"] = ChaveDeAdmin,
             ["Limites:PedidosDeContaPorMinuto"] = "1000",
             ["Limites:PedidosDeIaPorMinuto"] = "1000",
@@ -132,6 +145,7 @@ public sealed class Servidor : WebApplicationFactory<Program>
             s.AddSingleton<IValidadorDoGoogle>(Google);
             s.AddSingleton<ITrocaDoCodigoDoGoogle>(Troca);
             s.AddHttpClient(Ia.ClienteDoGemini).ConfigurePrimaryHttpMessageHandler(() => Gemini);
+            s.AddHttpClient(Ia.ClienteDaAnthropic).ConfigurePrimaryHttpMessageHandler(() => Claude);
         });
     }
 

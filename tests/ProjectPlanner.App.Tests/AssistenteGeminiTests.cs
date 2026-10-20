@@ -118,45 +118,36 @@ public sealed class AssistenteGeminiTests : IDisposable
     {
         var avisos = new List<string?>();
         Painel.PropertyChanged += (_, e) => avisos.Add(e.PropertyName);
-        Painel.DescricaoDoModelo.Should().BeEmpty("sem chave, nada no cabeçalho");
-        _ambiente.Dialogos.AoConfigurar = tela =>
-        {
-            tela.ChaveDigitada = "AIzaChaveColadaNoPainel0000000000001111";
-            tela.SalvarCommand.Execute(null);
-            _ambiente.Assistente.EstaConfigurado = true;
-        };
+        Painel.DescricaoDoModelo.Should().BeEmpty("sem conta, nada no cabeçalho");
+        _ambiente.Dialogos.AoConfigurar = _ => _ambiente.Assistente.EstaConfigurado = true;
 
         Painel.ConfigurarCommand.Execute(null);
 
         _ambiente.Dialogos.ConfiguracoesDoAssistente.Should().ContainSingle();
-        _ambiente.ConfiguracaoAssistente.Chave.Should().Be("AIzaChaveColadaNoPainel0000000000001111");
         avisos.Should().Contain([nameof(AssistenteViewModel.EstaConfigurado), nameof(AssistenteViewModel.DescricaoDoModelo)]);
-        (Painel.EstaConfigurado, Painel.DescricaoDoModelo).Should().Be((true, "Gemini (Google) · gemini-2.5-flash"));
+        (Painel.EstaConfigurado, Painel.DescricaoDoModelo).Should().Be((true, "Conta ProjectPlanner · gemini-2.5-flash"));
     }
 
     [Fact]
-    public void ComOAssistenteDeVerdade_SalvarAChaveNaTela_PassaAResponderPeloProvedor()
+    public async Task ComOAssistenteDeVerdade_EntrarNaContaPeloPainel_PassaAResponderPeloProvedor()
     {
-        var cofre = new CofreEmMemoria();
         var provedor = new ProvedorFalso();
-        var configuracao = new ConfiguracaoDoAssistente(cofre, new PreferenciasAssistenteEmMemoria(), provedor, _ => null);
+        var conta = new ContaFalsa();
+        var configuracao = new ConfiguracaoDoAssistente(new PreferenciasAssistenteEmMemoria(), provedor, _ => null, conta);
         var vm = new MainWindowViewModel(_ambiente.Repositorio, _ambiente.Calculadora, _ambiente.Dialogos, _ambiente.Relogio,
             _ambiente.Preferencias, FabricaAssistenteIA.Criar(configuracao, provedor), _ambiente.PreferenciasInterface,
-            _ambiente.Processador, configuracao);
+            _ambiente.Processador, configuracao, conta: conta);
+        vm.Assistente.Visivel = true;
         vm.Assistente.EstaConfigurado.Should().BeFalse();
-        _ambiente.Dialogos.AoConfigurar = tela =>
-        {
-            tela.ChaveDigitada = "AIzaChaveDeVerdadeNoTeste000000000002222";
-            tela.SalvarCommand.Execute(null);
-        };
+        _ambiente.Dialogos.AoMostrarConta = tela => tela.EntrarComGoogleCommand.ExecuteAsync(null);
 
-        vm.Assistente.ConfigurarCommand.Execute(null);
+        await vm.Assistente.EntrarNaContaCommand.ExecuteAsync(null);
         vm.Assistente.TextoDigitado = "Olá";
         vm.Assistente.EnviarCommand.Execute(null);
 
-        (vm.Assistente.EstaConfigurado, vm.Assistente.DescricaoDoModelo).Should().Be((true, "Gemini (Google) · gemini-2.5-flash"));
+        (vm.Assistente.EstaConfigurado, vm.Assistente.DescricaoDoModelo).Should().Be((true, "Conta ProjectPlanner · Gemini 2.5 Flash"));
         vm.Assistente.Mensagens[^1].Texto.Should().Be("[gemini-2.5-flash] Olá");
-        cofre.Segredos.Values.Should().Equal("AIzaChaveDeVerdadeNoTeste000000000002222");
+        provedor.Criados.Should().Equal((ProjectPlanner.IA.Conta.ProvedorDaConta.Credencial, "gemini-2.5-flash"));
     }
 
     [Fact]

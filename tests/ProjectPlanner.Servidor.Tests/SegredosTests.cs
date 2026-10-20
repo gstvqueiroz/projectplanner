@@ -31,9 +31,10 @@ public sealed class SegredosTests
     public void Planos_CotaDoPlano()
     {
         var p = new OpcoesDosPlanos();
-        (p.TokensPorMes(Planos.Gratis), p.TokensPorMes(Planos.Profissional), p.TokensPorMes("desconhecido")).Should().Be((300_000L, 10_000_000L, 300_000L));
-        new OpcoesDoGemini().Liberados.Should().Equal("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro");
-        new OpcoesDoGemini { Modelos = ["gemini-x", "gemini-x"] }.Liberados.Should().Equal("gemini-x");
+        (p.CreditosPorMes(Planos.Gratis), p.CreditosPorMes(Planos.Profissional), p.CreditosPorMes("desconhecido")).Should().Be((300L, 6_000L, 300L));
+        (p.Libera(Planos.Gratis, Niveis.Padrao), p.Libera(Planos.Gratis, Niveis.Avancado), p.Libera(Planos.Profissional, Niveis.Maximo)).Should().Be((true, false, true));
+        new OpcoesDosPlanos { NiveisDoGratis = " padrao , avancado " }.Libera(Planos.Gratis, Niveis.Avancado).Should().BeTrue();
+        p.Creditos(6_750).Should().Be(13.5m, "um pedido típico no Flash (US$ 0,00675) gasta 13,5 créditos de US$ 0,0005");
     }
 
     [Fact]

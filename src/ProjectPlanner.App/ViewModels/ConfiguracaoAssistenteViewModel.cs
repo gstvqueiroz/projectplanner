@@ -1,8 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Services;
-using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.IA;
+using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.ViewModels;
 
@@ -10,39 +10,33 @@ namespace ProjectPlanner.App.ViewModels;
 public sealed record OpcaoDeModo(PreferenciaDeModo Valor, string Texto);
 
 /// <summary>
-/// A tela Configurações do assistente (Bloco 23): colar a chave de API (que vai para o cofre do sistema), escolher o
-/// modelo, testar a conexão e remover a chave. A chave digitada nunca é mostrada de volta: só o fim da que está em uso.
-/// Bloco 45: escolher entre a chave própria e a conta ProjectPlanner (e abrir a tela da conta para entrar).
+/// A tela Configurações do assistente (Blocos 23 e 46): a conta ProjectPlanner (entrar, ver quem está conectado), o nível do
+/// modelo (Padrão, Avançado, Máximo, com o gasto em créditos), o modo ao pedir um cronograma e o teste da conexão. Desde o
+/// Bloco 46 não há chave própria na tela: só a variável <see cref="ConfiguracaoDoAssistente.VariavelDeAmbiente"/>, para quem
+/// compila o código.
 /// </summary>
 public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
 {
     public const string AvisoDePrivacidade =
-        "Ao usar o assistente, o texto das mensagens, o cronograma aberto e os anexos são enviados ao Google (Gemini). " +
-        "Na camada gratuita da API, o Google pode usar esses dados para melhorar os produtos dele: não envie o que não " +
-        "pode sair da empresa.";
-
-    /// <summary>Bloco 45: o aviso quando a IA vai pela conta.</summary>
-    public const string AvisoDaConta =
-        "Ao usar o assistente pela conta, o texto das mensagens, o cronograma aberto e os anexos passam pelo servidor do " +
-        "ProjectPlanner, que não guarda o conteúdo (só conta os tokens do seu plano), e vão ao Google (Gemini).";
+        "Ao usar o assistente, o texto das mensagens, o cronograma aberto e os anexos passam pelo servidor do ProjectPlanner, " +
+        "que não guarda o conteúdo (só conta os créditos do seu plano), e vão ao Google (Gemini) ou à Anthropic (Claude), " +
+        "conforme o nível escolhido.";
 
     private readonly IConfiguracaoAssistente _configuracao;
     private readonly IDialogosService _dialogos;
     private readonly IContaProjectPlanner _conta;
-    private CancellationTokenSource? _teste;
+    private readonly bool _pronta;
+    private CancellationTokenSource? _pedido;
 
     public ConfiguracaoAssistenteViewModel(IConfiguracaoAssistente configuracao, IDialogosService dialogos, IContaProjectPlanner? conta = null)
     {
         ArgumentNullException.ThrowIfNull(configuracao);
         ArgumentNullException.ThrowIfNull(dialogos);
         (_configuracao, _dialogos, _conta) = (configuracao, dialogos, conta ?? new SemContaProjectPlanner());
-        Modelo = configuracao.Modelo;
-        UsarConta = configuracao.Provedor == ProvedorDoAssistente.Conta;
         ModoEscolhido = OpcoesDeModo.FirstOrDefault(o => o.Valor == configuracao.PreferenciaDeModo) ?? OpcoesDeModo[0];
+        MostrarNiveis(_conta.Modelos);
         _pronta = true;
     }
-
-    private readonly bool _pronta;
 
     /// <summary>O que fazer num pedido de cronograma (Bloco 26).</summary>
     public static IReadOnlyList<OpcaoDeModo> OpcoesDeModo { get; } =
@@ -64,212 +58,148 @@ public sealed partial class ConfiguracaoAssistenteViewModel : ViewModelBase
         Mostrar($"Ao pedir um cronograma: {value.Texto.ToLowerInvariant()}.", erro: false);
     }
 
-    public string NomeDoProvedor => _configuracao.NomeDoProvedor;
-
-    // ---- Bloco 45: a chave própria ou a conta ProjectPlanner ----
-
-    /// <summary>Usar a conta ProjectPlanner (senão, a chave própria); muda na hora (não precisa de Salvar).</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UsarChavePropria), nameof(TextoDoProvedor), nameof(Aviso))]
-    [NotifyCanExecuteChangedFor(nameof(TestarCommand))]
-    public partial bool UsarConta { get; set; }
-
-    public bool UsarChavePropria
-    {
-        get => !UsarConta;
-        set => UsarConta = !value;
-    }
-
-    partial void OnUsarContaChanged(bool value)
-    {
-        if (!_pronta)
-            return;
-        _configuracao.SalvarProvedor(value ? ProvedorDoAssistente.Conta : ProvedorDoAssistente.ChavePropria);
-        Mostrar(value
-            ? _conta.Conectada
-                ? "O assistente passa a usar a sua conta ProjectPlanner."
-                : "O assistente vai usar a conta ProjectPlanner: entre na conta para ele funcionar."
-            : TemChave
-                ? "O assistente passa a usar a sua chave do Gemini."
-                : "O assistente vai usar a sua chave do Gemini: cole a chave e salve.", erro: false);
-    }
+    // ---- A conta ----
 
     public bool ContaConectada => _conta.Conectada;
 
-    public string TextoDoProvedor => UsarConta ? "Conta ProjectPlanner (Gemini pelo servidor)" : NomeDoProvedor;
-
-    /// <summary>Para onde vão os dados, conforme a escolha.</summary>
-    public string Aviso => UsarConta ? AvisoDaConta : AvisoDePrivacidade;
-
-    /// <summary>Quem entrou na conta, para a área da conta.</summary>
     public string SituacaoDaConta => _conta.Perfil is { } p
         ? $"Conectado como {p.Nome} ({p.Email}), plano {ContaViewModel.NomeDoPlano(p.Plano)}."
-        : "Você não entrou na conta ProjectPlanner.";
+        : "Entre na sua conta ProjectPlanner para usar o assistente (o plano Grátis tem 300 créditos por mês).";
 
     public string TextoDoBotaoDaConta => _conta.Conectada ? "Minha conta…" : "Entrar ou criar conta…";
 
-    /// <summary>Abre a tela da conta (entrar, criar, ver o plano); na volta, a situação é atualizada.</summary>
+    /// <summary>Quem compila o código e definiu GEMINI_API_KEY: a IA vai direto ao Google, sem a conta.</summary>
+    public bool ChaveDeDesenvolvimento => _configuracao.ChaveDeDesenvolvimento;
+
+    public string TextoDaChaveDeDesenvolvimento =>
+        $"Usando a chave da variável de ambiente {ConfiguracaoDoAssistente.VariavelDeAmbiente} (desenvolvimento): a IA vai direto ao " +
+        $"Google, sem a conta, com o modelo {_configuracao.Modelo}.";
+
+    /// <summary>Abre a tela da conta; na volta, a situação e os níveis são atualizados.</summary>
     [RelayCommand]
     private async Task AbrirConta()
     {
-        var tela = new ContaViewModel(_conta);
-        await _dialogos.MostrarContaAsync(tela);
+        await _dialogos.MostrarContaAsync(new ContaViewModel(_conta));
         OnPropertyChanged(nameof(ContaConectada));
         OnPropertyChanged(nameof(SituacaoDaConta));
         OnPropertyChanged(nameof(TextoDoBotaoDaConta));
         TestarCommand.NotifyCanExecuteChanged();
+        await CarregarAsync();
     }
 
-    public string ModeloPadrao => _configuracao.ModeloPadrao;
+    // ---- O nível do modelo ----
 
-    /// <summary>Onde a chave fica, para a dica abaixo do campo.</summary>
-    public string DicaDaChave => _configuracao.CofreDisponivel
-        ? $"A chave fica no cofre do sistema ({_configuracao.NomeDoCofre}), protegida pela sua conta. Ela nunca vai no " +
-          "arquivo do projeto. Crie uma em aistudio.google.com (Get API key)."
-        : "Este sistema não tem um cofre de senhas que o programa saiba usar: defina a variável de ambiente " +
-          $"{ConfiguracaoDoAssistente.VariavelDeAmbiente}.";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemNiveis))]
+    public partial IReadOnlyList<OpcaoDeNivel> Niveis { get; private set; } = [];
 
-    /// <summary>A chave em uso agora, sem mostrá-la.</summary>
-    public string Situacao => _configuracao.Origem switch
-    {
-        OrigemDaChave.Cofre => $"Chave guardada no cofre do sistema ({_configuracao.NomeDoCofre}), terminada em {_configuracao.FinalDaChave}.",
-        OrigemDaChave.VariavelDeAmbiente =>
-            $"Usando a chave da variável de ambiente {ConfiguracaoDoAssistente.VariavelDeAmbiente} (terminada em " +
-            $"{_configuracao.FinalDaChave}), só para desenvolvimento. Salve uma chave aqui para usar no programa publicado.",
-        _ => "Nenhuma chave configurada: o assistente dá respostas simuladas.",
-    };
+    public bool TemNiveis => Niveis.Count > 0;
 
-    public bool TemChave => _configuracao.Origem != OrigemDaChave.Nenhuma;
-
-    public string? ProblemaNoCofre => _configuracao.ProblemaNoCofre;
-
-    public bool TemProblemaNoCofre => ProblemaNoCofre is not null;
-
+    /// <summary>O nível escolhido; muda na hora (não precisa de Salvar). Um nível fora do plano não é aceito.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(TestarCommand))]
-    public partial string ChaveDigitada { get; set; } = "";
+    public partial OpcaoDeNivel? NivelEscolhido { get; set; }
 
-    [ObservableProperty]
-    public partial string Modelo { get; set; }
+    partial void OnNivelEscolhidoChanged(OpcaoDeNivel? oldValue, OpcaoDeNivel? newValue)
+    {
+        if (!_pronta || newValue is null || _mostrando)
+            return;
+        if (!newValue.Habilitado)
+        {
+            Mostrar($"O nível {newValue.Modelo.NomeDoNivel} ({newValue.Modelo.Nome}) é {newValue.Detalhe}.", erro: true);
+            _mostrando = true;
+            NivelEscolhido = oldValue; // fica o que estava
+            _mostrando = false;
+            return;
+        }
+        _configuracao.SalvarModelo(newValue.Id);
+        Mostrar($"O assistente passa a usar o nível {newValue.Modelo.NomeDoNivel} ({newValue.Modelo.Nome}), {newValue.Detalhe}.", erro: false);
+    }
 
-    /// <summary>O resultado da última ação (salvar, testar, remover).</summary>
+    private bool _mostrando;
+
+    /// <summary>Ao abrir a tela (e depois de entrar): busca os níveis da conta no servidor.</summary>
+    public async Task CarregarAsync()
+    {
+        if (!_conta.Conectada)
+        {
+            MostrarNiveis([]);
+            return;
+        }
+        using var pedido = _pedido = new CancellationTokenSource();
+        try
+        {
+            MostrarNiveis(await _conta.CarregarModelosAsync(pedido.Token));
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is ErroDaContaException or ErroDoAssistenteException)
+        {
+            Mostrar(ex.Message, erro: true);
+        }
+        finally
+        {
+            _pedido = null;
+        }
+    }
+
+    private void MostrarNiveis(IReadOnlyList<ModeloDaConta> modelos)
+    {
+        _mostrando = true;
+        Niveis = OpcaoDeNivel.De(modelos);
+        NivelEscolhido = OpcaoDeNivel.Escolhida(Niveis, _configuracao.Modelo);
+        _mostrando = false;
+        if (NivelEscolhido is { } escolhido && escolhido.Id != _configuracao.Modelo)
+            _configuracao.SalvarModelo(escolhido.Id); // o modelo salvo saiu da lista ou não é do plano: volta ao que vale
+    }
+
+    // ---- Testar ----
+
     [ObservableProperty]
     public partial string Mensagem { get; private set; } = "";
 
     [ObservableProperty]
     public partial bool MensagemEhErro { get; private set; }
 
-    /// <summary>Testando a conexão: os botões ficam travados.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SalvarCommand), nameof(TestarCommand), nameof(RemoverChaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestarCommand))]
     public partial bool Ocupado { get; private set; }
 
-    /// <summary>Grava a chave digitada (se houver) no cofre e o modelo (se mudou).</summary>
-    [RelayCommand(CanExecute = nameof(Livre))]
-    private void Salvar()
-    {
-        var salvos = new List<string>();
-        try
-        {
-            if (!string.Equals(Modelo?.Trim(), _configuracao.Modelo, StringComparison.Ordinal))
-            {
-                _configuracao.SalvarModelo(Modelo ?? "");
-                Modelo = _configuracao.Modelo;
-                salvos.Add("modelo");
-            }
-            if (!string.IsNullOrWhiteSpace(ChaveDigitada))
-            {
-                _configuracao.SalvarChave(ChaveDigitada);
-                ChaveDigitada = "";
-                salvos.Add("chave");
-            }
-        }
-        catch (Exception ex) when (ex is ArgumentException or CofreException)
-        {
-            Mostrar(ex.Message, erro: true);
-            AtualizarSituacao();
-            return;
-        }
-        Mostrar(salvos switch
-        {
-            [] => "Nada para salvar: cole uma chave ou mude o modelo.",
-            ["modelo"] => $"Modelo salvo: {Modelo}.",
-            ["chave"] => "Chave salva no cofre do sistema.",
-            _ => "Modelo e chave salvos.",
-        }, erro: false);
-        AtualizarSituacao();
-    }
-
-    /// <summary>Confere a chave digitada (ou, sem ela, a que está em uso) com o modelo, sem gastar a cota de mensagens.</summary>
+    /// <summary>Confere a conta com o nível escolhido, sem gastar créditos.</summary>
     [RelayCommand(CanExecute = nameof(PodeTestar))]
     private async Task Testar()
     {
-        using var teste = _teste = new CancellationTokenSource();
+        var modelo = NivelEscolhido?.Id ?? _configuracao.Modelo;
+        using var teste = _pedido = new CancellationTokenSource();
         Ocupado = true;
         Mostrar("Testando a conexão…", erro: false);
         try
         {
-            await _configuracao.TestarAsync(ChaveDigitada, Modelo ?? "", teste.Token);
-            Mostrar(UsarConta && string.IsNullOrWhiteSpace(ChaveDigitada)
-                ? $"Conexão OK: a conta ProjectPlanner funciona com o modelo {(Modelo ?? "").Trim()}."
-                : $"Conexão OK: a chave funciona com o modelo {(Modelo ?? "").Trim()}.", erro: false);
+            await _configuracao.TestarAsync(modelo, teste.Token);
+            Mostrar(NivelEscolhido is { } nivel
+                ? $"Conexão OK: a conta funciona com o nível {nivel.Modelo.NomeDoNivel} ({nivel.Modelo.Nome})."
+                : $"Conexão OK com o modelo {modelo}.", erro: false);
         }
         catch (OperationCanceledException)
         {
             Mostrar("Teste cancelado.", erro: true);
         }
-        catch (Exception ex) when (ex is ArgumentException or ErroDoAssistenteException)
+        catch (Exception ex) when (ex is ArgumentException or ErroDoAssistenteException or ErroDaContaException)
         {
             Mostrar(ex.Message, erro: true);
         }
         finally
         {
-            _teste = null;
+            _pedido = null;
             Ocupado = false;
         }
     }
 
-    private bool PodeTestar() => !Ocupado && (!string.IsNullOrWhiteSpace(ChaveDigitada) || (UsarConta ? _conta.Conectada : TemChave));
+    private bool PodeTestar() => !Ocupado && (_conta.Conectada || _configuracao.ChaveDeDesenvolvimento);
 
-    /// <summary>Apaga a chave do cofre, depois de confirmar.</summary>
-    [RelayCommand(CanExecute = nameof(PodeRemover))]
-    private async Task RemoverChave()
-    {
-        if (!await _dialogos.ConfirmarAsync("Remover a chave",
-                "Remover a chave do Gemini do cofre do sistema? O assistente volta a dar respostas simuladas até você salvar outra.",
-                "Remover"))
-            return;
-        try
-        {
-            _configuracao.RemoverChave();
-            Mostrar("Chave removida do cofre do sistema.", erro: false);
-        }
-        catch (CofreException ex)
-        {
-            Mostrar(ex.Message, erro: true);
-        }
-        AtualizarSituacao();
-    }
-
-    private bool PodeRemover() => !Ocupado && _configuracao.Origem == OrigemDaChave.Cofre;
-
-    [RelayCommand]
-    private void RestaurarModeloPadrao() => Modelo = _configuracao.ModeloPadrao;
-
-    /// <summary>A janela foi fechada: um teste em andamento é cancelado.</summary>
-    public void Fechando() => _teste?.Cancel();
-
-    private bool Livre() => !Ocupado;
+    /// <summary>A janela foi fechada: um teste ou uma busca em andamento é cancelado.</summary>
+    public void Fechando() => _pedido?.Cancel();
 
     private void Mostrar(string mensagem, bool erro) => (Mensagem, MensagemEhErro) = (mensagem, erro);
-
-    private void AtualizarSituacao()
-    {
-        OnPropertyChanged(nameof(Situacao));
-        OnPropertyChanged(nameof(TemChave));
-        OnPropertyChanged(nameof(ProblemaNoCofre));
-        OnPropertyChanged(nameof(TemProblemaNoCofre));
-        TestarCommand.NotifyCanExecuteChanged();
-        RemoverChaveCommand.NotifyCanExecuteChanged();
-    }
 }

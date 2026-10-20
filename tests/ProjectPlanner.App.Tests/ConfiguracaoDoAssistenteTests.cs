@@ -1,126 +1,54 @@
 using ProjectPlanner.App.Services;
 using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.IA;
+using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Tests;
 
-// Bloco 23: a chave do assistente no cofre (com a variável de ambiente para desenvolvimento) e o modelo.
+// Blocos 23 e 46: a configuração do assistente. Desde o Bloco 46, a IA vai pela conta ProjectPlanner; a chave do Gemini só
+// pela variável de ambiente, para quem compila o código. O modelo (o nível) fica no assistente.json.
 public class ConfiguracaoDoAssistenteTests
 {
-    private const string Chave = "AIzaChaveDoCofreParaTestes0000000001234";
     private const string ChaveDaVariavel = "AIzaChaveDaVariavelDeAmbiente000005678";
 
-    private readonly CofreEmMemoria _cofre = new();
     private readonly PreferenciasAssistenteEmMemoria _preferencias = new();
     private readonly ProvedorFalso _provedor = new();
+    private readonly ContaFalsa _conta = new();
     private readonly Dictionary<string, string?> _variaveis = [];
 
-    private ConfiguracaoDoAssistente Nova() => new(_cofre, _preferencias, _provedor, nome => _variaveis.GetValueOrDefault(nome));
+    private ConfiguracaoDoAssistente Nova() => new(_preferencias, _provedor, nome => _variaveis.GetValueOrDefault(nome), _conta);
 
     [Fact]
-    public void SemChave_NenhumaOrigem()
+    public void SemContaNemVariavel_SemCredencial()
     {
         var configuracao = Nova();
 
-        (configuracao.ChaveApi, configuracao.Origem, configuracao.FinalDaChave, configuracao.ProblemaNoCofre)
-            .Should().Be((null, OrigemDaChave.Nenhuma, null, null));
-        (configuracao.NomeDoProvedor, configuracao.NomeDoCofre, configuracao.CofreDisponivel, configuracao.Modelo)
-            .Should().Be(("Gemini (Google)", "Chaves do macOS", true, "gemini-2.5-flash"));
+        (configuracao.ChaveApi, configuracao.ChaveDeDesenvolvimento, configuracao.Modelo, configuracao.ModeloPadrao)
+            .Should().Be((null, false, "gemini-2.5-flash", "gemini-2.5-flash"));
     }
 
     [Fact]
-    public void ChaveDoCofre_TemPrioridadeSobreAVariavel_ECofreELidoUmaVezSo()
-    {
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = ChaveDaVariavel;
-        var configuracao = Nova();
-
-        (configuracao.ChaveApi, configuracao.Origem, configuracao.FinalDaChave).Should().Be((Chave, OrigemDaChave.Cofre, "…1234"));
-        _ = configuracao.ChaveApi;
-        _cofre.Leituras.Should().Be(1);
-    }
-
-    [Fact]
-    public void SoAVariavelDeAmbiente_ServeParaDesenvolvimento()
-    {
-        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = "  " + ChaveDaVariavel + "\n";
-
-        var configuracao = Nova();
-
-        (configuracao.ChaveApi, configuracao.Origem, configuracao.FinalDaChave)
-            .Should().Be((ChaveDaVariavel, OrigemDaChave.VariavelDeAmbiente, "…5678"));
-    }
-
-    [Fact]
-    public void SalvarChave_VaiParaOCofre_SemEspacosDasPontas_EValeNaHora()
+    public void ComAConta_ACredencialEADaConta_ESairDesliga()
     {
         var configuracao = Nova();
+        _conta.Conectar();
+        configuracao.ChaveApi.Should().Be(ProvedorDaConta.Credencial);
 
-        configuracao.SalvarChave("  " + Chave + " \n");
-
-        _cofre.Segredos.Should().Equal(new Dictionary<string, string> { [ConfiguracaoDoAssistente.NomeNoCofre] = Chave });
-        (configuracao.ChaveApi, configuracao.Origem).Should().Be((Chave, OrigemDaChave.Cofre));
-        _preferencias.Salvas.Should().BeNull("a chave nunca vai para o assistente.json");
+        _conta.Perfil = null;
+        configuracao.ChaveApi.Should().BeNull();
     }
 
     [Theory]
-    [InlineData("", "Cole a chave de API.")]
-    [InlineData("   ", "Cole a chave de API.")]
-    [InlineData("AIza com espaco", "A chave não pode ter espaços nem quebras de linha.")]
-    [InlineData("AIza\nquebrada", "A chave não pode ter espaços nem quebras de linha.")]
-    public void SalvarChave_Invalida_NaoMexeNoCofre(string chave, string mensagem)
+    [InlineData("  " + ChaveDaVariavel + "  ", ChaveDaVariavel)]
+    [InlineData("   ", null)]
+    [InlineData(null, null)]
+    public void VariavelDeAmbiente_ParaDesenvolvimento_TemPrioridadeSobreAConta(string? variavel, string? esperada)
     {
-        var salvar = () => Nova().SalvarChave(chave);
-
-        salvar.Should().Throw<ArgumentException>().Which.Message.Should().Be(mensagem);
-        _cofre.Segredos.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void SalvarChave_LongaDemais_Recusada()
-    {
-        var salvar = () => Nova().SalvarChave(new string('a', 513));
-
-        salvar.Should().Throw<ArgumentException>().WithMessage("A chave tem 513 caracteres; o máximo é 512.");
-    }
-
-    [Fact]
-    public void RemoverChave_VoltaParaAVariavel_OuParaNenhuma()
-    {
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        var configuracao = Nova();
-        _ = configuracao.ChaveApi;
-
-        configuracao.RemoverChave();
-        configuracao.Origem.Should().Be(OrigemDaChave.Nenhuma);
-        _cofre.Segredos.Should().BeEmpty();
-
-        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = ChaveDaVariavel;
-        configuracao.Origem.Should().Be(OrigemDaChave.VariavelDeAmbiente);
-    }
-
-    [Fact]
-    public void CofreBloqueado_AoLer_UsaAVariavel_EGuardaOProblema()
-    {
-        _cofre.Falha = new CofreException("Não foi possível ler a chave: as Chaves do macOS estão bloqueadas ou recusaram o acesso.");
-        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = ChaveDaVariavel;
-
+        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = variavel;
+        _conta.Conectar();
         var configuracao = Nova();
 
-        (configuracao.ChaveApi, configuracao.Origem).Should().Be((ChaveDaVariavel, OrigemDaChave.VariavelDeAmbiente));
-        configuracao.ProblemaNoCofre.Should().StartWith("Não foi possível ler a chave");
-    }
-
-    [Fact]
-    public void CofreRecusaGravar_AChaveNaoMuda()
-    {
-        var configuracao = Nova();
-        _cofre.Falha = new CofreException("Não foi possível salvar a chave nas Chaves do macOS (erro -25293).");
-
-        var salvar = () => configuracao.SalvarChave(Chave);
-
-        salvar.Should().Throw<CofreException>();
-        configuracao.Origem.Should().Be(OrigemDaChave.Nenhuma);
+        (configuracao.ChaveApi, configuracao.ChaveDeDesenvolvimento).Should().Be((esperada ?? ProvedorDaConta.Credencial, esperada is not null));
     }
 
     [Fact]
@@ -128,38 +56,32 @@ public class ConfiguracaoDoAssistenteTests
     {
         var configuracao = Nova();
 
-        configuracao.SalvarModelo(" models/gemini-2.5-pro ");
+        configuracao.SalvarModelo(" models/claude-opus-5-5 ");
 
-        (configuracao.Modelo, _preferencias.Salvas).Should().Be(("gemini-2.5-pro", new PreferenciasAssistente("gemini-2.5-pro")));
-        Nova().Modelo.Should().Be("gemini-2.5-pro", "fica salvo entre as sessões");
+        (configuracao.Modelo, _preferencias.Salvas).Should().Be(("claude-opus-5-5", new PreferenciasAssistente("claude-opus-5-5")));
+        Nova().Modelo.Should().Be("claude-opus-5-5", "fica salvo entre as sessões");
 
         _preferencias.Salvas = new PreferenciasAssistente("nome inválido!");
         Nova().Modelo.Should().Be("gemini-2.5-flash");
 
         var invalido = () => configuracao.SalvarModelo("gemini 2.5");
         invalido.Should().Throw<ArgumentException>();
-        configuracao.Modelo.Should().Be("gemini-2.5-pro");
+        configuracao.Modelo.Should().Be("claude-opus-5-5");
     }
 
     [Fact]
-    public async Task Testar_UsaAChaveDigitada_OuAEmUso()
+    public async Task Testar_PelaContaOuPelaVariavel_ESemNenhumaRecusa()
     {
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        var configuracao = Nova();
-
-        await configuracao.TestarAsync(" AIzaDigitadaNaTela ", "gemini-2.5-flash", CancellationToken.None);
-        await configuracao.TestarAsync(null, "models/gemini-2.5-pro", CancellationToken.None);
-
-        _provedor.Testes.Should().Equal(("AIzaDigitadaNaTela", "gemini-2.5-flash"), (Chave, "gemini-2.5-pro"));
-    }
-
-    [Fact]
-    public async Task Testar_SemNenhumaChave_Recusado()
-    {
-        var testar = () => Nova().TestarAsync("", "gemini-2.5-flash", CancellationToken.None);
-
-        await testar.Should().ThrowAsync<ArgumentException>().WithMessage("Cole a chave de API para testar (ou salve uma antes).");
+        var testar = () => Nova().TestarAsync("gemini-2.5-flash", CancellationToken.None);
+        await testar.Should().ThrowAsync<ArgumentException>().WithMessage("Entre na sua conta ProjectPlanner (menu Conta) para testar.");
         _provedor.Testes.Should().BeEmpty();
+
+        _conta.Conectar();
+        await Nova().TestarAsync("models/gemini-2.5-pro", CancellationToken.None);
+        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = ChaveDaVariavel;
+        await Nova().TestarAsync("gemini-2.5-flash", CancellationToken.None);
+
+        _provedor.Testes.Should().Equal((ProvedorDaConta.Credencial, "gemini-2.5-pro"), (ChaveDaVariavel, "gemini-2.5-flash"));
     }
 
     [Fact]
@@ -167,29 +89,29 @@ public class ConfiguracaoDoAssistenteTests
     {
         var acoes = new Action[]
         {
-            () => _ = new ConfiguracaoDoAssistente(null!, _preferencias, _provedor, _ => null),
-            () => _ = new ConfiguracaoDoAssistente(_cofre, null!, _provedor, _ => null),
-            () => _ = new ConfiguracaoDoAssistente(_cofre, _preferencias, null!, _ => null),
-            () => _ = new ConfiguracaoDoAssistente(_cofre, _preferencias, _provedor, null!),
+            () => _ = new ConfiguracaoDoAssistente(null!, _provedor, _ => null),
+            () => _ = new ConfiguracaoDoAssistente(_preferencias, null!, _ => null),
+            () => _ = new ConfiguracaoDoAssistente(_preferencias, _provedor, null!),
         };
 
         foreach (var acao in acoes)
             acao.Should().Throw<ArgumentNullException>();
+        new ConfiguracaoDoAssistente(_preferencias, _provedor, _ => null).ChaveApi.Should().BeNull("sem conta passada, nada conectado");
     }
 
     [Fact]
-    public async Task ComOAssistenteDeVerdade_SalvarAChaveLigaOProvedorNaHora()
+    public async Task ComOAssistenteDeVerdade_EntrarNaContaLigaOProvedorNaHora()
     {
         var configuracao = Nova();
         var assistente = FabricaAssistenteIA.Criar(configuracao, _provedor);
         assistente.EstaConfigurado.Should().BeFalse();
 
-        configuracao.SalvarChave(Chave);
-        configuracao.SalvarModelo("gemini-2.5-pro");
+        _conta.Conectar();
+        configuracao.SalvarModelo("claude-opus-5-5");
 
         assistente.EstaConfigurado.Should().BeTrue();
-        (await assistente.EnviarAsync(new PedidoIA("Oi", [], []), CancellationToken.None)).Texto.Should().Be("[gemini-2.5-pro] Oi");
-        _provedor.Criados.Should().Equal((Chave, "gemini-2.5-pro"));
+        (await assistente.EnviarAsync(new PedidoIA("Oi", [], []), CancellationToken.None)).Texto.Should().Be("[claude-opus-5-5] Oi");
+        _provedor.Criados.Should().Equal((ProvedorDaConta.Credencial, "claude-opus-5-5"));
     }
 }
 

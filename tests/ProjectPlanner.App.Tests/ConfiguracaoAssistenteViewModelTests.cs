@@ -1,207 +1,140 @@
 using ProjectPlanner.App.Services;
-using ProjectPlanner.App.Services.Cofre;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.IA;
+using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Tests;
 
-// Bloco 23: a tela Configurações do assistente.
+// Blocos 23 e 46: a tela Configurações do assistente: a conta, o nível do modelo (com o gasto em créditos), o modo e o teste.
 public class ConfiguracaoAssistenteViewModelTests
 {
-    private const string Chave = "AIzaChaveColadaNaTela00000000000009876";
-
-    private readonly CofreEmMemoria _cofre = new();
-    private readonly PreferenciasAssistenteEmMemoria _preferencias = new();
-    private readonly ProvedorFalso _provedor = new();
+    private readonly ConfiguracaoAssistenteFalsa _configuracao = new();
     private readonly DialogosFalsos _dialogos = new();
-    private readonly Dictionary<string, string?> _variaveis = [];
-    private readonly ConfiguracaoDoAssistente _configuracao;
+    private readonly ContaFalsa _conta = new();
 
-    public ConfiguracaoAssistenteViewModelTests() =>
-        _configuracao = new ConfiguracaoDoAssistente(_cofre, _preferencias, _provedor, nome => _variaveis.GetValueOrDefault(nome));
+    private static readonly IReadOnlyList<ModeloDaConta> DoProfissional =
+        [.. ContaFalsa.ModelosDoGratis.Select(m => m with { Liberado = true })];
 
-    private ConfiguracaoAssistenteViewModel Tela() => new(_configuracao, _dialogos);
+    private ConfiguracaoAssistenteViewModel Tela() => new(_configuracao, _dialogos, _conta);
 
     [Fact]
-    public void SemChave_SituacaoEBotoes()
+    public void SemConta_ConvidaAEntrar_SemNiveis_ETestarDesligado()
     {
         var tela = Tela();
 
-        (tela.Situacao, tela.TemChave, tela.Modelo, tela.NomeDoProvedor, tela.ModeloPadrao).Should().Be(
-            ("Nenhuma chave configurada: o assistente dá respostas simuladas.", false, "gemini-2.5-flash", "Gemini (Google)", "gemini-2.5-flash"));
-        tela.DicaDaChave.Should().Contain("cofre do sistema (Chaves do macOS)").And.Contain("nunca vai no arquivo do projeto");
-        tela.TestarCommand.CanExecute(null).Should().BeFalse("não há chave para testar");
-        tela.RemoverChaveCommand.CanExecute(null).Should().BeFalse();
-        tela.SalvarCommand.CanExecute(null).Should().BeTrue();
-        ConfiguracaoAssistenteViewModel.AvisoDePrivacidade.Should().Contain("enviados ao Google (Gemini)");
+        (tela.ContaConectada, tela.TextoDoBotaoDaConta, tela.TemNiveis, tela.ChaveDeDesenvolvimento, tela.TestarCommand.CanExecute(null))
+            .Should().Be((false, "Entrar ou criar conta…", false, false, false));
+        tela.SituacaoDaConta.Should().Be("Entre na sua conta ProjectPlanner para usar o assistente (o plano Grátis tem 300 créditos por mês).");
+        ConfiguracaoAssistenteViewModel.AvisoDePrivacidade.Should().Contain("servidor do ProjectPlanner").And.Contain("não guarda o conteúdo");
     }
 
     [Fact]
-    public void Salvar_ChaveVaiParaOCofre_ECampoEsvazia()
+    public async Task ComConta_CarregaOsNiveis_ForaDoPlanoDizOPorque()
     {
+        _conta.Conectar();
         var tela = Tela();
-        var avisos = new List<string?>();
-        tela.PropertyChanged += (_, e) => avisos.Add(e.PropertyName);
-        tela.ChaveDigitada = Chave;
-        tela.TestarCommand.CanExecute(null).Should().BeTrue();
+        await tela.CarregarAsync();
 
-        tela.SalvarCommand.Execute(null);
+        (tela.SituacaoDaConta, tela.TextoDoBotaoDaConta, tela.TemNiveis).Should().Be(("Conectado como Ana (ana@exemplo.com), plano Grátis.", "Minha conta…", true));
+        tela.Niveis.Select(n => (n.Titulo, n.Detalhe, n.Habilitado)).Should().Equal(
+            ("Padrão: Gemini 2.5 Flash", "cerca de 14 créditos por pedido", true),
+            ("Avançado: Gemini 2.5 Pro", "do plano Profissional", false),
+            ("Máximo: Claude Opus 5.5", "do plano Profissional", false));
+        (tela.NivelEscolhido!.Id, tela.Mensagem).Should().Be(("gemini-2.5-flash", ""));
 
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre].Should().Be(Chave);
-        (tela.ChaveDigitada, tela.Mensagem, tela.MensagemEhErro).Should().Be(("", "Chave salva no cofre do sistema.", false));
-        tela.Situacao.Should().Be("Chave guardada no cofre do sistema (Chaves do macOS), terminada em …9876.");
-        tela.Situacao.Should().NotContain(Chave[..20], "a tela nunca mostra a chave de volta");
-        avisos.Should().Contain(nameof(ConfiguracaoAssistenteViewModel.Situacao));
-        tela.RemoverChaveCommand.CanExecute(null).Should().BeTrue();
+        tela.NivelEscolhido = tela.Niveis[2];
+        (tela.NivelEscolhido!.Id, _configuracao.Modelo, tela.MensagemEhErro).Should().Be(("gemini-2.5-flash", "gemini-2.5-flash", true));
+        tela.Mensagem.Should().Be("O nível Máximo (Claude Opus 5.5) é do plano Profissional.");
     }
 
     [Fact]
-    public void Salvar_ModeloEChave_Juntos_ENadaParaSalvar()
+    public async Task Profissional_EscolherONivel_SalvaNaHora()
     {
+        _conta.Conectar(plano: "profissional");
+        _conta.ModelosDoServidor = DoProfissional;
         var tela = Tela();
+        await tela.CarregarAsync();
 
-        tela.SalvarCommand.Execute(null);
-        tela.Mensagem.Should().Be("Nada para salvar: cole uma chave ou mude o modelo.");
+        tela.NivelEscolhido = tela.Niveis[2];
 
-        (tela.ChaveDigitada, tela.Modelo) = (Chave, " models/gemini-2.5-pro ");
-        tela.SalvarCommand.Execute(null);
-
-        (tela.Mensagem, tela.Modelo, _configuracao.Modelo).Should().Be(("Modelo e chave salvos.", "gemini-2.5-pro", "gemini-2.5-pro"));
-
-        tela.Modelo = "gemini-2.5-flash";
-        tela.SalvarCommand.Execute(null);
-        tela.Mensagem.Should().Be("Modelo salvo: gemini-2.5-flash.");
+        (_configuracao.Modelo, tela.MensagemEhErro).Should().Be(("claude-opus-5-5", false));
+        tela.Mensagem.Should().Be("O assistente passa a usar o nível Máximo (Claude Opus 5.5), cerca de 140 créditos por pedido.");
+        Tela().NivelEscolhido!.Id.Should().Be("claude-opus-5-5", "a conta já tem os níveis: a tela abre com a escolha");
     }
 
     [Fact]
-    public void Salvar_Invalido_MostraOErro_ENaoSalvaNada()
+    public async Task ModeloSalvoForaDoPlanoOuDaLista_VoltaAoPadrao()
     {
+        _conta.Conectar();
+        _configuracao.Modelo = "claude-opus-5-5"; // era Profissional e voltou ao Grátis
         var tela = Tela();
-        (tela.ChaveDigitada, tela.Modelo) = ("chave com espaço", "gemini-2.5-flash");
+        await tela.CarregarAsync();
+        (tela.NivelEscolhido!.Id, _configuracao.Modelo).Should().Be(("gemini-2.5-flash", "gemini-2.5-flash"));
 
-        tela.SalvarCommand.Execute(null);
-
-        (tela.Mensagem, tela.MensagemEhErro).Should().Be(("A chave não pode ter espaços nem quebras de linha.", true));
-        _cofre.Segredos.Should().BeEmpty();
-        tela.ChaveDigitada.Should().Be("chave com espaço", "o usuário corrige o que colou");
-
-        (tela.ChaveDigitada, tela.Modelo) = ("", "gemini 2.5");
-        tela.SalvarCommand.Execute(null);
-        (tela.MensagemEhErro, _preferencias.Salvas).Should().Be((true, null));
+        _configuracao.Modelo = "gemini-2.5-flash-lite"; // um modelo que saiu da lista
+        await tela.CarregarAsync();
+        _configuracao.Modelo.Should().Be("gemini-2.5-flash");
     }
 
     [Fact]
-    public void Salvar_CofreRecusa_MostraOMotivo()
+    public async Task AbrirAConta_EntraEOsNiveisAparecem()
     {
-        _cofre.Falha = new CofreException("Não foi possível salvar a chave: o acesso às Chaves do macOS foi negado.");
+        _dialogos.AoMostrarConta = conta => conta.EntrarComGoogleCommand.ExecuteAsync(null);
         var tela = Tela();
-        tela.ChaveDigitada = Chave;
 
-        tela.SalvarCommand.Execute(null);
+        await tela.AbrirContaCommand.ExecuteAsync(null);
 
-        (tela.Mensagem, tela.MensagemEhErro, tela.TemChave).Should().Be(
-            ("Não foi possível salvar a chave: o acesso às Chaves do macOS foi negado.", true, false));
+        _dialogos.Contas.Should().ContainSingle();
+        (tela.ContaConectada, tela.SituacaoDaConta, tela.TemNiveis, tela.TestarCommand.CanExecute(null))
+            .Should().Be((true, "Conectado como Bia (bia@gmail.com), plano Grátis.", true, true));
     }
 
     [Fact]
-    public async Task Testar_ChaveDigitada_Ok()
+    public async Task CarregarSemServidor_MostraOMotivo()
     {
+        _conta.Conectar();
+        _conta.Erro = new ErroDaContaException("Sem conexão com o servidor do ProjectPlanner. Verifique a internet e tente de novo.", 0);
         var tela = Tela();
-        tela.ChaveDigitada = Chave;
+
+        await tela.CarregarAsync();
+
+        (tela.TemNiveis, tela.Mensagem, tela.MensagemEhErro).Should().Be((false,
+            "Sem conexão com o servidor do ProjectPlanner. Verifique a internet e tente de novo.", true));
+    }
+
+    [Fact]
+    public async Task Testar_ComONivelEscolhido_OkOuOErroDoServidor()
+    {
+        _conta.Conectar();
+        var tela = Tela();
+        await tela.CarregarAsync();
 
         await tela.TestarCommand.ExecuteAsync(null);
+        (_configuracao.Testes.Single(), tela.Mensagem, tela.MensagemEhErro, tela.Ocupado)
+            .Should().Be(("gemini-2.5-flash", "Conexão OK: a conta funciona com o nível Padrão (Gemini 2.5 Flash).", false, false));
 
-        (tela.Mensagem, tela.MensagemEhErro, tela.Ocupado).Should().Be(("Conexão OK: a chave funciona com o modelo gemini-2.5-flash.", false, false));
-        _provedor.Testes.Should().Equal((Chave, "gemini-2.5-flash"));
-        _cofre.Segredos.Should().BeEmpty("testar não salva");
-    }
-
-    [Fact]
-    public async Task Testar_Falha_MostraOErroDoProvedor()
-    {
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        _provedor.ErroNoTeste = new ErroDoAssistenteException("A chave do Gemini não é válida. Confira a chave nas configurações do assistente.");
-        var tela = Tela();
-
+        _configuracao.ErroNoTeste = new ErroDoAssistenteException("A sessão da sua conta ProjectPlanner acabou. Entre de novo (menu Conta).");
         await tela.TestarCommand.ExecuteAsync(null);
-
-        (tela.Mensagem, tela.MensagemEhErro).Should().Be(("A chave do Gemini não é válida. Confira a chave nas configurações do assistente.", true));
+        (tela.Mensagem, tela.MensagemEhErro).Should().Be(("A sessão da sua conta ProjectPlanner acabou. Entre de novo (menu Conta).", true));
     }
 
     [Fact]
-    public async Task Testar_EmAndamento_TravaOsBotoes_EFecharCancela()
+    public async Task ChaveDeDesenvolvimento_Explica_ETestaSemConta()
     {
-        _provedor.TesteSegurado = new TaskCompletionSource();
+        _configuracao.ChaveDeDesenvolvimento = true;
         var tela = Tela();
-        tela.ChaveDigitada = Chave;
 
-        var teste = tela.TestarCommand.ExecuteAsync(null);
-
-        (tela.Ocupado, tela.Mensagem).Should().Be((true, "Testando a conexão…"));
-        tela.SalvarCommand.CanExecute(null).Should().BeFalse();
-        tela.TestarCommand.CanExecute(null).Should().BeFalse();
-
-        tela.Fechando();
-        await teste;
-
-        (tela.Ocupado, tela.Mensagem, tela.MensagemEhErro).Should().Be((false, "Teste cancelado.", true));
+        (tela.ChaveDeDesenvolvimento, tela.TestarCommand.CanExecute(null)).Should().Be((true, true));
+        tela.TextoDaChaveDeDesenvolvimento.Should().StartWith("Usando a chave da variável de ambiente GEMINI_API_KEY (desenvolvimento)");
+        await tela.TestarCommand.ExecuteAsync(null);
+        tela.Mensagem.Should().Be("Conexão OK com o modelo gemini-2.5-flash.");
     }
 
     [Fact]
-    public async Task RemoverChave_ComConfirmacao()
+    public void ArgumentosNulos_Recusados()
     {
-        _cofre.Segredos[ConfiguracaoDoAssistente.NomeNoCofre] = Chave;
-        var tela = Tela();
-        _dialogos.Confirmar = false;
-
-        await tela.RemoverChaveCommand.ExecuteAsync(null);
-        _cofre.Segredos.Should().ContainKey(ConfiguracaoDoAssistente.NomeNoCofre, "cancelou");
-        _dialogos.Confirmacoes.Last().Should().StartWith("Remover a chave do Gemini do cofre do sistema?");
-
-        _dialogos.Confirmar = true;
-        await tela.RemoverChaveCommand.ExecuteAsync(null);
-
-        _cofre.Segredos.Should().BeEmpty();
-        (tela.Mensagem, tela.TemChave, tela.RemoverChaveCommand.CanExecute(null)).Should().Be(("Chave removida do cofre do sistema.", false, false));
-    }
-
-    [Fact]
-    public void ChaveDaVariavel_SituacaoExplica_ENaoDaParaRemover()
-    {
-        _variaveis[ConfiguracaoDoAssistente.VariavelDeAmbiente] = "AIzaChaveDaVariavelDeAmbiente000005678";
-
-        var tela = Tela();
-
-        tela.Situacao.Should().Be("Usando a chave da variável de ambiente GEMINI_API_KEY (terminada em …5678), só para desenvolvimento. " +
-                                  "Salve uma chave aqui para usar no programa publicado.");
-        tela.RemoverChaveCommand.CanExecute(null).Should().BeFalse("a variável não está no cofre");
-        tela.TestarCommand.CanExecute(null).Should().BeTrue();
-    }
-
-    [Fact]
-    public void CofreBloqueado_MostraOProblema()
-    {
-        _cofre.Falha = new CofreException("Não foi possível ler a chave: as Chaves do macOS estão bloqueadas ou recusaram o acesso.");
-
-        var tela = Tela();
-        _ = tela.Situacao;
-
-        (tela.TemProblemaNoCofre, tela.ProblemaNoCofre).Should().Be(
-            (true, "Não foi possível ler a chave: as Chaves do macOS estão bloqueadas ou recusaram o acesso."));
-    }
-
-    [Fact]
-    public void RestaurarModeloPadrao_EArgumentosNulos()
-    {
-        var tela = Tela();
-        tela.Modelo = "gemini-2.5-pro";
-
-        tela.RestaurarModeloPadraoCommand.Execute(null);
-
-        tela.Modelo.Should().Be("gemini-2.5-flash");
-        var semConfiguracao = () => new ConfiguracaoAssistenteViewModel(null!, _dialogos);
-        var semDialogos = () => new ConfiguracaoAssistenteViewModel(_configuracao, null!);
-        semConfiguracao.Should().Throw<ArgumentNullException>();
-        semDialogos.Should().Throw<ArgumentNullException>();
+        FluentActions.Invoking(() => new ConfiguracaoAssistenteViewModel(null!, _dialogos)).Should().Throw<ArgumentNullException>();
+        FluentActions.Invoking(() => new ConfiguracaoAssistenteViewModel(_configuracao, null!)).Should().Throw<ArgumentNullException>();
+        new ConfiguracaoAssistenteViewModel(_configuracao, _dialogos).ContaConectada.Should().BeFalse("sem conta passada");
     }
 }

@@ -8,12 +8,11 @@ namespace ProjectPlanner.App.Tests;
 // Bloco 26: "Ao pedir um cronograma" (perguntar, montar direto, estudar antes), em Configurações do assistente.
 public class PreferenciaDeModoTests
 {
-    private readonly CofreEmMemoria _cofre = new();
     private readonly PreferenciasAssistenteEmMemoria _preferencias = new();
     private readonly ConfiguracaoDoAssistente _configuracao;
 
     public PreferenciaDeModoTests() =>
-        _configuracao = new ConfiguracaoDoAssistente(_cofre, _preferencias, new ProvedorFalso(), _ => null);
+        _configuracao = new ConfiguracaoDoAssistente(_preferencias, new ProvedorFalso(), _ => null);
 
     [Fact]
     public void SemPreferencia_Perguntar()

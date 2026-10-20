@@ -3,6 +3,14 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.45.1
+
+Correção do nível Máximo (Claude Opus 5.5).
+
+- O Claude recusava os pedidos ("tool_choice … not supported for this model"): o servidor forçava a ferramenta de resposta,
+  e o Opus 5.5, que pensa antes de responder, não aceita isso. Agora a ferramenta vai como opção, com a instrução de usá-la;
+  se a resposta vier em texto, o servidor tira o JSON do texto. Só o servidor mudou: o programa 0.45.0 continua valendo.
+
 ## 0.45.0
 
 Bloco 46: três níveis de IA e créditos.

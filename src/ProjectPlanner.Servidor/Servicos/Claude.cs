@@ -10,11 +10,21 @@ public sealed class PedidoIncompativelException(string mensagem) : Exception(men
 /// <summary>
 /// Bloco 46: o programa fala sempre no formato do Gemini (<c>generateContent</c>); para os modelos da Anthropic, o servidor
 /// traduz o pedido para a API de mensagens e a resposta de volta. A resposta estruturada (o <c>responseSchema</c> que o
-/// cronograma, as fotos e o orçamento usam) vira uma ferramenta obrigatória, cuja entrada é o JSON pedido.
+/// cronograma, as fotos e o orçamento usam) vira a ferramenta "responder", cuja entrada é o JSON pedido.
 /// </summary>
+/// <remarks>
+/// 0.45.1: a ferramenta vai com <c>tool_choice: auto</c> e a instrução de sempre usá-la. Os modelos que pensam antes de
+/// responder (o Opus 5.5) recusam forçar uma ferramenta (<c>tool_choice: tool</c>). Se a resposta vier em texto, o JSON é
+/// tirado do texto.
+/// </remarks>
 public static class TradutorClaude
 {
     public const string Ferramenta = "responder";
+
+    /// <summary>Acrescentada às instruções quando o pedido quer a resposta estruturada.</summary>
+    public const string InstrucaoDaFerramenta =
+        "Formato da resposta: responda sempre chamando a ferramenta \"responder\" uma única vez, com todos os campos no formato " +
+        "pedido. Não escreva texto fora da ferramenta.";
 
     /// <summary>Sem escapar os acentos (o texto vai dentro de outro JSON, que já é UTF-8).</summary>
     public static readonly JsonSerializerOptions Json = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -26,7 +36,12 @@ public static class TradutorClaude
     public static JsonObject Pedido(JsonNode gemini, string modelo, int maximoDeTokens)
     {
         var pedido = new JsonObject { ["model"] = modelo };
-        if (Texto(gemini["systemInstruction"]) is { Length: > 0 } sistema)
+        var configuracao = gemini["generationConfig"];
+        var esquema = configuracao?["responseSchema"] as JsonObject;
+        var sistema = Texto(gemini["systemInstruction"]) ?? "";
+        if (esquema is not null)
+            sistema = (sistema.Length > 0 ? sistema + "\n\n" : "") + InstrucaoDaFerramenta;
+        if (sistema.Length > 0)
             pedido["system"] = sistema;
 
         var mensagens = new JsonArray();
@@ -55,12 +70,11 @@ public static class TradutorClaude
             mensagens.Insert(0, new JsonObject { ["role"] = "user", ["content"] = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = "(início da conversa)" }) });
         pedido["messages"] = mensagens;
 
-        var configuracao = gemini["generationConfig"];
         var maximo = configuracao?["maxOutputTokens"]?.GetValue<int>() is { } m && m > 0 ? Math.Min(m, maximoDeTokens) : maximoDeTokens;
         pedido["max_tokens"] = maximo;
         if (configuracao?["temperature"] is JsonValue temperatura)
             pedido["temperature"] = Math.Clamp(temperatura.GetValue<double>(), 0, 1);
-        if (configuracao?["responseSchema"] is JsonObject esquema)
+        if (esquema is not null)
         {
             pedido["tools"] = new JsonArray(new JsonObject
             {
@@ -68,7 +82,7 @@ public static class TradutorClaude
                 ["description"] = "Responda sempre por esta ferramenta, preenchendo os campos no formato pedido.",
                 ["input_schema"] = Esquema(esquema),
             });
-            pedido["tool_choice"] = new JsonObject { ["type"] = "tool", ["name"] = Ferramenta };
+            pedido["tool_choice"] = new JsonObject { ["type"] = "auto" };
         }
         return pedido;
     }
@@ -76,19 +90,14 @@ public static class TradutorClaude
     /// <summary>A resposta do Claude no formato do Gemini, e os tokens para a cobrança.</summary>
     public static (JsonObject Resposta, long Entrada, long Saida) Resposta(JsonNode claude)
     {
-        var textos = new List<string>();
-        foreach (var bloco in claude["content"]?.AsArray() ?? [])
-        {
-            switch (bloco?["type"]?.GetValue<string>())
-            {
-                case "tool_use":
-                    textos.Add(bloco["input"]?.ToJsonString(Json) ?? "{}");
-                    break;
-                case "text":
-                    textos.Add(bloco["text"]?.GetValue<string>() ?? "");
-                    break;
-            }
-        }
+        // A entrada da ferramenta, se houver; senão, o texto (sem o pensamento), com o JSON tirado de uma cerca de código.
+        var blocos = claude["content"]?.AsArray() ?? [];
+        var ferramenta = blocos.FirstOrDefault(b => b?["type"]?.GetValue<string>() == "tool_use");
+        var textos = ferramenta is not null
+            ? [ferramenta["input"]?.ToJsonString(Json) ?? "{}"]
+            : blocos.Where(b => b?["type"]?.GetValue<string>() == "text").Select(b => b!["text"]?.GetValue<string>() ?? "").ToList();
+        if (ferramenta is null && SoOObjeto(string.Concat(textos)) is { } json)
+            textos = [json];
         var uso = claude["usage"];
         long Numero(string nome) => uso?[nome] is JsonValue v && v.TryGetValue<long>(out var n) ? n : 0;
         var entrada = Numero("input_tokens") + Numero("cache_creation_input_tokens") + Numero("cache_read_input_tokens");
@@ -160,6 +169,23 @@ public static class TradutorClaude
                 : $"O Claude não lê anexos do tipo {tipo}. Use o nível Padrão ou Avançado para esse anexo.");
         }
         return null;
+    }
+
+    // Um texto com um objeto JSON no meio (numa cerca de código, por exemplo) vira só o objeto; nulo se não há um válido.
+    private static string? SoOObjeto(string texto)
+    {
+        var (inicio, fim) = (texto.IndexOf('{'), texto.LastIndexOf('}'));
+        if (inicio < 0 || fim <= inicio || (inicio == 0 && fim == texto.Length - 1))
+            return null; // sem objeto, ou já é só o objeto
+        var trecho = texto[inicio..(fim + 1)];
+        try
+        {
+            return JsonNode.Parse(trecho) is JsonObject ? trecho : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static JsonObject Fonte(string tipo, string base64) => new() { ["type"] = "base64", ["media_type"] = tipo, ["data"] = base64 };

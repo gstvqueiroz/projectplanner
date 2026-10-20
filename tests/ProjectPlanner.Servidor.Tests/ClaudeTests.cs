@@ -54,13 +54,15 @@ public sealed class ClaudeTests : IDisposable
         var pedido = TradutorClaude.Pedido(JsonNode.Parse(PedidoDoPrograma)!, "claude-opus-5-5", 16_000);
 
         (pedido["model"]!.GetValue<string>(), pedido["system"]!.GetValue<string>(), pedido["max_tokens"]!.GetValue<int>(), pedido["temperature"]!.GetValue<double>())
-            .Should().Be(("claude-opus-5-5", "Você é o assistente.\n\nResponda em português.", 16_000, 1.0), "o máximo e a temperatura ficam nos limites do Claude");
+            .Should().Be(("claude-opus-5-5", "Você é o assistente.\n\nResponda em português.\n\n" + TradutorClaude.InstrucaoDaFerramenta, 16_000, 1.0),
+                "o máximo e a temperatura ficam nos limites do Claude, e as instruções pedem a ferramenta");
         var mensagens = pedido["messages"]!.AsArray();
         mensagens.Select(m => m!["role"]!.GetValue<string>()).Should().Equal("user", "assistant", "user");
         mensagens[0]!["content"]![1]!.ToJsonString().Should().Be("""{"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":"AAAA"}}""");
         mensagens[2]!["content"]!.AsArray().Select(p => p!["type"]!.GetValue<string>()).Should().Equal(["text", "document"],
             "duas mensagens seguidas do usuário viram uma só");
-        pedido["tool_choice"]!.ToJsonString().Should().Be("""{"type":"tool","name":"responder"}""");
+        pedido["tool_choice"]!.ToJsonString().Should().Be("""{"type":"auto"}""",
+            "o Opus 5.5 (que pensa antes de responder) recusa forçar a ferramenta (0.45.1)");
         pedido["tools"]![0]!["input_schema"]!.ToJsonString().Should().Be(
             """{"type":"object","properties":{"mensagem":{"type":"string","description":"O texto"},"alteracoes":{"type":"array","items":{"type":"object","properties":{"acao":{"type":"string","enum":["criar","remover"]},"duracao":{"type":["integer","null"]}},"required":["acao"]}}},"required":["mensagem","alteracoes"]}""");
     }
@@ -92,6 +94,17 @@ public sealed class ClaudeTests : IDisposable
             """{"content":[{"type":"text","text":"Parte 1 "},{"type":"text","text":"parte 2"}],"stop_reason":"max_tokens","usage":{"input_tokens":5,"output_tokens":7}}""")!);
         (cortada["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>(), cortada["candidates"]![0]!["finishReason"]!.GetValue<string>())
             .Should().Be(("Parte 1 parte 2", "MAX_TOKENS"));
+        // Com o pensamento e um texto antes da ferramenta, vale só a ferramenta.
+        var (comPensamento, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+            """{"content":[{"type":"thinking","thinking":"vou montar"},{"type":"text","text":"Aqui está:"},{"type":"tool_use","name":"responder","input":{"mensagem":"ok"}}],"stop_reason":"tool_use","usage":{}}""")!);
+        comPensamento["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("""{"mensagem":"ok"}""");
+        // Sem a ferramenta, o JSON é tirado do texto (inclusive de uma cerca ```json).
+        var (emTexto, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+            """{"content":[{"type":"text","text":"Segue:\n```json\n{\"mensagem\": \"oi\", \"alteracoes\": []}\n```"}],"stop_reason":"end_turn","usage":{}}""")!);
+        emTexto["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("""{"mensagem": "oi", "alteracoes": []}""");
+        var (soTexto, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+            """{"content":[{"type":"text","text":"Sem chaves {aqui"}],"usage":{}}""")!);
+        soTexto["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("Sem chaves {aqui");
         (TradutorClaude.MensagemDeErro("""{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long"}}"""),
             TradutorClaude.MensagemDeErro("nada")).Should().Be(("prompt is too long", null));
     }

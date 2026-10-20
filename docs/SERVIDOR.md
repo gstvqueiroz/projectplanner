@@ -249,8 +249,10 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   | Avançado | Gemini 2.5 Pro | 1,25 / 10,00 | Profissional |
   | Máximo | Claude Opus 5.5 | 4,00 / 20,00 | Profissional |
 
-- **Claude:** o servidor traduz o pedido do formato do Gemini para o da Anthropic (texto, fotos, PDF e a resposta
-  estruturada por uma ferramenta obrigatória) e a resposta de volta. O programa continua com um formato só.
+- **Claude:** o servidor traduz o pedido do formato do Gemini para o da Anthropic e a resposta de volta. A tradução cobre
+  texto, fotos, PDF e a resposta estruturada, pela ferramenta "responder". Ela vai como opção (`tool_choice: auto`),
+  com a instrução de usá-la: o Opus 5.5 recusa forçar a ferramenta (0.45.1). Se a resposta vier em texto, o JSON é tirado
+  dele. O programa continua com um formato só.
 - **Créditos no lugar de tokens:** cada pedido custa o valor real (tokens de entrada e de saída, inclusive os de raciocínio,
   pela tabela de preços do modelo), guardado no banco. 1 crédito = US$ 0,0005 de custo. Um pedido típico (10 mil tokens de
   entrada e 1,5 mil de saída) gasta cerca de:

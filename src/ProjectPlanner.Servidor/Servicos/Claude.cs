@@ -208,3 +208,53 @@ public static class TradutorClaude
         }
     }
 }
+
+/// <summary>
+/// 0.47.2: a ponte do assistente do Telegram para o Claude. O assistente do programa (<c>AssistenteGemini</c>) monta o pedido
+/// no formato do Gemini; esta ponte o traduz, chama a Anthropic com a chave do servidor e devolve a resposta no formato do
+/// Gemini (com o usageMetadata, que o <see cref="MedidorDeTokens"/> lê). Assim o Telegram usa o nível Padrão seja qual for o
+/// provedor dele.
+/// </summary>
+public sealed class PonteParaOClaude(IHttpClientFactory clientes, Microsoft.Extensions.Options.IOptions<OpcoesDoServidor> opcoes) : HttpMessageHandler
+{
+    public const string Cliente = "claude-medido";
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage pedido, CancellationToken c)
+    {
+        var anthropic = opcoes.Value.Anthropic;
+        // .../models/{modelo}:generateContent
+        var caminho = pedido.RequestUri!.AbsolutePath;
+        var modelo = caminho[(caminho.LastIndexOf('/') + 1)..].Split(':')[0];
+        JsonObject corpo;
+        try
+        {
+            corpo = TradutorClaude.Pedido(JsonNode.Parse(await pedido.Content!.ReadAsStringAsync(c))!, modelo, anthropic.MaximoDeTokens);
+        }
+        catch (PedidoIncompativelException ex)
+        {
+            return Erro(System.Net.HttpStatusCode.BadRequest, ex.Message);
+        }
+        using var mensagem = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(anthropic.Endereco), "messages"))
+        {
+            Content = new StringContent(corpo.ToJsonString(), System.Text.Encoding.UTF8, "application/json"),
+        };
+        mensagem.Headers.Add("x-api-key", anthropic.Chave);
+        mensagem.Headers.Add("anthropic-version", anthropic.Versao);
+        using var resposta = await clientes.CreateClient(Rotas.Ia.ClienteDaAnthropic).SendAsync(mensagem, c);
+        var texto = await resposta.Content.ReadAsStringAsync(c);
+        if (!resposta.IsSuccessStatusCode)
+            return Erro(resposta.StatusCode, TradutorClaude.MensagemDeErro(texto) ?? $"erro {(int)resposta.StatusCode}");
+        var (gemini, _, _) = TradutorClaude.Resposta(JsonNode.Parse(texto)!);
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent(gemini.ToJsonString(TradutorClaude.Json), System.Text.Encoding.UTF8, "application/json"),
+        };
+    }
+
+    // Um erro no formato do Gemini (o assistente traduz para o usuário).
+    private static HttpResponseMessage Erro(System.Net.HttpStatusCode status, string mensagem) => new(status)
+    {
+        Content = new StringContent(new JsonObject { ["error"] = new JsonObject { ["code"] = (int)status, ["message"] = mensagem } }.ToJsonString(),
+            System.Text.Encoding.UTF8, "application/json"),
+    };
+}

@@ -470,13 +470,24 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     /// Escolhe documentos e os põe na lista de pendentes (sem abrir o conteúdo; repetidos entram uma vez). Formatos que
     /// o assistente não lê e arquivos grandes demais ficam de fora, com o motivo (Bloco 23).
     /// </summary>
+    /// <summary>0.47.2: converte as fotos HEIC para JPG ao anexar (os níveis com Claude não leem HEIC); nulo, elas seguem como estão.</summary>
+    public IConversorDeHeic? ConversorDeHeic { get; set; }
+
     [RelayCommand]
     private async Task Anexar()
     {
         var sumidos = new List<string>();
         var recusados = new List<string>();
-        foreach (var caminho in await _dialogos.EscolherDocumentosAsync())
+        var convertidas = new List<string>();
+        foreach (var escolhido in await _dialogos.EscolherDocumentosAsync())
         {
+            var caminho = escolhido;
+            if (ConversorDeHeic is { } conversor && ConversorDeHeicPeloSips.Extensoes.Contains(Path.GetExtension(caminho))
+                && conversor.ParaJpeg(caminho) is { } jpeg)
+            {
+                caminho = jpeg;
+                convertidas.Add(Path.GetFileName(escolhido));
+            }
             AnexoIA anexo;
             try
             {
@@ -495,6 +506,8 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         var avisos = recusados.ToList();
         if (sumidos.Count > 0)
             avisos.Insert(0, $"Não deu para anexar: {string.Join(", ", sumidos)}.");
+        if (convertidas.Count > 0)
+            avisos.Add($"Convertida para JPG (todos os níveis leem): {string.Join(", ", convertidas)}.");
         AvisoDeAnexo = string.Join("\n", avisos);
     }
 

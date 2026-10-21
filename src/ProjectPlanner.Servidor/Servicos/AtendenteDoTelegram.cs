@@ -75,6 +75,8 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         "As atualizações e as fotos ficam na caixa de entrada da obra: confira e aplique no programa (Conta > Buscar do Telegram).\n" +
         "/obra mostra e troca a obra · /sair desliga este chat da conta.";
 
+    public const string NaoRespondeu = "Não consegui responder agora. Tente de novo em instantes.";
+
     public const string SoProfissional =
         "O assistente no Telegram é do plano Profissional. No programa, veja em Conta > Minha conta.";
 
@@ -243,9 +245,9 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
             await telegram.EnviarAsync(chatId, Rotas.Ia.CotaEsgotada, c);
             return;
         }
-        var modelo = catalogo.Todos.FirstOrDefault(m => m.Nivel == Niveis.Padrao && m.Provedor == Provedores.Gemini);
-        var chave = opcoes.Value.Gemini.Chave;
-        if (modelo is null || string.IsNullOrWhiteSpace(chave))
+        // O nível Padrão, seja do Gemini (direto) ou da Anthropic (pela ponte, 0.47.2).
+        var modelo = catalogo.Todos.FirstOrDefault(m => m.Nivel == Niveis.Padrao);
+        if (modelo is null || !catalogo.Disponivel(modelo))
         {
             await telegram.EnviarAsync(chatId, Rotas.Ia.SemChave, c);
             return;
@@ -267,13 +269,16 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         {
             try
             {
-                var assistente = new AssistenteGemini(clientes.CreateClient(MedidorDeTokens.Cliente), chave, modelo.Id);
+                var assistente = modelo.Provedor == Provedores.Anthropic
+                    ? new AssistenteGemini(clientes.CreateClient(PonteParaOClaude.Cliente), "pela-ponte", modelo.Id) // a chave de verdade fica na ponte
+                    : new AssistenteGemini(clientes.CreateClient(MedidorDeTokens.Cliente), opcoes.Value.Gemini.Chave!, modelo.Id);
                 resposta = await assistente.EnviarAsync(new PedidoIA(texto, [], conversas.Historico(chatId), retrato) { Canal = CanaisDaConversa.Telegram }, c);
             }
             catch (ErroDoAssistenteException ex)
             {
-                log.LogWarning("O assistente do Telegram falhou: {Motivo}", ex.Message);
-                await telegram.EnviarAsync(chatId, "Não consegui responder agora: " + ex.Message, c);
+                // O motivo vai para o log; no chat, uma mensagem neutra (o assistente fala em "Gemini" mesmo quando é o Claude).
+                log.LogWarning("O assistente do Telegram falhou ({Modelo}): {Motivo}", modelo.Id, ex.Message);
+                await telegram.EnviarAsync(chatId, NaoRespondeu, c);
                 return;
             }
             (entrada, saida) = (medicao.Entrada, medicao.Saida);

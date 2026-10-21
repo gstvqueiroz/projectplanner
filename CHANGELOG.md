@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.47.2
+
+Modelos de IA mais baratos.
+
+- O nível **Padrão** passa a ser o **Claude Haiku 5.5**: cerca de 4 créditos por pedido típico, contra 14 no Gemini 2.5
+  Flash. Os 300 créditos do plano Grátis rendem cerca de 80 pedidos. O Telegram também usa o Haiku.
+- O nível **Máximo** passa a ser o **Claude Sonnet 5.5**: metade do preço do Opus 5.5, e bom em montar e atualizar
+  cronogramas.
+- O preço do Haiku sobe em pedidos muito grandes (acima de 100 mil tokens, com PDFs ou muitas fotos), e os créditos
+  acompanham.
+- No Mac, uma foto HEIC (a do iPhone) anexada ao chat vira JPG, porque o Claude não lê HEIC.
+- Os testes do programa deixam de ler o Chaves do macOS de verdade. O macOS pedia a senha das chaves ao executor dos testes
+  e às vezes os segurava por minutos.
+
 ## 0.47.1
 
 Correção do Telegram: o bot não respondia.

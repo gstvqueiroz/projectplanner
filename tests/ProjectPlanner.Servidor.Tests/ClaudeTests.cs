@@ -226,12 +226,43 @@ public sealed class ClaudeTests : IDisposable
     }
 
     [Fact]
-    public void Custo_EmMilionesimosDeDolar_ArredondaParaCima()
+    public void Custo_EmMilionesimosDeDolar_ArredondaParaCima_EComFaixa()
     {
-        var flash = CatalogoDeModelos.Padrao[0];
+        var flash = CatalogoDeModelos.Reserva;
         (flash.Microdolares(10_000, 1_500), flash.Microdolares(1, 0), flash.Microdolares(0, 0)).Should().Be((6_750L, 1L, 0L));
-        CatalogoDeModelos.Padrao.Select(m => (m.Nivel, m.Provedor)).Should().Equal(
-            (Niveis.Padrao, Provedores.Gemini), (Niveis.Avancado, Provedores.Gemini), (Niveis.Maximo, Provedores.Anthropic));
+        // 0.47.2: o catálogo do código (Haiku no Padrão, Sonnet no Máximo).
+        CatalogoDeModelos.Padrao.Select(m => (m.Id, m.Nivel, m.Provedor)).Should().Equal(
+            ("claude-haiku-5-5", Niveis.Padrao, Provedores.Anthropic), ("gemini-3.1-pro-preview", Niveis.Avancado, Provedores.Gemini),
+            ("claude-sonnet-5-5", Niveis.Maximo, Provedores.Anthropic));
+        var haiku = CatalogoDeModelos.Padrao[0];
+        // Até 100 mil tokens de entrada: US$ 0,10 e 0,50 por milhão; acima, o pedido inteiro a US$ 0,50 e 2,50.
+        (haiku.Microdolares(10_000, 1_500), haiku.Microdolares(100_000, 1_000), haiku.Microdolares(100_001, 1_000))
+            .Should().Be((1_750L, 10_500L, 52_501L));
+        CatalogoDeModelos.Padrao[2].Microdolares(10_000, 1_500).Should().Be(35_000L, "Sonnet: US$ 2 e 10 por milhão");
         (Niveis.Nome(Niveis.Padrao), Niveis.Nome(Niveis.Avancado), Niveis.Nome(Niveis.Maximo)).Should().Be(("Padrão", "Avançado", "Máximo"));
+    }
+
+    [Fact]
+    public async Task CatalogoDoCodigo_GratisNoHaiku_PeloClaude_ComOCustoDaFaixa()
+    {
+        _s.Dispose();
+        using var s = new Servidor(catalogoDoCodigo: true);
+        var sessao = await s.CriarConta();
+        var lista = System.Text.Json.JsonDocument.Parse(await (await s.Get("/v1/modelos", sessao.Acesso)).Content.ReadAsStringAsync()).RootElement;
+        lista.EnumerateArray().Select(m => (m.GetProperty("id").GetString(), m.GetProperty("liberado").GetBoolean(), m.GetProperty("creditosPorPedido").GetInt32()))
+            .Should().Equal(("claude-haiku-5-5", true, 4), ("gemini-3.1-pro-preview", false, 76), ("claude-sonnet-5-5", false, 70));
+
+        var pedido = new HttpRequestMessage(HttpMethod.Post, "/v1/ia/models/claude-haiku-5-5:generateContent")
+        {
+            Content = new StringContent(PedidoDoPrograma, Encoding.UTF8, "application/json"),
+        };
+        pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessao.Acesso);
+        var r = await s.CreateClient().SendAsync(pedido);
+
+        r.StatusCode.Should().Be(HttpStatusCode.OK);
+        JsonNode.Parse(s.Claude.Pedidos.Single().Corpo)!["model"]!.GetValue<string>().Should().Be("claude-haiku-5-5");
+        // 1.500 de entrada e 200 de saída no Haiku = 150 + 100 = 250 milionésimos (0,5 crédito).
+        s.NoBanco(b => b.UsosDeIa.Single().CustoEmMicrodolares).Should().Be(250);
+        s.Gemini.Pedidos.Should().BeEmpty();
     }
 }

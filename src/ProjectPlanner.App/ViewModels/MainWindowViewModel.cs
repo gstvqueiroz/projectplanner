@@ -43,7 +43,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null,
         IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null,
         IConsultorDeOrcamento? consultorDeOrcamento = null, IAnalistaDaObra? analistaDaObra = null, IContaProjectPlanner? conta = null,
-        ITelegramDaConta? telegram = null)
+        ITelegramDaConta? telegram = null, IConversorDeHeic? conversorDeHeic = null)
     {
         _conta = conta ?? new SemContaProjectPlanner();
         _telegram = telegram;
@@ -55,7 +55,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _analista = analistaDeFotos ?? new AnalistaIndisponivel();
         _fotos = new FotosDoProjeto(repositorio, processadorDeImagens, relogio);
         Colunas = new ColunasViewModel(preferenciasColunas);
-        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface, configuracaoAssistente, this) { Conta = _conta };
+        Assistente = new AssistenteViewModel(assistente, dialogos, relogio, preferenciasInterface, configuracaoAssistente, this)
+        {
+            Conta = _conta,
+            ConversorDeHeic = conversorDeHeic,
+        };
         _conta.Mudou += (_, _) => ContaMudou();
         _repositorio = repositorio;
         _calculadora = calculadora;

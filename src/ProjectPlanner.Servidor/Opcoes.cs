@@ -64,9 +64,18 @@ public sealed class ModeloDeIa
     public decimal DolaresPorMilhaoDeEntrada { get; set; }
     public decimal DolaresPorMilhaoDeSaida { get; set; }
 
+    /// <summary>
+    /// 0.47.2: a faixa de preço por tamanho do pedido (o Haiku 5.5 custa 5 vezes mais acima de 100 mil tokens de entrada).
+    /// Acima deste número de tokens de entrada, o pedido inteiro usa os preços "Acima"; 0 = um preço só.
+    /// </summary>
+    public long LimiteDaFaixa { get; set; }
+    public decimal DolaresPorMilhaoDeEntradaAcima { get; set; }
+    public decimal DolaresPorMilhaoDeSaidaAcima { get; set; }
+
     /// <summary>O custo, em milionésimos de dólar (inteiro, para somar no banco sem perder centavos).</summary>
-    public long Microdolares(long entrada, long saida) =>
-        (long)Math.Ceiling(entrada * DolaresPorMilhaoDeEntrada + saida * DolaresPorMilhaoDeSaida);
+    public long Microdolares(long entrada, long saida) => LimiteDaFaixa > 0 && entrada > LimiteDaFaixa
+        ? (long)Math.Ceiling(entrada * DolaresPorMilhaoDeEntradaAcima + saida * DolaresPorMilhaoDeSaidaAcima)
+        : (long)Math.Ceiling(entrada * DolaresPorMilhaoDeEntrada + saida * DolaresPorMilhaoDeSaida);
 }
 
 public static class Niveis

@@ -318,4 +318,47 @@ public sealed class TelegramTests : IDisposable
         s.Telegram.Webhooks.Single().Should().Be(("https://servidor.teste/v1/telegram/webhook",
             new OpcoesDoTelegram { Segredo = Servidor.SegredoDoTelegram }.SegredoParaOTelegram!));
     }
+
+    [Fact]
+    public async Task PadraoNoClaude_OTelegramPassaPelaPonte_EMedeOsTokens()
+    {
+        _s.Dispose();
+        using var s = new Servidor(catalogoDoCodigo: true);
+        var sessao = await s.CriarConta();
+        await AdminTests.TrocarPlano(s, "ana@exemplo.com", Planos.Profissional, Servidor.ChaveDeAdmin);
+        var marcar = new HttpRequestMessage(HttpMethod.Put, $"/v1/obras/{Projeto}") { Content = JsonContent.Create(new { nome = "Casa da Ana", retrato = Retrato() }, options: AtendenteDoTelegram.Json) };
+        marcar.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessao.Acesso);
+        (await s.CreateClient().SendAsync(marcar)).StatusCode.Should().Be(HttpStatusCode.OK);
+        var gerar = new HttpRequestMessage(HttpMethod.Post, "/v1/telegram/codigo");
+        gerar.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessao.Acesso);
+        var codigo = JsonDocument.Parse(await (await s.CreateClient().SendAsync(gerar)).Content.ReadAsStringAsync()).RootElement.GetProperty("codigo").GetString();
+        async Task Mandar(string texto)
+        {
+            using var escopo = s.Services.CreateScope();
+            await escopo.ServiceProvider.GetRequiredService<AtendenteDoTelegram>().AtenderAsync(JsonDocument.Parse(new JsonObject
+            {
+                ["message"] = new JsonObject { ["chat"] = new JsonObject { ["id"] = Chat }, ["text"] = texto },
+            }.ToJsonString()).RootElement, default);
+        }
+        await Mandar($"/start {codigo}");
+        s.Claude.Resposta = """
+            {"content":[{"type":"tool_use","name":"responder","input":{"mensagem":"Anotei a alvenaria.","alteracoes":[],"atualizacoes":[{"tipo":"percentual","tarefa":"2","percentual":60}]}}],
+             "stop_reason":"tool_use","usage":{"input_tokens":12000,"output_tokens":800}}
+            """;
+
+        await Mandar("a alvenaria está em 60%");
+
+        s.Telegram.Ultima.Should().StartWith("Anotei a alvenaria.").And.Contain("1 atualização ficou na caixa");
+        var enviado = JsonNode.Parse(s.Claude.Pedidos.Single().Corpo)!;
+        (enviado["model"]!.GetValue<string>(), enviado["system"]!.GetValue<string>().Contains(InstrucoesDoAssistente.Telegram)).Should().Be(("claude-haiku-5-5", true));
+        s.Claude.Pedidos.Single().Chave.Should().Be(Servidor.ChaveDaAnthropic, "a chave de verdade vai pela ponte");
+        s.Gemini.Pedidos.Should().BeEmpty();
+        // 12.000 de entrada e 800 de saída no Haiku = 1.200 + 400 = 1.600 milionésimos.
+        s.NoBanco(b => b.UsosDeIa.Single()).Should().Match<UsoDeIa>(u => u.Modelo == "claude-haiku-5-5" && u.TokensDeEntrada == 12_000 && u.CustoEmMicrodolares == 1_600);
+        s.NoBanco(b => b.CaixaDeEntrada.Count()).Should().Be(1);
+
+        s.Claude.Status = HttpStatusCode.Unauthorized;
+        await Mandar("e a laje?");
+        s.Telegram.Ultima.Should().Be(AtendenteDoTelegram.NaoRespondeu, "sem falar em Gemini quando quem responde é o Claude");
+    }
 }

@@ -33,6 +33,9 @@ builder.Services.AddSingleton<CatalogoDeModelos>();
 builder.Services.AddHttpClient(ClienteDoTelegram.Cliente, c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddTransient<MedidorDeTokens>();
 builder.Services.AddHttpClient(MedidorDeTokens.Cliente, c => c.Timeout = TimeSpan.FromMinutes(5)).AddHttpMessageHandler<MedidorDeTokens>();
+builder.Services.AddHttpClient(PonteParaOClaude.Cliente, c => c.Timeout = TimeSpan.FromMinutes(5))
+    .ConfigurePrimaryHttpMessageHandler(s => new PonteParaOClaude(s.GetRequiredService<IHttpClientFactory>(), s.GetRequiredService<IOptions<OpcoesDoServidor>>()))
+    .AddHttpMessageHandler<MedidorDeTokens>();
 builder.Services.AddSingleton<IClienteDoTelegram, ClienteDoTelegram>();
 builder.Services.AddSingleton<FilaDoTelegram>();
 builder.Services.AddSingleton<ConversasDoTelegram>();

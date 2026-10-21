@@ -261,9 +261,9 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
 
   | Nível | Modelo | US$ por milhão (entrada / saída) | Planos |
   |---|---|---|---|
-  | Padrão | Gemini 2.5 Flash | 0,30 / 2,50 | Grátis e Profissional |
+  | Padrão | Claude Haiku 5.5 (desde a 0.47.2; até 100 mil tokens de entrada; acima, 0,50 / 2,50 o pedido inteiro). Antes, o Gemini 2.5 Flash (0,30 / 2,50), que é a reserva | 0,10 / 0,50 | Grátis e Profissional |
   | Avançado | Gemini 3.1 Pro (`gemini-3.1-pro-preview`; até a 0.45.1, o 2.5 Pro, que responde 404 para chaves de projetos novos) | 2,00 / 12,00 | Profissional |
-  | Máximo | Claude Opus 5.5 | 4,00 / 20,00 | Profissional |
+  | Máximo | Claude Sonnet 5.5 (desde a 0.47.2; antes, o Opus 5.5, a 4 / 20) | 2,00 / 10,00 | Profissional |
 
 - **Claude:** o servidor traduz o pedido do formato do Gemini para o da Anthropic e a resposta de volta. A tradução cobre
   texto, fotos, PDF e a resposta estruturada, pela ferramenta "responder". Ela vai como opção (`tool_choice: auto`),
@@ -276,6 +276,16 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   - 76 no Avançado;
   - 140 no Máximo.
 - **Créditos por mês:** Grátis 300 (cerca de 20 pedidos no Padrão); Profissional 6.000 (custo máximo de cerca de US$ 3).
+- **Voltar o Padrão ao Gemini 2.5 Flash** (se o Haiku der problema): no Render, configure o catálogo inteiro. Configurado,
+  ele substitui a lista toda, então ponha os três:
+  - `Modelos__0__Id` = `gemini-2.5-flash`, `Modelos__0__Nivel` = `padrao`, `Modelos__0__Provedor` = `gemini`,
+    `Modelos__0__Nome` = `Gemini 2.5 Flash`, `Modelos__0__DolaresPorMilhaoDeEntrada` = `0.30`,
+    `Modelos__0__DolaresPorMilhaoDeSaida` = `2.50`;
+  - `Modelos__1__…` com `gemini-3.1-pro-preview`, `avancado`, `gemini`, `Gemini 3.1 Pro`, `2.00`, `12.00`;
+  - `Modelos__2__…` com `claude-sonnet-5-5`, `maximo`, `anthropic`, `Claude Sonnet 5.5`, `2.00`, `10.00`.
+
+  A faixa de preço de um modelo (como a do Haiku): `Modelos__N__LimiteDaFaixa` (tokens de entrada),
+  `Modelos__N__DolaresPorMilhaoDeEntradaAcima` e `Modelos__N__DolaresPorMilhaoDeSaidaAcima`.
 - **Trocar o modelo de um nível** (quando o Google aposentar o 2.5 Flash, por exemplo): no Render, em Environment,
   configure o catálogo inteiro (`Modelos__0__Id`, etc., da tabela acima). O programa não precisa de versão nova.
 - **Programa:**
@@ -332,6 +342,8 @@ Decisões do usuário:
 3. **No Telegram:**
    - **perguntas** são respondidas pelo **mesmo assistente do programa**, com o retrato da obra e as instruções de canal
      (`InstrucoesDoAssistente.Telegram`: respostas curtas, nada de mudar a estrutura nem abrir telas), no nível Padrão.
+     Se o Padrão é da Anthropic (o Haiku, desde a 0.47.2), o pedido passa pela `PonteParaOClaude`, que traduz como no
+     ponto de IA.
      O custo vai para os créditos e para o painel financeiro, medido por `MedidorDeTokens`;
    - **atualizações** (%, medição, custo, "não iniciar antes de", linha de base) vão para a **caixa de entrada**, com o
      Nº e o id de cada tarefa do retrato daquele momento;

@@ -150,7 +150,11 @@ public sealed class Servidor : WebApplicationFactory<Program>
     public TelegramDeTeste Telegram { get; } = new();
     public const string SegredoDoTelegram = "segredo-do-webhook-de-teste";
 
-    public Servidor(Dictionary<string, string?>? config = null)
+    /// <summary>
+    /// O catálogo dos testes antigos (Flash, 3.1 Pro e Opus, com o Gemini falso no Padrão). Com <paramref name="catalogoDoCodigo"/>,
+    /// vale o do código (Haiku, 3.1 Pro e Sonnet, desde a 0.47.2).
+    /// </summary>
+    public Servidor(Dictionary<string, string?>? config = null, bool catalogoDoCodigo = false)
     {
         _config = new()
         {
@@ -165,6 +169,24 @@ public sealed class Servidor : WebApplicationFactory<Program>
             ["Limites:PedidosDeContaPorMinuto"] = "1000",
             ["Limites:PedidosDeIaPorMinuto"] = "1000",
         };
+        if (!catalogoDoCodigo && !(config ?? []).Keys.Any(k => k.StartsWith("Modelos:", StringComparison.Ordinal)))
+        {
+            string[][] modelos =
+            [
+                ["gemini-2.5-flash", "padrao", "gemini", "Gemini 2.5 Flash", "0.30", "2.50"],
+                ["gemini-3.1-pro-preview", "avancado", "gemini", "Gemini 3.1 Pro", "2.00", "12.00"],
+                ["claude-opus-5-5", "maximo", "anthropic", "Claude Opus 5.5", "4.00", "20.00"],
+            ];
+            for (var i = 0; i < modelos.Length; i++)
+            {
+                _config[$"Modelos:{i}:Id"] = modelos[i][0];
+                _config[$"Modelos:{i}:Nivel"] = modelos[i][1];
+                _config[$"Modelos:{i}:Provedor"] = modelos[i][2];
+                _config[$"Modelos:{i}:Nome"] = modelos[i][3];
+                _config[$"Modelos:{i}:DolaresPorMilhaoDeEntrada"] = modelos[i][4];
+                _config[$"Modelos:{i}:DolaresPorMilhaoDeSaida"] = modelos[i][5];
+            }
+        }
         foreach (var (k, v) in config ?? [])
             _config[k] = v;
     }

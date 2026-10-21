@@ -14,7 +14,22 @@ namespace ProjectPlanner.App.Services;
 /// <summary>Composição da aplicação: quem implementa cada dependência dos ViewModels.</summary>
 public static class Servicos
 {
-    public static ServiceProvider Configurar() => new ServiceCollection()
+    /// <param name="cofre">
+    /// O cofre de segredos; nulo, o do sistema. Os testes passam um em memória: montar a janela lê a sessão da conta do cofre,
+    /// e o Chaves do macOS pediria a senha ao executor dos testes (0.47.2).
+    /// </param>
+    public static ServiceProvider Configurar(ICofreDeSegredos? cofre = null)
+    {
+        var servicos = Registrar();
+        if (cofre is not null)
+            servicos.AddSingleton(cofre);
+        // 0.47.2: no Mac, as fotos HEIC anexadas ao chat viram JPG (pelo sips); nos outros sistemas, seguem como estão.
+        if (ConversorDeHeicPeloSips.DoSistema() is { } conversor)
+            servicos.AddSingleton(conversor);
+        return servicos.BuildServiceProvider();
+    }
+
+    private static ServiceCollection Registrar() => (ServiceCollection)new ServiceCollection()
         .AddSingleton(TimeProvider.System)
         // Bloco 25 (R2): antes de gravar por cima, a versão anterior vai para as cópias de segurança.
         .AddSingleton<IProjetoRepository>(s =>
@@ -58,6 +73,5 @@ public static class Servicos
         .AddSingleton<IConsultorDeOrcamento>(s => new ConsultorConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
         // Bloco 43: a IA que analisa os indicadores da obra.
         .AddSingleton<IAnalistaDaObra>(s => new AnalistaDaObraConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
-        .AddTransient<MainWindowViewModel>()
-        .BuildServiceProvider();
+        .AddTransient<MainWindowViewModel>();
 }

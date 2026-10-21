@@ -11,17 +11,36 @@ A cada mensagem, o assistente recebe:
 - as **instruções** (quem ele é, responder em português, texto simples, como alterar o cronograma);
 - um **retrato só de leitura do cronograma aberto**: projeto, datas, e por tarefa Nº, EDT, nome, tipo, duração,
   início/término calculados, % concluído, predecessoras, folga, se é crítica, quantidade de fotos e notas;
-- a **conversa inteira** (as APIs de chat não guardam nada entre as chamadas), sem os avisos locais;
+- as **últimas 20 mensagens da conversa** (as APIs de chat não guardam nada entre as chamadas), sem os avisos locais
+  (desde o Bloco 46; ver "O que vai a cada envio e o custo", abaixo);
 - desde o Bloco 26, a **condução da conversa**: o modo (montar agora ou estudar antes), a ficha do projeto e o andamento
   do estudo (ver "Dois modos, ficha do projeto e conversa salva", abaixo);
-- os **anexos da conversa inteira**: PDF e imagens (PNG, JPG, WebP, HEIC) como arquivo, texto (TXT, MD, CSV, JSON)
-  lido como parte da mensagem. Word, Excel e outros formatos são recusados ao anexar, com a orientação de exportar
-  como PDF. A soma dos anexos da conversa vai até 14 MB (o Gemini aceita 20 MB por pedido, e os arquivos vão em
-  base64).
+- os **anexos da mensagem atual e das 2 últimas mensagens do usuário**: PDF e imagens (PNG, JPG, WebP, HEIC) como
+  arquivo, texto (TXT, MD, CSV, JSON) lido como parte da mensagem; os de mensagens mais antigas vão só como a nota
+  "(anexo: planta.pdf, enviado antes)". Word, Excel e outros formatos são recusados ao anexar, com a orientação de
+  exportar como PDF. A soma dos anexos de um envio vai até 14 MB (o Gemini aceita 20 MB por pedido, e os arquivos vão
+  em base64).
 
 Desde o Bloco 24, o assistente **altera o cronograma pelo chat**: pedir "monte o cronograma de uma residência de
 100 m²", "acrescente a etapa de cobertura depois da estrutura" ou "a laje leva 8 dias" faz o cronograma mudar na hora
 (ver "Alterações do cronograma pelo chat", abaixo).
+
+## O que vai a cada envio e o custo (Bloco 46)
+
+Como nada fica guardado do lado da IA, tudo o que vai é cobrado de novo a cada mensagem. Até o Bloco 46, a conversa
+inteira e todos os seus anexos iam a cada envio: numa conversa longa com PDFs, um pedido passava de 100 mil tokens de
+entrada, e o custo de cada pergunta crescia com a conversa. Agora o corte é fixo (`LimitesDaConversa`, em
+`ProjectPlanner.IA`):
+
+- `MensagensDoHistorico` = 20: só as 20 mensagens anteriores mais recentes vão (se a primeira do corte for do
+  assistente, ela fica de fora, para a conversa começar pelo usuário);
+- `MensagensComAnexos` = 2: os anexos vão como arquivo só na mensagem atual e nas 2 últimas do usuário; nas mais
+  antigas, cada anexo vira a nota "(anexo: nome.pdf, enviado antes)".
+
+**A troca:** o assistente não "enxerga" mais um PDF antigo. Ele sabe que o arquivo foi enviado, mas não lê o conteúdo;
+para voltar a consultá-lo, o usuário anexa de novo. O que ele já entendeu do projeto não se perde: a ficha e a condução
+da conversa (Bloco 26) e o retrato do cronograma vão inteiros, a cada envio, nas instruções. O corte vale também para a
+conversa pelo Telegram (Bloco 49), que passa pelo mesmo assistente.
 
 ## Onde está cada coisa
 

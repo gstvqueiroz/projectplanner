@@ -3,6 +3,16 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.47.3
+
+O chat da IA fica mais barato em conversas longas.
+
+- A cada mensagem vão só as **últimas 20 mensagens** da conversa, e não mais a conversa inteira.
+- Os anexos vão como arquivo só na mensagem atual e nas **2 últimas mensagens** suas. Os mais antigos viram a nota
+  "(anexo: planta.pdf, enviado antes)". Para o assistente voltar a ler um PDF antigo, anexe de novo.
+- A ficha do projeto e o retrato do cronograma continuam indo inteiros, então o assistente não perde o que já entendeu
+  da obra. O corte vale também para o Telegram.
+
 ## 0.47.2
 
 Modelos de IA mais baratos.

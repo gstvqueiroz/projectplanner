@@ -9,7 +9,7 @@ namespace ProjectPlanner.IA;
 public static class AnexosAceitos
 {
     /// <summary>
-    /// Soma máxima dos anexos de uma conversa (todos vão a cada envio, para o assistente continuar enxergando-os).
+    /// Soma máxima dos anexos de um envio (os da mensagem atual e das últimas do usuário, ver <see cref="LimitesDaConversa"/>).
     /// O Gemini aceita até 20 MB por pedido, e os arquivos vão em base64 (um terço maior).
     /// </summary>
     public const long TamanhoMaximoPorEnvio = 14L * 1024 * 1024;

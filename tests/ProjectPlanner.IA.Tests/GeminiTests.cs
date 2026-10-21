@@ -352,6 +352,127 @@ public sealed class GeminiTests : IDisposable
             .Should().Be("[O anexo contrato.docx, de uma mensagem anterior, não foi enviado: formato não aceito.] + Contrato");
     }
 
+    // ---- Bloco 46: o corte do histórico e dos anexos antigos ----
+
+    private static MensagemChat[] Conversa(int pares) =>
+    [
+        .. Enumerable.Range(1, pares).SelectMany(i => new[]
+        {
+            Do(AutorMensagem.Usuario, $"Pergunta {i}"),
+            Do(AutorMensagem.Assistente, $"Resposta {i}"),
+        }),
+    ];
+
+    [Fact]
+    public async Task Historico_Longo_VaoSoAsUltimasMensagens()
+    {
+        var historico = Conversa(15); // 30 mensagens
+
+        await Assistente().EnviarAsync(Pedido("E agora?", historico: historico), CancellationToken.None);
+
+        var conteudos = Conteudos(_servidor.UltimoCorpo).ToList();
+        conteudos.Should().HaveCount(LimitesDaConversa.MensagensDoHistorico + 1);
+        conteudos.First().Should().Be(("user", "Pergunta 6"));
+        conteudos.SkipLast(1).Last().Should().Be(("model", "Resposta 15"));
+        conteudos.Last().Should().Be(("user", "E agora?"));
+    }
+
+    [Fact]
+    public async Task Historico_CorteQueComecariaPeloAssistente_ComecaPeloUsuario()
+    {
+        // Termina numa pergunta sem resposta (a resposta falhou): as últimas 20 começam por "Resposta 6".
+        MensagemChat[] historico = [.. Conversa(15), Do(AutorMensagem.Usuario, "Pergunta 16")];
+
+        await Assistente().EnviarAsync(Pedido("E agora?", historico: historico), CancellationToken.None);
+
+        var conteudos = Conteudos(_servidor.UltimoCorpo).ToList();
+        conteudos.First().Should().Be(("user", "Pergunta 7"));
+        conteudos.Last().Should().Be(("user", "Pergunta 16 + E agora?"));
+        conteudos.Should().HaveCount(LimitesDaConversa.MensagensDoHistorico - 1);
+    }
+
+    [Fact]
+    public async Task Historico_Curto_VaiInteiro()
+    {
+        var historico = Conversa(LimitesDaConversa.MensagensDoHistorico / 2);
+
+        await Assistente().EnviarAsync(Pedido("E agora?", historico: historico), CancellationToken.None);
+
+        Conteudos(_servidor.UltimoCorpo).Should().HaveCount(LimitesDaConversa.MensagensDoHistorico + 1)
+            .And.StartWith(("user", "Pergunta 1"));
+    }
+
+    [Fact]
+    public async Task Anexos_Antigos_ViramNota_EOsRecentesEOAtualContinuamIndo()
+    {
+        var antigo = Arquivo("antigo.pdf", [1]);
+        var penultimo = Arquivo("penultimo.pdf", [2]);
+        var ultimo = Arquivo("ultimo.png", [3]);
+        var atual = Arquivo("atual.pdf", [4]);
+        var historico = new[]
+        {
+            Do(AutorMensagem.Usuario, "Veja o contrato", [antigo]),
+            Do(AutorMensagem.Assistente, "Vi."),
+            Do(AutorMensagem.Usuario, "Veja a planta", [penultimo]),
+            Do(AutorMensagem.Assistente, "Vi."),
+            Do(AutorMensagem.Usuario, "Veja a foto", [ultimo]),
+            Do(AutorMensagem.Assistente, "Vi."),
+        };
+
+        await Assistente().EnviarAsync(Pedido("E o memorial?", [atual], historico), CancellationToken.None);
+
+        Conteudos(_servidor.UltimoCorpo).Where(c => c.Papel == "user").Select(c => c.Textos).Should().Equal(
+            "(anexo: antigo.pdf, enviado antes) + Veja o contrato",
+            "Anexo: penultimo.pdf + [application/pdf] + Veja a planta",
+            "Anexo: ultimo.png + [image/png] + Veja a foto",
+            "Anexo: atual.pdf + [application/pdf] + E o memorial?");
+    }
+
+    [Fact]
+    public async Task Anexos_Antigos_NaoSaoLidosDoDisco_NemContamNoLimite()
+    {
+        var sumiu = Arquivo("sumiu.pdf", [1]);
+        File.Delete(sumiu.CaminhoLocal);
+        var historico = new[]
+        {
+            Do(AutorMensagem.Usuario, "Veja", [sumiu, new AnexoIA(Path.Combine(_pasta, "contrato.docx"), 10)]),
+            Do(AutorMensagem.Assistente, "Vi."),
+            Do(AutorMensagem.Usuario, "Oi"),
+            Do(AutorMensagem.Assistente, "Olá."),
+            Do(AutorMensagem.Usuario, "Tudo bem?"),
+            Do(AutorMensagem.Assistente, "Sim."),
+        };
+
+        await Assistente().EnviarAsync(Pedido("E então?", historico: historico), CancellationToken.None);
+
+        Conteudos(_servidor.UltimoCorpo).First().Textos
+            .Should().Be("(anexo: sumiu.pdf, enviado antes) + (anexo: contrato.docx, enviado antes) + Veja");
+    }
+
+    [Fact]
+    public async Task Historico_Cortado_RespostaEstruturadaContinuaIndoComoJson()
+    {
+        var perguntas = new RespostaIA("Antes, uma pergunta.")
+        {
+            Tipo = TipoDeResposta.Perguntas,
+            Perguntas = [new PerguntaIA("Qual a estrutura?", ["Concreto armado", "Alvenaria estrutural"])],
+        };
+        MensagemChat[] historico =
+        [
+            .. Conversa(12),
+            Do(AutorMensagem.Usuario, "Monte a casa"),
+            new MensagemChat(AutorMensagem.Assistente, perguntas.Texto, DateTimeOffset.UnixEpoch, [], Resposta: perguntas),
+        ];
+
+        await Assistente().EnviarAsync(Pedido("Concreto armado", historico: historico), CancellationToken.None);
+
+        var conteudos = Conteudos(_servidor.UltimoCorpo).ToList();
+        conteudos.Should().HaveCount(LimitesDaConversa.MensagensDoHistorico + 1);
+        var (papel, textos) = conteudos.SkipLast(1).Last();
+        papel.Should().Be("model");
+        textos.Should().StartWith("{\"tipo\":\"perguntas\"").And.Contain("Alvenaria estrutural");
+    }
+
     [Fact]
     public async Task Anexos_AtualQueNaoDaParaLer_InterrompeSemChamarAApi()
     {

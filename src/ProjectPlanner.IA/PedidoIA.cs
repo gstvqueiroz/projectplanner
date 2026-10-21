@@ -9,6 +9,7 @@ namespace ProjectPlanner.IA;
 /// <param name="Historico">
 /// As mensagens anteriores da conversa, da mais antiga para a mais recente, sem os avisos locais
 /// (<see cref="MensagemChat.EhErro"/>): as APIs de chat não guardam a conversa entre as chamadas.
+/// O assistente manda só as mais recentes e só os anexos das últimas (Bloco 46, <see cref="LimitesDaConversa"/>).
 /// </param>
 /// <param name="Contexto">
 /// Retrato só de leitura do cronograma aberto (Bloco 23), montado pelo App no momento do envio; nulo se não há.

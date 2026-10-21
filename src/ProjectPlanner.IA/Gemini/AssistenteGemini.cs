@@ -10,9 +10,10 @@ namespace ProjectPlanner.IA.Gemini;
 /// Gemini é obrigado a mandar no formato de <see cref="FormatoDaResposta"/>.
 /// </summary>
 /// <remarks>
-/// Os anexos de toda a conversa vão a cada envio, para o assistente continuar enxergando os documentos nas perguntas
-/// seguintes: PDF e imagens em base64 (<c>inlineData</c>), texto lido como parte da mensagem. Um anexo de uma mensagem
-/// anterior que sumiu do disco vira uma nota; um da mensagem atual, que não dá para ler, interrompe o envio.
+/// Desde o Bloco 46, vão só as últimas <see cref="LimitesDaConversa.MensagensDoHistorico"/> mensagens, e os anexos só da
+/// mensagem atual e das últimas <see cref="LimitesDaConversa.MensagensComAnexos"/> do usuário (os mais antigos viram uma
+/// nota com o nome): PDF e imagens em base64 (<c>inlineData</c>), texto lido como parte da mensagem. Um anexo de uma
+/// mensagem anterior que sumiu do disco vira uma nota; um da mensagem atual, que não dá para ler, interrompe o envio.
 /// </remarks>
 public sealed class AssistenteGemini : IAssistenteIA
 {
@@ -153,21 +154,29 @@ public sealed class AssistenteGemini : IAssistenteIA
 
     internal static async Task<JsonObject> MontarCorpoAsync(PedidoIA pedido, CancellationToken cancelamento)
     {
-        var turnos = pedido.Historico
-            .Where(m => !m.EhErro)
+        // Bloco 46: só as mensagens mais recentes, começando por uma do usuário, e só os anexos das últimas dele.
+        var historico = pedido.Historico.Where(m => !m.EhErro).TakeLast(LimitesDaConversa.MensagensDoHistorico)
+            .SkipWhile(m => m.Autor != AutorMensagem.Usuario).ToList();
+        var comAnexos = historico.Where(m => m.Autor == AutorMensagem.Usuario).TakeLast(LimitesDaConversa.MensagensComAnexos)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var turnos = historico
             // Bloco 26: uma resposta estruturada volta como o JSON que ela foi, com as perguntas ou o plano.
-            .Select(m => (m.Autor, Texto: m.Resposta is { Estruturada: true } r ? FormatoDaResposta.ComoJson(r) : m.Texto, m.Anexos, Atual: false))
-            .Append((Autor: AutorMensagem.Usuario, Texto: pedido.Mensagem, pedido.Anexos, Atual: true));
+            .Select(m => (m.Autor, Texto: m.Resposta is { Estruturada: true } r ? FormatoDaResposta.ComoJson(r) : m.Texto, m.Anexos,
+                Atual: false, Arquivos: comAnexos.Contains(m)))
+            .Append((Autor: AutorMensagem.Usuario, Texto: pedido.Mensagem, pedido.Anexos, Atual: true, Arquivos: true));
 
         var conteudos = new JsonArray();
         var bytesDosAnexos = 0L;
         string? papelAnterior = null;
         JsonArray? partesAnteriores = null;
-        foreach (var (autor, texto, anexos, atual) in turnos)
+        foreach (var (autor, texto, anexos, atual, arquivos) in turnos)
         {
             var papel = autor == AutorMensagem.Usuario ? "user" : "model";
             var partes = new JsonArray();
-            if (autor == AutorMensagem.Usuario)
+            if (autor == AutorMensagem.Usuario && !arquivos)
+                foreach (var anexo in anexos)
+                    partes.Add(Nota(LimitesDaConversa.NotaDeAnexoAntigo(anexo)));
+            else if (autor == AutorMensagem.Usuario)
                 foreach (var anexo in anexos)
                     foreach (var parte in await PartesDoAnexoAsync(anexo, atual, cancelamento))
                     {

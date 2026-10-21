@@ -33,12 +33,14 @@ public sealed class PainelTests : IDisposable
         return JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
     }
 
-    private async Task Gerar(string acesso, string modelo = "gemini-2.5-flash")
+    private async Task Gerar(string acesso, string modelo = "gemini-2.5-flash", string? rotina = null)
     {
         var pedido = new HttpRequestMessage(HttpMethod.Post, $"/v1/ia/models/{modelo}:generateContent")
         {
             Content = new StringContent("""{"contents":[{"role":"user","parts":[{"text":"Oi"}]}]}""", Encoding.UTF8, "application/json"),
         };
+        if (rotina is not null)
+            pedido.Headers.Add(Ia.CabecalhoDaRotina, rotina);
         pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", acesso);
         (await _s.CreateClient().SendAsync(pedido)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -74,34 +76,62 @@ public sealed class PainelTests : IDisposable
         await AdminTests.TrocarPlano(_s, "bia@exemplo.com", "profissional", Servidor.ChaveDeAdmin);
         await Gerar(ana.Acesso);
         await Gerar(ana.Acesso);
-        await Gerar(bia.Acesso, "claude-opus-5-5"); // 1.500 e 200 tokens no Claude: 10.000 milionésimos
+        await Gerar(bia.Acesso, "claude-opus-5-5"); // 1.500 (500 do cache) e 200 tokens no Claude: 8.200 milionésimos
 
         var d = await Dados();
 
         (d.GetProperty("de").GetString(), d.GetProperty("ate").GetString()).Should().Be(("2026-10-01", "2026-10-18"), "o padrão é o mês até hoje");
         var r = d.GetProperty("resumo");
-        // US$ 1,11 (2 × 0,55 + 0,01) × R$ 5,50 × 1,035 = R$ 6,32; a receita: 1 Profissional × R$ 59 × 18/30 dias = R$ 35,40.
+        // US$ 1,1082 (2 × 0,55 + 0,0082) × R$ 5,50 × 1,035 = R$ 6,31; a receita: 1 Profissional × R$ 59 × 18/30 dias = R$ 35,40.
         (r.GetProperty("pedidos").GetInt32(), r.GetProperty("custoEmDolares").GetDecimal(), r.GetProperty("custoEmReais").GetDecimal(),
                 r.GetProperty("receitaEstimadaEmReais").GetDecimal(), r.GetProperty("impostosETaxasEmReais").GetDecimal(), r.GetProperty("margemEmReais").GetDecimal())
-            .Should().Be((3, 1.11m, 6.32m, 35.40m, 3.89m, 25.19m));
+            .Should().Be((3, 1.1082m, 6.31m, 35.40m, 3.89m, 25.20m));
         (r.GetProperty("usuarios").GetInt32(), r.GetProperty("usuariosAtivos").GetInt32(), r.GetProperty("profissionais").GetInt32(),
             r.GetProperty("novosCadastros").GetInt32(), r.GetProperty("margemPercentual").GetDecimal()).Should().Be((2, 2, 1, 2, 71.2m));
 
         var modelos = d.GetProperty("porModelo").EnumerateArray().ToList();
         modelos.Select(m => (m.GetProperty("nome").GetString(), m.GetProperty("nivel").GetString(), m.GetProperty("pedidos").GetInt32(), m.GetProperty("custoEmReais").GetDecimal()))
-            .Should().Equal(("Gemini 2.5 Flash", "padrao", 2, 6.26m), ("Claude Opus 5.5", "maximo", 1, 0.06m));
+            .Should().Equal(("Gemini 2.5 Flash", "padrao", 2, 6.26m), ("Claude Opus 5.5", "maximo", 1, 0.05m));
         modelos[0].GetProperty("creditosMedios").GetDecimal().Should().Be(1100m, "US$ 0,55 por pedido / US$ 0,0005 por crédito");
 
         d.GetProperty("porPlano").EnumerateArray().Select(p => (p.GetProperty("plano").GetString(), p.GetProperty("usuarios").GetInt32(), p.GetProperty("pedidos").GetInt32(),
                 p.GetProperty("receitaEmReais").GetDecimal(), p.GetProperty("margemEmReais").GetDecimal()))
-            .Should().Equal(("gratis", 1, 2, 0m, -6.26m), ("profissional", 1, 1, 35.40m, 31.45m));
+            .Should().Equal(("gratis", 1, 2, 0m, -6.26m), ("profissional", 1, 1, 35.40m, 31.46m));
         d.GetProperty("quemMaisGasta").EnumerateArray().Select(u => (u.GetProperty("email").GetString(), u.GetProperty("pedidos").GetInt32(), u.GetProperty("creditosUsados").GetDecimal()))
-            .Should().Equal(("ana@exemplo.com", 2, 2200m), ("bia@exemplo.com", 1, 20m));
+            .Should().Equal(("ana@exemplo.com", 2, 2200m), ("bia@exemplo.com", 1, 16.4m));
 
         var dias = d.GetProperty("porDia").EnumerateArray().ToList();
         dias.Should().HaveCount(18);
         (dias[^1].GetProperty("dia").GetString(), dias[^1].GetProperty("pedidos").GetInt32(), dias[0].GetProperty("pedidos").GetInt32()).Should().Be(("2026-10-18", 3, 0));
         d.GetProperty("premissas").GetProperty("reaisPorDolar").GetDecimal().Should().Be(5.50m);
+    }
+
+    [Fact]
+    public async Task PorRotina_OCustoDeCadaUma_EQuantoVeioDoCache()
+    {
+        // Bloco 50: 1 milhão de entrada (400 mil do cache, a 10% do preço) e 100 mil de saída no Flash dos testes:
+        // 600 mil × 0,30 + 400 mil × 0,03 + 100 mil × 2,50 = US$ 0,18 + 0,012 + 0,25 = 442.000 milionésimos (884 créditos).
+        _s.Gemini.Resposta = """
+            {"candidates":[{"content":{"parts":[{"text":"ok"}]}}],
+             "usageMetadata":{"promptTokenCount":1000000,"cachedContentTokenCount":400000,"candidatesTokenCount":100000}}
+            """;
+        var ana = await _s.CriarConta();
+        await Gerar(ana.Acesso, rotina: "classificar-fotos");
+        await Gerar(ana.Acesso, rotina: "classificar-fotos");
+        await Gerar(ana.Acesso, rotina: "chat");
+        await Gerar(ana.Acesso, rotina: "rotina-de-um-programa-mais-novo");
+        await Gerar(ana.Acesso);
+
+        _s.NoBanco(b => b.UsosDeIa.OrderBy(u => u.Id).Select(u => new { u.Rotina, u.TokensDoCache, u.CustoEmMicrodolares }).ToList()
+                .Select(u => (u.Rotina, u.TokensDoCache, u.CustoEmMicrodolares)))
+            .Should().Equal(("classificar-fotos", 400_000, 442_000L), ("classificar-fotos", 400_000, 442_000L), ("chat", 400_000, 442_000L),
+                ("outra", 400_000, 442_000L), ("outra", 400_000, 442_000L));
+        var rotinas = (await Dados()).GetProperty("porRotina").EnumerateArray()
+            .Select(l => (l.GetProperty("rotina").GetString(), l.GetProperty("nome").GetString(), l.GetProperty("pedidos").GetInt32(),
+                l.GetProperty("creditosMedios").GetDecimal(), l.GetProperty("percentualDoCache").GetDecimal()));
+        rotinas.Should().BeEquivalentTo([("classificar-fotos", "Classificar fotos", 2, 884m, 40m), ("outra", "Outras", 2, 884m, 40m),
+            ("chat", "Chat do programa", 1, 884m, 40m)]);
+        (await (await _s.CreateClient().GetAsync("/admin/painel.js")).Content.ReadAsStringAsync()).Should().Contain("porRotina");
     }
 
     [Fact]

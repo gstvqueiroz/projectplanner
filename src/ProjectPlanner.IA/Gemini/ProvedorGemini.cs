@@ -55,7 +55,7 @@ public sealed partial class ProvedorGemini : IProvedorIA
     {
         var acesso = new AcessoPorChave(chave);
         var nome = NormalizarModelo(modelo);
-        using var _ = await ChamadaGemini.ExecutarAsync(_http, acesso, HttpMethod.Get, $"models/{nome}", null, nome, cancelamento);
+        using var _ = await ChamadaGemini.ExecutarAsync(_http, acesso, HttpMethod.Get, $"models/{nome}", null, nome, null, cancelamento);
     }
 
     [GeneratedRegex("^[a-z0-9][a-z0-9.\\-]*$")]

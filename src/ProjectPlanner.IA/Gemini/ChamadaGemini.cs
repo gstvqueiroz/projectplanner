@@ -17,10 +17,11 @@ internal static class ChamadaGemini
     /// <remarks>
     /// Se o acesso diz que a credencial venceu (o token da conta), pede de novo uma vez, com uma credencial renovada.
     /// </remarks>
+    /// <param name="rotina">Bloco 50: a rotina (<see cref="RotinasDeIa"/>), que vai ao servidor da conta para o painel de custos.</param>
     /// <exception cref="OperationCanceledException">O usuário cancelou.</exception>
     /// <exception cref="ErroDoAssistenteException">Qualquer outra falha, com a mensagem para o usuário.</exception>
     public static async Task<JsonDocument> ExecutarAsync(HttpClient http, AcessoAoGemini acesso, HttpMethod metodo, string caminho,
-        string? corpoJson, string modelo, CancellationToken cancelamento)
+        string? corpoJson, string modelo, string? rotina, CancellationToken cancelamento)
     {
         for (var tentativa = 0; ; tentativa++)
         {
@@ -28,6 +29,8 @@ internal static class ChamadaGemini
             if (corpoJson is not null)
                 pedido.Content = new StringContent(corpoJson, System.Text.Encoding.UTF8, "application/json");
             await acesso.AutenticarAsync(pedido, renovar: tentativa > 0, cancelamento);
+            if (rotina is not null && acesso is AcessoPelaConta)
+                pedido.Headers.Add(RotinasDeIa.Cabecalho, rotina);
             HttpResponseMessage resposta;
             try
             {

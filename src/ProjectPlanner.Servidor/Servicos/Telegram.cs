@@ -129,8 +129,8 @@ public sealed class MedidorDeTokens : DelegatingHandler
 
     public sealed class Medicao : IDisposable
     {
-        public long Entrada { get; internal set; }
-        public long Saida { get; internal set; }
+        /// <summary>Bloco 50: a soma das chamadas, com os tokens do cache.</summary>
+        public TokensDoPedido Tokens { get; internal set; }
 
         public void Dispose() => Atual.Value = null;
     }
@@ -147,11 +147,7 @@ public sealed class MedidorDeTokens : DelegatingHandler
             {
                 using var json = JsonDocument.Parse(bytes);
                 if (json.RootElement.TryGetProperty("usageMetadata", out var uso))
-                {
-                    long N(string nome) => uso.TryGetProperty(nome, out var v) && v.TryGetInt64(out var n) ? n : 0;
-                    medicao.Entrada += N("promptTokenCount");
-                    medicao.Saida += N("candidatesTokenCount") + N("thoughtsTokenCount");
-                }
+                    medicao.Tokens = medicao.Tokens.Mais(TokensDoPedido.DoUso(uso));
             }
             catch (JsonException)
             {

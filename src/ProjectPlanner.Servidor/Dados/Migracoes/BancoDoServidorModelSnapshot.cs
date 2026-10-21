@@ -231,10 +231,17 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.Property<DateTime>("Quando")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Rotina")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<int>("TokensDeEntrada")
                         .HasColumnType("integer");
 
                     b.Property<int>("TokensDeSaida")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TokensDoCache")
                         .HasColumnType("integer");
 
                     b.Property<int>("TokensTotais")

@@ -264,7 +264,7 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         await telegram.DigitandoAsync(chatId, c);
 
         RespostaIA resposta;
-        long entrada, saida;
+        TokensDoPedido tokens;
         using (var medicao = MedidorDeTokens.Abrir())
         {
             try
@@ -281,14 +281,10 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
                 await telegram.EnviarAsync(chatId, NaoRespondeu, c);
                 return;
             }
-            (entrada, saida) = (medicao.Entrada, medicao.Saida);
+            tokens = medicao.Tokens;
         }
-        var custo = modelo.Microdolares(entrada, saida);
-        banco.UsosDeIa.Add(new UsoDeIa
-        {
-            UsuarioId = usuario.Id, Quando = agora, Modelo = modelo.Id, TokensDeEntrada = (int)entrada, TokensDeSaida = (int)saida,
-            TokensTotais = (int)(entrada + saida), CustoEmMicrodolares = custo,
-        });
+        var custo = tokens.Microdolares(modelo);
+        banco.UsosDeIa.Add(UsoDeIa.Novo(usuario.Id, agora, modelo.Id, tokens, custo, RotinasDeIa.Telegram));
 
         var mensagem = resposta.Texto.Trim();
         if (resposta.Atualizacoes.Count > 0)

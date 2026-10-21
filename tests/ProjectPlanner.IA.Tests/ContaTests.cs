@@ -41,6 +41,26 @@ public sealed class ContaTests
     }
 
     [Fact]
+    public async Task PelaConta_CadaPedidoDizARotina_PelaChaveNao()
+    {
+        // Bloco 50: o servidor guarda a rotina de cada pedido, para o painel mostrar quanto custa cada uma.
+        var sessao = new SessaoFixa();
+        await Assistente(sessao).EnviarAsync(new PedidoIA("Oi", [], []), default);
+        await Assistente(sessao).EnviarAsync(new PedidoIA("Oi", [], []) { Canal = CanaisDaConversa.Telegram }, default);
+        _servidor.Responder = (_, _) => Task.FromResult(ManipuladorFalso.Json(200, ManipuladorFalso.Resposta("""{"legendas":[]}""")));
+        var fotos = new PedidoDeLegendas("Casa", [new FotoParaIA("f1", [1, 2, 3], "Alvenaria", new DateOnly(2026, 10, 21))]);
+        await new AnalistaGemini(new HttpClient(_servidor), new AcessoPelaConta(new Uri("https://servidor.teste/"), sessao), "m")
+            .SugerirLegendasAsync(fotos, default);
+        await new AnalistaGemini(new HttpClient(_servidor), "AIzaChaveDeTesteSoParaOsTestes123456789", "m").SugerirLegendasAsync(fotos, default);
+
+        _servidor.Pedidos.Select(p => p.Pedido.Headers.TryGetValues(RotinasDeIa.Cabecalho, out var v) ? v.Single() : null)
+            .Should().Equal(RotinasDeIa.Chat, RotinasDeIa.Telegram, RotinasDeIa.Legendas, null);
+        (RotinasDeIa.Normalizar(" Classificar-Fotos "), RotinasDeIa.Normalizar("nova-rotina"), RotinasDeIa.Normalizar(null))
+            .Should().Be((RotinasDeIa.ClassificarFotos, RotinasDeIa.Outra, RotinasDeIa.Outra));
+        RotinasDeIa.Todas.Select(RotinasDeIa.Nome).Should().OnlyHaveUniqueItems().And.NotContain("Outras", "toda rotina conhecida tem nome próprio");
+    }
+
+    [Fact]
     public async Task PelaConta_OSaldoDoCabecalhoVaiParaASessao()
     {
         var sessao = new SessaoFixa();

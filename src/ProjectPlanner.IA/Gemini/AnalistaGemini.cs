@@ -70,7 +70,7 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
         ArgumentNullException.ThrowIfNull(pedido);
         if (pedido.Fotos.Count == 0)
             return [];
-        var resposta = await ChamarAsync(MontarLegendas(pedido), cancelamento);
+        var resposta = await ChamarAsync(MontarLegendas(pedido), RotinasDeIa.Legendas, cancelamento);
         var ids = pedido.Fotos.Select(f => f.Id).ToHashSet();
         return Lista(resposta, "legendas")
             .Select(i => (Id: Texto(i, "id"), Legenda: Limitar(Texto(i, "legenda"), TamanhoDaLegenda)))
@@ -98,7 +98,7 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
         ArgumentNullException.ThrowIfNull(pedido);
         if (pedido.Tarefas.Count == 0)
             return [];
-        var resposta = await ChamarAsync(MontarAvanco(pedido), cancelamento);
+        var resposta = await ChamarAsync(MontarAvanco(pedido), RotinasDeIa.AvancoPelasFotos, cancelamento);
         var ids = pedido.Tarefas.Select(t => t.Id).ToHashSet();
         var sugestoes = new List<AvancoSugerido>();
         foreach (var item in Lista(resposta, "tarefas"))
@@ -138,7 +138,7 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
     public async Task<TextoSugerido> RedigirRelatorioAsync(PedidoDeTextoDoRelatorio pedido, CancellationToken cancelamento)
     {
         ArgumentNullException.ThrowIfNull(pedido);
-        var resposta = await ChamarAsync(MontarTexto(pedido), cancelamento);
+        var resposta = await ChamarAsync(MontarTexto(pedido), RotinasDeIa.Relatorio, cancelamento);
         var andamento = Texto(resposta, "andamento");
         if (string.IsNullOrWhiteSpace(andamento))
             throw new ErroDoAssistenteException("O Gemini não escreveu o texto do andamento. Tente de novo.");
@@ -192,7 +192,7 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
         ArgumentNullException.ThrowIfNull(pedido);
         if (pedido.Fotos.Count == 0)
             return [];
-        var resposta = await ChamarAsync(MontarClassificacao(pedido), cancelamento);
+        var resposta = await ChamarAsync(MontarClassificacao(pedido), RotinasDeIa.ClassificarFotos, cancelamento);
         var fotos = pedido.Fotos.Select(f => f.Id).ToHashSet();
         var tarefas = pedido.Tarefas.Select(t => t.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var classificacoes = new List<ClassificacaoDaFoto>();
@@ -244,15 +244,15 @@ public sealed class AnalistaGemini : IAnalistaDeFotos
 
     // ---- Comum ----
 
-    private Task<JsonElement> ChamarAsync(JsonObject corpo, CancellationToken cancelamento) =>
-        ChamarJsonAsync(_http, _acesso, Modelo, corpo, "A resposta do Gemini ficou grande demais e veio cortada. Tente com menos fotos.", cancelamento);
+    private Task<JsonElement> ChamarAsync(JsonObject corpo, string rotina, CancellationToken cancelamento) =>
+        ChamarJsonAsync(_http, _acesso, Modelo, corpo, "A resposta do Gemini ficou grande demais e veio cortada. Tente com menos fotos.", rotina, cancelamento);
 
     /// <summary>Uma chamada que responde em JSON (o objeto da raiz); também a do consultor de orçamento (Bloco 38).</summary>
     internal static async Task<JsonElement> ChamarJsonAsync(HttpClient http, AcessoAoGemini acesso, string modelo, JsonObject corpo, string seCortada,
-        CancellationToken cancelamento)
+        string rotina, CancellationToken cancelamento)
     {
         using var resposta = await ChamadaGemini.ExecutarAsync(http, acesso, HttpMethod.Post, $"models/{modelo}:generateContent",
-            corpo.ToJsonString(), modelo, cancelamento);
+            corpo.ToJsonString(), modelo, rotina, cancelamento);
         var (texto, fim) = AssistenteGemini.LerResposta(resposta.RootElement);
         try
         {

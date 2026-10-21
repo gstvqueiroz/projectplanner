@@ -105,7 +105,7 @@
     alvo.appendChild(svg);
   }
 
-  function nivel(n) { return { padrao: "Padrão", avancado: "Avançado", maximo: "Máximo" }[n] || n; }
+  function nivel(n) { return { padrao: "Padrão", intermediario: "Intermediário", avancado: "Avançado", maximo: "Máximo" }[n] || n; }
   function plano(p) { return { gratis: "Grátis", profissional: "Profissional" }[p] || p; }
 
   function desenhar(d) {
@@ -128,6 +128,10 @@
     grafico(d.porDia);
     tabela("porModelo", ["Modelo", "Nível", "Pedidos", "Custo", "Médio/pedido", "Créditos/pedido"], d.porModelo.map(function (m) {
       return [m.nome, nivel(m.nivel), numero.format(m.pedidos), reais.format(m.custoEmReais), reais.format(m.custoMedioEmReais), umaCasa.format(m.creditosMedios)];
+    }));
+    tabela("porRotina", ["Rotina", "Pedidos", "Custo", "Médio/pedido", "Créditos/pedido", "Do cache"], d.porRotina.map(function (l) {
+      return [l.nome, numero.format(l.pedidos), reais.format(l.custoEmReais), reais.format(l.custoMedioEmReais), umaCasa.format(l.creditosMedios),
+        umaCasa.format(l.percentualDoCache) + "%"];
     }));
     tabela("porPlano", ["Plano", "Contas", "Ativas", "Pedidos", "Custo", "Receita", "Margem"], d.porPlano.map(function (p) {
       return [plano(p.plano), numero.format(p.usuarios), numero.format(p.usuariosAtivos), numero.format(p.pedidos), reais.format(p.custoEmReais),

@@ -115,7 +115,7 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Jwt__Chave` | 32 bytes ou mais, aleatória (por exemplo, `openssl rand -base64 48`). Sem ela, em produção, o servidor não sobe |
 | `Gemini__Chave` | A chave do Gemini da empresa. Sem ela, a IA responde 503 |
 | `Anthropic__Chave` | Bloco 46: a chave da API da Anthropic (o nível Máximo). Sem ela, o Máximo aparece como "indisponível no momento" |
-| `Modelos__0__Id`, `Modelos__0__Nivel`, `Modelos__0__Provedor`, `Modelos__0__Nome`, `Modelos__0__DolaresPorMilhaoDeEntrada`, `Modelos__0__DolaresPorMilhaoDeSaida` (e `__1`, `__2`…) | Opcional: o catálogo de modelos. Sem ele, os padrão: Gemini 2.5 Flash (padrao), Gemini 3.1 Pro (avancado) e Claude Opus 5.5 (maximo). Configurado, substitui a lista inteira |
+| `Modelos__0__Id`, `Modelos__0__Nivel`, `Modelos__0__Provedor`, `Modelos__0__Nome`, `Modelos__0__DolaresPorMilhaoDeEntrada`, `Modelos__0__DolaresPorMilhaoDeSaida` (e `__1`, `__2`…) | Opcional: o catálogo de modelos. Sem ele, os padrão: Claude Haiku 5.5 (padrao), Gemini 3 Flash (intermediario), Gemini 3.1 Pro (avancado) e Claude Sonnet 5.5 (maximo). Também `__FatorDaLeituraDoCache` e `__FatorDaGravacaoNoCache` (Bloco 50). Configurado, substitui a lista inteira |
 | `Google__ClientIdDoApp`, `Google__SegredoDoApp` | Bloco 45: o client ID OAuth do tipo "App para computador" e o segredo dele. Sem os dois, o "Entrar com Google" do programa fica desligado (o resto funciona) |
 | `Google__ClientIds__0`, `__1`… | Opcional: outros client IDs aceitos no idToken (por exemplo, o do Telegram, depois) |
 | `Email__Smtp`, `Email__Porta`, `Email__Usuario`, `Email__Senha`, `Email__Remetente` | O SMTP do serviço de e-mail. Sem `Email__Smtp`, os e-mails vão só para o log |
@@ -262,6 +262,7 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   | Nível | Modelo | US$ por milhão (entrada / saída) | Planos |
   |---|---|---|---|
   | Padrão | Claude Haiku 5.5 (desde a 0.47.2; até 100 mil tokens de entrada; acima, 0,50 / 2,50 o pedido inteiro). Antes, o Gemini 2.5 Flash (0,30 / 2,50), que é a reserva | 0,10 / 0,50 | Grátis e Profissional |
+  | Intermediário | Gemini 3 Flash (`gemini-3-flash-preview`, desde o Bloco 50) | 0,50 / 3,00 | Profissional |
   | Avançado | Gemini 3.1 Pro (`gemini-3.1-pro-preview`; até a 0.45.1, o 2.5 Pro, que responde 404 para chaves de projetos novos) | 2,00 / 12,00 | Profissional |
   | Máximo | Claude Sonnet 5.5 (desde a 0.47.2; antes, o Opus 5.5, a 4 / 20) | 2,00 / 10,00 | Profissional |
 
@@ -281,8 +282,13 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   - `Modelos__0__Id` = `gemini-2.5-flash`, `Modelos__0__Nivel` = `padrao`, `Modelos__0__Provedor` = `gemini`,
     `Modelos__0__Nome` = `Gemini 2.5 Flash`, `Modelos__0__DolaresPorMilhaoDeEntrada` = `0.30`,
     `Modelos__0__DolaresPorMilhaoDeSaida` = `2.50`;
-  - `Modelos__1__…` com `gemini-3.1-pro-preview`, `avancado`, `gemini`, `Gemini 3.1 Pro`, `2.00`, `12.00`;
-  - `Modelos__2__…` com `claude-sonnet-5-5`, `maximo`, `anthropic`, `Claude Sonnet 5.5`, `2.00`, `10.00`.
+  - `Modelos__1__…` com `gemini-3-flash-preview`, `intermediario`, `gemini`, `Gemini 3 Flash`, `0.50`, `3.00`;
+  - `Modelos__2__…` com `gemini-3.1-pro-preview`, `avancado`, `gemini`, `Gemini 3.1 Pro`, `2.00`, `12.00`;
+  - `Modelos__3__…` com `claude-sonnet-5-5`, `maximo`, `anthropic`, `Claude Sonnet 5.5`, `2.00`, `10.00`.
+
+  O preço do cache (Bloco 50), como fração do preço da entrada: `Modelos__N__FatorDaLeituraDoCache` (padrão `0.10`) e
+  `Modelos__N__FatorDaGravacaoNoCache` (padrão `1.25`, o do Claude; ponha `1` nos modelos do Gemini). Para o Gemini
+  2.5 Flash, use `0.25` na leitura.
 
   A faixa de preço de um modelo (como a do Haiku): `Modelos__N__LimiteDaFaixa` (tokens de entrada),
   `Modelos__N__DolaresPorMilhaoDeEntradaAcima` e `Modelos__N__DolaresPorMilhaoDeSaidaAcima`.
@@ -294,6 +300,22 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
   - um seletor rápido no topo do painel do chat;
   - o saldo de créditos depois de cada resposta (o servidor manda no cabeçalho `X-Creditos-Restantes`);
   - os níveis fora do plano aparecem como "do plano Profissional".
+
+## Bloco 50 (0.50.0, feito): gastar menos com a IA
+
+- **Cache do retrato da obra no Claude:** as instruções, que levam o retrato da obra e se repetem a cada mensagem, vão
+  marcadas com `cache_control`. Numa conversa seguida (até 5 minutos entre as mensagens), elas custam 10% do preço da
+  entrada; a primeira vez custa 25% a mais. No Gemini, o cache é automático (os tokens vêm em
+  `cachedContentTokenCount`). Os créditos acompanham o custo real, com o desconto.
+- **Nível Intermediário:** o Gemini 3 Flash, cerca de 19 créditos por pedido típico, entre o Padrão (4) e o Máximo (70).
+  Profissional. O seletor do programa mostra o nível novo sem mudança (a lista vem do servidor).
+- **O custo de cada rotina:** o programa diz ao servidor, no cabeçalho `X-Rotina`, de qual rotina é cada pedido: chat,
+  Telegram, classificar fotos, legendas, % pelas fotos, texto do relatório, orçamento ou análise da obra. O banco guarda a
+  rotina e os tokens lidos do cache (`UsosDeIa.Rotina` e `TokensDoCache`, migração `Rotinas`). O painel `/admin` ganha a
+  tabela "Por rotina": pedidos, custo, custo médio, créditos por pedido e quanto da entrada veio do cache. Os pedidos de
+  programas anteriores aparecem em "Outras".
+- **Ficou para depois:** um limite de resposta por rotina. O ganho é pequeno (a saída do Haiku é barata) e uma resposta
+  cortada estraga o JSON. O roteamento automático entre os níveis é o Bloco 51.
 
 ## Bloco 47: assinatura Pro
 

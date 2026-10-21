@@ -74,7 +74,7 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
     {
         ArgumentNullException.ThrowIfNull(pedido);
         var resposta = await ChamarJsonAsync(_http, _acesso, Modelo, Montar(pedido),
-            "A resposta do Gemini ficou grande demais e veio cortada. Peça uma parte do orçamento por vez (use o foco).", cancelamento);
+            "A resposta do Gemini ficou grande demais e veio cortada. Peça uma parte do orçamento por vez (use o foco).", RotinasDeIa.Orcamento, cancelamento);
         return Interpretar(resposta, pedido);
     }
 

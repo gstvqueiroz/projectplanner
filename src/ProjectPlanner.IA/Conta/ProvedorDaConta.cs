@@ -40,7 +40,7 @@ public sealed class ProvedorDaConta : IProvedorIA
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
         var nome = NormalizarModelo(modelo);
-        using var _ = await ChamadaGemini.ExecutarAsync(_http, _acesso, HttpMethod.Get, $"models/{nome}", null, nome, cancelamento);
+        using var _ = await ChamadaGemini.ExecutarAsync(_http, _acesso, HttpMethod.Get, $"models/{nome}", null, nome, null, cancelamento);
     }
 }
 

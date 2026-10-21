@@ -71,5 +71,7 @@ public sealed class ContaNoAssistenteTests
             OpcaoDeNivel.Escolhida(opcoes, "gemini-x")!.Id, OpcaoDeNivel.Escolhida([], "gemini-2.5-flash")).Should().Be(
             ("gemini-2.5-flash", "gemini-2.5-flash", "gemini-2.5-flash", null));
         new ModeloDaConta("a", "outro", "A", true, true, 1).NomeDoNivel.Should().Be("Padrão");
+        new OpcaoDeNivel(new ModeloDaConta("gemini-3-flash-preview", "intermediario", "Gemini 3 Flash", true, true, 19)).TextoCompleto
+            .Should().Be("Intermediário: Gemini 3 Flash (cerca de 19 créditos por pedido)", "Bloco 50: o nível entre o Padrão e o Avançado");
     }
 }

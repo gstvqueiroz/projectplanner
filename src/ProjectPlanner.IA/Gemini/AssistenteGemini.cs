@@ -42,7 +42,7 @@ public sealed class AssistenteGemini : IAssistenteIA
         ArgumentNullException.ThrowIfNull(pedido);
         var corpo = await MontarCorpoAsync(pedido, cancelamento);
         using var resposta = await ChamadaGemini.ExecutarAsync(_http, _acesso, HttpMethod.Post, $"models/{Modelo}:generateContent",
-            corpo.ToJsonString(), Modelo, cancelamento);
+            corpo.ToJsonString(), Modelo, pedido.Canal == CanaisDaConversa.Telegram ? RotinasDeIa.Telegram : RotinasDeIa.Chat, cancelamento);
         var (texto, fim) = LerResposta(resposta.RootElement);
         return FormatoDaResposta.Interpretar(texto, cortada: fim == "MAX_TOKENS");
     }

@@ -35,6 +35,7 @@ public sealed record ModeloDaConta(string Id, string Nivel, string Nome, bool Li
 {
     public string NomeDoNivel => Nivel switch
     {
+        "intermediario" => "Intermediário", // Bloco 50
         "avancado" => "Avançado",
         "maximo" => "Máximo",
         _ => "Padrão",

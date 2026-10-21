@@ -343,18 +343,19 @@ public sealed class TelegramTests : IDisposable
         await Mandar($"/start {codigo}");
         s.Claude.Resposta = """
             {"content":[{"type":"tool_use","name":"responder","input":{"mensagem":"Anotei a alvenaria.","alteracoes":[],"atualizacoes":[{"tipo":"percentual","tarefa":"2","percentual":60}]}}],
-             "stop_reason":"tool_use","usage":{"input_tokens":12000,"output_tokens":800}}
+             "stop_reason":"tool_use","usage":{"input_tokens":2000,"cache_read_input_tokens":10000,"output_tokens":800}}
             """;
 
         await Mandar("a alvenaria está em 60%");
 
         s.Telegram.Ultima.Should().StartWith("Anotei a alvenaria.").And.Contain("1 atualização ficou na caixa");
         var enviado = JsonNode.Parse(s.Claude.Pedidos.Single().Corpo)!;
-        (enviado["model"]!.GetValue<string>(), enviado["system"]!.GetValue<string>().Contains(InstrucoesDoAssistente.Telegram)).Should().Be(("claude-haiku-5-5", true));
+        (enviado["model"]!.GetValue<string>(), enviado["system"]![0]!["text"]!.GetValue<string>().Contains(InstrucoesDoAssistente.Telegram)).Should().Be(("claude-haiku-5-5", true));
         s.Claude.Pedidos.Single().Chave.Should().Be(Servidor.ChaveDaAnthropic, "a chave de verdade vai pela ponte");
         s.Gemini.Pedidos.Should().BeEmpty();
         // 12.000 de entrada e 800 de saída no Haiku = 1.200 + 400 = 1.600 milionésimos.
-        s.NoBanco(b => b.UsosDeIa.Single()).Should().Match<UsoDeIa>(u => u.Modelo == "claude-haiku-5-5" && u.TokensDeEntrada == 12_000 && u.CustoEmMicrodolares == 1_600);
+        s.NoBanco(b => b.UsosDeIa.Single()).Should().Match<UsoDeIa>(u => u.Modelo == "claude-haiku-5-5" && u.TokensDeEntrada == 12_000 && u.TokensDoCache == 10_000
+            && u.CustoEmMicrodolares == 700 && u.Rotina == "telegram", "Bloco 50: 2.000 × 0,10 + 10.000 do cache × 0,01 + 800 × 0,50 = 700 (seria 1.600 sem o cache)");
         s.NoBanco(b => b.CaixaDeEntrada.Count()).Should().Be(1);
 
         s.Claude.Status = HttpStatusCode.Unauthorized;

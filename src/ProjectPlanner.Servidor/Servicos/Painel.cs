@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ProjectPlanner.IA;
 using ProjectPlanner.Servidor.Dados;
 
 namespace ProjectPlanner.Servidor.Servicos;
@@ -7,6 +8,10 @@ public sealed record LinhaDoDia(DateOnly Dia, int Pedidos, long Tokens, decimal 
 
 public sealed record LinhaDoModelo(string Modelo, string Nome, string Nivel, int Pedidos, long TokensDeEntrada, long TokensDeSaida, decimal CustoEmReais,
     decimal CustoMedioEmReais, decimal CreditosMedios);
+
+/// <summary>Bloco 50: o custo de cada rotina do programa (chat, classificar fotos, Telegram…) e quanto da entrada veio do cache.</summary>
+public sealed record LinhaDaRotina(string Rotina, string Nome, int Pedidos, decimal CustoEmReais, decimal CustoMedioEmReais, decimal CreditosMedios,
+    decimal PercentualDoCache);
 
 public sealed record LinhaDoPlano(string Plano, int Usuarios, int UsuariosAtivos, int Pedidos, decimal CustoEmReais, decimal ReceitaEmReais,
     decimal MargemEmReais);
@@ -21,7 +26,7 @@ public sealed record AlertaDoPainel(decimal CustoDoMesEmReais, decimal LimiteEmR
 
 /// <summary>Bloco 48: tudo o que o painel financeiro mostra num período.</summary>
 public sealed record DadosDoPainel(DateOnly De, DateOnly Ate, ResumoDoPainel Resumo, IReadOnlyList<LinhaDoDia> PorDia, IReadOnlyList<LinhaDoModelo> PorModelo,
-    IReadOnlyList<LinhaDoPlano> PorPlano, IReadOnlyList<LinhaDoUsuario> QuemMaisGasta, AlertaDoPainel Alerta, OpcoesFinanceiras Premissas);
+    IReadOnlyList<LinhaDaRotina> PorRotina, IReadOnlyList<LinhaDoPlano> PorPlano, IReadOnlyList<LinhaDoUsuario> QuemMaisGasta, AlertaDoPainel Alerta, OpcoesFinanceiras Premissas);
 
 /// <summary>
 /// Bloco 48: o painel financeiro. Junta os pedidos de IA de um período (o custo real de cada um, gravado desde o Bloco 46)
@@ -45,7 +50,7 @@ public static class Painel
         var (inicio, fim) = (de.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), ate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
         var usos = await banco.UsosDeIa.AsNoTracking().Where(u => u.Quando >= inicio && u.Quando < fim)
-            .Select(u => new { u.UsuarioId, u.Quando, u.Modelo, u.TokensDeEntrada, u.TokensDeSaida, u.TokensTotais, u.CustoEmMicrodolares })
+            .Select(u => new { u.UsuarioId, u.Quando, u.Modelo, u.TokensDeEntrada, u.TokensDeSaida, u.TokensTotais, u.CustoEmMicrodolares, u.TokensDoCache, u.Rotina })
             .ToListAsync(c);
         var usuarios = await banco.Usuarios.AsNoTracking().Select(u => new { u.Id, u.Email, u.Plano, u.CriadoEm, u.EmailConfirmado }).ToListAsync(c);
         var porUsuario = usuarios.ToDictionary(u => u.Id);
@@ -69,6 +74,15 @@ public static class Painel
             var custo = g.Sum(u => u.CustoEmMicrodolares);
             return new LinhaDoModelo(g.Key, modelo?.Nome ?? g.Key, modelo?.Nivel ?? "", g.Count(), g.Sum(u => (long)u.TokensDeEntrada), g.Sum(u => (long)u.TokensDeSaida),
                 Reais(custo), Math.Round(financeiro.Reais(custo) / g.Count(), 4), Math.Round(planos.Creditos(custo) / g.Count(), 1));
+        }).OrderByDescending(l => l.CustoEmReais).ToList();
+
+        // Bloco 50: os pedidos anteriores ao registro da rotina entram em "Outras".
+        var porRotina = usos.GroupBy(u => u.Rotina ?? RotinasDeIa.Outra).Select(g =>
+        {
+            var custo = g.Sum(u => u.CustoEmMicrodolares);
+            var entrada = g.Sum(u => (long)u.TokensDeEntrada);
+            return new LinhaDaRotina(g.Key, RotinasDeIa.Nome(g.Key), g.Count(), Reais(custo), Math.Round(financeiro.Reais(custo) / g.Count(), 4),
+                Math.Round(planos.Creditos(custo) / g.Count(), 1), entrada == 0 ? 0 : Math.Round(g.Sum(u => (long)u.TokensDoCache) * 100m / entrada, 1));
         }).OrderByDescending(l => l.CustoEmReais).ToList();
 
         var porPlano = Planos.Todos.Select(plano =>
@@ -103,7 +117,7 @@ public static class Painel
             usuarios.Count(u => u.CriadoEm >= inicio && u.CriadoEm < fim && u.EmailConfirmado),
             usos.Count == 0 ? 0 : Math.Round(financeiro.Reais(custoTotal) / usos.Count, 4));
 
-        return new DadosDoPainel(de, ate, resumo, porDia, porModelo, porPlano, quemMaisGasta, await AlertaAsync(banco, financeiro, agora, c), financeiro);
+        return new DadosDoPainel(de, ate, resumo, porDia, porModelo, porRotina, porPlano, quemMaisGasta, await AlertaAsync(banco, financeiro, agora, c), financeiro);
     }
 
     /// <summary>O custo de IA do mês corrente (UTC), de todas as contas, em milionésimos de dólar.</summary>

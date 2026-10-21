@@ -16,6 +16,11 @@ public sealed class PedidoIncompativelException(string mensagem) : Exception(men
 /// 0.45.1: a ferramenta vai com <c>tool_choice: auto</c> e a instrução de sempre usá-la. Os modelos que pensam antes de
 /// responder (o Opus 5.5) recusam forçar uma ferramenta (<c>tool_choice: tool</c>). Se a resposta vier em texto, o JSON é
 /// tirado do texto.
+/// <para>
+/// Bloco 50: as instruções (com o retrato da obra, que se repete a cada mensagem) vão marcadas para o cache do Claude
+/// (<c>cache_control</c>). Na mensagem seguinte, dentro de 5 minutos, elas custam 10% do preço da entrada; a primeira vez
+/// custa 25% a mais. Um pedido curto demais para o cache (menos de alguns milhares de tokens) vai normalmente, sem erro.
+/// </para>
 /// </remarks>
 public static class TradutorClaude
 {
@@ -42,7 +47,10 @@ public static class TradutorClaude
         if (esquema is not null)
             sistema = (sistema.Length > 0 ? sistema + "\n\n" : "") + InstrucaoDaFerramenta;
         if (sistema.Length > 0)
-            pedido["system"] = sistema;
+            pedido["system"] = new JsonArray(new JsonObject
+            {
+                ["type"] = "text", ["text"] = sistema, ["cache_control"] = new JsonObject { ["type"] = "ephemeral" },
+            });
 
         var mensagens = new JsonArray();
         foreach (var conteudo in gemini["contents"]?.AsArray() ?? [])
@@ -88,7 +96,7 @@ public static class TradutorClaude
     }
 
     /// <summary>A resposta do Claude no formato do Gemini, e os tokens para a cobrança.</summary>
-    public static (JsonObject Resposta, long Entrada, long Saida) Resposta(JsonNode claude)
+    public static (JsonObject Resposta, TokensDoPedido Tokens) Resposta(JsonNode claude)
     {
         // A entrada da ferramenta, se houver; senão, o texto (sem o pensamento), com o JSON tirado de uma cerca de código.
         var blocos = claude["content"]?.AsArray() ?? [];
@@ -100,7 +108,8 @@ public static class TradutorClaude
             textos = [json];
         var uso = claude["usage"];
         long Numero(string nome) => uso?[nome] is JsonValue v && v.TryGetValue<long>(out var n) ? n : 0;
-        var entrada = Numero("input_tokens") + Numero("cache_creation_input_tokens") + Numero("cache_read_input_tokens");
+        var (lidos, gravados) = (Numero("cache_read_input_tokens"), Numero("cache_creation_input_tokens"));
+        var entrada = Numero("input_tokens") + gravados + lidos;
         var saida = Numero("output_tokens");
         var fim = claude["stop_reason"]?.GetValue<string>() == "max_tokens" ? "MAX_TOKENS" : "STOP";
         var resposta = new JsonObject
@@ -119,10 +128,12 @@ public static class TradutorClaude
                 ["promptTokenCount"] = entrada,
                 ["candidatesTokenCount"] = saida,
                 ["totalTokenCount"] = entrada + saida,
+                ["cachedContentTokenCount"] = lidos,
+                [TokensDoPedido.CampoGravadosNoCache] = gravados,
             },
             ["modelVersion"] = claude["model"]?.GetValue<string>(),
         };
-        return (resposta, entrada, saida);
+        return (resposta, new TokensDoPedido(entrada, saida, lidos, gravados));
     }
 
     /// <summary>O esquema do Gemini (tipos em maiúsculas, <c>nullable</c>) como JSON Schema.</summary>
@@ -244,7 +255,7 @@ public sealed class PonteParaOClaude(IHttpClientFactory clientes, Microsoft.Exte
         var texto = await resposta.Content.ReadAsStringAsync(c);
         if (!resposta.IsSuccessStatusCode)
             return Erro(resposta.StatusCode, TradutorClaude.MensagemDeErro(texto) ?? $"erro {(int)resposta.StatusCode}");
-        var (gemini, _, _) = TradutorClaude.Resposta(JsonNode.Parse(texto)!);
+        var (gemini, _) = TradutorClaude.Resposta(JsonNode.Parse(texto)!);
         return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
         {
             Content = new StringContent(gemini.ToJsonString(TradutorClaude.Json), System.Text.Encoding.UTF8, "application/json"),

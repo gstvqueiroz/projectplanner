@@ -72,20 +72,42 @@ public sealed class ModeloDeIa
     public decimal DolaresPorMilhaoDeEntradaAcima { get; set; }
     public decimal DolaresPorMilhaoDeSaidaAcima { get; set; }
 
+    /// <summary>
+    /// Bloco 50: o preço dos tokens de entrada lidos do cache, como fração do preço normal da entrada (no Claude e no
+    /// Gemini 3, 10%). O Claude guarda as instruções com o retrato da obra (ver <c>TradutorClaude</c>); o Gemini guarda
+    /// sozinho o começo repetido dos pedidos.
+    /// </summary>
+    public decimal FatorDaLeituraDoCache { get; set; } = 0.10m;
+
+    /// <summary>Bloco 50: o preço dos tokens gravados no cache (só no Claude: 25% a mais que a entrada normal).</summary>
+    public decimal FatorDaGravacaoNoCache { get; set; } = 1.25m;
+
     /// <summary>O custo, em milionésimos de dólar (inteiro, para somar no banco sem perder centavos).</summary>
-    public long Microdolares(long entrada, long saida) => LimiteDaFaixa > 0 && entrada > LimiteDaFaixa
-        ? (long)Math.Ceiling(entrada * DolaresPorMilhaoDeEntradaAcima + saida * DolaresPorMilhaoDeSaidaAcima)
-        : (long)Math.Ceiling(entrada * DolaresPorMilhaoDeEntrada + saida * DolaresPorMilhaoDeSaida);
+    /// <param name="entrada">Todos os tokens de entrada, inclusive os lidos do cache e os gravados nele (a faixa vale pelo total).</param>
+    /// <param name="lidosDoCache">Bloco 50: quantos da entrada vieram do cache.</param>
+    /// <param name="gravadosNoCache">Bloco 50: quantos da entrada foram gravados no cache.</param>
+    public long Microdolares(long entrada, long saida, long lidosDoCache = 0, long gravadosNoCache = 0)
+    {
+        var acima = LimiteDaFaixa > 0 && entrada > LimiteDaFaixa;
+        var (precoDaEntrada, precoDaSaida) = acima ? (DolaresPorMilhaoDeEntradaAcima, DolaresPorMilhaoDeSaidaAcima) : (DolaresPorMilhaoDeEntrada, DolaresPorMilhaoDeSaida);
+        lidosDoCache = Math.Clamp(lidosDoCache, 0, entrada);
+        gravadosNoCache = Math.Clamp(gravadosNoCache, 0, entrada - lidosDoCache);
+        var normal = entrada - lidosDoCache - gravadosNoCache;
+        return (long)Math.Ceiling(precoDaEntrada * (normal + lidosDoCache * FatorDaLeituraDoCache + gravadosNoCache * FatorDaGravacaoNoCache)
+                                  + saida * precoDaSaida);
+    }
 }
 
 public static class Niveis
 {
     public const string Padrao = "padrao";
+    public const string Intermediario = "intermediario"; // Bloco 50
     public const string Avancado = "avancado";
     public const string Maximo = "maximo";
 
     public static string Nome(string nivel) => nivel switch
     {
+        Intermediario => "Intermediário",
         Avancado => "Avançado",
         Maximo => "Máximo",
         _ => "Padrão",

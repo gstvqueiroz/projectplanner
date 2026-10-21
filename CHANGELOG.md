@@ -3,6 +3,18 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.50.0
+
+A IA gasta menos, e dá para ver onde vai o dinheiro.
+
+- **Cache nas conversas:** a cada mensagem, o assistente recebe de novo as instruções e o retrato da obra. Agora, no
+  Claude, essa parte fica guardada por alguns minutos e, nas mensagens seguintes, custa 10% do preço. No Gemini o cache já
+  era automático; agora os créditos também descontam. Numa conversa seguida, a pergunta fica bem mais barata.
+- **Nível Intermediário (Gemini 3 Flash):** cerca de 19 créditos por pedido, entre o Padrão (Haiku, cerca de 4) e o
+  Máximo (Sonnet, cerca de 70). Bom para pedidos médios que não precisam do modelo mais caro. Do plano Profissional.
+- **O custo de cada rotina no painel do servidor:** chat, Telegram, classificar fotos, legendas, % pelas fotos, texto do
+  relatório, orçamento e análise da obra, com quanto veio do cache.
+
 ## 0.47.3
 
 O chat da IA fica mais barato em conversas longas.

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
+using ProjectPlanner.IA;
 using ProjectPlanner.Servidor.Dados;
 using ProjectPlanner.Servidor.Servicos;
 
@@ -22,6 +23,9 @@ public static class Ia
     public const string ClienteDaAnthropic = "anthropic";
     public const string CabecalhoDosCreditosUsados = "X-Creditos-Usados";
     public const string CabecalhoDosCreditosRestantes = "X-Creditos-Restantes";
+
+    /// <summary>Bloco 50: a rotina do programa que fez o pedido (<see cref="RotinasDeIa"/>), para o painel mostrar o custo de cada uma.</summary>
+    public const string CabecalhoDaRotina = RotinasDeIa.Cabecalho;
     public const string CotaEsgotada = "Os créditos de IA do seu plano acabaram neste mês. Eles voltam no dia 1º (ou assine o plano Profissional).";
     public const string SemChave = "A IA do servidor ainda não está configurada. Tente mais tarde.";
 
@@ -101,12 +105,10 @@ public static class Ia
         if (resultado.Falha is not null)
             return resultado.Falha;
 
-        var custo = escolhido.Microdolares(resultado.Entrada, resultado.Saida);
-        banco.UsosDeIa.Add(new UsoDeIa
-        {
-            UsuarioId = usuario.Id, Quando = relogio.GetUtcNow().UtcDateTime, Modelo = escolhido.Id, TokensDeEntrada = (int)resultado.Entrada,
-            TokensDeSaida = (int)resultado.Saida, TokensTotais = (int)(resultado.Entrada + resultado.Saida), CustoEmMicrodolares = custo,
-        });
+        var tokens = resultado.Tokens;
+        var custo = tokens.Microdolares(escolhido);
+        banco.UsosDeIa.Add(UsoDeIa.Novo(usuario.Id, relogio.GetUtcNow().UtcDateTime, escolhido.Id, tokens, custo,
+            RotinasDeIa.Normalizar(http.Request.Headers[CabecalhoDaRotina].FirstOrDefault())));
         await banco.SaveChangesAsync(c);
         await Painel.ConferirAlertaAsync(banco, config, email, relogio.GetUtcNow().UtcDateTime, log, c); // Bloco 48
         var cultura = System.Globalization.CultureInfo.InvariantCulture;
@@ -115,9 +117,9 @@ public static class Ia
         return Results.Bytes(resultado.Resposta!, "application/json");
     }
 
-    private sealed record Resultado(byte[]? Resposta, long Entrada, long Saida, IResult? Falha)
+    private sealed record Resultado(byte[]? Resposta, TokensDoPedido Tokens, IResult? Falha)
     {
-        public static Resultado Erro(IResult falha) => new(null, 0, 0, falha);
+        public static Resultado Erro(IResult falha) => new(null, default, falha);
     }
 
     private static async Task<Resultado> PeloGemini(ModeloDeIa modelo, byte[] corpo, OpcoesDoGemini gemini, IHttpClientFactory clientes, ILogger log,
@@ -137,8 +139,7 @@ public static class Ia
             var status = (int)resposta.StatusCode;
             if (resposta.IsSuccessStatusCode)
             {
-                var (entrada, saida) = TokensDoGemini(bytes, log, modelo.Id);
-                return new Resultado(bytes, entrada, saida, null);
+                return new Resultado(bytes, TokensDoGemini(bytes, log, modelo.Id), null);
             }
             var texto = Encoding.UTF8.GetString(bytes).Replace(chave, "(chave)", StringComparison.Ordinal);
             // Um problema da chave do servidor não é do usuário: não passa adiante o que o Google disse.
@@ -185,8 +186,8 @@ public static class Ia
             {
                 try
                 {
-                    var (gemini, entrada, saida) = TradutorClaude.Resposta(JsonNode.Parse(texto) ?? throw new JsonException());
-                    return new Resultado(Encoding.UTF8.GetBytes(gemini.ToJsonString(TradutorClaude.Json)), entrada, saida, null);
+                    var (gemini, tokens) = TradutorClaude.Resposta(JsonNode.Parse(texto) ?? throw new JsonException());
+                    return new Resultado(Encoding.UTF8.GetBytes(gemini.ToJsonString(TradutorClaude.Json)), tokens, null);
                 }
                 catch (Exception ex) when (ex is JsonException or InvalidOperationException)
                 {
@@ -243,27 +244,19 @@ public static class Ia
         return memoria.ToArray();
     }
 
-    // Os tokens do usageMetadata do Gemini (a saída inclui os de raciocínio, cobrados como saída).
-    private static (long Entrada, long Saida) TokensDoGemini(byte[] resposta, ILogger log, string modelo)
+    // Os tokens do usageMetadata do Gemini.
+    private static TokensDoPedido TokensDoGemini(byte[] resposta, ILogger log, string modelo)
     {
         try
         {
             using var json = JsonDocument.Parse(resposta);
             if (json.RootElement.ValueKind == JsonValueKind.Object && json.RootElement.TryGetProperty("usageMetadata", out var uso))
-            {
-                long entrada = Numero(uso, "promptTokenCount"), saida = Numero(uso, "candidatesTokenCount") + Numero(uso, "thoughtsTokenCount");
-                if (entrada + saida == 0)
-                    entrada = Numero(uso, "totalTokenCount");
-                return (entrada, saida);
-            }
+                return TokensDoPedido.DoUso(uso);
         }
         catch (JsonException ex)
         {
             log.LogWarning(ex, "Resposta do Gemini sem JSON válido ({Modelo})", modelo);
         }
-        return (0, 0);
+        return default;
     }
-
-    private static long Numero(JsonElement objeto, string nome) =>
-        objeto.TryGetProperty(nome, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : 0;
 }

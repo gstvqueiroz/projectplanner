@@ -53,9 +53,11 @@ public sealed class ClaudeTests : IDisposable
     {
         var pedido = TradutorClaude.Pedido(JsonNode.Parse(PedidoDoPrograma)!, "claude-opus-5-5", 16_000);
 
-        (pedido["model"]!.GetValue<string>(), pedido["system"]!.GetValue<string>(), pedido["max_tokens"]!.GetValue<int>(), pedido["temperature"]!.GetValue<double>())
+        (pedido["model"]!.GetValue<string>(), pedido["system"]![0]!["text"]!.GetValue<string>(), pedido["max_tokens"]!.GetValue<int>(), pedido["temperature"]!.GetValue<double>())
             .Should().Be(("claude-opus-5-5", "Você é o assistente.\n\nResponda em português.\n\n" + TradutorClaude.InstrucaoDaFerramenta, 16_000, 1.0),
                 "o máximo e a temperatura ficam nos limites do Claude, e as instruções pedem a ferramenta");
+        // Bloco 50: as instruções (com o retrato da obra) vão num bloco só, marcado para o cache.
+        (pedido["system"]!.AsArray().Count, pedido["system"]![0]!["cache_control"]!.ToJsonString()).Should().Be((1, """{"type":"ephemeral"}"""));
         var mensagens = pedido["messages"]!.AsArray();
         mensagens.Select(m => m!["role"]!.GetValue<string>()).Should().Equal("user", "assistant", "user");
         mensagens[0]!["content"]![1]!.ToJsonString().Should().Be("""{"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":"AAAA"}}""");
@@ -85,24 +87,26 @@ public sealed class ClaudeTests : IDisposable
     [Fact]
     public void Traducao_DaResposta_FerramentaTextoECorte()
     {
-        var (resposta, entrada, saida) = TradutorClaude.Resposta(JsonNode.Parse(Servidor.ClaudeDeTeste)!);
-        (entrada, saida).Should().Be((1500L, 200L), "a entrada inclui a lida do cache");
+        var (resposta, tokens) = TradutorClaude.Resposta(JsonNode.Parse(Servidor.ClaudeDeTeste)!);
+        tokens.Should().Be(new TokensDoPedido(1500, 200, 500, 0), "a entrada inclui a lida do cache, que o Bloco 50 separa");
+        (resposta["usageMetadata"]!["cachedContentTokenCount"]!.GetValue<long>(), resposta["usageMetadata"]![TokensDoPedido.CampoGravadosNoCache]!.GetValue<long>())
+            .Should().Be((500L, 0L), "o Telegram mede pelo usageMetadata");
         resposta["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("""{"mensagem":"Olá do Claude","alteracoes":[]}""");
         (resposta["candidates"]![0]!["finishReason"]!.GetValue<string>(), resposta["usageMetadata"]!["totalTokenCount"]!.GetValue<long>()).Should().Be(("STOP", 1700L));
 
-        var (cortada, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+        var (cortada, _) = TradutorClaude.Resposta(JsonNode.Parse(
             """{"content":[{"type":"text","text":"Parte 1 "},{"type":"text","text":"parte 2"}],"stop_reason":"max_tokens","usage":{"input_tokens":5,"output_tokens":7}}""")!);
         (cortada["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>(), cortada["candidates"]![0]!["finishReason"]!.GetValue<string>())
             .Should().Be(("Parte 1 parte 2", "MAX_TOKENS"));
         // Com o pensamento e um texto antes da ferramenta, vale só a ferramenta.
-        var (comPensamento, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+        var (comPensamento, _) = TradutorClaude.Resposta(JsonNode.Parse(
             """{"content":[{"type":"thinking","thinking":"vou montar"},{"type":"text","text":"Aqui está:"},{"type":"tool_use","name":"responder","input":{"mensagem":"ok"}}],"stop_reason":"tool_use","usage":{}}""")!);
         comPensamento["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("""{"mensagem":"ok"}""");
         // Sem a ferramenta, o JSON é tirado do texto (inclusive de uma cerca ```json).
-        var (emTexto, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+        var (emTexto, _) = TradutorClaude.Resposta(JsonNode.Parse(
             """{"content":[{"type":"text","text":"Segue:\n```json\n{\"mensagem\": \"oi\", \"alteracoes\": []}\n```"}],"stop_reason":"end_turn","usage":{}}""")!);
         emTexto["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("""{"mensagem": "oi", "alteracoes": []}""");
-        var (soTexto, _, _) = TradutorClaude.Resposta(JsonNode.Parse(
+        var (soTexto, _) = TradutorClaude.Resposta(JsonNode.Parse(
             """{"content":[{"type":"text","text":"Sem chaves {aqui"}],"usage":{}}""")!);
         soTexto["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Be("Sem chaves {aqui");
         (TradutorClaude.MensagemDeErro("""{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long"}}"""),
@@ -124,10 +128,11 @@ public sealed class ClaudeTests : IDisposable
             .Should().Be((new Uri("https://api.anthropic.com/v1/messages"), Servidor.ChaveDaAnthropic, false, "2023-06-01"));
         JsonNode.Parse(enviado.Corpo)!["model"]!.GetValue<string>().Should().Be("claude-opus-5-5");
         _s.Gemini.Pedidos.Should().BeEmpty();
-        // 1.500 de entrada a US$ 4 e 200 de saída a US$ 20 por milhão = 10.000 milionésimos = 20 créditos.
+        // Bloco 50: 1.000 de entrada a US$ 4, 500 lidos do cache a 10% disso e 200 de saída a US$ 20 por milhão
+        // = 4.000 + 200 + 4.000 = 8.200 milionésimos = 16,4 créditos (seriam 20 sem o desconto do cache).
         var uso = _s.NoBanco(b => b.UsosDeIa.Single());
-        (uso.Modelo, uso.TokensDeEntrada, uso.TokensDeSaida, uso.CustoEmMicrodolares).Should().Be(("claude-opus-5-5", 1500, 200, 10_000L));
-        (r.Headers.GetValues(Ia.CabecalhoDosCreditosUsados).Single(), r.Headers.GetValues(Ia.CabecalhoDosCreditosRestantes).Single()).Should().Be(("20", "5980"));
+        (uso.Modelo, uso.TokensDeEntrada, uso.TokensDeSaida, uso.TokensDoCache, uso.CustoEmMicrodolares).Should().Be(("claude-opus-5-5", 1500, 200, 500, 8_200L));
+        (r.Headers.GetValues(Ia.CabecalhoDosCreditosUsados).Single(), r.Headers.GetValues(Ia.CabecalhoDosCreditosRestantes).Single()).Should().Be(("16.4", "5983.6"));
     }
 
     [Fact]
@@ -232,14 +237,38 @@ public sealed class ClaudeTests : IDisposable
         (flash.Microdolares(10_000, 1_500), flash.Microdolares(1, 0), flash.Microdolares(0, 0)).Should().Be((6_750L, 1L, 0L));
         // 0.47.2: o catálogo do código (Haiku no Padrão, Sonnet no Máximo).
         CatalogoDeModelos.Padrao.Select(m => (m.Id, m.Nivel, m.Provedor)).Should().Equal(
-            ("claude-haiku-5-5", Niveis.Padrao, Provedores.Anthropic), ("gemini-3.1-pro-preview", Niveis.Avancado, Provedores.Gemini),
+            ("claude-haiku-5-5", Niveis.Padrao, Provedores.Anthropic), ("gemini-3-flash-preview", Niveis.Intermediario, Provedores.Gemini),
+            ("gemini-3.1-pro-preview", Niveis.Avancado, Provedores.Gemini),
             ("claude-sonnet-5-5", Niveis.Maximo, Provedores.Anthropic));
         var haiku = CatalogoDeModelos.Padrao[0];
         // Até 100 mil tokens de entrada: US$ 0,10 e 0,50 por milhão; acima, o pedido inteiro a US$ 0,50 e 2,50.
         (haiku.Microdolares(10_000, 1_500), haiku.Microdolares(100_000, 1_000), haiku.Microdolares(100_001, 1_000))
             .Should().Be((1_750L, 10_500L, 52_501L));
-        CatalogoDeModelos.Padrao[2].Microdolares(10_000, 1_500).Should().Be(35_000L, "Sonnet: US$ 2 e 10 por milhão");
-        (Niveis.Nome(Niveis.Padrao), Niveis.Nome(Niveis.Avancado), Niveis.Nome(Niveis.Maximo)).Should().Be(("Padrão", "Avançado", "Máximo"));
+        CatalogoDeModelos.Padrao[3].Microdolares(10_000, 1_500).Should().Be(35_000L, "Sonnet: US$ 2 e 10 por milhão");
+        CatalogoDeModelos.Padrao[1].Microdolares(10_000, 1_500).Should().Be(9_500L, "Bloco 50, Gemini 3 Flash: US$ 0,50 e 3 por milhão (19 créditos)");
+        (Niveis.Nome(Niveis.Padrao), Niveis.Nome(Niveis.Intermediario), Niveis.Nome(Niveis.Avancado), Niveis.Nome(Niveis.Maximo))
+            .Should().Be(("Padrão", "Intermediário", "Avançado", "Máximo"));
+    }
+
+    [Fact]
+    public void Custo_ComCache_LeituraA10PorCento_GravacaoA125_EAFaixaPeloTotal()
+    {
+        var sonnet = CatalogoDeModelos.Padrao[3];
+        // 10 mil de entrada, 8 mil deles lidos do cache: 2.000 × 2 + 8.000 × 0,2 + 1.500 × 10 = 4.000 + 1.600 + 15.000.
+        sonnet.Microdolares(10_000, 1_500, lidosDoCache: 8_000).Should().Be(20_600L);
+        // A primeira vez grava no cache: 25% a mais nos gravados.
+        sonnet.Microdolares(10_000, 1_500, gravadosNoCache: 8_000).Should().Be(39_000L);
+        // Lidos maiores que a entrada (um número estranho do provedor) não dão custo negativo.
+        sonnet.Microdolares(1_000, 0, lidosDoCache: 5_000, gravadosNoCache: 5_000).Should().Be(200L);
+        // No Haiku, a faixa vale pelo total da entrada, com ou sem cache: 120 mil, 100 mil do cache, a US$ 0,50 (acima da faixa).
+        CatalogoDeModelos.Padrao[0].Microdolares(120_000, 0, lidosDoCache: 100_000).Should().Be(15_000L);
+        // A reserva (Gemini 2.5 Flash) lê o cache a 25%.
+        CatalogoDeModelos.Reserva.Microdolares(10_000, 0, lidosDoCache: 10_000).Should().Be(750L);
+        // O Claude traduzido conta os gravados; o Gemini só os lidos (que já estão no promptTokenCount).
+        TokensDoPedido.DoUso(JsonDocument.Parse("""{"promptTokenCount":900,"cachedContentTokenCount":600,"candidatesTokenCount":50,"thoughtsTokenCount":5}""").RootElement)
+            .Should().Be(new TokensDoPedido(900, 55, 600, 0));
+        TokensDoPedido.DoUso(JsonDocument.Parse("""{"totalTokenCount":70}""").RootElement).Should().Be(new TokensDoPedido(70, 0));
+        TokensDoPedido.DoUso(JsonDocument.Parse("[]").RootElement).Should().Be(default(TokensDoPedido));
     }
 
     [Fact]
@@ -250,7 +279,8 @@ public sealed class ClaudeTests : IDisposable
         var sessao = await s.CriarConta();
         var lista = System.Text.Json.JsonDocument.Parse(await (await s.Get("/v1/modelos", sessao.Acesso)).Content.ReadAsStringAsync()).RootElement;
         lista.EnumerateArray().Select(m => (m.GetProperty("id").GetString(), m.GetProperty("liberado").GetBoolean(), m.GetProperty("creditosPorPedido").GetInt32()))
-            .Should().Equal(("claude-haiku-5-5", true, 4), ("gemini-3.1-pro-preview", false, 76), ("claude-sonnet-5-5", false, 70));
+            .Should().Equal(("claude-haiku-5-5", true, 4), ("gemini-3-flash-preview", false, 19), ("gemini-3.1-pro-preview", false, 76),
+                ("claude-sonnet-5-5", false, 70));
 
         var pedido = new HttpRequestMessage(HttpMethod.Post, "/v1/ia/models/claude-haiku-5-5:generateContent")
         {
@@ -261,8 +291,8 @@ public sealed class ClaudeTests : IDisposable
 
         r.StatusCode.Should().Be(HttpStatusCode.OK);
         JsonNode.Parse(s.Claude.Pedidos.Single().Corpo)!["model"]!.GetValue<string>().Should().Be("claude-haiku-5-5");
-        // 1.500 de entrada e 200 de saída no Haiku = 150 + 100 = 250 milionésimos (0,5 crédito).
-        s.NoBanco(b => b.UsosDeIa.Single().CustoEmMicrodolares).Should().Be(250);
+        // 1.000 de entrada, 500 do cache (a 10%) e 200 de saída no Haiku = 100 + 5 + 100 = 205 milionésimos (0,4 crédito).
+        s.NoBanco(b => b.UsosDeIa.Single().CustoEmMicrodolares).Should().Be(205);
         s.Gemini.Pedidos.Should().BeEmpty();
     }
 }

@@ -48,7 +48,7 @@ public sealed class AnalistaDaObraGemini : IAnalistaDaObra
     {
         ArgumentNullException.ThrowIfNull(pedido);
         var resposta = await ChamarJsonAsync(_http, _acesso, Modelo, Montar(pedido),
-            "A resposta do Gemini ficou grande demais e veio cortada. Tente de novo.", cancelamento);
+            "A resposta do Gemini ficou grande demais e veio cortada. Tente de novo.", RotinasDeIa.AnaliseDaObra, cancelamento);
         return Interpretar(resposta);
     }
 

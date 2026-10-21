@@ -70,6 +70,18 @@ public sealed class UsoDeIa
 
     /// <summary>Bloco 46: o custo do pedido em milionésimos de dólar (pela tabela de preços do modelo), base dos créditos.</summary>
     public long CustoEmMicrodolares { get; set; }
+
+    /// <summary>Bloco 50: quantos dos tokens de entrada vieram do cache (custam 10% no Claude e no Gemini 3).</summary>
+    public int TokensDoCache { get; set; }
+
+    /// <summary>Bloco 50: a rotina que fez o pedido (<see cref="ProjectPlanner.IA.RotinasDeIa"/>); nula nos pedidos anteriores.</summary>
+    public string? Rotina { get; set; }
+
+    public static UsoDeIa Novo(Guid usuario, DateTime quando, string modelo, Servicos.TokensDoPedido tokens, long custo, string rotina) => new()
+    {
+        UsuarioId = usuario, Quando = quando, Modelo = modelo, TokensDeEntrada = (int)tokens.Entrada, TokensDeSaida = (int)tokens.Saida,
+        TokensTotais = (int)(tokens.Entrada + tokens.Saida), TokensDoCache = (int)tokens.LidosDoCache, CustoEmMicrodolares = custo, Rotina = rotina,
+    };
 }
 
 /// <summary>Bloco 48: o alerta de custo já mandado num mês ("2026-10"), para não mandar de novo.</summary>
@@ -183,6 +195,7 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
         });
         modelo.Entity<UsoDeIa>().HasIndex(x => new { x.UsuarioId, x.Quando });
         modelo.Entity<UsoDeIa>().HasIndex(x => x.Quando);
+        modelo.Entity<UsoDeIa>().Property(x => x.Rotina).HasMaxLength(32);
         modelo.Entity<AlertaDeCusto>(a =>
         {
             a.HasKey(x => x.Mes);

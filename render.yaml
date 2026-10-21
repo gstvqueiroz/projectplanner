@@ -59,3 +59,12 @@ services:
         sync: false
       - key: Google__SegredoDoApp
         sync: false
+      # Bloco 47: o Mercado Pago (o access token de teste começa com TEST-)
+      - key: MercadoPago__AccessToken
+        sync: false
+      - key: MercadoPago__SegredoDoWebhook
+        sync: false
+      - key: MercadoPago__EmailDoCompradorDeTeste
+        sync: false
+      - key: MercadoPago__Teste
+        sync: false

@@ -23,6 +23,9 @@ public sealed class OpcoesDoServidor
 
     /// <summary>Bloco 49: o bot do Telegram.</summary>
     public OpcoesDoTelegram Telegram { get; set; } = new();
+
+    /// <summary>Bloco 47: a cobrança pelo Mercado Pago (assinatura do Profissional e pacotes de créditos).</summary>
+    public OpcoesDoMercadoPago MercadoPago { get; set; } = new();
 }
 
 public sealed class OpcoesDoJwt
@@ -161,6 +164,9 @@ public sealed class OpcoesDosPlanos
         || NiveisDoGratis.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Contains(nivel);
 
     public decimal Creditos(long microdolares) => microdolares / (DolaresPorCredito * 1_000_000m);
+
+    /// <summary>Bloco 47: os créditos em milionésimos de dólar (o pacote comprado vira saldo nessa unidade, como os custos).</summary>
+    public long Microdolares(decimal creditos) => (long)Math.Round(creditos * DolaresPorCredito * 1_000_000m);
 }
 
 public static class Planos
@@ -233,6 +239,43 @@ public sealed class OpcoesFinanceiras
 
     /// <summary>O custo em reais (com o IOF) de milionésimos de dólar.</summary>
     public decimal Reais(long microdolares) => microdolares / 1_000_000m * ReaisPorDolar * (1 + PercentualSobreODolar / 100);
+}
+
+/// <summary>
+/// Bloco 47: a cobrança pelo Mercado Pago. Sem o access token, os pagamentos ficam desligados (o plano continua trocável pela
+/// rota de admin). Com um token de teste (<c>TEST-…</c>), tudo funciona no modo de teste do Mercado Pago, sem dinheiro de verdade.
+/// </summary>
+public sealed class OpcoesDoMercadoPago
+{
+    /// <summary>O access token da aplicação (Suas integrações > Credenciais): só no servidor.</summary>
+    public string? AccessToken { get; set; }
+
+    /// <summary>A assinatura secreta dos webhooks (Suas integrações > Webhooks), para conferir que a notificação veio do Mercado Pago.</summary>
+    public string? SegredoDoWebhook { get; set; }
+
+    public string Endereco { get; set; } = "https://api.mercadopago.com/";
+
+    /// <summary>O endereço público do servidor (para o Mercado Pago avisar); vazio: o do Telegram (<c>Telegram__UrlPublica</c>).</summary>
+    public string? UrlPublica { get; set; }
+
+    /// <summary>
+    /// No modo de teste, o Mercado Pago só aceita assinaturas de um comprador de teste (os dois lados precisam ser de teste):
+    /// o e-mail do usuário de teste comprador, criado em Suas integrações > Contas de teste.
+    /// </summary>
+    public string? EmailDoCompradorDeTeste { get; set; }
+
+    public long CreditosDoPacote { get; set; } = 3_000;
+    public decimal PrecoDoPacoteEmReais { get; set; } = 19m;
+
+    /// <summary>
+    /// O modo de teste, quando o token não diz: as credenciais de um vendedor de teste começam com <c>APP_USR-</c>, como as de
+    /// verdade. Vazio: teste só com um token <c>TEST-…</c>.
+    /// </summary>
+    public bool? Teste { get; set; }
+
+    public bool Ligado => !string.IsNullOrWhiteSpace(AccessToken);
+    public bool TokenDeTeste => AccessToken?.Trim().StartsWith("TEST-", StringComparison.Ordinal) == true;
+    public bool ModoDeTeste => Ligado && (Teste ?? TokenDeTeste);
 }
 
 /// <summary>Bloco 49: o bot do Telegram (criado no @BotFather). Sem o token, o Telegram fica desligado.</summary>

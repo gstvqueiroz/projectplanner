@@ -239,8 +239,8 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
     private async Task PerguntaAsync(long chatId, Usuario usuario, ObraNoServidor obra, string texto, DateTime agora, CancellationToken c)
     {
         var planos = opcoes.Value.Planos;
-        var (_, gastos) = await Rotas.Cotas.NoMes(banco, usuario.Id, relogio);
-        if (planos.Creditos(gastos) >= planos.CreditosPorMes(usuario.Plano))
+        var saldo = await Rotas.Cotas.SaldoAsync(banco, usuario, planos, relogio);
+        if (saldo.Esgotado)
         {
             await telegram.EnviarAsync(chatId, Rotas.Ia.CotaEsgotada, c);
             return;
@@ -285,6 +285,7 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         }
         var custo = tokens.Microdolares(modelo);
         banco.UsosDeIa.Add(UsoDeIa.Novo(usuario.Id, agora, modelo.Id, tokens, custo, RotinasDeIa.Telegram));
+        Rotas.Cotas.Debitar(usuario, saldo, custo);
 
         var mensagem = resposta.Texto.Trim();
         if (resposta.Atualizacoes.Count > 0)

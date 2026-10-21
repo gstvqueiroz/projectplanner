@@ -119,6 +119,31 @@ public sealed class GeminiDeTeste : HttpMessageHandler
     }
 }
 
+public sealed record PedidoAoMercadoPago(HttpMethod Metodo, string Caminho, string? Token, string Corpo);
+
+/// <summary>Bloco 47: o Mercado Pago de mentira: responde por "MÉTODO caminho" (sem a barra do começo) o que o teste mandar.</summary>
+public sealed class MercadoPagoDeTeste : HttpMessageHandler
+{
+    public ConcurrentQueue<PedidoAoMercadoPago> Pedidos { get; } = new();
+    public Dictionary<string, (HttpStatusCode Status, string Json)> Respostas { get; } = new()
+    {
+        ["POST preapproval"] = (HttpStatusCode.Created, """{"id":"assin-1","init_point":"https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=assin-1","status":"pending"}"""),
+        ["POST checkout/preferences"] = (HttpStatusCode.Created,
+            """{"id":"pref-1","init_point":"https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-1","sandbox_init_point":"https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-1"}"""),
+    };
+
+    public PedidoAoMercadoPago Ultimo => Pedidos.Last();
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage pedido, CancellationToken cancelamento)
+    {
+        var caminho = pedido.RequestUri!.AbsolutePath.TrimStart('/');
+        Pedidos.Enqueue(new PedidoAoMercadoPago(pedido.Method, caminho, pedido.Headers.Authorization?.Parameter,
+            pedido.Content is null ? "" : await pedido.Content.ReadAsStringAsync(cancelamento)));
+        var (status, json) = Respostas.TryGetValue($"{pedido.Method} {caminho}", out var r) ? r : (HttpStatusCode.NotFound, """{"message":"not found"}""");
+        return new HttpResponseMessage(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
+    }
+}
+
 /// <summary>
 /// O servidor de verdade, em memória (TestServer), com SQLite num arquivo temporário e os serviços externos falsos. Com a
 /// variável PP_SERVIDOR_POSTGRES (por exemplo "Host=/tmp;Username=eu"), cada teste roda num banco PostgreSQL temporário
@@ -138,6 +163,9 @@ public sealed class Servidor : WebApplicationFactory<Program>
     public GoogleDeTeste Google { get; } = new();
     public GeminiDeTeste Gemini { get; } = new();
     public GeminiDeTeste Claude { get; } = new() { Resposta = ClaudeDeTeste };
+    public MercadoPagoDeTeste MercadoPago { get; } = new();
+    public const string TokenDoMercadoPago = "TEST-token-do-mercado-pago";
+    public const string CompradorDeTeste = "comprador@testuser.com";
     public const string ChaveDaAnthropic = "chave-da-anthropic-do-servidor-0123456789";
 
     /// <summary>Bloco 46: a resposta do Claude de mentira (a ferramenta "responder" com o JSON pedido).</summary>
@@ -166,6 +194,9 @@ public sealed class Servidor : WebApplicationFactory<Program>
             ["Telegram:Token"] = "123:token-de-teste",
             ["Telegram:Segredo"] = SegredoDoTelegram,
             ["Telegram:NomeDoBot"] = "ProjectPlannerTesteBot",
+            ["MercadoPago:AccessToken"] = TokenDoMercadoPago,
+            ["MercadoPago:UrlPublica"] = "https://servidor.teste/",
+            ["MercadoPago:EmailDoCompradorDeTeste"] = CompradorDeTeste,
             ["Limites:PedidosDeContaPorMinuto"] = "1000",
             ["Limites:PedidosDeIaPorMinuto"] = "1000",
         };
@@ -206,6 +237,7 @@ public sealed class Servidor : WebApplicationFactory<Program>
             s.AddHttpClient(MedidorDeTokens.Cliente).ConfigurePrimaryHttpMessageHandler(() => Gemini);
             s.AddHttpClient(Ia.ClienteDoGemini).ConfigurePrimaryHttpMessageHandler(() => Gemini);
             s.AddHttpClient(Ia.ClienteDaAnthropic).ConfigurePrimaryHttpMessageHandler(() => Claude);
+            s.AddHttpClient(ProjectPlanner.Servidor.Servicos.MercadoPago.Cliente).ConfigurePrimaryHttpMessageHandler(() => MercadoPago);
         });
     }
 

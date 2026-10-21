@@ -317,12 +317,54 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
 - **Ficou para depois:** um limite de resposta por rotina. O ganho é pequeno (a saída do Haiku é barata) e uma resposta
   cortada estraga o JSON. O roteamento automático entre os níveis é o Bloco 51.
 
-## Bloco 47: assinatura Pro
+## Bloco 47 (0.51.0, feito): pagamentos pelo Mercado Pago
 
-Mercado Pago (ou Asaas ou Stripe), com Pix e cartão:
-- o plano Profissional mensal e os pacotes de créditos extras;
-- o aviso do pagamento (webhook), a liberação automática, a renovação e o cancelamento;
-- a página do plano no programa (Conta > Minha conta > Assinar).
+Decisão do usuário: Mercado Pago. Enquanto a conta é só pessoal (CPF), tudo roda no **modo de teste** (credenciais
+`TEST-…`, sem dinheiro de verdade); a conta de vendedor com CNPJ e o contador vêm antes de vender.
+
+- **Assinatura do Profissional:** um "preapproval" sem plano, mensal, no preço de `Financeiro__PrecoProfissionalEmReais`
+  (o mesmo que o painel usa). O programa pede o link (`POST /v1/pagamentos/assinatura`) e o abre no navegador; o usuário
+  paga com Pix ou cartão no Mercado Pago, que volta para `/pagamento` (uma página que manda voltar ao programa).
+- **Pacote de créditos:** um pagamento avulso (Checkout Pro), `MercadoPago__CreditosDoPacote` (3.000) por
+  `MercadoPago__PrecoDoPacoteEmReais` (R$ 19). Os créditos avulsos **não vencem**: são gastos só depois dos do plano do mês.
+  O admin também pode dar créditos: `POST /v1/admin/usuarios/{email}/creditos` com `{"creditos": 1000}` (negativo tira).
+- **Avisos (webhook):** `POST /v1/pagamentos/webhook`. O servidor nunca confia no conteúdo do aviso: pergunta à API do
+  Mercado Pago (com o access token) como está a assinatura ou o pagamento, e só isso muda a conta. Com
+  `MercadoPago__SegredoDoWebhook`, um aviso com `x-signature` errada é recusado (HMAC-SHA256 de
+  `id:{data.id};request-id:{x-request-id};ts:{ts};`).
+  - assinatura `authorized` → Profissional;
+  - `cancelled` ou `paused` → o Profissional vale até a próxima cobrança (o mês já pago); de hora em hora, as contas
+    vencidas voltam ao Grátis (`ExpiracaoDosPlanos`);
+  - pagamento `approved` de um pacote → soma os créditos uma vez só (a tabela `Pagamentos` guarda o id); o de uma
+    mensalidade fica registrado como receita.
+- **Cancelar:** pelo programa (Conta > Minha conta > Cancelar assinatura, com confirmação) ou pelo Mercado Pago.
+- **Programa:** Conta > Minha conta mostra o plano, a próxima cobrança (ou até quando vale), os créditos avulsos e os
+  botões Assinar, Comprar créditos e Cancelar assinatura. No modo de teste, um aviso diz que nada é cobrado.
+- **Tabelas novas** (migração `Pagamentos`): `Assinaturas`, `Pagamentos`; em `Usuarios`, `ProfissionalAte` e
+  `MicrodolaresAvulsos`.
+
+### Ligar o Mercado Pago (passo a passo, modo de teste)
+
+1. Em [mercadopago.com.br/developers](https://www.mercadopago.com.br/developers), entre com a sua conta e abra **Suas
+   integrações > Criar aplicação**: nome "ProjectPlanner", tipo de pagamento online, produto **Assinaturas** (e Checkout Pro).
+2. Em **Contas de teste**, crie duas: um **vendedor** e um **comprador**. Anote o e-mail (e a senha) do comprador.
+3. Numa janela anônima do navegador, entre no Mercado Pago com o **vendedor de teste**, crie nele uma aplicação igual e
+   copie, em **Credenciais de produção** dessa aplicação, o **Access Token** (`APP_USR-…`). Como a conta é de teste,
+   nada é cobrado de verdade. (Assinaturas no Mercado Pago só funcionam com comprador e vendedor de teste juntos.)
+4. Na aplicação do vendedor de teste, em **Webhooks > Configurar notificações**: URL
+   `https://projectplanner-servidor.onrender.com/v1/pagamentos/webhook`, eventos **Pagamentos** e **Planos e
+   assinaturas**. Salve e copie a **assinatura secreta**.
+5. No Render (Environment), crie:
+   - `MercadoPago__AccessToken` = o access token;
+   - `MercadoPago__SegredoDoWebhook` = a assinatura secreta;
+   - `MercadoPago__EmailDoCompradorDeTeste` = o e-mail do comprador de teste;
+   - `MercadoPago__Teste` = `true` (o token `APP_USR-` do vendedor de teste parece um de verdade; isso avisa o servidor).
+6. No programa: Conta > Minha conta > Assinar. No Mercado Pago, entre com o **comprador de teste** e pague com um
+   [cartão de teste](https://www.mercadopago.com.br/developers/pt/docs/checkout-api/integration-test/test-cards)
+   (nome do titular `APRO` para aprovar). Volte ao programa e clique em Atualizar.
+
+**Para vender de verdade:** a conta de vendedor (de preferência com CNPJ), as credenciais de produção no lugar das de
+teste, e apagar `MercadoPago__EmailDoCompradorDeTeste` e `MercadoPago__Teste`.
 
 ## Bloco 48 (0.46.0, feito): painel financeiro
 

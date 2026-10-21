@@ -983,6 +983,30 @@ public sealed class ContaFalsa : IContaProjectPlanner
 
     public Task<string> AcessoAsync(bool renovar, CancellationToken cancelamento) =>
         Perfil is null ? Task.FromException<string>(new ErroDoAssistenteException("sem conta")) : Task.FromResult("acesso-falso");
+
+    // ---- Bloco 47: sem Pagamentos, como um servidor que não cobra (a rota não existe, e o pedido nem conta) ----
+
+    public SituacaoDosPagamentos? Pagamentos { get; set; }
+
+    public async Task<SituacaoDosPagamentos> PagamentosAsync(CancellationToken cancelamento)
+    {
+        if (Pagamentos is null)
+            throw new ErroDaContaException("O servidor do ProjectPlanner não reconheceu o pedido. Atualize o programa.", 404);
+        await Passo("pagamentos", cancelamento);
+        return Pagamentos;
+    }
+
+    public Task AssinarAsync(CancellationToken cancelamento) => Passo("assinar", cancelamento);
+
+    public Task ComprarCreditosAsync(CancellationToken cancelamento) => Passo("comprar créditos", cancelamento);
+
+    public async Task<DateTime?> CancelarAssinaturaAsync(CancellationToken cancelamento)
+    {
+        await Passo("cancelar assinatura", cancelamento);
+        var ate = new DateTime(2026, 11, 18, 15, 0, 0, DateTimeKind.Utc);
+        Pagamentos = Pagamentos! with { Assinatura = "cancelled", ProfissionalAte = ate };
+        return ate;
+    }
 }
 
 /// <summary>Bloco 49: o Telegram da conta nos testes: as obras marcadas, a caixa de entrada e o que foi pedido.</summary>

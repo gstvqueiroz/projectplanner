@@ -61,6 +61,30 @@
             </StackPanel>
         </Border>
 
+        <!-- Bloco 47: plano e pagamento (pelo Mercado Pago, no navegador) -->
+        <StackPanel x:Name="Pagamentos" Spacing="8">
+            <StackPanel.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="EmPerfil" />
+                    <Binding Path="MostraPagamentos" />
+                </MultiBinding>
+            </StackPanel.IsVisible>
+            <TextBlock x:Name="PlanoPago" Text="{Binding TextoDoPlanoPago}" TextWrapping="Wrap" FontSize="12"
+                       IsVisible="{Binding TextoDoPlanoPago, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{x:Static vm:ContaViewModel.AvisoDoModoDeTeste}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                       IsVisible="{Binding EmModoDeTeste}" />
+            <Button x:Name="Assinar" Content="{Binding TextoDoAssinar}" Classes="accent" Command="{Binding AssinarCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" IsVisible="{Binding PodeAssinarPlano}" />
+            <Button x:Name="ComprarCreditos" Content="{Binding TextoDoPacote}" Command="{Binding ComprarCreditosCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            <Button x:Name="CancelarAssinatura" Content="Cancelar assinatura" Command="{Binding CancelarAssinaturaCommand}"
+                    HorizontalAlignment="Right" IsVisible="{Binding TemAssinatura}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding ConfirmandoCancelamento}">
+                <Button x:Name="ManterAssinatura" Content="Manter" Command="{Binding ManterAssinaturaCommand}" />
+                <Button x:Name="ConfirmarCancelamento" Content="Sim, cancelar" Command="{Binding ConfirmarCancelamentoCommand}" />
+            </StackPanel>
+        </StackPanel>
+
         <!-- Resultado da última ação -->
         <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap"
                    IsVisible="{Binding Mensagem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"

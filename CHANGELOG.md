@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.51.0
+
+Assinatura e créditos pelo Mercado Pago (Bloco 47).
+
+- Em **Conta > Minha conta**:
+  - **Assinar o Profissional:** o pagamento abre no navegador, com Pix ou cartão, e o plano muda sozinho assim que o
+    Mercado Pago confirma (clique em **Atualizar**).
+  - **Comprar créditos:** um pacote de 3.000 créditos que **não vencem no fim do mês**. Eles só são usados depois que
+    acabam os créditos do plano.
+  - **Cancelar a assinatura:** o Profissional continua valendo até o fim do mês já pago, e nada mais é cobrado.
+  - O plano mostra a próxima cobrança ou até quando ele vale, e o uso mostra os créditos avulsos.
+- Enquanto o Mercado Pago está no modo de teste, a tela avisa que nada é cobrado de verdade.
+
 ## 0.50.0
 
 A IA gasta menos, e dá para ver onde vai o dinheiro.

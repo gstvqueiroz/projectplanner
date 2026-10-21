@@ -26,7 +26,8 @@ public static class Ia
 
     /// <summary>Bloco 50: a rotina do programa que fez o pedido (<see cref="RotinasDeIa"/>), para o painel mostrar o custo de cada uma.</summary>
     public const string CabecalhoDaRotina = RotinasDeIa.Cabecalho;
-    public const string CotaEsgotada = "Os créditos de IA do seu plano acabaram neste mês. Eles voltam no dia 1º (ou assine o plano Profissional).";
+    public const string CotaEsgotada = "Os créditos de IA acabaram. Os do plano voltam no dia 1º; para continuar agora, compre um pacote de créditos " +
+                                       "ou assine o Profissional em Conta > Minha conta.";
     public const string SemChave = "A IA do servidor ainda não está configurada. Tente mais tarde.";
 
     public static void Mapear(WebApplication app)
@@ -88,9 +89,8 @@ public static class Ia
         var (usuario, escolhido, falha) = await Conferir(quem, modelo, banco, catalogo, planos);
         if (falha is not null)
             return falha;
-        var limite = planos.CreditosPorMes(usuario!.Plano);
-        var (_, gastos) = await Cotas.NoMes(banco, usuario.Id, relogio);
-        if (planos.Creditos(gastos) >= limite)
+        var saldo = await Cotas.SaldoAsync(banco, usuario!, planos, relogio); // Bloco 47: com os créditos avulsos
+        if (saldo.Esgotado)
             return Falha(402, CotaEsgotada);
 
         var tamanho = config.Limites.MegabytesPorPedido * 1024L * 1024L;
@@ -107,13 +107,14 @@ public static class Ia
 
         var tokens = resultado.Tokens;
         var custo = tokens.Microdolares(escolhido);
-        banco.UsosDeIa.Add(UsoDeIa.Novo(usuario.Id, relogio.GetUtcNow().UtcDateTime, escolhido.Id, tokens, custo,
+        banco.UsosDeIa.Add(UsoDeIa.Novo(usuario!.Id, relogio.GetUtcNow().UtcDateTime, escolhido.Id, tokens, custo,
             RotinasDeIa.Normalizar(http.Request.Headers[CabecalhoDaRotina].FirstOrDefault())));
+        var restante = Cotas.Debitar(usuario, saldo, custo);
         await banco.SaveChangesAsync(c);
         await Painel.ConferirAlertaAsync(banco, config, email, relogio.GetUtcNow().UtcDateTime, log, c); // Bloco 48
         var cultura = System.Globalization.CultureInfo.InvariantCulture;
         http.Response.Headers[CabecalhoDosCreditosUsados] = Math.Round(planos.Creditos(custo), 1, MidpointRounding.AwayFromZero).ToString(cultura);
-        http.Response.Headers[CabecalhoDosCreditosRestantes] = Math.Max(0, Math.Round(limite - planos.Creditos(gastos + custo), 1, MidpointRounding.AwayFromZero)).ToString(cultura);
+        http.Response.Headers[CabecalhoDosCreditosRestantes] = Math.Round(planos.Creditos(restante), 1, MidpointRounding.AwayFromZero).ToString(cultura);
         return Results.Bytes(resultado.Resposta!, "application/json");
     }
 

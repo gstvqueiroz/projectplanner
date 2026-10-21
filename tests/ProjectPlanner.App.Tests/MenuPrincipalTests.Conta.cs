@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.App.Views;
+using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Tests;
 
@@ -78,6 +79,34 @@ public partial class MenuPrincipalTests
         (Visivel("NomeDaConta"), Visivel("Plano"), Visivel("Sair"), Visivel("Email")).Should().Be((true, true, true, false));
         janela.FindControl<TextBlock>("Plano")!.Text.Should().Be("Plano: Grátis");
         janela.Title.Should().Be("Conta ProjectPlanner: Minha conta");
+        Visivel("Pagamentos").Should().BeFalse("servidor sem pagamentos");
+
+        janela.Close();
+    });
+
+    [Fact]
+    public Task ContaWindow_PlanoEPagamento_BotoesConformeAAssinatura() => Tela.Executar(() =>
+    {
+        // Bloco 47
+        var conta = new ContaFalsa();
+        conta.Conectar();
+        conta.Pagamentos = new SituacaoDosPagamentos(true, true, "gratis", null, 59m, 6000, 3000, 19m, 0, null, null);
+        var tela = new ContaViewModel(conta);
+        var janela = new ContaWindow(tela);
+        janela.Show();
+        tela.AbrirAsync().GetAwaiter().GetResult();
+        Dispatcher.UIThread.RunJobs();
+        bool Visivel(string nome) => janela.FindControl<Control>(nome)!.IsEffectivelyVisible;
+
+        (Visivel("Pagamentos"), Visivel("Assinar"), Visivel("ComprarCreditos"), Visivel("CancelarAssinatura"), Visivel("ConfirmarCancelamento"))
+            .Should().Be((true, true, true, false, false));
+        janela.FindControl<Button>("Assinar")!.Content.Should().Be("Assinar o Profissional: R$ 59,00/mês (6.000 créditos por mês)");
+
+        conta.Pagamentos = conta.Pagamentos with { Plano = "profissional", Assinatura = "authorized" };
+        tela.AtualizarUsoCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        tela.CancelarAssinaturaCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        (Visivel("Assinar"), Visivel("CancelarAssinatura"), Visivel("ConfirmarCancelamento"), Visivel("PlanoPago")).Should().Be((false, true, true, true));
 
         janela.Close();
     });

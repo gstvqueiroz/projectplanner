@@ -20,7 +20,8 @@ public enum PaginaDaConta
 
 /// <summary>
 /// Bloco 45: a tela da conta ProjectPlanner (menu Conta): entrar com e-mail e senha ou com o Google, criar a conta (com o
-/// código que chega por e-mail), trocar a senha esquecida e, conectado, ver o plano e o uso de IA do mês e sair.
+/// código que chega por e-mail), trocar a senha esquecida e, conectado, ver o plano e o uso de IA do mês e sair. Bloco 47:
+/// assinar o Profissional, comprar créditos e cancelar a assinatura (o pagamento é no Mercado Pago, pelo navegador).
 /// </summary>
 public sealed partial class ContaViewModel : ViewModelBase
 {
@@ -66,8 +67,8 @@ public sealed partial class ContaViewModel : ViewModelBase
 
     /// <summary>O texto que explica a conta, no alto da tela de entrar.</summary>
     public const string Explicacao =
-        "Com a conta ProjectPlanner, o assistente de IA funciona sem chave do Gemini: o plano grátis tem uma cota por mês, e o " +
-        "plano Profissional, uma cota maior. Quem prefere pode continuar usando a própria chave (engrenagem do assistente).";
+        "Com a conta ProjectPlanner, o assistente de IA funciona sem chave de nenhuma IA: o plano Grátis tem créditos por mês " +
+        "para experimentar, e o Profissional, muito mais créditos, os níveis de IA mais fortes e o Telegram.";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EntrarCommand), nameof(CriarCommand), nameof(PedirCodigoDaSenhaCommand))]
@@ -98,7 +99,8 @@ public sealed partial class ContaViewModel : ViewModelBase
     /// <summary>Esperando o servidor (ou o navegador, no Google): os botões ficam travados e aparece "Cancelar".</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EntrarCommand), nameof(EntrarComGoogleCommand), nameof(CriarCommand), nameof(ConfirmarCommand),
-        nameof(ReenviarCodigoCommand), nameof(PedirCodigoDaSenhaCommand), nameof(RedefinirCommand), nameof(AtualizarUsoCommand), nameof(SairCommand))]
+        nameof(ReenviarCodigoCommand), nameof(PedirCodigoDaSenhaCommand), nameof(RedefinirCommand), nameof(AtualizarUsoCommand), nameof(SairCommand),
+        nameof(AssinarCommand), nameof(ComprarCreditosCommand), nameof(CancelarAssinaturaCommand), nameof(ConfirmarCancelamentoCommand))]
     public partial bool Ocupado { get; private set; }
 
     // ---- Minha conta ----
@@ -118,6 +120,49 @@ public sealed partial class ContaViewModel : ViewModelBase
     /// <summary>O uso do mês em % da cota (0 a 100), para a barra.</summary>
     [ObservableProperty]
     public partial double PercentualDoUso { get; private set; }
+
+    // ---- Bloco 47: plano e pagamento ----
+
+    /// <summary>A situação dos pagamentos (nula enquanto não se sabe, ou se o servidor não cobra).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MostraPagamentos), nameof(PodeAssinarPlano), nameof(TemAssinatura), nameof(TextoDoAssinar),
+        nameof(TextoDoPacote), nameof(TextoDoPlanoPago), nameof(EmModoDeTeste))]
+    [NotifyCanExecuteChangedFor(nameof(AssinarCommand), nameof(ComprarCreditosCommand), nameof(CancelarAssinaturaCommand))]
+    public partial SituacaoDosPagamentos? Pagamentos { get; private set; }
+
+    /// <summary>O primeiro clique em "Cancelar assinatura" pede a confirmação.</summary>
+    [ObservableProperty]
+    public partial bool ConfirmandoCancelamento { get; private set; }
+
+    public bool MostraPagamentos => Pagamentos is { Disponivel: true };
+
+    public bool PodeAssinarPlano => Pagamentos is { Disponivel: true, Assinando: false } p && (p.Plano != "profissional" || p.ProfissionalAte is not null);
+
+    public bool TemAssinatura => Pagamentos is { Assinando: true };
+
+    public bool EmModoDeTeste => Pagamentos is { Disponivel: true, ModoDeTeste: true };
+
+    public const string AvisoDoModoDeTeste = "Pagamentos em modo de teste: nada é cobrado de verdade.";
+
+    public string TextoDoAssinar => Pagamentos is { } p
+        ? $"Assinar o Profissional: {Reais(p.PrecoMensal)}/mês ({p.CreditosDoProfissional.ToString("N0", Brasil)} créditos por mês)"
+        : "";
+
+    public string TextoDoPacote => Pagamentos is { } p ? $"Comprar {p.CreditosDoPacote.ToString("N0", Brasil)} créditos: {Reais(p.PrecoDoPacote)}" : "";
+
+    /// <summary>"Assinatura ativa: próxima cobrança em 18/11/2026" ou "O Profissional vale até 18/11/2026 (assinatura cancelada)".</summary>
+    public string TextoDoPlanoPago => Pagamentos switch
+    {
+        { ProfissionalAte: { } ate } => $"O Profissional vale até {Data(ate)} (assinatura cancelada).",
+        { Assinando: true, ProximaCobranca: { } proxima } => $"Assinatura ativa: próxima cobrança em {Data(proxima)}.",
+        { Assinando: true } => "Assinatura ativa.",
+        { Assinatura: SituacaoDosPagamentos.Pendente } => "Assinatura esperando o pagamento. Depois de pagar, clique em Atualizar.",
+        _ => "",
+    };
+
+    private static string Reais(decimal valor) => valor.ToString("C", Brasil);
+
+    private static string Data(DateTime data) => data.ToLocalTime().ToString("dd/MM/yyyy", Brasil);
 
     public static string NomeDoPlano(string plano) => plano switch
     {
@@ -202,10 +247,54 @@ public sealed partial class ContaViewModel : ViewModelBase
     private Task Sair() => Executar("Saindo…", async c =>
     {
         await _conta.SairAsync(c);
-        (Senha, Codigo, NovaSenha, Plano, TextoDoUso, PercentualDoUso) = ("", "", "", "", "", 0);
+        (Senha, Codigo, NovaSenha, Plano, TextoDoUso, PercentualDoUso, Pagamentos, ConfirmandoCancelamento) = ("", "", "", "", "", 0, null, false);
         IrPara(PaginaDaConta.Entrar);
         Mostrar("Você saiu da conta neste computador.", erro: false);
     });
+
+    [RelayCommand(CanExecute = nameof(PodeAssinar))]
+    private Task Assinar() => Executar("Abrindo o pagamento no navegador…", async c =>
+    {
+        await _conta.AssinarAsync(c);
+        Mostrar("Conclua a assinatura no navegador (Pix ou cartão). Depois de pagar, clique em Atualizar.", erro: false);
+    });
+
+    private bool PodeAssinar() => !Ocupado && PodeAssinarPlano;
+
+    [RelayCommand(CanExecute = nameof(PodeComprar))]
+    private Task ComprarCreditos() => Executar("Abrindo o pagamento no navegador…", async c =>
+    {
+        await _conta.ComprarCreditosAsync(c);
+        Mostrar("Conclua a compra no navegador. Assim que o pagamento for aprovado, clique em Atualizar para ver os créditos.", erro: false);
+    });
+
+    private bool PodeComprar() => !Ocupado && MostraPagamentos;
+
+    /// <summary>O primeiro passo: pede a confirmação.</summary>
+    [RelayCommand(CanExecute = nameof(PodeCancelarAssinatura))]
+    private void CancelarAssinatura()
+    {
+        ConfirmandoCancelamento = true;
+        Mostrar("Cancelar a assinatura? O Profissional continua valendo até o fim do mês já pago, e nada mais é cobrado.", erro: false);
+    }
+
+    private bool PodeCancelarAssinatura() => !Ocupado && TemAssinatura;
+
+    [RelayCommand(CanExecute = nameof(Livre))]
+    private Task ConfirmarCancelamento() => Executar("Cancelando a assinatura…", async c =>
+    {
+        ConfirmandoCancelamento = false;
+        var ate = await _conta.CancelarAssinaturaAsync(c);
+        await AtualizarUsoSemMensagem(c);
+        Mostrar(ate is { } data ? $"Assinatura cancelada. O Profissional vale até {Data(data)}." : "Assinatura cancelada.", erro: false);
+    });
+
+    [RelayCommand]
+    private void ManterAssinatura()
+    {
+        ConfirmandoCancelamento = false;
+        Mostrar("", erro: false);
+    }
 
     [RelayCommand]
     private void Cancelar() => _pedido?.Cancel();
@@ -224,14 +313,28 @@ public sealed partial class ContaViewModel : ViewModelBase
 
     private Task AtualizarUsoAsync() => Executar("Buscando o uso do mês…", async c =>
     {
+        await AtualizarUsoSemMensagem(c);
+        Mostrar("", erro: false);
+    });
+
+    private async Task AtualizarUsoSemMensagem(CancellationToken c)
+    {
         var uso = await _conta.UsoAsync(c);
         Plano = NomeDoPlano(uso.Perfil.Plano);
         PercentualDoUso = uso.CreditosDoPlano <= 0 ? 0 : Math.Min(100, (double)(100 * uso.CreditosUsadosNoMes / uso.CreditosDoPlano));
         TextoDoUso = $"{uso.CreditosUsadosNoMes.ToString("N0", Brasil)} de {uso.CreditosDoPlano.ToString("N0", Brasil)} créditos de IA usados " +
-                     $"este mês ({PercentualDoUso.ToString("0.#", Brasil)}%). Eles voltam no dia 1º.";
+                     $"este mês ({PercentualDoUso.ToString("0.#", Brasil)}%). Eles voltam no dia 1º." +
+                     (uso.CreditosAvulsos > 0 ? $" Mais {uso.CreditosAvulsos.ToString("N0", Brasil)} créditos avulsos, que não vencem." : "");
         OnPropertyChanged(nameof(NomeDaConta));
-        Mostrar("", erro: false);
-    });
+        try
+        {
+            Pagamentos = await _conta.PagamentosAsync(c);
+        }
+        catch (ErroDaContaException ex) when (!ex.SessaoRecusada)
+        {
+            Pagamentos = null; // um servidor sem pagamentos (ou fora do ar só nessa rota): a tela segue sem eles
+        }
+    }
 
     private async Task Conectou(string mensagem)
     {

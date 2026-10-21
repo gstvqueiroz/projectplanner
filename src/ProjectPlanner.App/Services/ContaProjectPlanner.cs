@@ -52,6 +52,22 @@ public interface IContaProjectPlanner : ISessaoDaConta
 
     /// <summary>Sai da conta neste computador (e encerra a sessão no servidor, se der).</summary>
     Task SairAsync(CancellationToken cancelamento);
+
+    // ---- Bloco 47: pagamentos (sem conta, ou numa implementação sem eles, avisam que não estão disponíveis) ----
+
+    Task<SituacaoDosPagamentos> PagamentosAsync(CancellationToken cancelamento) => SemPagamentos<SituacaoDosPagamentos>();
+
+    /// <summary>Pede ao servidor o link da assinatura do Profissional e o abre no navegador.</summary>
+    Task AssinarAsync(CancellationToken cancelamento) => SemPagamentos<bool>();
+
+    /// <summary>Pede ao servidor o link de um pacote de créditos e o abre no navegador.</summary>
+    Task ComprarCreditosAsync(CancellationToken cancelamento) => SemPagamentos<bool>();
+
+    /// <returns>Até quando o Profissional ainda vale; nulo se acabou na hora.</returns>
+    Task<DateTime?> CancelarAssinaturaAsync(CancellationToken cancelamento) => SemPagamentos<DateTime?>();
+
+    private static Task<T> SemPagamentos<T>() =>
+        Task.FromException<T>(new ErroDaContaException("Os pagamentos não estão disponíveis nesta versão.", 0));
 }
 
 /// <summary>
@@ -180,6 +196,36 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
         }
         AtualizarSaldo(uso.CreditosRestantes);
         return uso;
+    }
+
+    public Task<SituacaoDosPagamentos> PagamentosAsync(CancellationToken cancelamento) => ComAcessoAsync(a => _cliente.PagamentosAsync(a, cancelamento), cancelamento);
+
+    public async Task AssinarAsync(CancellationToken cancelamento) =>
+        await AbrirPagamentoAsync(await ComAcessoAsync(a => _cliente.AssinarAsync(a, cancelamento), cancelamento));
+
+    public async Task ComprarCreditosAsync(CancellationToken cancelamento) =>
+        await AbrirPagamentoAsync(await ComAcessoAsync(a => _cliente.ComprarCreditosAsync(a, cancelamento), cancelamento));
+
+    public Task<DateTime?> CancelarAssinaturaAsync(CancellationToken cancelamento) =>
+        ComAcessoAsync(a => _cliente.CancelarAssinaturaAsync(a, cancelamento), cancelamento);
+
+    /// <summary>Só abre um endereço https (o do Mercado Pago, que o servidor mandou).</summary>
+    private Task AbrirPagamentoAsync(LinkDePagamento link) =>
+        Uri.TryCreate(link?.Url, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps
+            ? _abrirNavegador(url)
+            : throw new ErroDaContaException("O servidor mandou um link de pagamento inválido. Tente de novo.", 0);
+
+    // Uma rota da conta com o token (renovado uma vez se o servidor recusar).
+    private async Task<T> ComAcessoAsync<T>(Func<string, Task<T>> chamada, CancellationToken cancelamento)
+    {
+        try
+        {
+            return await chamada(await AcessoDaContaAsync(false, cancelamento));
+        }
+        catch (ErroDaContaException ex) when (ex.SessaoRecusada)
+        {
+            return await chamada(await AcessoDaContaAsync(true, cancelamento));
+        }
     }
 
     public async Task SairAsync(CancellationToken cancelamento)

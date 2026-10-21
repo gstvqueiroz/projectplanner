@@ -43,6 +43,40 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.ToTable("AlertasDeCusto");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.Assinatura", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("AtualizadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProximaCobranca")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ValorEmReais")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Assinaturas");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.CodigoDeEmail", b =>
                 {
                     b.Property<Guid>("Id")
@@ -178,6 +212,37 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.ToTable("Obras");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.Pagamento", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("Creditos")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("Quando")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ValorEmReais")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "Quando");
+
+                    b.ToTable("Pagamentos");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.TokenDeRenovacao", b =>
                 {
                     b.Property<Guid>("Id")
@@ -287,6 +352,9 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.Property<string>("GoogleId")
                         .HasColumnType("text");
 
+                    b.Property<long>("MicrodolaresAvulsos")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -296,6 +364,9 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime?>("ProfissionalAte")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SenhaHash")
                         .HasColumnType("text");

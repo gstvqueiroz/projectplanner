@@ -24,10 +24,14 @@ public sealed record PerfilDaConta(string Email, string Nome, string Plano, bool
 /// <summary>Uma sessão: o token de acesso (curto, 15 min) e o de renovação (longo, 30 dias), com o perfil.</summary>
 public sealed record SessaoDaConta(string Acesso, DateTime AcessoExpiraEm, string Renovacao, DateTime RenovacaoExpiraEm, PerfilDaConta Usuario);
 
-/// <summary>O plano e o uso de IA do mês (Bloco 46: em créditos; cada pedido gasta o custo real dele).</summary>
-public sealed record UsoDaConta(PerfilDaConta Perfil, long TokensUsadosNoMes, decimal CreditosUsadosNoMes, long CreditosDoPlano)
+/// <summary>
+/// O plano e o uso de IA do mês (Bloco 46: em créditos; cada pedido gasta o custo real dele). Bloco 47: os créditos avulsos
+/// (pacotes comprados, que não vencem) e até quando vale um Profissional cancelado.
+/// </summary>
+public sealed record UsoDaConta(PerfilDaConta Perfil, long TokensUsadosNoMes, decimal CreditosUsadosNoMes, long CreditosDoPlano,
+    decimal CreditosAvulsos = 0, DateTime? ProfissionalAte = null)
 {
-    public decimal CreditosRestantes => Math.Max(0, CreditosDoPlano - CreditosUsadosNoMes);
+    public decimal CreditosRestantes => Math.Max(0, CreditosDoPlano - CreditosUsadosNoMes) + CreditosAvulsos;
 }
 
 /// <summary>Bloco 46: um modelo do servidor: o nível (padrao, avancado, maximo), se o plano libera e o gasto de um pedido típico.</summary>
@@ -41,6 +45,22 @@ public sealed record ModeloDaConta(string Id, string Nivel, string Nome, bool Li
         _ => "Padrão",
     };
 }
+
+/// <summary>
+/// Bloco 47: os pagamentos da conta: se o servidor cobra (e se é o modo de teste), os preços, a assinatura (pending,
+/// authorized, paused, cancelled ou nula) e os créditos avulsos.
+/// </summary>
+public sealed record SituacaoDosPagamentos(bool Disponivel, bool ModoDeTeste, string Plano, DateTime? ProfissionalAte, decimal PrecoMensal,
+    long CreditosDoProfissional, long CreditosDoPacote, decimal PrecoDoPacote, decimal CreditosAvulsos, string? Assinatura, DateTime? ProximaCobranca)
+{
+    public const string Ativa = "authorized";
+    public const string Pendente = "pending";
+
+    public bool Assinando => Assinatura == Ativa;
+}
+
+/// <summary>Bloco 47: o link de pagamento (Mercado Pago) que o programa abre no navegador.</summary>
+public sealed record LinkDePagamento(string Url);
 
 /// <summary>Bloco 49: uma obra marcada para o Telegram e quantos itens esperam na caixa dela.</summary>
 public sealed record ObraNoTelegram(Guid Projeto, string Nome, DateTime AtualizadoEm, int Pendentes);
@@ -183,6 +203,22 @@ public sealed class ClienteDaConta
     /// <summary>O programa levou o item: ele some do servidor.</summary>
     public async Task LevarDaCaixaAsync(string acesso, Guid item, CancellationToken c) =>
         await PedirAsync<JsonElement?>(HttpMethod.Delete, $"v1/caixa/{item}", null, acesso, c);
+
+    // ---- Bloco 47: pagamentos pelo Mercado Pago ----
+
+    public Task<SituacaoDosPagamentos> PagamentosAsync(string acesso, CancellationToken c) =>
+        PedirAsync<SituacaoDosPagamentos>(HttpMethod.Get, "v1/pagamentos", null, acesso, c);
+
+    public Task<LinkDePagamento> AssinarAsync(string acesso, CancellationToken c) =>
+        PedirAsync<LinkDePagamento>(HttpMethod.Post, "v1/pagamentos/assinatura", null, acesso, c);
+
+    public Task<LinkDePagamento> ComprarCreditosAsync(string acesso, CancellationToken c) =>
+        PedirAsync<LinkDePagamento>(HttpMethod.Post, "v1/pagamentos/creditos", null, acesso, c);
+
+    /// <returns>Até quando o Profissional ainda vale (o mês já pago); nulo se acabou na hora.</returns>
+    public async Task<DateTime?> CancelarAssinaturaAsync(string acesso, CancellationToken c) =>
+        (await PedirAsync<JsonElement>(HttpMethod.Post, "v1/pagamentos/assinatura/cancelar", null, acesso, c)) is { ValueKind: JsonValueKind.Object } r
+        && r.TryGetProperty("profissionalAte", out var ate) && ate.ValueKind == JsonValueKind.String ? ate.GetDateTime() : null;
 
     /// <summary>Bloco 46: os modelos de cada nível para esta conta.</summary>
     public async Task<IReadOnlyList<ModeloDaConta>> ModelosAsync(string acesso, CancellationToken cancelamento) =>

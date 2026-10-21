@@ -344,6 +344,8 @@ public static class Contas
             tokensUsadosNoMes = tokens,
             creditosUsadosNoMes = Math.Round(planos.Creditos(custo), 1, MidpointRounding.AwayFromZero),
             creditosDoPlano = planos.CreditosPorMes(usuario.Plano),
+            creditosAvulsos = Math.Round(planos.Creditos(usuario.MicrodolaresAvulsos), 1, MidpointRounding.AwayFromZero), // Bloco 47
+            profissionalAte = usuario.ProfissionalAte,
         });
     }
 }
@@ -355,8 +357,33 @@ public static class Usuarios
         Guid.TryParse(quem.FindFirstValue(ClaimTypes.NameIdentifier) ?? quem.FindFirstValue("sub"), out var id) ? await banco.Usuarios.FindAsync(id) : null;
 }
 
+/// <summary>
+/// Bloco 47: o saldo de uma conta, em milionésimos de dólar: o que já gastou no mês, os créditos do plano e os avulsos
+/// (pacotes). Os avulsos só são gastos depois que os do plano acabam, e não vencem no fim do mês.
+/// </summary>
+public sealed record SaldoDaConta(long GastosDoMes, long DoPlano, long Avulsos)
+{
+    public long RestanteDoPlano => Math.Max(0, DoPlano - GastosDoMes);
+    public long Restante => RestanteDoPlano + Avulsos;
+    public bool Esgotado => Restante <= 0;
+}
+
 public static class Cotas
 {
+    public static async Task<SaldoDaConta> SaldoAsync(BancoDoServidor banco, Usuario usuario, OpcoesDosPlanos planos, TimeProvider relogio)
+    {
+        var (_, gastos) = await NoMes(banco, usuario.Id, relogio);
+        return new SaldoDaConta(gastos, planos.Microdolares(planos.CreditosPorMes(usuario.Plano)), usuario.MicrodolaresAvulsos);
+    }
+
+    /// <summary>Tira dos avulsos a parte do custo que passou dos créditos do plano; devolve o que resta depois do pedido.</summary>
+    public static long Debitar(Usuario usuario, SaldoDaConta antes, long custo)
+    {
+        var dosAvulsos = custo - Math.Min(custo, antes.RestanteDoPlano);
+        usuario.MicrodolaresAvulsos = Math.Max(0, usuario.MicrodolaresAvulsos - dosAvulsos);
+        return Math.Max(0, antes.Restante - custo);
+    }
+
     /// <summary>Os tokens e o custo (em milionésimos de dólar) do mês corrente (UTC).</summary>
     public static async Task<(long Tokens, long Microdolares)> NoMes(BancoDoServidor banco, Guid usuarioId, TimeProvider relogio)
     {

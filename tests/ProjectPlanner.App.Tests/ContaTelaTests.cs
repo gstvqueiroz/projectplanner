@@ -158,3 +158,82 @@ public sealed class ContaTelaTests
         await sem.SairAsync(default);
     }
 }
+
+// Bloco 47: plano e pagamento na tela da conta (o pagamento em si é no Mercado Pago, pelo navegador).
+public sealed class ContaPagamentosTests
+{
+    private readonly ContaFalsa _conta = new();
+
+    private static SituacaoDosPagamentos Situacao(string plano = "gratis", string? assinatura = null, DateTime? ate = null, bool teste = false) =>
+        new(true, teste, plano, ate, 59m, 6000, 3000, 19m, 0, assinatura, assinatura == "authorized" ? new DateTime(2026, 11, 18, 15, 0, 0, DateTimeKind.Utc) : null);
+
+    private async Task<ContaViewModel> Aberta(SituacaoDosPagamentos? pagamentos, UsoDaConta? uso = null)
+    {
+        _conta.Conectar(plano: pagamentos?.Plano ?? "gratis");
+        _conta.Pagamentos = pagamentos;
+        _conta.Uso = uso;
+        var tela = new ContaViewModel(_conta);
+        await tela.AbrirAsync();
+        return tela;
+    }
+
+    [Fact]
+    public async Task Gratis_OfereceAssinarEComprar_ComOsPrecos_EAbreONavegador()
+    {
+        var tela = await Aberta(Situacao(teste: true));
+
+        (tela.MostraPagamentos, tela.PodeAssinarPlano, tela.TemAssinatura, tela.EmModoDeTeste, tela.TextoDoPlanoPago).Should().Be((true, true, false, true, ""));
+        (tela.TextoDoAssinar, tela.TextoDoPacote).Should().Be(("Assinar o Profissional: R$ 59,00/mês (6.000 créditos por mês)", "Comprar 3.000 créditos: R$ 19,00"));
+
+        await tela.AssinarCommand.ExecuteAsync(null);
+        tela.Mensagem.Should().Be("Conclua a assinatura no navegador (Pix ou cartão). Depois de pagar, clique em Atualizar.");
+        await tela.ComprarCreditosCommand.ExecuteAsync(null);
+        tela.Mensagem.Should().StartWith("Conclua a compra no navegador.");
+        _conta.Pedidos.Should().Equal("uso", "pagamentos", "assinar", "comprar créditos");
+    }
+
+    [Fact]
+    public async Task Assinando_MostraAProximaCobranca_ECancelarPedeConfirmacao()
+    {
+        var tela = await Aberta(Situacao("profissional", "authorized"));
+
+        (tela.PodeAssinarPlano, tela.TemAssinatura, tela.TextoDoPlanoPago).Should().Be((false, true, "Assinatura ativa: próxima cobrança em " +
+            new DateTime(2026, 11, 18, 15, 0, 0, DateTimeKind.Utc).ToLocalTime().ToString("dd/MM/yyyy") + "."));
+        tela.AssinarCommand.CanExecute(null).Should().BeFalse();
+
+        tela.CancelarAssinaturaCommand.Execute(null);
+        (tela.ConfirmandoCancelamento, tela.Mensagem).Should().Be((true,
+            "Cancelar a assinatura? O Profissional continua valendo até o fim do mês já pago, e nada mais é cobrado."));
+        tela.ManterAssinaturaCommand.Execute(null);
+        (tela.ConfirmandoCancelamento, tela.Mensagem).Should().Be((false, ""));
+        _conta.Pedidos.Should().NotContain("cancelar assinatura");
+
+        tela.CancelarAssinaturaCommand.Execute(null);
+        await tela.ConfirmarCancelamentoCommand.ExecuteAsync(null);
+
+        var data = new DateTime(2026, 11, 18, 15, 0, 0, DateTimeKind.Utc).ToLocalTime().ToString("dd/MM/yyyy");
+        (tela.ConfirmandoCancelamento, tela.Mensagem, tela.MensagemEhErro).Should().Be((false, $"Assinatura cancelada. O Profissional vale até {data}.", false));
+        (tela.TemAssinatura, tela.PodeAssinarPlano, tela.TextoDoPlanoPago).Should().Be((false, true, $"O Profissional vale até {data} (assinatura cancelada)."));
+    }
+
+    [Fact]
+    public async Task SemPagamentosNoServidor_ATelaSegueSemEles_EOsAvulsosEntramNoUso()
+    {
+        var tela = await Aberta(null, new UsoDaConta(new PerfilDaConta("ana@exemplo.com", "Ana", "gratis", true, false), 0, 300m, 300, 2500m));
+
+        (tela.MostraPagamentos, tela.PodeAssinarPlano, tela.Mensagem, tela.MensagemEhErro).Should().Be((false, false, "", false));
+        tela.ComprarCreditosCommand.CanExecute(null).Should().BeFalse();
+        tela.TextoDoUso.Should().Be("300 de 300 créditos de IA usados este mês (100%). Eles voltam no dia 1º. Mais 2.500 créditos avulsos, que não vencem.");
+        _conta.CreditosRestantes.Should().Be(2500m, "os do plano acabaram, os avulsos não");
+
+        // Uma falha do servidor ao abrir o pagamento aparece como erro.
+        _conta.Pagamentos = Situacao();
+        await tela.AtualizarUsoCommand.ExecuteAsync(null);
+        _conta.Erro = new ErroDaContaException("O Mercado Pago não respondeu. Tente de novo em instantes.", 502);
+        await tela.AssinarCommand.ExecuteAsync(null);
+        (tela.Mensagem, tela.MensagemEhErro).Should().Be(("O Mercado Pago não respondeu. Tente de novo em instantes.", true));
+
+        await tela.SairCommand.ExecuteAsync(null);
+        (tela.Pagamentos, tela.MostraPagamentos).Should().Be((null, false));
+    }
+}

@@ -42,6 +42,10 @@ builder.Services.AddSingleton<ConversasDoTelegram>();
 builder.Services.AddScoped<AtendenteDoTelegram>();
 builder.Services.AddHostedService<ProcessadorDoTelegram>();
 builder.Services.AddHostedService<RegistroDoWebhook>();
+// Bloco 47: a cobrança pelo Mercado Pago e a volta ao Grátis de uma assinatura cancelada e vencida.
+builder.Services.AddHttpClient(MercadoPago.Cliente, c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton<MercadoPago>();
+builder.Services.AddHostedService<ExpiracaoDosPlanos>();
 builder.Services.AddRateLimiter(_ => { });
 builder.Services.AddOptions<RateLimiterOptions>().Configure<IOptions<OpcoesDoServidor>>((o, opcoes) => LimitesDeUso.Configurar(o, opcoes.Value.Limites));
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -97,6 +101,10 @@ using (var escopo = app.Services.CreateScope())
         log.LogWarning("Sem Gemini:Chave: os pedidos de IA vão responder que a IA não está configurada.");
     if (string.IsNullOrWhiteSpace(configuracao.Anthropic.Chave))
         log.LogWarning("Sem Anthropic:Chave: os modelos da Anthropic (nível Máximo) vão responder que não estão configurados.");
+    if (!configuracao.MercadoPago.Ligado)
+        log.LogWarning("Sem MercadoPago:AccessToken: os pagamentos ficam desligados (o plano só muda pela rota de admin).");
+    else if (configuracao.MercadoPago.ModoDeTeste)
+        log.LogWarning("Mercado Pago no modo de teste: nenhum pagamento é de verdade.");
     if (string.IsNullOrWhiteSpace(configuracao.Email.Smtp))
         log.LogWarning("Sem Email:Smtp: os e-mails (com os códigos) vão só para o log.");
 }
@@ -118,6 +126,7 @@ Ia.Mapear(app);
 Admin.Mapear(app);
 PainelFinanceiro.Mapear(app);
 Telegram.Mapear(app);
+Pagamentos.Mapear(app);
 
 app.Run();
 

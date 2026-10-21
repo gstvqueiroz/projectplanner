@@ -19,6 +19,15 @@ public sealed class Usuario
     public bool EmailConfirmado { get; set; }
     public DateTime CriadoEm { get; set; }
     public string Plano { get; set; } = Planos.Gratis;
+
+    /// <summary>
+    /// Bloco 47: até quando o Profissional vale depois de cancelado (a última mensalidade paga); nulo: sem prazo (assinatura
+    /// ativa ou plano dado pelo admin). Passada a data, a conta volta ao Grátis (<c>ExpiracaoDosPlanos</c>).
+    /// </summary>
+    public DateTime? ProfissionalAte { get; set; }
+
+    /// <summary>Bloco 47: os créditos avulsos (pacotes comprados ou dados pelo admin), em milionésimos de dólar. Não vencem no fim do mês.</summary>
+    public long MicrodolaresAvulsos { get; set; }
     public int TentativasFalhas { get; set; }
     public DateTime? BloqueadoAte { get; set; }
 }
@@ -82,6 +91,36 @@ public sealed class UsoDeIa
         UsuarioId = usuario, Quando = quando, Modelo = modelo, TokensDeEntrada = (int)tokens.Entrada, TokensDeSaida = (int)tokens.Saida,
         TokensTotais = (int)(tokens.Entrada + tokens.Saida), TokensDoCache = (int)tokens.LidosDoCache, CustoEmMicrodolares = custo, Rotina = rotina,
     };
+}
+
+/// <summary>Bloco 47: a assinatura do Profissional no Mercado Pago (um "preapproval"), como o Mercado Pago informou por último.</summary>
+public sealed class Assinatura
+{
+    /// <summary>O id do preapproval no Mercado Pago.</summary>
+    public string Id { get; set; } = "";
+    public Guid UsuarioId { get; set; }
+
+    /// <summary>pending (esperando o pagamento), authorized (ativa), paused ou cancelled.</summary>
+    public string Status { get; set; } = "";
+    public decimal ValorEmReais { get; set; }
+    public DateTime CriadaEm { get; set; }
+    public DateTime AtualizadaEm { get; set; }
+    public DateTime? ProximaCobranca { get; set; }
+}
+
+/// <summary>Bloco 47: um pagamento aprovado no Mercado Pago (mensalidade ou pacote de créditos). O id evita contar duas vezes.</summary>
+public sealed class Pagamento
+{
+    public const string DeAssinatura = "assinatura";
+    public const string DeCreditos = "creditos";
+
+    /// <summary>O id do pagamento no Mercado Pago.</summary>
+    public string Id { get; set; } = "";
+    public Guid UsuarioId { get; set; }
+    public string Tipo { get; set; } = "";
+    public decimal ValorEmReais { get; set; }
+    public long Creditos { get; set; }
+    public DateTime Quando { get; set; }
 }
 
 /// <summary>Bloco 48: o alerta de custo já mandado num mês ("2026-10"), para não mandar de novo.</summary>
@@ -166,6 +205,8 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
     public DbSet<TokenDeRenovacao> TokensDeRenovacao => Set<TokenDeRenovacao>();
     public DbSet<CodigoDeEmail> CodigosDeEmail => Set<CodigoDeEmail>();
     public DbSet<UsoDeIa> UsosDeIa => Set<UsoDeIa>();
+    public DbSet<Assinatura> Assinaturas => Set<Assinatura>(); // Bloco 47
+    public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
     public DbSet<AlertaDeCusto> AlertasDeCusto => Set<AlertaDeCusto>();
     public DbSet<ObraNoServidor> Obras => Set<ObraNoServidor>();
     public DbSet<VinculoDoTelegram> VinculosDoTelegram => Set<VinculoDoTelegram>();
@@ -196,6 +237,20 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
         modelo.Entity<UsoDeIa>().HasIndex(x => new { x.UsuarioId, x.Quando });
         modelo.Entity<UsoDeIa>().HasIndex(x => x.Quando);
         modelo.Entity<UsoDeIa>().Property(x => x.Rotina).HasMaxLength(32);
+        modelo.Entity<Assinatura>(a =>
+        {
+            a.Property(x => x.Id).HasMaxLength(64);
+            a.Property(x => x.Status).HasMaxLength(32);
+            a.Property(x => x.ValorEmReais).HasPrecision(12, 2);
+            a.HasIndex(x => x.UsuarioId);
+        });
+        modelo.Entity<Pagamento>(p =>
+        {
+            p.Property(x => x.Id).HasMaxLength(64);
+            p.Property(x => x.Tipo).HasMaxLength(16);
+            p.Property(x => x.ValorEmReais).HasPrecision(12, 2);
+            p.HasIndex(x => new { x.UsuarioId, x.Quando });
+        });
         modelo.Entity<AlertaDeCusto>(a =>
         {
             a.HasKey(x => x.Mes);

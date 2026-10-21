@@ -191,6 +191,37 @@ public sealed class ContaProjectPlannerTests
     }
 
     [Fact]
+    public async Task Pagamentos_AbremSoLinkHttpsNoNavegador_ECancelarDizAteQuando()
+    {
+        // Bloco 47
+        var conta = Nova();
+        await conta.EntrarAsync("ana@exemplo.com", "senha-boa-123", default);
+        var link = "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=1";
+        _servidor.Responder = (rota, _) => rota switch
+        {
+            "POST /v1/pagamentos/assinatura" => (HttpStatusCode.OK, JsonSerializer.Serialize(new { url = link })),
+            "POST /v1/pagamentos/creditos" => (HttpStatusCode.OK, """{"url":"http://golpe.exemplo/pagar"}"""),
+            "POST /v1/pagamentos/assinatura/cancelar" => (HttpStatusCode.OK, """{"profissionalAte":"2026-11-18T15:00:00Z"}"""),
+            "GET /v1/pagamentos" => (HttpStatusCode.OK, """
+                {"disponivel":true,"modoDeTeste":true,"plano":"gratis","profissionalAte":null,"precoMensal":59,"creditosDoProfissional":6000,
+                 "creditosDoPacote":3000,"precoDoPacote":19,"creditosAvulsos":12.5,"assinatura":null,"proximaCobranca":null}
+                """),
+            _ => null,
+        };
+        IContaProjectPlanner comInterface = conta;
+
+        await comInterface.AssinarAsync(default);
+        _abertos.Should().Equal(new Uri(link));
+        await FluentActions.Awaiting(() => comInterface.ComprarCreditosAsync(default)).Should().ThrowAsync<ErroDaContaException>()
+            .WithMessage("O servidor mandou um link de pagamento inválido*");
+        _abertos.Should().HaveCount(1, "um link que não é https não abre");
+        (await comInterface.CancelarAssinaturaAsync(default)).Should().Be(new DateTime(2026, 11, 18, 15, 0, 0, DateTimeKind.Utc));
+        var situacao = await comInterface.PagamentosAsync(default);
+        (situacao.Disponivel, situacao.ModoDeTeste, situacao.PrecoMensal, situacao.CreditosAvulsos, situacao.Assinando).Should().Be((true, true, 59m, 12.5m, false));
+        await FluentActions.Awaiting(() => ((IContaProjectPlanner)new SemContaProjectPlanner()).AssinarAsync(default)).Should().ThrowAsync<ErroDaContaException>();
+    }
+
+    [Fact]
     public async Task Uso_AcessoRecusado_RenovaETentaDeNovo()
     {
         var conta = Nova();

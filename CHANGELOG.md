@@ -3,6 +3,25 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.68.0
+
+**Testes automáticos e avaliação da IA.**
+
+- **Testes no GitHub a cada push:** o GitHub Actions compila (avisos viram erro) e roda os 2.300 testes no macOS. O servidor no
+  Render só é publicado depois que eles passam no commit.
+- **O programa e o servidor sempre em português do Brasil:** num computador configurado em inglês, algumas mensagens mostravam
+  a data no formato americano ("9/29/2026"); agora as datas, os números e os valores seguem o padrão brasileiro em qualquer
+  idioma do sistema.
+- **O vocabulário da IA num lugar só:** os tipos de atualização e os campos de cada um saem de um catálogo único, de onde vêm o
+  formato que o Gemini segue, a leitura da resposta e a lista dos campos nas instruções (o Claude passa a receber essa lista
+  também). Testes conferem que todo tipo e toda ação têm como ser aplicados no programa.
+- **Instruções corrigidas:** a lista das telas que a IA abre não tinha a impressão do Gantt nem as abas novas (as situações do
+  relatório das OS e as folhas Carta e Ofício), e um trecho ainda dizia que os pagamentos das OS eram só pela tela.
+- **Avaliação da IA:** 40 pedidos reais ("paga a OS-001 com a NF 123", "coloca 2 serventes no reboco", "imprime o Gantt em A3",
+  pedidos pelo Telegram), cada um com o que se espera da resposta, numa obra de exemplo. Sem IA, os testes conferem que o
+  programa aplica a resposta certa de cada um; com a IA de verdade (Gemini ou a conta), um comando gera o relatório de quantos
+  ela acerta. Ver docs/AVALIACAO-DA-IA.md.
+
 ## 0.67.0
 
 **A IA no programa todo.** O assistente (no programa e no Telegram) passa a conduzir o fluxo da obra inteiro: além do

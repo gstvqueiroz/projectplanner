@@ -114,6 +114,20 @@ public sealed class AssistenteGemini : IAssistenteIA
             ["required"] = new JsonArray([.. obrigatorios.Select(o => (JsonNode)o)]),
         };
 
+        // Bloco 41 (68: pelo catálogo): as atualizações da obra (cartão para confirmar).
+        static JsonObject Atualizacao()
+        {
+            var propriedades = new JsonObject { ["tipo"] = Tipo("STRING", [.. TiposDeAtualizacao.Todos]) };
+            foreach (var campo in CatalogoDaIa.Campos)
+                propriedades[campo.Nome] = Tipo(campo.Formato switch
+                {
+                    FormatoDoCampo.Inteiro => "INTEGER",
+                    FormatoDoCampo.Numero => "NUMBER",
+                    _ => "STRING",
+                }, [.. campo.Valores ?? []]);
+            return propriedades;
+        }
+
         // Bloco 26: tipo, ficha, perguntas e plano, todos opcionais (as respostas comuns continuam iguais).
         return new JsonObject
         {
@@ -142,43 +156,8 @@ public sealed class AssistenteGemini : IAssistenteIA
                 ["alteracoes"] = new JsonObject { ["type"] = "ARRAY", ["items"] = alteracao },
                 ["orcamento"] = Tipo("STRING"), // Bloco 38: o pedido de sugestões de orçamento
                 // Bloco 41: as atualizações da obra (cartão para confirmar) e a tela para abrir.
-                ["atualizacoes"] = Lista(Objeto(new JsonObject
-                {
-                    ["tipo"] = Tipo("STRING", [.. TiposDeAtualizacao.Todos]),
-                    ["tarefa"] = Tipo("STRING"),
-                    ["percentual"] = Tipo("NUMBER"),
-                    ["quantidade"] = Tipo("NUMBER"),
-                    ["medicao"] = Tipo("INTEGER"),
-                    ["de"] = Tipo("STRING"),
-                    ["ate"] = Tipo("STRING"),
-                    ["data"] = Tipo("STRING"),
-                    ["categoria"] = Tipo("STRING"),
-                    ["descricao"] = Tipo("STRING"),
-                    ["valor"] = Tipo("NUMBER"),
-                    ["documento"] = Tipo("STRING"),
-                    ["nome"] = Tipo("STRING"),
-                    // Bloco 63: as ordens de serviço.
-                    ["os"] = Tipo("INTEGER"),
-                    ["titulo"] = Tipo("STRING"),
-                    ["executante"] = Tipo("STRING"),
-                    ["tipoDeExecutante"] = Tipo("STRING", ["equipe", "terceiro"]),
-                    ["tarefas"] = Tipo("STRING"),
-                    ["novaTarefa"] = Tipo("STRING"),
-                    ["duracao"] = Tipo("INTEGER"),
-                    ["apos"] = Tipo("STRING"),
-                    ["prazo"] = Tipo("STRING"),
-                    ["pagamento"] = Tipo("STRING", ["empreitada", "medicao", "diaria"]),
-                    ["retencao"] = Tipo("NUMBER"),
-                    ["acao"] = Tipo("STRING", [.. TiposDeAtualizacao.AcoesDaOs, .. TiposDeAtualizacao.AcoesDaMedicao.Except(TiposDeAtualizacao.AcoesDaOs)]),
-                    // Bloco 67: tarefas, obra, recursos e medições do contrato.
-                    ["unidade"] = Tipo("STRING"),
-                    ["contratante"] = Tipo("STRING"),
-                    ["contrato"] = Tipo("STRING"),
-                    ["endereco"] = Tipo("STRING"),
-                    ["tipoDoRecurso"] = Tipo("STRING", ["profissional", "material", "equipamento"]),
-                    ["fornecedor"] = Tipo("STRING"),
-                    ["recurso"] = Tipo("STRING"),
-                }, "tipo")),
+                ["atualizacoes"] = Lista(Objeto(Atualizacao(), "tipo")), // Bloco 68: pelo catálogo
+
                 ["abrir"] = Objeto(new JsonObject
                 {
                     ["tela"] = Tipo("STRING", [.. TelasDoPrograma.Todas]),

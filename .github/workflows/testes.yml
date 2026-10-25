@@ -1,0 +1,43 @@
+# Bloco 68: os testes rodam a cada push no main e em cada pull request. O Render só publica o servidor depois que eles
+# passam (autoDeployTrigger: checksPass no render.yaml). Roda no macOS, como o desenvolvimento e o app do Mac; o repositório
+# é público, então os minutos do GitHub Actions não são cobrados.
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: dotnet test
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restaurar
+        run: dotnet restore ProjectPlanner.slnx
+
+      - name: Compilar (avisos viram erro)
+        run: dotnet build ProjectPlanner.slnx --no-restore -warnaserror
+
+      - name: Testar
+        run: dotnet test ProjectPlanner.slnx --no-build --logger "trx;LogFilePrefix=testes" --results-directory resultados
+
+      - name: Guardar os resultados
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-dos-testes
+          path: resultados
+          retention-days: 7

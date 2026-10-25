@@ -204,16 +204,15 @@ public static class FormatoDaResposta
             // O % às vezes vem com outro nome ou no "valor" (o campo dos custos): numa atualização de %, vale o que vier.
             var percentual = Decimal(item, "percentual") ?? Decimal(item, "percentualConcluido") ?? Decimal(item, "concluido")
                 ?? (tipo == TiposDeAtualizacao.Percentual ? Decimal(item, "valor") ?? Decimal(item, "quantidade") : null);
-            lista.Add(new AtualizacaoDaObra(tipo, Curto(item, "tarefa"), percentual, Decimal(item, "quantidade"), Inteiro(item, "medicao"),
-                Curto(item, "de"), Curto(item, "ate"), Curto(item, "data"), Curto(item, "categoria"), Curto(item, "descricao"), Decimal(item, "valor"),
-                Curto(item, "documento"), Curto(item, "nome"),
-                // Bloco 63: as ordens de serviço.
-                Inteiro(item, "os"), Curto(item, "titulo"), Curto(item, "executante"), Curto(item, "tipoDeExecutante"), Curto(item, "tarefas"),
-                Curto(item, "novaTarefa"), Inteiro(item, "duracao"), Curto(item, "apos"), Curto(item, "prazo"), Curto(item, "pagamento"),
-                Decimal(item, "retencao"), Curto(item, "acao"),
-                // Bloco 67: tarefas, obra, recursos e medições do contrato.
-                Curto(item, "unidade"), Curto(item, "contratante"), Curto(item, "contrato"), Curto(item, "endereco"), Curto(item, "tipoDoRecurso"),
-                Curto(item, "fornecedor"), Curto(item, "recurso")));
+            // Bloco 68: os campos pelo catálogo (o mesmo do esquema do Gemini e das instruções).
+            var valores = CatalogoDaIa.Campos.ToDictionary(c => c.Nome, c => c.Formato switch
+            {
+                FormatoDoCampo.Inteiro => (object?)Inteiro(item, c.Nome),
+                FormatoDoCampo.Numero => Decimal(item, c.Nome),
+                _ => Curto(item, c.Nome),
+            });
+            valores["percentual"] = percentual;
+            lista.Add(CatalogoDaIa.Montar(tipo, valores));
             if (lista.Count == MaximoDeAtualizacoes)
                 break;
         }

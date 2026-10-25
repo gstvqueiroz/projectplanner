@@ -25,4 +25,9 @@
     <ProjectReference Include="..\..\src\ProjectPlanner.App\ProjectPlanner.App.csproj" />
   </ItemGroup>
 
+  <!-- Bloco 68: os pedidos da avaliação da IA (ver docs/AVALIACAO-DA-IA.md). -->
+  <ItemGroup>
+    <None Include="Avaliacao\pedidos.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

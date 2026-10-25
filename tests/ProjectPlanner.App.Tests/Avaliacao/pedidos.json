@@ -1,0 +1,277 @@
+{
+  "sobre": "Bloco 68: pedidos reais para avaliar a IA na obra da avaliação (ObraDaAvaliacao.cs). 'esperado' é parcial (texto com ~ = contém); 'referencia' é uma resposta certa, conferida nos testes sem IA. Ver docs/AVALIACAO-DA-IA.md.",
+  "casos": [
+    {
+      "id": "percentual-alvenaria",
+      "pedido": "A alvenaria chegou a 90% concluída.",
+      "esperado": { "atualizacoes": [{ "tipo": "percentual", "tarefa": "2", "percentual": 90 }] },
+      "referencia": { "mensagem": "Proponho a alvenaria em 90% concluída. Confira e aplique no cartão.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "percentual", "tarefa": "2", "percentual": 90 }] }
+    },
+    {
+      "id": "percentual-reboco",
+      "pedido": "o reboco está pela metade",
+      "esperado": { "atualizacoes": [{ "tipo": "percentual", "tarefa": "3", "percentual": 50 }] },
+      "referencia": { "mensagem": "Proponho o reboco em 50%.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "percentual", "tarefa": "3", "percentual": 50 }] }
+    },
+    {
+      "id": "medicao-alvenaria",
+      "pedido": "Medi mais 30 m² de alvenaria nesta medição.",
+      "esperado": { "atualizacoes": [{ "tipo": "medicao", "tarefa": "2", "quantidade": 30 }] },
+      "referencia": { "mensagem": "Proponho 30 m² de alvenaria na medição 02.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "medicao", "tarefa": "2", "quantidade": 30, "medicao": 2 }] }
+    },
+    {
+      "id": "custo-cimento",
+      "pedido": "Lança um custo de R$ 850 de cimento hoje, nota fiscal 4521, na alvenaria.",
+      "esperado": { "atualizacoes": [{ "tipo": "custo", "valor": 850, "tarefa": "2", "documento": "~4521", "categoria": "material" }] },
+      "referencia": { "mensagem": "Proponho o custo de R$ 850,00 do cimento na alvenaria.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "custo", "data": "2026-09-28", "valor": 850, "descricao": "Cimento", "categoria": "material", "tarefa": "2", "documento": "NF 4521" }] }
+    },
+    {
+      "id": "inicio-reboco",
+      "pedido": "O reboco não pode começar antes de 05/10/2026.",
+      "esperado": { "atualizacoes": [{ "tipo": "inicio", "tarefa": "3", "data": "2026-10-05" }] },
+      "referencia": { "mensagem": "Proponho o reboco não iniciar antes de 05/10/2026.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "inicio", "tarefa": "3", "data": "2026-10-05" }] }
+    },
+    {
+      "id": "linha-de-base",
+      "pedido": "Salva uma linha de base chamada Contrato.",
+      "esperado": { "atualizacoes": [{ "tipo": "linhaDeBase", "nome": "~contrato" }] },
+      "referencia": { "mensagem": "Proponho salvar a linha de base \"Contrato\".", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "linhaDeBase", "nome": "Contrato" }] }
+    },
+    {
+      "id": "os-nova-eletrica",
+      "pedido": "Cria uma OS das instalações elétricas para a Eletro Forte, que é empreiteira, pagamento por medição e retenção de 5%.",
+      "esperado": { "atualizacoes": [{ "tipo": "os", "tarefas": "5", "executante": "~eletro forte", "tipoDeExecutante": "terceiro", "pagamento": "medicao", "retencao": 5 }] },
+      "referencia": { "mensagem": "Proponho a OS das instalações elétricas para a Eletro Forte.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "os", "titulo": "Instalações elétricas", "executante": "Eletro Forte", "tipoDeExecutante": "terceiro", "tarefas": "5", "pagamento": "medicao", "retencao": 5 }] }
+    },
+    {
+      "id": "os-nova-tarefa-limpeza",
+      "pedido": "Abre uma OS para a limpeza final da obra, 2 dias depois da pintura, com a equipe própria.",
+      "esperado": { "atualizacoes": [{ "tipo": "os", "novaTarefa": "~limpeza", "duracao": 2, "apos": "4", "tipoDeExecutante": "equipe" }] },
+      "referencia": { "mensagem": "Proponho a OS da limpeza final, com a tarefa nova depois da pintura.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "os", "titulo": "Limpeza final", "executante": "Equipe própria", "tipoDeExecutante": "equipe", "novaTarefa": "Limpeza final", "duracao": 2, "apos": "4" }] }
+    },
+    {
+      "id": "os-alterar-executante",
+      "pedido": "Na OS-002, troca o executante para Cores & Cia.",
+      "esperado": { "atualizacoes": [{ "tipo": "os", "os": 2, "executante": "~cores" }] },
+      "referencia": { "mensagem": "Proponho a OS-002 com a Cores & Cia.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "os", "os": 2, "executante": "Cores & Cia" }] }
+    },
+    {
+      "id": "os-emitir",
+      "pedido": "Emite a OS 2.",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 2, "acao": "emitir" }] },
+      "referencia": { "mensagem": "Proponho emitir a OS-002.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 2, "acao": "emitir" }] }
+    },
+    {
+      "id": "os-medir",
+      "pedido": "A OS-001 está com 50% executado.",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "medir", "percentual": 50 }] },
+      "referencia": { "mensagem": "Proponho medir a OS-001 até 50%.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "medir", "percentual": 50 }] }
+    },
+    {
+      "id": "os-pagar",
+      "pedido": "Paga a OS-001 com a NF 123.",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "pagar", "documento": "~123" }] },
+      "referencia": { "mensagem": "Proponho pagar as medições abertas da OS-001 com a NF 123.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "pagar", "documento": "NF 123" }] }
+    },
+    {
+      "id": "os-cancelar",
+      "pedido": "Cancela a OS 2, o cliente desistiu da pintura.",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 2, "acao": "cancelar", "descricao": "~desist" }] },
+      "referencia": { "mensagem": "Proponho cancelar a OS-002.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 2, "acao": "cancelar", "descricao": "O cliente desistiu da pintura" }] }
+    },
+    {
+      "id": "os-duplicar",
+      "pedido": "Duplica a OS-001.",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "duplicar" }] },
+      "referencia": { "mensagem": "Proponho duplicar a OS-001.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "duplicar" }] }
+    },
+    {
+      "id": "os-concluir",
+      "pedido": "A Construtora Silva terminou a OS 1.",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "concluir" }] },
+      "referencia": { "mensagem": "Proponho a OS-001 como concluída.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "concluir" }] }
+    },
+    {
+      "id": "tarefa-dados-pintura",
+      "pedido": "A pintura tem 260 m² e vale R$ 5.200.",
+      "esperado": { "atualizacoes": [{ "tipo": "tarefa", "tarefa": "4", "quantidade": 260, "valor": 5200 }] },
+      "referencia": { "mensagem": "Proponho a pintura com 260 m² e R$ 5.200,00.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "tarefa", "tarefa": "4", "quantidade": 260, "valor": 5200 }] }
+    },
+    {
+      "id": "tarefa-prazo-eletrica",
+      "pedido": "O prazo das instalações elétricas é 16/10/2026.",
+      "esperado": { "atualizacoes": [{ "tipo": "tarefa", "tarefa": "5", "prazo": "2026-10-16" }] },
+      "referencia": { "mensagem": "Proponho o prazo de 16/10/2026 para as instalações elétricas.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "tarefa", "tarefa": "5", "prazo": "2026-10-16" }] }
+    },
+    {
+      "id": "obra-contratante",
+      "pedido": "O contratante agora é a Prefeitura de Barra Mansa e o contrato é o 45/2026.",
+      "esperado": { "atualizacoes": [{ "tipo": "obra", "contratante": "~barra mansa", "contrato": "~45/2026" }] },
+      "referencia": { "mensagem": "Proponho os dados da obra.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "obra", "contratante": "Prefeitura de Barra Mansa", "contrato": "45/2026" }] }
+    },
+    {
+      "id": "obra-endereco",
+      "pedido": "O endereço da obra é Rua das Flores, 100.",
+      "esperado": { "atualizacoes": [{ "tipo": "obra", "endereco": "~rua das flores" }] },
+      "referencia": { "mensagem": "Proponho o endereço da obra.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "obra", "endereco": "Rua das Flores, 100" }] }
+    },
+    {
+      "id": "recurso-novo",
+      "pedido": "Cria o recurso Servente, profissional, R$ 150 por dia.",
+      "esperado": { "atualizacoes": [{ "tipo": "recurso", "nome": "~servente", "tipoDoRecurso": "profissional", "valor": 150 }] },
+      "referencia": { "mensagem": "Proponho o recurso Servente.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "recurso", "nome": "Servente", "tipoDoRecurso": "profissional", "unidade": "dia", "valor": 150 }] }
+    },
+    {
+      "id": "recurso-criar-e-atribuir",
+      "pedido": "Coloca 2 serventes no reboco.",
+      "esperado": { "atualizacoes": [{ "tipo": "recurso", "nome": "~servente" }, { "tipo": "atribuir", "tarefa": "3", "recurso": "~servente", "quantidade": 2 }] },
+      "referencia": { "mensagem": "O projeto não tem servente: proponho criar o recurso e pôr 2 no reboco.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "recurso", "nome": "Servente", "tipoDoRecurso": "profissional", "unidade": "dia", "valor": 150 },
+          { "tipo": "atribuir", "tarefa": "3", "recurso": "Servente", "quantidade": 2 }] }
+    },
+    {
+      "id": "recurso-tirar",
+      "pedido": "Tira o pedreiro da alvenaria.",
+      "esperado": { "atualizacoes": [{ "tipo": "atribuir", "tarefa": "2", "recurso": "~pedreiro", "quantidade": 0 }] },
+      "referencia": { "mensagem": "Proponho tirar o pedreiro da alvenaria.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "atribuir", "tarefa": "2", "recurso": "Pedreiro", "quantidade": 0 }] }
+    },
+    {
+      "id": "recurso-custo",
+      "pedido": "O pedreiro agora custa R$ 300 por dia.",
+      "esperado": { "atualizacoes": [{ "tipo": "recurso", "nome": "~pedreiro", "valor": 300 }] },
+      "referencia": { "mensagem": "Proponho o pedreiro a R$ 300,00 por dia.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "recurso", "nome": "Pedreiro", "valor": 300 }] }
+    },
+    {
+      "id": "medicao-aprovar",
+      "pedido": "Aprova a medição 2.",
+      "esperado": { "atualizacoes": [{ "tipo": "medicaoContrato", "medicao": 2, "acao": "aprovar" }] },
+      "referencia": { "mensagem": "Proponho aprovar a medição 02.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "medicaoContrato", "medicao": 2, "acao": "aprovar" }] }
+    },
+    {
+      "id": "medicao-paga",
+      "pedido": "A medição 1 foi paga em 15/09/2026.",
+      "esperado": { "atualizacoes": [{ "tipo": "medicaoContrato", "medicao": 1, "acao": "pagar", "data": "2026-09-15" }] },
+      "referencia": { "mensagem": "Proponho a medição 01 paga em 15/09/2026.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "medicaoContrato", "medicao": 1, "acao": "pagar", "data": "2026-09-15" }] }
+    },
+    {
+      "id": "cronograma-criar-tarefa",
+      "pedido": "Cria a tarefa Limpeza final, com 2 dias, depois da pintura.",
+      "esperado": { "alteracoes": [{ "acao": "criar", "nome": "~limpeza", "duracao": 2 }, { "acao": "vincular", "de": "4" }] },
+      "referencia": { "mensagem": "Criei a Limpeza final depois da pintura.",
+        "alteracoes": [{ "acao": "criar", "ref": "n1", "nome": "Limpeza final", "duracao": 2 }, { "acao": "vincular", "de": "4", "para": "n1", "tipo": "TI" }] }
+    },
+    {
+      "id": "cronograma-duracao",
+      "pedido": "Aumenta o reboco para 12 dias.",
+      "esperado": { "alteracoes": [{ "acao": "alterar", "tarefa": "3", "duracao": 12 }] },
+      "referencia": { "mensagem": "O reboco passou para 12 dias.", "alteracoes": [{ "acao": "alterar", "tarefa": "3", "duracao": 12 }] }
+    },
+    {
+      "id": "cronograma-inicio",
+      "pedido": "A obra começa em 10/08/2026.",
+      "esperado": { "alteracoes": [{ "acao": "projeto", "inicio": "2026-08-10" }] },
+      "referencia": { "mensagem": "O início do projeto passou para 10/08/2026.", "alteracoes": [{ "acao": "projeto", "inicio": "2026-08-10" }] }
+    },
+    {
+      "id": "pergunta-medido",
+      "pedido": "Quanto já medi até agora?",
+      "esperado": { "semMudancas": true, "abrir": "nenhum" },
+      "referencia": { "mensagem": "A medição 01 (aprovada) tem R$ 18.000,00; a 02, em rascunho, R$ 4.800,00.", "alteracoes": [] }
+    },
+    {
+      "id": "pergunta-atraso",
+      "pedido": "O que está atrasado na obra?",
+      "esperado": { "semMudancas": true },
+      "referencia": { "mensagem": "A alvenaria e o reboco estão abaixo do previsto para hoje.", "alteracoes": [] }
+    },
+    {
+      "id": "orcamento-vedacoes",
+      "pedido": "Orça as vedações para mim.",
+      "esperado": { "orcamento": true, "semMudancas": true },
+      "referencia": { "mensagem": "Abri as sugestões de orçamento das vedações.", "alteracoes": [], "orcamento": "composições e quantidades das vedações" }
+    },
+    {
+      "id": "tela-fisico-financeiro",
+      "pedido": "Abre o cronograma físico-financeiro.",
+      "esperado": { "abrir": { "tela": "fisicoFinanceiro" }, "semMudancas": true },
+      "referencia": { "mensagem": "Abri o cronograma físico-financeiro.", "alteracoes": [], "abrir": { "tela": "fisicoFinanceiro" } }
+    },
+    {
+      "id": "tela-gantt-a3",
+      "pedido": "Quero imprimir o Gantt numa folha A3.",
+      "esperado": { "abrir": { "tela": "imprimirGantt", "aba": "A3" } },
+      "referencia": { "mensagem": "Abri a impressão do Gantt em A3.", "alteracoes": [], "abrir": { "tela": "imprimirGantt", "aba": "A3" } }
+    },
+    {
+      "id": "tela-os-vencidas",
+      "pedido": "Me mostra o relatório das OS vencidas.",
+      "esperado": { "abrir": { "tela": "relatorioDasOrdens", "aba": "vencidas" } },
+      "referencia": { "mensagem": "Abri o relatório das OS vencidas.", "alteracoes": [], "abrir": { "tela": "relatorioDasOrdens", "aba": "vencidas" } }
+    },
+    {
+      "id": "tela-fotos-da-os",
+      "pedido": "Gera o relatório fotográfico da OS 1.",
+      "esperado": { "abrir": { "tela": "relatorioFotografico", "os": 1 } },
+      "referencia": { "mensagem": "Abri o relatório fotográfico da OS-001.", "alteracoes": [], "abrir": { "tela": "relatorioFotografico", "os": 1, "texto": true } }
+    },
+    {
+      "id": "tela-medicao-2",
+      "pedido": "Abre a medição 2.",
+      "esperado": { "abrir": { "tela": "medicoes", "medicao": 2 } },
+      "referencia": { "mensagem": "Abri a medição 02.", "alteracoes": [], "abrir": { "tela": "medicoes", "aba": "medicoes", "medicao": 2 } }
+    },
+    {
+      "id": "tela-indicadores-custos",
+      "pedido": "Mostra os indicadores de custo.",
+      "esperado": { "abrir": { "tela": "indicadores", "aba": "custos" } },
+      "referencia": { "mensagem": "Abri os indicadores de custo.", "alteracoes": [], "abrir": { "tela": "indicadores", "aba": "custos" } }
+    },
+    {
+      "id": "telegram-percentual",
+      "canal": "telegram",
+      "pedido": "a alvenaria chegou a 90%",
+      "esperado": { "atualizacoes": [{ "tipo": "percentual", "tarefa": "2", "percentual": 90 }], "abrir": "nenhum" },
+      "referencia": { "mensagem": "Anotei a alvenaria em 90%. Aplique quando abrir a obra no programa.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "percentual", "tarefa": "2", "percentual": 90 }] }
+    },
+    {
+      "id": "telegram-pagar-os",
+      "canal": "telegram",
+      "pedido": "paga a OS 1 com o pix de hoje",
+      "esperado": { "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "pagar", "documento": "~pix" }], "abrir": "nenhum" },
+      "referencia": { "mensagem": "Anotei o pagamento da OS-001 (Pix).", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "situacaoOs", "os": 1, "acao": "pagar", "documento": "Pix" }] }
+    },
+    {
+      "id": "telegram-nao-abre-tela",
+      "canal": "telegram",
+      "pedido": "abre o relatório das OS",
+      "esperado": { "abrir": "nenhum", "semMudancas": true },
+      "referencia": { "mensagem": "Daqui não dá para abrir telas: o relatório das OS fica no programa, em Obra > Relatório das OS.", "alteracoes": [] }
+    }
+  ]
+}

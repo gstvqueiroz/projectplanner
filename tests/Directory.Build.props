@@ -1,0 +1,8 @@
+<Project>
+  <!-- Bloco 68: os metadados de sempre (o Directory.Build.props da raiz) e, em todo projeto de teste, o português do Brasil
+       como no programa e no servidor (CulturaDosTestes.cs), para os testes darem o mesmo resultado no Mac e no CI. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)CulturaDosTestes.cs" Link="CulturaDosTestes.cs" />
+  </ItemGroup>
+</Project>

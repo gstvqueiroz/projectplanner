@@ -382,6 +382,16 @@ Desfazer volta tudo); o cronograma muda direto, como sempre. Pelo Telegram, os m
 Os arquivos (PDF, Word, Excel) o usuário salva na tela que a IA abrir. Ficam só na tela, sem a IA: mandar a OS ao grupo do
 Telegram e as preferências (logotipo, colunas, tema).
 
+### O catálogo e a avaliação (Bloco 68)
+
+Os tipos de atualização e os campos de cada um ficam num lugar só, o `CatalogoDaIa` (ProjectPlanner.IA). Dele saem o
+esquema que o Gemini segue, a leitura da resposta, a lista "CAMPOS DE CADA ATUALIZAÇÃO" e "VALORES FIXOS" nas instruções
+(que o Claude, sem esquema, também lê) e as listas de telas e abas. Testes conferem que o registro `AtualizacaoDaObra`, o
+esquema, a leitura e as instruções batem com o catálogo, e que todo tipo e toda ação têm como ser aplicados no programa.
+
+Para saber se a IA acerta os pedidos de verdade, há a avaliação com 40 pedidos numa obra de exemplo: ver
+[AVALIACAO-DA-IA.md](AVALIACAO-DA-IA.md).
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".

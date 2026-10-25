@@ -30,8 +30,10 @@ public static class TiposDeAtualizacao
     /// <summary>Bloco 67: aprovar ou marcar como paga uma medição do contrato.</summary>
     public const string MedicaoDoContrato = "medicaoContrato";
 
-    public static IReadOnlyList<string> Todos { get; } =
-        [Percentual, Medicao, Custo, Inicio, LinhaDeBase, Os, SituacaoOs, Tarefa, Obra, Recurso, Atribuir, MedicaoDoContrato];
+    /// <summary>Bloco 68: os do <see cref="CatalogoDaIa"/>, na ordem dele.</summary>
+    public static IReadOnlyList<string> Todos => _todos ??= [.. CatalogoDaIa.Tipos.Select(t => t.Nome)];
+
+    private static IReadOnlyList<string>? _todos;
 
     /// <summary>Bloco 63: as ações de "situacaoOs" (Bloco 67: pagar, liberar a retenção e duplicar).</summary>
     public static IReadOnlyList<string> AcoesDaOs { get; } =

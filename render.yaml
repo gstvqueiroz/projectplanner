@@ -10,7 +10,8 @@ services:
     dockerfilePath: ./src/ProjectPlanner.Servidor/Dockerfile
     dockerContext: .
     healthCheckPath: /
-    autoDeploy: true
+    # Bloco 68: publica só depois que os testes do GitHub (.github/workflows/testes.yml) passam no commit.
+    autoDeployTrigger: checksPass
     buildFilter:
       paths:
         - src/ProjectPlanner.Servidor/**

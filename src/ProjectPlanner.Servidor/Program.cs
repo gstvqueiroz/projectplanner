@@ -10,6 +10,11 @@ using ProjectPlanner.Servidor.Servicos;
 
 // Bloco 44: o servidor de contas e IA do ProjectPlanner. Toda a configuração (e os segredos) vem do ambiente: ver docs/SERVIDOR.md.
 // A configuração é lida pelo IOptions (na hora de montar os serviços), não antes: assim os testes conseguem trocá-la.
+// Bloco 68: as mensagens (Telegram, e-mails, painel) em português do Brasil, qualquer que seja o idioma do contêiner.
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.DefaultThreadCurrentUICulture =
+    System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.CurrentUICulture =
+        System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
 var builder = WebApplication.CreateBuilder(args);
 static OpcoesDoServidor Opcoes(IServiceProvider s) => s.GetRequiredService<IOptions<OpcoesDoServidor>>().Value;
 

@@ -18,7 +18,8 @@ public sealed partial class AtendenteDoTelegram
         "Como usar o ProjectPlanner neste grupo:\n" +
         "• mande fotos da obra (com legenda, se quiser): vão para a caixa da obra;\n" +
         "• escreva #atualizacao e o que mudou (\"#atualizacao alvenaria do 2º piso em 70%\");\n" +
-        "• para perguntar, marque o bot (@{0}) ou responda a uma mensagem dele.\n\n" +
+        "• para perguntar, marque o bot (@{0}) ou responda a uma mensagem dele;\n" +
+        "• ordens de serviço: toque nos botões da OS (Aceitar, Comecei, Terminei); /os lista as abertas, /recusar 14 e o motivo recusa.\n\n" +
         "O resto da conversa do grupo o bot não lê. Tudo vai para a caixa da obra, e o dono confere e aplica no programa.\n" +
         "/equipe mostra os papéis · /papel (respondendo à mensagem de alguém) muda o papel · /obra troca a obra · /sair desliga o grupo.";
 
@@ -97,6 +98,12 @@ public sealed partial class AtendenteDoTelegram
                 return;
             case "/sair":
                 await SairDoGrupoAsync(chatId, grupo, ehDono, c);
+                return;
+            case "/os": // Bloco 59
+                await OrdensDoGrupoAsync(chatId, grupo, argumento, c);
+                return;
+            case "/recusar":
+                await RecusarAsync(chatId, grupo, membro, argumento, agora, c);
                 return;
             case "/ajuda" or "/help" or "/start":
                 await telegram.EnviarAsync(chatId, string.Format(AjudaDoGrupo, NomeDoBot) + $"\n\nObra: {obra.Nome}.", c);

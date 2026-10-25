@@ -23,7 +23,7 @@ internal static class FormatoDasOrdens
             [.. o.Dados.Itens.Select(i => new Item(i.TarefaId, i.Descricao, i.Unidade, i.Quantidade, i.PrecoUnitario))],
             o.Dados.InicioPrevisto, o.Dados.Prazo, o.Dados.FormaDePagamento, o.Dados.Observacoes,
             [.. o.Dados.Verificacao.Select(v => new Verificacao(v.Texto, v.Feito))],
-            [.. o.Historico.Select(e => new Evento(e.Quando, e.Situacao, e.Descricao, e.Autor))]))]), Opcoes);
+            [.. o.Historico.Select(e => new Evento(e.Quando, e.Situacao, e.Descricao, e.Autor))], o.NoTelegram ? true : null))]), Opcoes);
 
     /// <exception cref="InvalidDataException">JSON com defeito ou valores que o domínio recusa.</exception>
     public static void Ler(string json, Cronograma cronograma)
@@ -37,7 +37,7 @@ internal static class FormatoDasOrdens
                     o.InicioPrevisto, o.Prazo, o.FormaDePagamento, o.Observacoes,
                     (o.Verificacao ?? []).Select(v => new ItemDeVerificacao(v.Texto, v.Feito))),
                 o.Situacao, o.Emissao, o.Conclusao,
-                (o.Historico ?? []).Select(e => new EventoDaOrdem(e.Quando, e.Situacao, e.Descricao ?? "", e.Autor)))).ToList());
+                (o.Historico ?? []).Select(e => new EventoDaOrdem(e.Quando, e.Situacao, e.Descricao ?? "", e.Autor)), o.NoTelegram == true)).ToList());
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or DomainValidationException or ArgumentException)
         {
@@ -50,7 +50,7 @@ internal static class FormatoDasOrdens
     private sealed record Ordem(Guid Id, int Numero, SituacaoDaOrdem Situacao, DateOnly? Emissao, DateOnly? Conclusao, string? Titulo,
         TipoDeExecutante Tipo, string? Executante, Guid? RecursoId, string? Contato, List<Guid>? Tarefas, List<Item>? Itens,
         DateOnly? InicioPrevisto, DateOnly? Prazo, FormaDePagamentoDaOrdem FormaDePagamento, string? Observacoes, List<Verificacao>? Verificacao,
-        List<Evento>? Historico);
+        List<Evento>? Historico, bool? NoTelegram = null);
 
     private sealed record Item(Guid? TarefaId, string? Descricao, string? Unidade, decimal Quantidade, decimal PrecoUnitario);
 

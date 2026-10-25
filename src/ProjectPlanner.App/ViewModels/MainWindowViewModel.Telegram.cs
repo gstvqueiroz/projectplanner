@@ -87,6 +87,12 @@ public sealed partial class MainWindowViewModel
             cartoes++;
             falhas += await Levar(item) ? 0 : 1;
         }
+        // Bloco 59: os passos das OS (cada item é levado; o que a OS não aceita mais fica de lado).
+        var daOrdem = itens.Where(i => i.Tipo == ItemDoTelegram.DeOrdem).ToList();
+        var (ordens, _) = AplicarOrdensDoTelegram(daOrdem);
+        foreach (var item in daOrdem)
+            falhas += await Levar(item) ? 0 : 1;
+
         var pasta = Path.Combine(PastaDasFotosDoTelegram, _cronograma.Id.ToString("N"));
         foreach (var item in itens.Where(i => i.Tipo == ItemDoTelegram.DeFoto))
         {
@@ -110,6 +116,7 @@ public sealed partial class MainWindowViewModel
         Mensagem = string.Join(" ", new[]
         {
             cartoes == 0 ? null : cartoes == 1 ? "1 mensagem do Telegram virou cartão no assistente: confira e aplique." : $"{cartoes} mensagens do Telegram viraram cartões no assistente: confira e aplique.",
+            ordens.Count == 0 ? null : $"Ordens de serviço pelo Telegram: {string.Join(", ", ordens)}.",
             fotos.Count == 0 ? null : fotos.Count == 1 ? "1 foto foi para a importação." : $"{fotos.Count} fotos foram para a importação.",
             falhas == 0 ? null : $"{falhas} item(ns) não puderam ser trazidos agora (tente de novo).",
         }.Where(t => t is not null));

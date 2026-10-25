@@ -15,7 +15,19 @@ public interface IClienteDoTelegram
     Task<byte[]?> BaixarAsync(string arquivo, CancellationToken c);
 
     Task RegistrarWebhookAsync(string url, string segredo, CancellationToken c);
+
+    /// <summary>Bloco 59: manda com botões embaixo (numa linha); devolve o id da mensagem, ou nulo se o Telegram recusou.</summary>
+    Task<long?> EnviarComBotoesAsync(long chat, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c);
+
+    /// <summary>Bloco 59: troca o texto e os botões de uma mensagem já mandada (sem botões, eles somem).</summary>
+    Task EditarAsync(long chat, long mensagem, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c);
+
+    /// <summary>Bloco 59: responde ao toque num botão (o aviso rápido no alto da tela de quem tocou).</summary>
+    Task ResponderAoBotaoAsync(string consulta, string texto, CancellationToken c);
 }
+
+/// <summary>Bloco 59: um botão embaixo de uma mensagem; os dados voltam no toque (até 64 bytes).</summary>
+public sealed record BotaoDoTelegram(string Texto, string Dados);
 
 /// <summary>A API de bots do Telegram (https://api.telegram.org/bot&lt;token&gt;/…).</summary>
 public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<OpcoesDoServidor> opcoes, ILogger<ClienteDoTelegram> log) : IClienteDoTelegram
@@ -36,6 +48,39 @@ public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<Opco
         if (!r.IsSuccessStatusCode)
             log.LogWarning("O Telegram recusou a mensagem ({Status})", (int)r.StatusCode);
     }
+
+    public async Task<long?> EnviarComBotoesAsync(long chat, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c)
+    {
+        using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("sendMessage"),
+            new { chat_id = chat, text = Cortar(texto), reply_markup = Teclado(botoes) }, c);
+        if (!r.IsSuccessStatusCode)
+        {
+            log.LogWarning("O Telegram recusou a mensagem com botões ({Status})", (int)r.StatusCode);
+            return null;
+        }
+        using var json = JsonDocument.Parse(await r.Content.ReadAsStringAsync(c));
+        return json.RootElement.TryGetProperty("result", out var resultado) && resultado.TryGetProperty("message_id", out var id) && id.TryGetInt64(out var n)
+            ? n : null;
+    }
+
+    public async Task EditarAsync(long chat, long mensagem, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c)
+    {
+        using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("editMessageText"),
+            new { chat_id = chat, message_id = mensagem, text = Cortar(texto), reply_markup = Teclado(botoes) }, c);
+        if (!r.IsSuccessStatusCode) // inclusive "message is not modified", quando nada mudou
+            log.LogInformation("O Telegram não editou a mensagem ({Status})", (int)r.StatusCode);
+    }
+
+    public async Task ResponderAoBotaoAsync(string consulta, string texto, CancellationToken c)
+    {
+        using var _ = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("answerCallbackQuery"),
+            new { callback_query_id = consulta, text = texto.Length > 190 ? texto[..190] : texto }, c);
+    }
+
+    private static object Teclado(IReadOnlyList<BotaoDoTelegram> botoes) =>
+        new { inline_keyboard = botoes.Count == 0 ? [] : new[] { botoes.Select(b => new { text = b.Texto, callback_data = b.Dados }).ToArray() } };
+
+    private static string Cortar(string texto) => texto.Length > TamanhoMaximo ? texto[..TamanhoMaximo] + "…" : texto;
 
     public async Task DigitandoAsync(long chat, CancellationToken c)
     {
@@ -58,7 +103,7 @@ public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<Opco
     public async Task RegistrarWebhookAsync(string url, string segredo, CancellationToken c)
     {
         using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("setWebhook"),
-            new { url, secret_token = segredo, allowed_updates = new[] { "message" }, drop_pending_updates = false }, c);
+            new { url, secret_token = segredo, allowed_updates = new[] { "message", "callback_query" }, drop_pending_updates = false }, c);
         if (r.IsSuccessStatusCode)
             log.LogInformation("Webhook do Telegram registrado em {Url}", url);
         else // o motivo vem no corpo (o token não aparece nele)

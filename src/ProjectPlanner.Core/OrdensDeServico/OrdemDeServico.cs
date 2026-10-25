@@ -63,6 +63,50 @@ public static class TextosDaOrdem
         _ => "Diária",
     };
 
+    /// <summary>
+    /// Bloco 59: o corpo da mensagem da OS no Telegram: o executante, as datas, o pagamento, os itens (com os valores, se
+    /// <paramref name="comValores"/>), as observações e a verificação. O servidor põe o número, o título e a situação em cima.
+    /// </summary>
+    public static string ParaOTelegram(OrdemDeServico ordem, bool comValores)
+    {
+        ArgumentNullException.ThrowIfNull(ordem);
+        var brasil = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+        var d = ordem.Dados;
+        var tipo = d.Tipo == TipoDeExecutante.EquipePropria ? "equipe própria" : "empreiteiro";
+        var linhas = new List<string> { $"Executante: {d.Executante ?? "a definir"} ({tipo})" };
+        var datas = string.Join(" · ", new[]
+        {
+            d.InicioPrevisto is { } inicio ? $"Início: {inicio.ToString("dd/MM/yyyy", brasil)}" : null,
+            d.Prazo is { } prazo ? $"prazo: {prazo.ToString("dd/MM/yyyy", brasil)}" : null,
+        }.OfType<string>());
+        if (datas.Length > 0)
+            linhas.Add(char.ToUpper(datas[0], brasil) + datas[1..]);
+        if (comValores)
+            linhas.Add($"Pagamento: {Texto(d.FormaDePagamento)}");
+        linhas.Add("");
+        linhas.Add("Itens:");
+        foreach (var item in d.Itens)
+        {
+            var quantidade = $"{Planejamento.Moeda.FormatarQuantidade(item.Quantidade)} {item.Unidade}";
+            linhas.Add(comValores
+                ? $"• {item.Descricao}: {quantidade} × R$ {Planejamento.Moeda.Formatar(item.PrecoUnitario)} = R$ {Planejamento.Moeda.Formatar(item.Total)}"
+                : $"• {item.Descricao}: {quantidade}");
+        }
+        if (comValores)
+            linhas.Add($"Total: R$ {Planejamento.Moeda.Formatar(d.Total)}");
+        if (d.Observacoes is { } obs)
+        {
+            linhas.Add("");
+            linhas.Add($"Observações: {obs}");
+        }
+        if (d.Verificacao.Count > 0)
+        {
+            linhas.Add("");
+            linhas.Add("Verificação: " + string.Join(" · ", d.Verificacao.Select(v => $"{(v.Feito ? "☑" : "☐")} {v.Texto}")));
+        }
+        return string.Join("\n", linhas);
+    }
+
     /// <summary>Emitida, aceita, em execução ou concluída: está na rua, esperando alguém.</summary>
     public static bool EmAndamento(SituacaoDaOrdem situacao) =>
         situacao is SituacaoDaOrdem.Emitida or SituacaoDaOrdem.Aceita or SituacaoDaOrdem.EmExecucao or SituacaoDaOrdem.Concluida;
@@ -245,7 +289,7 @@ public sealed record OrdemDeServico
     /// <summary>A OS como estava no arquivo (sem conferir o fluxo).</summary>
     /// <exception cref="DomainValidationException">Id vazio, número menor que 1 ou situação desconhecida.</exception>
     public static OrdemDeServico Restaurar(Guid id, int numero, DadosDaOrdem dados, SituacaoDaOrdem situacao, DateOnly? emissao, DateOnly? conclusao,
-        IEnumerable<EventoDaOrdem> historico)
+        IEnumerable<EventoDaOrdem> historico, bool noTelegram = false)
     {
         ArgumentNullException.ThrowIfNull(dados);
         if (id == Guid.Empty)
@@ -254,7 +298,7 @@ public sealed record OrdemDeServico
             throw new DomainValidationException(nameof(Numero), "O número da OS começa em 1.");
         if (!Enum.IsDefined(situacao))
             throw new DomainValidationException(nameof(Situacao), "Situação de OS desconhecida.");
-        return new OrdemDeServico(id, numero, dados, situacao, emissao, conclusao, [.. historico]);
+        return new OrdemDeServico(id, numero, dados, situacao, emissao, conclusao, [.. historico]) { NoTelegram = noTelegram };
     }
 
     public Guid Id { get; }
@@ -274,6 +318,28 @@ public sealed record OrdemDeServico
     public DateOnly? Conclusao { get; private init; }
 
     public IReadOnlyList<EventoDaOrdem> Historico { get; private init; }
+
+    /// <summary>Bloco 59: a OS foi mandada aos grupos da obra no Telegram (as mudanças seguintes vão junto).</summary>
+    public bool NoTelegram { get; private init; }
+
+    public OrdemDeServico MandadaAoTelegram() => this with { NoTelegram = true };
+
+    /// <summary>
+    /// Bloco 59: o passo que alguém deu pelo Telegram (aceitar, recusar, iniciar, concluir), com o nome da pessoa no histórico.
+    /// </summary>
+    /// <exception cref="DomainValidationException">A ação é desconhecida ou a situação de agora não deixa.</exception>
+    public OrdemDeServico PeloTelegram(string acao, DateTime quando, string autor, string? motivo = null)
+    {
+        var quem = $"{autor}, pelo Telegram";
+        return acao switch
+        {
+            "aceitar" => Aceitar(quando, quem),
+            "recusar" => Recusar(quando, motivo, quem),
+            "iniciar" => Iniciar(quando, quem),
+            "concluir" => Concluir(quando, quem),
+            _ => throw new DomainValidationException(nameof(acao), $"Ação desconhecida na {Codigo}: {acao}."),
+        };
+    }
 
     public decimal Total => Dados.Total;
 

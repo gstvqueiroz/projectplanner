@@ -1131,4 +1131,19 @@ public sealed class TelegramFalso : ITelegramDaConta
         foreach (var caixa in Caixas.Values)
             caixa.RemoveAll(i => i.Id == item);
     }
+
+    // ---- Bloco 59 ----
+
+    /// <summary>As OS publicadas, na ordem: o número, o título, o texto e a situação.</summary>
+    public List<(Guid Ordem, int Numero, string Titulo, string Texto, string Situacao)> Publicadas { get; } = [];
+
+    /// <summary>Em quantos grupos a obra está.</summary>
+    public int Grupos { get; set; } = 1;
+
+    public async Task<int> PublicarOrdemAsync(Guid projeto, Guid ordem, int numero, string titulo, string texto, string situacao, CancellationToken c)
+    {
+        await Passo($"publicar OS-{numero:000} {situacao}");
+        Publicadas.Add((ordem, numero, titulo, texto, situacao));
+        return Grupos;
+    }
 }

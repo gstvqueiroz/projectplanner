@@ -191,6 +191,43 @@ public sealed class GrupoDoTelegram
     public DateTime CriadoEm { get; set; }
 }
 
+/// <summary>
+/// Bloco 59: uma ordem de serviço publicada nos grupos da obra. O programa manda o texto e a situação; os botões do Telegram
+/// (aceitar, começar, terminar) mudam a situação aqui e deixam o aviso na caixa, para o programa aplicar.
+/// </summary>
+public sealed class OrdemNoTelegram
+{
+    public const string Emitida = "Emitida";
+    public const string Aceita = "Aceita";
+    public const string Recusada = "Recusada";
+    public const string EmExecucao = "EmExecucao";
+    public const string Concluida = "Concluida";
+
+    /// <summary>As situações que o programa manda (os nomes do SituacaoDaOrdem).</summary>
+    public static IReadOnlySet<string> Situacoes { get; } =
+        new HashSet<string> { "Rascunho", Emitida, Aceita, Recusada, EmExecucao, Concluida, "Conferida", "Paga", "Cancelada" };
+
+    /// <summary>O id da OS no programa.</summary>
+    public Guid Id { get; set; }
+    public Guid UsuarioId { get; set; }
+    public Guid ObraId { get; set; }
+    public int Numero { get; set; }
+    public string Titulo { get; set; } = "";
+
+    /// <summary>O corpo da mensagem (executante, datas, itens), montado pelo programa.</summary>
+    public string Texto { get; set; } = "";
+    public string Situacao { get; set; } = Emitida;
+
+    /// <summary>Quem mudou a situação pelo Telegram por último (nulo quando foi o programa).</summary>
+    public string? Autor { get; set; }
+
+    /// <summary>As mensagens da OS nos grupos, em JSON: [{"chat":-100500,"mensagem":42}].</summary>
+    public string Mensagens { get; set; } = "[]";
+    public DateTime AtualizadoEm { get; set; }
+
+    public string Codigo => $"OS-{Numero:000}";
+}
+
 /// <summary>Bloco 53: quem fala num grupo ligado, e o papel (o que pode fazer lá).</summary>
 public sealed class MembroDoGrupo
 {
@@ -232,6 +269,9 @@ public sealed class ItemDaCaixa
     public const string DeAtualizacoes = "atualizacoes";
     public const string DeFoto = "foto";
 
+    /// <summary>Bloco 59: um botão de OS tocado no Telegram (aceitar, iniciar, concluir) ou um /recusar; o Conteudo é o EventoDaOrdemNoTelegram.</summary>
+    public const string DeOrdem = "ordem";
+
     public Guid Id { get; set; }
     public Guid UsuarioId { get; set; }
     public Guid ObraId { get; set; }
@@ -268,6 +308,7 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
     public DbSet<GrupoDoTelegram> GruposDoTelegram => Set<GrupoDoTelegram>(); // Bloco 53
     public DbSet<FalhaDoServidor> FalhasDoServidor => Set<FalhaDoServidor>(); // 0.55.1
     public DbSet<MembroDoGrupo> MembrosDosGrupos => Set<MembroDoGrupo>();
+    public DbSet<OrdemNoTelegram> OrdensNoTelegram => Set<OrdemNoTelegram>(); // Bloco 59
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -346,6 +387,17 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
             g.Property(x => x.ChatId).ValueGeneratedNever();
             g.HasIndex(x => x.UsuarioId);
             g.Property(x => x.Titulo).HasMaxLength(200);
+        });
+        modelo.Entity<OrdemNoTelegram>(o =>
+        {
+            o.Property(x => x.Id).ValueGeneratedNever();
+            o.HasIndex(x => new { x.UsuarioId, x.ObraId });
+            o.Property(x => x.Titulo).HasMaxLength(200);
+            o.Property(x => x.Texto).HasMaxLength(3500);
+            o.Property(x => x.Situacao).HasMaxLength(20);
+            o.Property(x => x.Autor).HasMaxLength(120);
+            o.Property(x => x.Mensagens).HasMaxLength(2000);
+            o.Ignore(x => x.Codigo);
         });
         modelo.Entity<MembroDoGrupo>(m =>
         {

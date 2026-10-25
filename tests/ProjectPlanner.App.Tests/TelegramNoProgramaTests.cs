@@ -6,7 +6,7 @@ namespace ProjectPlanner.App.Tests;
 
 // Bloco 49: o Telegram no programa: marcar a obra (o retrato vai ao servidor e de novo a cada salvar), buscar o que chegou
 // (atualizações viram cartões; fotos vão para a importação) e a tela Conectar o Telegram.
-public sealed class TelegramNoProgramaTests : IDisposable
+public sealed partial class TelegramNoProgramaTests : IDisposable
 {
     private readonly Ambiente _ambiente = new();
     private readonly MainWindowViewModel _vm;

@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.59.0
+
+**Ordens de serviço no grupo do Telegram** (precisa da obra no Telegram e de um grupo da obra com o bot).
+
+- Na tela da OS, **Mandar ao grupo do Telegram** põe a OS emitida no grupo da obra: executante, datas, itens (com os preços
+  e o total, ou sem eles, desmarcando "com os valores") e os botões para a equipe: **Aceitar** e **Recusar**; depois
+  **Comecei** e **Terminei**. A mensagem se atualiza a cada passo, e as mudanças seguintes feitas no programa (conferir,
+  reprovar, cancelar) vão junto.
+- Quem é do campo ou da engenharia toca nos botões; quem só acompanha, não. Recusar pede o motivo:
+  `/recusar 14 o preço não cobre o material`. `/os` lista as OS abertas e `/os 14` manda uma de novo.
+- **Conta > Buscar do Telegram** traz os passos da equipe e aplica nas OS, com o nome de quem fez no histórico ("Aceita
+  (João, pelo Telegram)"). O que a OS não aceita mais (porque já mudou no programa) fica de lado. Entra no Desfazer.
+- Os botões não usam a IA (não gastam créditos).
+
 ## 0.58.0
 
 **Ordens de serviço** (Projeto > Ordens de serviço… e o botão novo da barra, no grupo Obra).

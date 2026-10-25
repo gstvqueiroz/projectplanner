@@ -85,6 +85,11 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
 
     public async Task AtenderAsync(JsonElement aviso, CancellationToken c)
     {
+        if (aviso.TryGetProperty("callback_query", out var consulta)) // Bloco 59: um botão de OS
+        {
+            await AtenderBotaoAsync(consulta, c);
+            return;
+        }
         if (!aviso.TryGetProperty("message", out var mensagem) || !mensagem.TryGetProperty("chat", out var chat)
             || !chat.TryGetProperty("id", out var idDoChat) || !idDoChat.TryGetInt64(out var chatId))
             return;

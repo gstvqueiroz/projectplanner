@@ -69,6 +69,12 @@
                 <StackPanel DockPanel.Dock="Top" Spacing="6">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                            <!-- Bloco 59 -->
+                            <CheckBox Content="com os valores" IsChecked="{Binding ValoresNoTelegram}" IsVisible="{Binding PodeMandarAoTelegram}"
+                                      ToolTip.Tip="A mensagem no grupo mostra os preços e o total (todos do grupo veem)" />
+                            <Button x:Name="MandarAoTelegram" Content="Mandar ao grupo do Telegram" Command="{Binding MandarAoTelegramCommand}"
+                                    IsVisible="{Binding PodeMandarAoTelegram}"
+                                    ToolTip.Tip="A OS vai ao grupo da obra com os botões Aceitar, Comecei e Terminei; as mudanças seguintes vão junto" />
                             <Button x:Name="SalvarPdf" Content="Salvar PDF…" Command="{Binding SalvarPdfCommand}" />
                             <Button x:Name="Imprimir" Content="Imprimir…" Command="{Binding ImprimirCommand}"
                                     ToolTip.Tip="Abre o PDF da OS no leitor do sistema, para imprimir e assinar" />

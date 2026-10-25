@@ -10,6 +10,9 @@ namespace ProjectPlanner.Servidor.Rotas;
 
 public sealed record PedidoDeObra(string? Nome, JsonElement Retrato);
 
+/// <summary>Bloco 59: uma OS para os grupos da obra: o número, o título, o corpo da mensagem e a situação (o nome do SituacaoDaOrdem).</summary>
+public sealed record PedidoDeOrdem(int Numero, string? Titulo, string? Texto, string? Situacao);
+
 /// <summary>
 /// Bloco 49: o Telegram. O webhook recebe as mensagens (conferindo o segredo) e as põe na fila do atendente; o programa marca
 /// as obras (com o retrato), liga o Telegram com um código e leva o que chegou na caixa de entrada.
@@ -34,6 +37,7 @@ public static class Telegram
         conta.MapGet("/obras/{projeto:guid}/caixa", Caixa);
         conta.MapGet("/caixa/{id:guid}/foto", Foto);
         conta.MapDelete("/caixa/{id:guid}", Levar);
+        conta.MapPut("/obras/{projeto:guid}/ordens/{id:guid}", PublicarOrdem); // Bloco 59
     }
 
     /// <summary>O aviso do Telegram: confere o segredo e responde na hora; o atendimento é na fila.</summary>
@@ -159,6 +163,7 @@ public static class Telegram
         if (await banco.Obras.FirstOrDefaultAsync(o => o.UsuarioId == usuario!.Id && o.Projeto == projeto) is { } obra)
         {
             await banco.CaixaDeEntrada.Where(i => i.ObraId == obra.Id).ExecuteDeleteAsync();
+            await banco.OrdensNoTelegram.Where(o => o.ObraId == obra.Id).ExecuteDeleteAsync();
             await banco.VinculosDoTelegram.Where(v => v.ObraAtiva == obra.Id).ExecuteUpdateAsync(v => v.SetProperty(x => x.ObraAtiva, (Guid?)null));
             banco.Obras.Remove(obra);
             await banco.SaveChangesAsync();
@@ -179,9 +184,46 @@ public static class Telegram
         return Results.Ok(itens.Select(i => new
         {
             id = i.Id, tipo = i.Tipo, criadoEm = i.CriadoEm, texto = i.Texto, nomeDaFoto = i.NomeDaFoto,
-            atualizacoes = i.Conteudo is null ? (JsonElement?)null : JsonDocument.Parse(i.Conteudo).RootElement.Clone(),
+            atualizacoes = i.Conteudo is null || i.Tipo == ItemDaCaixa.DeOrdem ? (JsonElement?)null : JsonDocument.Parse(i.Conteudo).RootElement.Clone(),
+            ordem = i.Conteudo is null || i.Tipo != ItemDaCaixa.DeOrdem ? (JsonElement?)null : JsonDocument.Parse(i.Conteudo).RootElement.Clone(),
             tarefas = i.Tarefas is null ? (JsonElement?)null : JsonDocument.Parse(i.Tarefas).RootElement.Clone(),
         }));
+    }
+
+    /// <summary>
+    /// Bloco 59: põe a OS (ou a versão nova dela) nos grupos da obra, com os botões da situação; responde em quantos grupos
+    /// ela está (zero: a obra ainda não tem grupo).
+    /// </summary>
+    private static async Task<IResult> PublicarOrdem(Guid projeto, Guid id, PedidoDeOrdem? pedido, ClaimsPrincipal quem, BancoDoServidor banco,
+        AtendenteDoTelegram atendente, TimeProvider relogio, IOptions<OpcoesDoServidor> opcoes, CancellationToken c)
+    {
+        var (usuario, falha) = await Conta(quem, banco, soProfissional: true);
+        if (falha is not null)
+            return falha;
+        if (!opcoes.Value.Telegram.Ligado)
+            return Contas.Falha(503, "O Telegram ainda não está configurado no servidor.");
+        var titulo = pedido?.Titulo?.Trim() ?? "";
+        var texto = pedido?.Texto?.Trim() ?? "";
+        if (pedido is null || pedido.Numero < 1 || titulo.Length == 0 || pedido.Situacao is not { } situacao || !OrdemNoTelegram.Situacoes.Contains(situacao))
+            return Contas.Falha(400, "Pedido incompleto: falta o número, o título ou a situação da OS.");
+        if (await banco.Obras.FirstOrDefaultAsync(o => o.UsuarioId == usuario!.Id && o.Projeto == projeto, c) is not { } obra)
+            return Contas.Falha(404, "A obra não está no Telegram: marque Conta > Usar esta obra no Telegram.");
+        var ordem = await banco.OrdensNoTelegram.FindAsync([id], c);
+        if (ordem is not null && (ordem.UsuarioId != usuario!.Id || ordem.ObraId != obra.Id))
+            return Contas.Falha(409, "Essa OS é de outra obra.");
+        if (ordem is null)
+        {
+            ordem = new OrdemNoTelegram { Id = id, UsuarioId = usuario!.Id, ObraId = obra.Id };
+            banco.OrdensNoTelegram.Add(ordem);
+        }
+        // A situação do programa vale; quem mudou pelo Telegram continua aparecendo enquanto ela não muda.
+        if (ordem.Situacao != situacao)
+            ordem.Autor = null;
+        (ordem.Numero, ordem.Titulo, ordem.Texto, ordem.Situacao, ordem.AtualizadoEm) =
+            (pedido.Numero, titulo.Length > 200 ? titulo[..200] : titulo, texto.Length > 3500 ? texto[..3500] : texto, situacao, relogio.GetUtcNow().UtcDateTime);
+        var grupos = await atendente.PublicarAsync(ordem, c);
+        await banco.SaveChangesAsync(c);
+        return Results.Ok(new { grupos });
     }
 
     private static async Task<IResult> Foto(Guid id, ClaimsPrincipal quem, BancoDoServidor banco)

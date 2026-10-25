@@ -88,6 +88,36 @@ public sealed class TelegramDeTeste : IClienteDoTelegram
     }
 
     public string Ultima => Mensagens.Last().Texto;
+
+    // ---- Bloco 59: mensagens com botões ----
+
+    private long _proximaMensagem = 1000;
+
+    /// <summary>As mensagens com botões mandadas: o chat, o id que o Telegram deu, o texto e os botões.</summary>
+    public ConcurrentQueue<(long Chat, long Id, string Texto, IReadOnlyList<BotaoDoTelegram> Botoes)> ComBotoes { get; } = new();
+
+    public ConcurrentQueue<(long Chat, long Mensagem, string Texto, IReadOnlyList<BotaoDoTelegram> Botoes)> Edicoes { get; } = new();
+
+    public ConcurrentQueue<(string Consulta, string Texto)> RespostasAosBotoes { get; } = new();
+
+    public Task<long?> EnviarComBotoesAsync(long chat, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c)
+    {
+        var id = Interlocked.Increment(ref _proximaMensagem);
+        ComBotoes.Enqueue((chat, id, texto, botoes));
+        return Task.FromResult<long?>(id);
+    }
+
+    public Task EditarAsync(long chat, long mensagem, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c)
+    {
+        Edicoes.Enqueue((chat, mensagem, texto, botoes));
+        return Task.CompletedTask;
+    }
+
+    public Task ResponderAoBotaoAsync(string consulta, string texto, CancellationToken c)
+    {
+        RespostasAosBotoes.Enqueue((consulta, texto));
+        return Task.CompletedTask;
+    }
 }
 
 public sealed record PedidoAoGemini(HttpMethod Metodo, Uri Endereco, string? Chave, bool TemAuthorization, string Corpo);

@@ -11,7 +11,7 @@ namespace ProjectPlanner.Servidor.Tests;
 
 // Bloco 53: um grupo do Telegram por obra: o dono liga com /obra, a equipe ganha papéis, a conversa do grupo não gasta nada
 // e o bot só age em fotos, #atualizacao, menções e respostas a ele. Os créditos são do dono.
-public sealed class GruposDoTelegramTests : IDisposable
+public sealed partial class GruposDoTelegramTests : IDisposable
 {
     private const long Dono = 777_001; // o chat privado do dono (no Telegram, o id do chat privado é o id da pessoa)
     private const long Grupo = -100_500;
@@ -21,6 +21,7 @@ public sealed class GruposDoTelegramTests : IDisposable
     private static readonly Guid Projeto = Guid.Parse("11111111-2222-3333-4444-555555555555");
 
     private readonly Servidor _s = new();
+    private string _acesso = "";
 
     public void Dispose() => _s.Dispose();
 
@@ -43,6 +44,7 @@ public sealed class GruposDoTelegramTests : IDisposable
     private async Task Preparar(string plano = Planos.Profissional)
     {
         var sessao = await _s.CriarConta();
+        _acesso = sessao.Acesso;
         await AdminTests.TrocarPlano(_s, "ana@exemplo.com", plano, Servidor.ChaveDeAdmin);
         var marcar = new HttpRequestMessage(HttpMethod.Put, $"/v1/obras/{Projeto}") { Content = JsonContent.Create(new { nome = "Casa da Ana", retrato = Retrato() }, options: AtendenteDoTelegram.Json) };
         marcar.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessao.Acesso);

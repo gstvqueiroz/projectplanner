@@ -93,13 +93,21 @@ public sealed record ObraNoTelegram(Guid Projeto, string Nome, DateTime Atualiza
 /// <summary>Bloco 49: uma tarefa do retrato do momento em que a mensagem chegou (o Nº que a IA usou e o id).</summary>
 public sealed record TarefaDoTelegram(int Numero, Guid Id);
 
-/// <summary>Bloco 49: o que chegou pelo Telegram: atualizações (para o cartão) ou uma foto.</summary>
+/// <summary>Bloco 59: alguém mexeu numa OS pelo Telegram.</summary>
+/// <param name="Acao">aceitar, recusar, iniciar ou concluir.</param>
+public sealed record EventoDeOrdemDoTelegram(Guid Ordem, string Acao, string Autor, DateTime Quando, string? Motivo);
+
+/// <summary>Bloco 49: o que chegou pelo Telegram: atualizações (para o cartão), uma foto ou (Bloco 59) um passo de uma OS.</summary>
 public sealed record ItemDoTelegram(Guid Id, string Tipo, DateTime CriadoEm, string Texto, string? NomeDaFoto,
-    IReadOnlyList<AtualizacaoDaObra>? Atualizacoes, IReadOnlyList<TarefaDoTelegram>? Tarefas)
+    IReadOnlyList<AtualizacaoDaObra>? Atualizacoes, IReadOnlyList<TarefaDoTelegram>? Tarefas, EventoDeOrdemDoTelegram? Ordem = null)
 {
     public const string DeAtualizacoes = "atualizacoes";
     public const string DeFoto = "foto";
+    public const string DeOrdem = "ordem";
 }
+
+/// <summary>Bloco 59: em quantos grupos da obra a OS está.</summary>
+public sealed record OrdemPublicada(int Grupos);
 
 /// <summary>Bloco 49: se o servidor tem o Telegram e se esta conta está ligada a um chat.</summary>
 public sealed record SituacaoDoTelegram(bool Disponivel, bool Ligado, string? Nome, string? Bot);
@@ -224,6 +232,11 @@ public sealed class ClienteDaConta
             throw new ErroDaContaException(LerErro(await resposta.Content.ReadAsStringAsync(c)) ?? "Não deu para baixar a foto do Telegram.", (int)resposta.StatusCode);
         return await resposta.Content.ReadAsByteArrayAsync(c);
     }
+
+    /// <summary>Bloco 59: põe a OS (ou a versão nova dela) nos grupos da obra; a situação é o nome do SituacaoDaOrdem.</summary>
+    public Task<OrdemPublicada> PublicarOrdemAsync(string acesso, Guid projeto, Guid ordem, int numero, string titulo, string texto, string situacao,
+        CancellationToken c) =>
+        PedirAsync<OrdemPublicada>(HttpMethod.Put, $"v1/obras/{projeto}/ordens/{ordem}", new { numero, titulo, texto, situacao }, acesso, c);
 
     /// <summary>O programa levou o item: ele some do servidor.</summary>
     public async Task LevarDaCaixaAsync(string acesso, Guid item, CancellationToken c) =>

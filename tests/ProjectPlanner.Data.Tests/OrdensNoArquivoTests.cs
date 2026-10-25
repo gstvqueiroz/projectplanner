@@ -20,7 +20,7 @@ public sealed class OrdensNoArquivoTests : TesteComArquivo
             [new ItemDaOrdem(a.Id, "Alvenaria de blocos", "m²", 120.5m, 32.1m), new ItemDaOrdem(null, "Andaime", "vb", 1, 300)],
             new DateOnly(2026, 9, 28), new DateOnly(2026, 10, 2), FormaDePagamentoDaOrdem.PorMedicao, "Usar EPI.\nMaterial da obra.",
             [new ItemDeVerificacao("Prumo conferido"), new ItemDeVerificacao("Limpeza")]);
-        var os = OrdemDeServico.Nova(Guid.NewGuid(), 1, dados, agora).Emitir(agora).Aceitar(agora.AddHours(1), "João").MarcarVerificacao(1, true);
+        var os = OrdemDeServico.Nova(Guid.NewGuid(), 1, dados, agora).Emitir(agora).Aceitar(agora.AddHours(1), "João").MarcarVerificacao(1, true).MandadaAoTelegram();
         c.OrdensDeServico.Adicionar(os);
         c.OrdensDeServico.Adicionar(OrdemDeServico.Nova(Guid.NewGuid(), 2, new DadosDaOrdem("Pintura", TipoDeExecutante.EquipePropria, null, null, null,
             null, null, null, null, FormaDePagamentoDaOrdem.Diaria, null, null), agora));
@@ -34,6 +34,7 @@ public sealed class OrdensNoArquivoTests : TesteComArquivo
         lida.Dados.Should().BeEquivalentTo(os.Dados);
         lida.Historico.Should().Equal(os.Historico);
         aberta[1].Dados.Executante.Should().BeNull();
+        (lida.NoTelegram, aberta[1].NoTelegram).Should().Be((true, false));
     }
 
     [Theory]

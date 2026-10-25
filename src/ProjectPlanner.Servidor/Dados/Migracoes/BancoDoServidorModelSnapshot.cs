@@ -308,6 +308,54 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.ToTable("Obras");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.OrdemNoTelegram", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Autor")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Mensagens")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ObraId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(3500)
+                        .HasColumnType("character varying(3500)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "ObraId");
+
+                    b.ToTable("OrdensNoTelegram");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.Pagamento", b =>
                 {
                     b.Property<string>("Id")

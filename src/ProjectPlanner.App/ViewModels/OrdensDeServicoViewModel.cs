@@ -120,6 +120,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
     private readonly Action<string, bool> _mudou;
+    private readonly Func<OrdemDeServico, bool, Task<int>>? _publicar;
     private readonly IReadOnlyDictionary<Guid, string> _nomes;
     private readonly IReadOnlyDictionary<Guid, string> _edt;
     private bool _carregando;
@@ -127,9 +128,14 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
 
     /// <param name="mudou">As OS mudaram, com o nome da mudança para o Desfazer e se as tarefas mudaram (para recalcular).</param>
     /// <param name="tarefaSelecionada">A tarefa selecionada na grid: a OS nova começa com ela.</param>
+    /// <param name="publicar">
+    /// Bloco 59: põe a OS nos grupos da obra no Telegram (com os valores ou não) e diz em quantos; nulo quando a obra não está no
+    /// Telegram.
+    /// </param>
     public OrdensDeServicoViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio, Action<string, bool> mudou,
-        Guid? tarefaSelecionada = null)
+        Guid? tarefaSelecionada = null, Func<OrdemDeServico, bool, Task<int>>? publicar = null)
     {
+        _publicar = publicar;
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(dialogos);
         ArgumentNullException.ThrowIfNull(relogio);
@@ -602,14 +608,23 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     public bool PodeVoltarARascunho => Ordem?.PodeIrPara(SituacaoDaOrdem.Rascunho) == true;
     public bool PodeCancelar => Ordem?.PodeIrPara(SituacaoDaOrdem.Cancelada) == true;
 
+    /// <summary>Bloco 59: a obra está no Telegram (o botão de mandar aparece).</summary>
+    public bool TemTelegram => _publicar is not null;
+
+    /// <summary>Bloco 59: só a OS que já saiu do rascunho vai para o grupo.</summary>
+    public bool PodeMandarAoTelegram => TemTelegram && Ordem is { } o && TextosDaOrdem.EmAndamento(o.Situacao);
+
+    /// <summary>Bloco 59: a mensagem no grupo mostra os preços e o total (a equipe toda vê).</summary>
+    [ObservableProperty] public partial bool ValoresNoTelegram { get; set; } = true;
+
     private void AtualizarBotoes()
     {
         foreach (var nome in new[] { nameof(PodeEmitir), nameof(PodeAceitar), nameof(PodeIniciar), nameof(PodeConcluir), nameof(PodeConferir),
-                     nameof(PodeVoltarARascunho), nameof(PodeCancelar) })
+                     nameof(PodeVoltarARascunho), nameof(PodeCancelar), nameof(PodeMandarAoTelegram) })
             OnPropertyChanged(nome);
         foreach (var comando in new IRelayCommand[] { SalvarCommand, TrazerItensDasTarefasCommand, AdicionarItemCommand, AdicionarVerificacaoCommand,
                      ExcluirRascunhoCommand, EmitirCommand, AceitarCommand, RecusarCommand, IniciarCommand, ConcluirCommand, ConferirCommand,
-                     ReprovarCommand, VoltarARascunhoCommand, CancelarCommand, SalvarPdfCommand, ImprimirCommand })
+                     ReprovarCommand, VoltarARascunhoCommand, CancelarCommand, SalvarPdfCommand, ImprimirCommand, MandarAoTelegramCommand })
             comando.NotifyCanExecuteChanged();
     }
 
@@ -630,7 +645,52 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         _mudou(descricao, tarefasMudaram);
         Atualizar();
         Mensagem = mensagem;
+        if (nova.NoTelegram && _publicar is not null)
+            _ = AtualizarNoTelegramAsync(nova);
         return true;
+    }
+
+    // Bloco 59: a OS que já está no grupo acompanha cada passo dado no programa (sem atrapalhar se o servidor não responder).
+    private async Task AtualizarNoTelegramAsync(OrdemDeServico ordem)
+    {
+        try
+        {
+            await _publicar!(ordem, ValoresNoTelegram);
+        }
+        catch (IA.Conta.ErroDaContaException ex)
+        {
+            Mensagem += $" A mensagem no Telegram não foi atualizada agora ({ex.Message})";
+        }
+    }
+
+    /// <summary>Bloco 59: manda a OS (ou a versão de agora) aos grupos da obra, com os botões para a equipe.</summary>
+    [RelayCommand(CanExecute = nameof(PodeMandarAoTelegram))]
+    private async Task MandarAoTelegram()
+    {
+        var o = Ordem!;
+        int grupos;
+        try
+        {
+            grupos = await _publicar!(o, ValoresNoTelegram);
+        }
+        catch (IA.Conta.ErroDaContaException ex)
+        {
+            Mensagem = $"Não deu para mandar a {o.Codigo} ao Telegram: {ex.Message}";
+            return;
+        }
+        if (grupos == 0)
+        {
+            Mensagem = "A obra ainda não tem um grupo no Telegram: crie um grupo com a equipe, ponha o bot nele e mande /obra lá. Depois, mande a OS de novo.";
+            return;
+        }
+        if (!o.NoTelegram)
+        {
+            _cronograma.OrdensDeServico.Substituir(o.MandadaAoTelegram());
+            _mudou($"Mandar a {o.Codigo} ao Telegram", false);
+            Atualizar();
+        }
+        Mensagem = $"{o.Codigo} mandada {(grupos == 1 ? "ao grupo" : $"aos {grupos} grupos")} da obra no Telegram: a equipe aceita, começa e termina pelos botões, " +
+                   "e você traz em Conta > Buscar do Telegram. As próximas mudanças vão junto.";
     }
 
     [RelayCommand(CanExecute = nameof(PodeEmitir))]

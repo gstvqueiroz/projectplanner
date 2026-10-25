@@ -348,6 +348,21 @@ Por padrão, um bot em grupo só recebe comandos e respostas a ele: **não vê a
 
 O servidor recebe então as mensagens do grupo, mas descarta na hora as que não são para o bot (não guarda nem manda à IA).
 
+## Bloco 59 (0.59.0): ordens de serviço nos grupos
+
+- **Publicar:** `PUT /v1/obras/{projeto}/ordens/{id}` (conta Profissional) com `{numero, titulo, texto, situacao}`. O texto é
+  o corpo montado pelo programa (executante, datas, itens, com ou sem os valores); a situação é o nome do `SituacaoDaOrdem`.
+  O servidor guarda em `OrdensNoTelegram` e põe (ou edita) a mensagem em cada grupo da obra, com os botões da situação:
+  emitida, **Aceitar** e **Recusar**; aceita, **Comecei** e **Terminei**; em execução, **Terminei**. Responde `{grupos}`
+  (zero: a obra ainda não tem grupo). Uma OS que já terminou só edita as mensagens que existem.
+- **Botões:** o toque chega como `callback_query` (o webhook agora pede `message` e `callback_query`; ele é registrado de
+  novo a cada início do servidor). Quem é do campo ou da engenharia muda a situação; quem só acompanha, não. A mensagem é
+  editada na hora, o grupo recebe um aviso curto e o passo vai para a caixa (tipo `ordem`, campo `ordem` em
+  `GET /v1/obras/{projeto}/caixa`). O programa aplica na OS ao buscar do Telegram. Nada disso usa a IA.
+- **Comandos no grupo:** `/os` lista as OS abertas; `/os 14` manda a OS de novo (com os botões); `/recusar 14 e o motivo`
+  recusa (o botão Recusar só explica o comando, porque a recusa leva o motivo).
+- Tirar a obra do Telegram apaga também as OS dela no servidor.
+
 ## Bloco 51 (0.52.0, feito): o nível Automático
 
 Decisões do usuário: o Automático vira o padrão para todos (quem escolheu de propósito um nível forte continua nele) e

@@ -132,7 +132,9 @@
             <TabItem Header="Bases">
                 <DockPanel Margin="0,8,0,0">
                     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
-                        <TextBlock Classes="secao" Text="Importar uma planilha de preços" />
+                        <TextBlock Classes="secao" Text="Baixar a SINAPI ou importar uma planilha de preços" />
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                                   Text="Baixar da Caixa: o programa busca a SINAPI mais recente no site da Caixa (uns 16 MB) e monta a base do estado (UF) e da desoneração escolhidos, com os insumos e as composições." />
                         <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
                                    Text="A planilha de insumos (código, descrição, unidade, preço) e a de composições analíticas (código da composição, tipo e código do item, coeficiente) vão para a mesma base: importe as duas. A UF, a referência e a desoneração vêm do nome do arquivo quando ele as traz (por exemplo SINAPI_Custo_Ref_Insumos_SP_202609_Desonerado.xlsx). Só a primeira aba de um .xlsx é lida." />
                         <WrapPanel ItemSpacing="8" LineSpacing="6">
@@ -143,7 +145,9 @@
                             <TextBlock Text="Referência" VerticalAlignment="Center" Margin="8,0,0,0" />
                             <TextBox x:Name="Referencia" Text="{Binding Referencia}" Width="90" PlaceholderText="09/2026" />
                             <ComboBox x:Name="Desoneracao" ItemsSource="{Binding OpcoesDeDesoneracao}" SelectedItem="{Binding DesoneradoEscolhido}" Margin="8,0,0,0" />
-                            <Button x:Name="Importar" Classes="accent" Content="Importar planilha…" Command="{Binding ImportarPlanilhaCommand}" Margin="8,0,0,0" />
+                            <Button x:Name="BaixarSinapi" Classes="accent" Content="Baixar da Caixa" Command="{Binding BaixarSinapiCommand}" Margin="8,0,0,0"
+                                    ToolTip.Tip="Baixa a SINAPI mais recente do site da Caixa para a UF e a desoneração escolhidas" />
+                            <Button x:Name="Importar" Content="Importar planilha…" Command="{Binding ImportarPlanilhaCommand}" />
                         </WrapPanel>
                     </StackPanel>
                     <WrapPanel DockPanel.Dock="Bottom" ItemSpacing="8" Margin="0,8,0,0">

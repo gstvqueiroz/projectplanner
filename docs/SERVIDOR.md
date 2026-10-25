@@ -501,7 +501,7 @@ o servidor acordar.
 ## Depois
 
 - Sincronização e backup dos projetos na nuvem.
-- O SINAPI atualizado pelo servidor (o Bloco 40 continua esperando o arquivo ou a permissão para baixar).
+- O SINAPI: feito no Bloco 40 (0.55.0) pelo próprio programa, que baixa do site da Caixa (sem passar pelo servidor).
 - Relatórios automáticos.
 
 ## O que depende do usuário

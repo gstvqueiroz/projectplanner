@@ -62,14 +62,18 @@ public sealed partial class OrcamentoViewModel : ViewModelBase
     private readonly TimeProvider _relogio;
     private readonly Action<string> _mudou;
     private readonly Dictionary<string, TabelaDeReferencia> _carregadas = [];
+    private readonly ISinapiDaCaixa _sinapi;
+    private CancellationTokenSource? _download;
     private bool _carregando;
 
     /// <param name="mudou">Uma mudança no projeto, com o nome para o Desfazer.</param>
     /// <param name="consultor">Bloco 38: a IA das sugestões; sem ela, a aba avisa que é preciso configurar o assistente.</param>
+    /// <param name="sinapi">Bloco 40: a SINAPI no site da Caixa; sem ela, a de verdade.</param>
     public OrcamentoViewModel(Cronograma cronograma, IDialogosService dialogos, IBibliotecaDeReferencias biblioteca, TimeProvider relogio, Action<string> mudou,
-        IA.IConsultorDeOrcamento? consultor = null)
+        IA.IConsultorDeOrcamento? consultor = null, ISinapiDaCaixa? sinapi = null)
     {
         _consultor = consultor ?? new IA.ConsultorIndisponivel();
+        _sinapi = sinapi ?? SinapiDaCaixa.Padrao;
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(dialogos);
         ArgumentNullException.ThrowIfNull(biblioteca);
@@ -382,6 +386,77 @@ public sealed partial class OrcamentoViewModel : ViewModelBase
     /// Importa uma planilha (a de insumos ou a de composições analíticas) para a base dos campos Fonte, UF, Referência e
     /// Desoneração (preenchidos pelo nome do arquivo quando ele os traz); a mesma base pode receber as duas planilhas.
     /// </summary>
+    /// <summary>
+    /// Bloco 40: baixa a SINAPI mais recente do site da Caixa e monta a base do estado e do regime escolhidos (UF e
+    /// desoneração), com os insumos e as composições. Uns 16 MB; a base fica na biblioteca, como uma importada.
+    /// </summary>
+    [RelayCommand]
+    private async Task BaixarSinapi()
+    {
+        var uf = Uf.Trim().ToUpperInvariant();
+        if (!BaseDeReferencia.Ufs.Contains(uf))
+        {
+            Mensagem = "Informe a UF do estado da obra (por exemplo, SP) e clique de novo.";
+            return;
+        }
+        var pasta = Path.Combine(Path.GetTempPath(), "projectplanner-sinapi-" + Guid.NewGuid().ToString("N"));
+        using var cancelamento = _download = new CancellationTokenSource();
+        Ocupado = true;
+        try
+        {
+            Mensagem = "Procurando a SINAPI mais recente no site da Caixa…";
+            if (await _sinapi.ProcurarAsync(DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), cancelamento.Token) is not { } arquivo)
+            {
+                Mensagem = "Não achei a SINAPI dos últimos meses no site da Caixa. Tente mais tarde, ou baixe e importe a planilha.";
+                return;
+            }
+            Mensagem = $"Baixando {arquivo.Nome} da Caixa (cerca de 16 MB)…";
+            var planilha = await _sinapi.BaixarAsync(arquivo, pasta, cancelamento.Token);
+            var @base = new BaseDeReferencia("SINAPI", uf, arquivo.Referencia, DesoneradoEscolhido.Valor);
+            Mensagem = $"Montando a base {@base.Descricao}…";
+            var (tabela, avisos) = await Task.Run(() => ImportacaoDoSinapi.Importar(planilha, @base), cancelamento.Token);
+            await Task.Run(() => _biblioteca.Salvar(tabela), cancelamento.Token);
+            _carregadas[@base.Chave] = tabela;
+            _carregando = true;
+            (Fonte, Uf, Referencia) = ("SINAPI", uf, arquivo.Referencia);
+            _carregando = false;
+            AtualizarBases();
+            BaseEscolhida = Bases.First(b => b.Valor.Chave == @base.Chave);
+            Mensagem = $"{@base.Descricao}: {tabela.Insumos.Count.ToString("#,##0", Brasil)} insumos e {tabela.Composicoes.Count.ToString("#,##0", Brasil)} " +
+                       "composições, baixados da Caixa. As composições que a própria SINAPI marca sem custo (um insumo sem preço) não entram nas sugestões." +
+                       (avisos switch { 0 => "", 1 => " 1 linha da planilha foi pulada.", _ => $" {avisos} linhas da planilha foram puladas." });
+        }
+        catch (OperationCanceledException)
+        {
+            Mensagem = "Download cancelado.";
+        }
+        catch (HttpRequestException)
+        {
+            Mensagem = "Sem conexão com o site da Caixa. Verifique a internet e tente de novo.";
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or DomainValidationException)
+        {
+            Mensagem = $"Não foi possível montar a base: {ex.Message}";
+        }
+        finally
+        {
+            _download = null;
+            Ocupado = false;
+            try
+            {
+                if (Directory.Exists(pasta))
+                    Directory.Delete(pasta, recursive: true);
+            }
+            catch (IOException)
+            {
+                // a pasta temporária some sozinha depois
+            }
+        }
+    }
+
+    /// <summary>Bloco 40: a janela fechou durante o download: ele para.</summary>
+    public void CancelarDownload() => _download?.Cancel();
+
     [RelayCommand]
     private async Task ImportarPlanilha()
     {

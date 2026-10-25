@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
@@ -90,28 +91,60 @@ public static class LeitorDePlanilha
 
     // ---- Excel ----
 
-    private static IReadOnlyList<IReadOnlyList<string>> LerExcel(string caminho)
+    /// <summary>
+    /// Bloco 40: uma aba de uma planilha do Excel pelo nome (sem diferença de acentos e maiúsculas: "Analítico" ou "analitico").
+    /// Lida em fluxo, sem montar a planilha inteira na memória (a de referência da SINAPI tem centenas de milhares de linhas).
+    /// </summary>
+    /// <exception cref="InvalidDataException">O arquivo não é uma planilha do Excel, ou não tem a aba.</exception>
+    /// <exception cref="IOException">Não deu para abrir o arquivo.</exception>
+    public static IReadOnlyList<IReadOnlyList<string>> LerAba(string caminho, string aba)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(caminho);
+        ArgumentException.ThrowIfNullOrWhiteSpace(aba);
+        return LerExcel(caminho, aba);
+    }
+
+    private static IReadOnlyList<IReadOnlyList<string>> LerExcel(string caminho, string? nomeDaAba = null)
     {
         try
         {
             using var documento = SpreadsheetDocument.Open(caminho, isEditable: false);
             var livro = documento.WorkbookPart ?? throw new InvalidDataException("A planilha está vazia.");
-            var aba = livro.Workbook.Sheets?.Elements<Sheet>().FirstOrDefault() ?? throw new InvalidDataException("A planilha não tem abas.");
+            var abas = livro.Workbook.Sheets?.Elements<Sheet>().ToList() ?? [];
+            var aba = (nomeDaAba is null ? abas.FirstOrDefault() : abas.FirstOrDefault(a => MesmoNome(a.Name?.Value, nomeDaAba)))
+                      ?? throw new InvalidDataException(nomeDaAba is null ? "A planilha não tem abas." : $"A planilha não tem a aba {nomeDaAba}.");
             var parte = (WorksheetPart)livro.GetPartById(aba.Id!.Value!);
             var textos = livro.SharedStringTablePart?.SharedStringTable.Elements<SharedStringItem>().Select(s => s.InnerText).ToList() ?? [];
             var linhas = new List<IReadOnlyList<string>>();
-            foreach (var linha in parte.Worksheet.Descendants<Row>())
+            List<string>? campos = null;
+            using var leitor = OpenXmlReader.Create(parte);
+            while (leitor.Read())
             {
-                var campos = new List<string>();
-                foreach (var celula in linha.Elements<Cell>())
+                if (leitor.ElementType == typeof(Row))
                 {
+                    if (leitor.IsStartElement)
+                    {
+                        if (campos is not null)
+                            linhas.Add(campos); // uma linha vazia (<row/>) não tem o fim separado
+                        campos = [];
+                    }
+                    else if (campos is not null)
+                    {
+                        linhas.Add(campos);
+                        campos = null;
+                    }
+                }
+                else if (leitor.ElementType == typeof(Cell) && leitor.IsStartElement && campos is not null)
+                {
+                    var celula = (Cell)leitor.LoadCurrentElement()!;
                     var coluna = Coluna(celula.CellReference?.Value);
                     while (coluna >= 0 && campos.Count < coluna)
                         campos.Add("");
                     campos.Add(Texto(celula, textos));
                 }
-                linhas.Add(campos);
             }
+            if (campos is not null)
+                linhas.Add(campos);
             return linhas;
         }
         catch (Exception ex) when (ex is OpenXmlPackageException or FileFormatException or InvalidOperationException
@@ -132,6 +165,9 @@ public static class LeitorDePlanilha
             return numero.ToString("0.##########", CultureInfo.GetCultureInfo("pt-BR"));
         return valor;
     }
+
+    private static bool MesmoNome(string? a, string b) =>
+        string.Compare(a?.Trim(), b.Trim(), CultureInfo.InvariantCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) == 0;
 
     // "C7" → 2 (a coluna, a partir de 0); sem referência, -1.
     private static int Coluna(string? referencia)

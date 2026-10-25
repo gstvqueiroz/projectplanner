@@ -13,8 +13,11 @@ public sealed partial class MainWindowViewModel
     private OrcamentoViewModel NovoOrcamento()
     {
         Recalcular(); // o uso dos recursos e as durações vêm das datas calculadas
-        return new OrcamentoViewModel(_cronograma, _dialogos, _biblioteca, _relogio, descricao => MarcarAlteracao(descricao), _consultor);
+        return new OrcamentoViewModel(_cronograma, _dialogos, _biblioteca, _relogio, descricao => MarcarAlteracao(descricao), _consultor, SinapiDaCaixa);
     }
+
+    /// <summary>Bloco 40: de onde a SINAPI é baixada (os testes trocam por uma de mentira).</summary>
+    internal ISinapiDaCaixa SinapiDaCaixa { get; set; } = Services.SinapiDaCaixa.Padrao;
 
     [RelayCommand]
     private Task Orcamento() => _dialogos.MostrarOrcamentoAsync(NovoOrcamento());

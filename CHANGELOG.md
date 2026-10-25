@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.55.0
+
+**A SINAPI direto da Caixa** (Bloco 40).
+
+- Em Projeto > Orçamento, aba Bases: escolha a **UF** e a **desoneração** e clique em **Baixar da Caixa**. O programa
+  procura a SINAPI mais recente no site da Caixa (hoje, setembro de 2026), baixa o arquivo (uns 16 MB) e monta a base
+  do estado com os **insumos e as composições** (em São Paulo, cerca de 4.900 insumos e 10.600 composições). Não precisa
+  mais baixar e importar planilha por planilha.
+- Conferido com o arquivo real de 09/2026: todas as composições com custo abrem, e o custo calculado bate com o da Caixa
+  (em 883 de 8.444, diferença de centavos de arredondamento). As que a própria SINAPI marca "sem custo" ficam fora das
+  sugestões.
+- Com a base baixada, as sugestões de orçamento da IA (e o botão "Estimar orçamento e recursos desta obra") usam as
+  composições reais, e aplicar o orçamento cria a mão de obra e os equipamentos de cada tarefa.
+
 ## 0.54.0
 
 **A obra completa: cronograma, orçamento e recursos** (Bloco 54).

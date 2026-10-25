@@ -31,8 +31,12 @@ public sealed record ResultadoDaImportacaoDeReferencia(IReadOnlyList<Insumo> Ins
 /// </summary>
 public static class ImportacaoDeReferencia
 {
+    /// <param name="uf">
+    /// Bloco 40: o estado ("SP") quando a planilha de insumos traz um preço por estado, em colunas com a sigla (o formato da SINAPI a
+    /// partir de 2025); sem uma coluna Preço, vale a coluna do estado.
+    /// </param>
     /// <exception cref="DomainValidationException">A planilha não tem as colunas de insumos nem as de composições.</exception>
-    public static ResultadoDaImportacaoDeReferencia Ler(IReadOnlyList<IReadOnlyList<string>> linhas)
+    public static ResultadoDaImportacaoDeReferencia Ler(IReadOnlyList<IReadOnlyList<string>> linhas, string? uf = null)
     {
         ArgumentNullException.ThrowIfNull(linhas);
         for (var i = 0; i < Math.Min(40, linhas.Count); i++)
@@ -48,6 +52,8 @@ public static class ImportacaoDeReferencia
             var preco = nomes.FindIndex(n => n.Contains("preco mediano"));
             if (preco < 0)
                 preco = nomes.FindIndex(n => n.StartsWith("preco") || n.StartsWith("custo") || n.StartsWith("valor"));
+            if (preco < 0 && !string.IsNullOrWhiteSpace(uf))
+                preco = nomes.FindIndex(n => n == TiposDeInsumo.Normalizar(uf));
             if (codigo >= 0 && descricao >= 0 && preco >= 0)
                 return LerInsumos(linhas, i, nomes, codigo, descricao, preco);
         }
@@ -59,7 +65,7 @@ public static class ImportacaoDeReferencia
         int codigo, int descricao, int preco)
     {
         var unidade = nomes.FindIndex(n => n.StartsWith("unid") || n is "un" or "und");
-        var classe = nomes.FindIndex(n => n.StartsWith("classe") || n.StartsWith("tipo") || n.StartsWith("categoria") || n.StartsWith("grupo"));
+        var classe = nomes.FindIndex(n => n.StartsWith("classe") || n.StartsWith("classif") || n.StartsWith("tipo") || n.StartsWith("categoria") || n.StartsWith("grupo"));
         var (insumos, avisos) = (new List<Insumo>(), new List<string>());
         for (var i = cabecalho + 1; i < linhas.Count; i++)
         {

@@ -130,8 +130,9 @@ public sealed record BaseDeReferencia
         return new BaseDeReferencia(fonte, uf, referencia, desonerado);
     }
 
-    private static readonly HashSet<string> Ufs =
-        ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+    /// <summary>As siglas dos estados (Bloco 40: a SINAPI tem um preço por estado).</summary>
+    public static IReadOnlySet<string> Ufs { get; } = new HashSet<string>
+        { "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO" };
 }
 
 /// <summary>Bloco 33: um insumo de uma base (o preço é o da base: com os encargos, na mão de obra).</summary>

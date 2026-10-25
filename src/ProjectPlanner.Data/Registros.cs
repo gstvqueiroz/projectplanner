@@ -180,6 +180,16 @@ internal sealed class CustosRegistro
     public required string Dados { get; set; }
 }
 
+/// <summary>Bloco 58: as ordens de serviço, em JSON (ver <see cref="FormatoDasOrdens"/>); nenhuma linha sem OS.</summary>
+internal sealed class OrdensRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
 /// <summary>Bloco 33: o orçamento, em JSON (ver <see cref="FormatoDoOrcamento"/>); nenhuma linha sem orçamento.</summary>
 internal sealed class OrcamentoRegistro
 {

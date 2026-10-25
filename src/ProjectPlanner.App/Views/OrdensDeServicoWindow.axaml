@@ -1,0 +1,215 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.OrdensDeServicoWindow"
+        x:DataType="vm:OrdensDeServicoViewModel"
+        Title="{Binding Titulo}"
+        Width="1240" Height="800" MinWidth="960" MinHeight="560"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 58: a lista das OS à esquerda; a ficha da escolhida (dados, itens, tarefas, verificação, histórico) à direita. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,12,0,4" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.cabecalhoDosItens">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <!-- Mensagem e fechar -->
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button DockPanel.Dock="Right" Content="Fechar" Click="Fechar" IsCancel="True" />
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <!-- A lista -->
+        <DockPanel DockPanel.Dock="Left" Width="330" Margin="0,0,16,0">
+            <StackPanel DockPanel.Dock="Top" Spacing="6">
+                <Button x:Name="NovaOrdem" Classes="accent" Content="Nova OS" Command="{Binding NovaOrdemCommand}" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        ToolTip.Tip="Uma OS em rascunho com a tarefa (ou a etapa) selecionada na grid: itens, quantidades, preços e datas vêm do cronograma" />
+                <ComboBox x:Name="Filtro" ItemsSource="{Binding Filtros}" SelectedItem="{Binding FiltroEscolhido}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <TextBlock DockPanel.Dock="Bottom" x:Name="Resumo" Text="{Binding Resumo}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0" />
+            <Panel Margin="0,8,0,0">
+                <TextBlock Text="{x:Static vm:OrdensDeServicoViewModel.TextoSemOrdens}" TextWrapping="Wrap" Opacity="0.7" IsVisible="{Binding SemOrdens}" />
+                <ListBox x:Name="Lista" ItemsSource="{Binding Lista}" SelectedItem="{Binding Selecionada}" IsVisible="{Binding !SemOrdens}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:OrdemNaLista">
+                            <StackPanel Spacing="1" Margin="0,2">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Situacao}" FontSize="11" Opacity="0.8"
+                                               Foreground="{DynamicResource TextoDeAviso}" IsVisible="{Binding Vencida}" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Situacao}" FontSize="11" Opacity="0.8" IsVisible="{Binding !Vencida}" />
+                                    <TextBlock Text="{Binding Codigo}" FontWeight="SemiBold" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding Titulo}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Titulo}" />
+                                <TextBlock Text="{Binding Detalhe}" FontSize="11" Opacity="0.7" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Panel>
+        </DockPanel>
+
+        <!-- A ficha -->
+        <Panel>
+            <TextBlock Text="Escolha uma OS na lista, ou crie uma." Opacity="0.6" IsVisible="{Binding !TemSelecionada}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <DockPanel IsVisible="{Binding TemSelecionada}">
+                <!-- Cabeçalho e o fluxo -->
+                <StackPanel DockPanel.Dock="Top" Spacing="6">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                            <Button x:Name="SalvarPdf" Content="Salvar PDF…" Command="{Binding SalvarPdfCommand}" />
+                            <Button x:Name="Imprimir" Content="Imprimir…" Command="{Binding ImprimirCommand}"
+                                    ToolTip.Tip="Abre o PDF da OS no leitor do sistema, para imprimir e assinar" />
+                        </StackPanel>
+                        <TextBlock x:Name="Cabecalho" Text="{Binding Cabecalho}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding AvisoDeVencida}" Foreground="{DynamicResource TextoDeAviso}"
+                               IsVisible="{Binding AvisoDeVencida, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <WrapPanel ItemSpacing="6" LineSpacing="6">
+                        <Button x:Name="Salvar" Content="Salvar" Command="{Binding SalvarCommand}" IsVisible="{Binding PodeEditar}" />
+                        <Button x:Name="Emitir" Classes="accent" Content="Emitir" Command="{Binding EmitirCommand}" IsVisible="{Binding PodeEmitir}"
+                                ToolTip.Tip="A OS sai do rascunho e vai para o executante (no PDF ou pelo Telegram)" />
+                        <Button x:Name="Aceitar" Content="Aceita pelo executante" Command="{Binding AceitarCommand}" IsVisible="{Binding PodeAceitar}" />
+                        <Button x:Name="Recusar" Content="Recusada…" Command="{Binding RecusarCommand}" IsVisible="{Binding PodeAceitar}" />
+                        <Button x:Name="Iniciar" Content="Iniciar execução" Command="{Binding IniciarCommand}" IsVisible="{Binding PodeIniciar}" />
+                        <Button x:Name="Concluir" Content="Concluída" Command="{Binding ConcluirCommand}" IsVisible="{Binding PodeConcluir}"
+                                ToolTip.Tip="O executante terminou: falta a conferência" />
+                        <Button x:Name="Conferir" Classes="accent" Content="Conferir e aprovar" Command="{Binding ConferirCommand}" IsVisible="{Binding PodeConferir}" />
+                        <Button x:Name="Reprovar" Content="Reprovar…" Command="{Binding ReprovarCommand}" IsVisible="{Binding PodeConferir}"
+                                ToolTip.Tip="Precisa refazer: volta à execução, com o motivo no histórico" />
+                        <Button x:Name="VoltarARascunho" Content="Voltar a rascunho" Command="{Binding VoltarARascunhoCommand}" IsVisible="{Binding PodeVoltarARascunho}" />
+                        <Button x:Name="Cancelar" Content="Cancelar OS…" Command="{Binding CancelarCommand}" IsVisible="{Binding PodeCancelar}" />
+                        <Button x:Name="ExcluirRascunho" Content="Excluir rascunho" Command="{Binding ExcluirRascunhoCommand}" IsVisible="{Binding PodeEditar}" />
+                    </WrapPanel>
+                </StackPanel>
+
+                <ScrollViewer Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="6" Margin="0,0,12,0">
+                        <!-- Os dados -->
+                        <Grid ColumnDefinitions="110,*,14,110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding PodeEditar}">
+                            <Grid.Styles>
+                                <Style Selector="Grid > Control">
+                                    <Setter Property="Margin" Value="0,3" />
+                                </Style>
+                            </Grid.Styles>
+                            <TextBlock Classes="rotulo" Text="Serviço" />
+                            <TextBox Grid.Column="1" Grid.ColumnSpan="4" x:Name="TituloDaOrdem" Text="{Binding TituloDaOrdem}"
+                                     PlaceholderText="Ex.: Alvenaria do 1º pavimento" />
+                            <TextBlock Grid.Row="1" Classes="rotulo" Text="Executante" />
+                            <AutoCompleteBox Grid.Row="1" Grid.Column="1" x:Name="Executante" Text="{Binding Executante}" ItemsSource="{Binding Sugestoes}"
+                                             FilterMode="ContainsOrdinal" PlaceholderText="Equipe ou empreiteiro" />
+                            <TextBlock Grid.Row="1" Grid.Column="3" Classes="rotulo" Text="Tipo" />
+                            <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding Tipos}" SelectedItem="{Binding TipoEscolhido}" HorizontalAlignment="Stretch" />
+                            <TextBlock Grid.Row="2" Classes="rotulo" Text="Contato" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Contato}" PlaceholderText="Telefone ou e-mail" />
+                            <TextBlock Grid.Row="2" Grid.Column="3" Classes="rotulo" Text="Pagamento" />
+                            <ComboBox Grid.Row="2" Grid.Column="4" ItemsSource="{Binding Formas}" SelectedItem="{Binding FormaEscolhida}" HorizontalAlignment="Stretch" />
+                            <TextBlock Grid.Row="3" Classes="rotulo" Text="Início previsto" />
+                            <CalendarDatePicker Grid.Row="3" Grid.Column="1" SelectedDate="{Binding InicioPrevisto}" HorizontalAlignment="Stretch" />
+                            <TextBlock Grid.Row="3" Grid.Column="3" Classes="rotulo" Text="Prazo" />
+                            <CalendarDatePicker Grid.Row="3" Grid.Column="4" SelectedDate="{Binding Prazo}" HorizontalAlignment="Stretch" />
+                            <TextBlock Grid.Row="4" Classes="rotulo" Text="Observações" VerticalAlignment="Top" Margin="0,8,0,0" />
+                            <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Observacoes}" AcceptsReturn="True" TextWrapping="Wrap"
+                                     MinHeight="56" PlaceholderText="Segurança, EPIs, material fornecido pela obra, horário…" />
+                        </Grid>
+
+                        <!-- Os itens -->
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding TotalDaFicha, StringFormat='Total: {0}'}" FontWeight="SemiBold" VerticalAlignment="Bottom" />
+                            <TextBlock Classes="secao" Text="Itens" />
+                        </DockPanel>
+                        <Grid ColumnDefinitions="50,*,60,90,100,100,30">
+                            <TextBlock Classes="cabecalhoDosItens" Text="Tarefa" />
+                            <TextBlock Grid.Column="1" Classes="cabecalhoDosItens" Text="Descrição" />
+                            <TextBlock Grid.Column="2" Classes="cabecalhoDosItens" Text="Un" />
+                            <TextBlock Grid.Column="3" Classes="cabecalhoDosItens" Text="Quantidade" />
+                            <TextBlock Grid.Column="4" Classes="cabecalhoDosItens" Text="Preço un. (R$)" />
+                            <TextBlock Grid.Column="5" Classes="cabecalhoDosItens" Text="Total (R$)" TextAlignment="Right" />
+                        </Grid>
+                        <ItemsControl x:Name="Itens" ItemsSource="{Binding Itens}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ItemNaFicha">
+                                    <Grid ColumnDefinitions="50,*,60,90,100,100,30" Margin="0,2">
+                                        <TextBlock Text="{Binding Tarefa}" VerticalAlignment="Center" FontSize="12" />
+                                        <TextBox Grid.Column="1" Text="{Binding Descricao}" Margin="0,0,4,0"
+                                                 IsEnabled="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PodeEditar}" />
+                                        <TextBox Grid.Column="2" Text="{Binding Unidade}" Margin="0,0,4,0"
+                                                 IsEnabled="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PodeEditar}" />
+                                        <TextBox Grid.Column="3" Text="{Binding Quantidade}" Margin="0,0,4,0" TextAlignment="Right"
+                                                 IsEnabled="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PodeEditar}" />
+                                        <TextBox Grid.Column="4" Text="{Binding Preco}" Margin="0,0,4,0" TextAlignment="Right"
+                                                 IsEnabled="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PodeEditar}" />
+                                        <TextBlock Grid.Column="5" Text="{Binding Total}" VerticalAlignment="Center" TextAlignment="Right" />
+                                        <Button Grid.Column="6" Content="✕" Padding="6,2" HorizontalAlignment="Right" ToolTip.Tip="Tirar o item"
+                                                Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).RemoverItemCommand}" CommandParameter="{Binding}"
+                                                IsVisible="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PodeEditar}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <WrapPanel ItemSpacing="6" LineSpacing="6" IsVisible="{Binding PodeEditar}">
+                            <Button x:Name="AdicionarItem" Content="Adicionar item" Command="{Binding AdicionarItemCommand}" />
+                            <Button x:Name="TrazerItens" Content="Trazer itens das tarefas marcadas" Command="{Binding TrazerItensDasTarefasCommand}" />
+                            <ComboBox ItemsSource="{Binding Precos}" SelectedItem="{Binding PrecoEscolhido}" MinWidth="260"
+                                      ToolTip.Tip="O preço que vem da composição do orçamento (sem BDI: é o que se paga ao executante)" />
+                        </WrapPanel>
+
+                        <!-- As tarefas -->
+                        <Expander Header="Tarefas da OS" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+                            <ScrollViewer MaxHeight="220">
+                                <ItemsControl ItemsSource="{Binding Tarefas}" IsEnabled="{Binding PodeEditar}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:TarefaParaEscolher">
+                                            <CheckBox Content="{Binding Texto}" IsChecked="{Binding Marcada}" Margin="{Binding Recuo}" FontWeight="Normal" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Expander>
+
+                        <!-- A verificação -->
+                        <TextBlock Classes="secao" Text="Lista de verificação" />
+                        <ItemsControl x:Name="Verificacao" ItemsSource="{Binding Verificacao}" IsEnabled="{Binding PodeMarcarVerificacao}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:VerificacaoNaFicha">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="✕" Padding="6,2" ToolTip.Tip="Tirar da lista"
+                                                Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).RemoverVerificacaoCommand}" CommandParameter="{Binding}"
+                                                IsVisible="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PodeEditar}" />
+                                        <CheckBox Content="{Binding Texto}" IsChecked="{Binding Feito}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <DockPanel IsVisible="{Binding PodeEditar}">
+                            <Button DockPanel.Dock="Right" Content="Adicionar" Command="{Binding AdicionarVerificacaoCommand}" Margin="6,0,0,0" />
+                            <TextBox x:Name="NovaVerificacao" Text="{Binding NovaVerificacao}" PlaceholderText="Ex.: limpeza feita, teste de estanqueidade" />
+                        </DockPanel>
+
+                        <!-- O histórico -->
+                        <TextBlock Classes="secao" Text="Histórico" />
+                        <ItemsControl x:Name="Historico" ItemsSource="{Binding Historico}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{Binding}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Panel>
+    </DockPanel>
+</Window>

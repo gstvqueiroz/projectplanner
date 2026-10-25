@@ -69,6 +69,7 @@ public sealed partial class BarraDeIconesViewModel
             B("relatorio", "Relatório fotográfico", GrupoDaBarra.Obra),
             B("fotosDoProjeto", "Fotos do projeto", GrupoDaBarra.Obra),
             B("medicoes", "Medições", GrupoDaBarra.Obra),
+            B("ordensDeServico", "Ordens de serviço", GrupoDaBarra.Obra),
             B("orcamento", "Orçamento", GrupoDaBarra.Obra),
             B("indicadores", "Indicadores", GrupoDaBarra.Obra),
             B("fisicoFinanceiro", "Cronograma físico-financeiro", GrupoDaBarra.Obra),

@@ -494,6 +494,9 @@ public class Cronograma
     /// <summary>Bloco 37: os custos realizados da obra. Voltam no Desfazer, como as tarefas.</summary>
     public Indicadores.CustosRealizados Custos { get; private set; } = new();
 
+    /// <summary>Bloco 58: as ordens de serviço da obra. Voltam no Desfazer, como as tarefas.</summary>
+    public OrdensDeServico.OrdensDeServicoDoProjeto OrdensDeServico { get; private set; } = new();
+
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
     public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
 
@@ -529,6 +532,7 @@ public class Cronograma
         };
         copia.Contrato = Contrato.CopiarPara(copia);
         copia.Custos = Custos.Copiar();
+        copia.OrdensDeServico = OrdensDeServico.Copiar();
         copia.Recursos = Recursos.CopiarPara(copia);
         copia.Orcamento = Orcamento.CopiarPara(copia);
         copia._linhasDeBase.AddRange(_linhasDeBase);

@@ -3,6 +3,25 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.58.0
+
+**Ordens de serviço** (Projeto > Ordens de serviço… e o botão novo da barra, no grupo Obra).
+
+- **Nova OS a partir do cronograma:** selecione uma tarefa (ou uma etapa inteira) na grid e clique em Nova OS. Os itens, as
+  quantidades, as unidades e as datas vêm das tarefas; o preço vem da composição do orçamento, só a mão de obra (o
+  material é da obra) ou o serviço completo, sem BDI (é o que se paga ao executante). Também dá para marcar outras tarefas e
+  trazer os itens delas, ou pôr itens avulsos.
+- **A ficha:** serviço, executante (equipe própria ou empreiteiro, com sugestões dos recursos e fornecedores), contato, forma
+  de pagamento (empreitada, por medição ou diária), início e prazo, observações e uma lista de verificação.
+- **O fluxo:** rascunho → emitida → aceita → em execução → concluída → conferida. A emitida pode ser recusada (com o motivo)
+  e voltar a rascunho para corrigir; a concluída pode ser reprovada na conferência e voltar à execução; antes da
+  conferência, dá para cancelar. Cada passo fica no histórico da OS e no Desfazer.
+- **A lista:** filtro (abertas, vencidas, encerradas) e os números da obra: OS em andamento, vencidas, o valor a pagar e os
+  rascunhos.
+- **PDF para assinar** (A4): obra, contratante e endereço, executante, datas, itens com o total, observações, verificação,
+  histórico e as assinaturas do emitente, do executante e da conferência. **Imprimir…** abre o PDF no leitor do sistema.
+- As OS ficam no arquivo da obra (.pplan). Um arquivo salvo nesta versão não abre nas anteriores (atualize o programa nos outros computadores).
+
 ## 0.57.0
 
 **Imprimir o Gantt** (Arquivo > Imprimir o Gantt…, ⌘P no Mac ou Ctrl+P no Windows, e o botão da impressora na barra).

@@ -21,6 +21,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<LinhasDeBaseRegistro> LinhasDeBase => Set<LinhasDeBaseRegistro>();
     public DbSet<ContratoRegistro> Contrato => Set<ContratoRegistro>();
     public DbSet<CustosRegistro> Custos => Set<CustosRegistro>();
+    public DbSet<OrdensRegistro> Ordens => Set<OrdensRegistro>();
     public DbSet<RecursoRegistro> Recursos => Set<RecursoRegistro>();
     public DbSet<OrcamentoRegistro> Orcamento => Set<OrcamentoRegistro>();
     public DbSet<AtribuicaoRegistro> Atribuicoes => Set<AtribuicaoRegistro>();
@@ -154,6 +155,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             custos.HasKey(c => c.ProjetoId);
             custos.HasOne<ProjetoRegistro>().WithOne()
                 .HasForeignKey<CustosRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // As ordens de serviço (Bloco 58), em JSON.
+        modelBuilder.Entity<OrdensRegistro>(ordens =>
+        {
+            ordens.ToTable("OrdensDeServicoDoProjeto");
+            ordens.HasKey(o => o.ProjetoId);
+            ordens.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<OrdensRegistro>(o => o.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RelatorioRegistro>(relatorio =>

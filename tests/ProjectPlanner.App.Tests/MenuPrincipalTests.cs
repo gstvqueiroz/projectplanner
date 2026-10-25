@@ -116,7 +116,7 @@ public partial class MenuPrincipalTests
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…", "Recursos da tarefa…");
         Titulos(a.Item("Projeto")).Should().Equal("Salvar linha de base…", "Linhas de base…", Linha,
-            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Orçamento…", "Recursos…", "Uso de recursos…", Linha, "Medições…", "Custos realizados…", "Indicadores…");
+            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Orçamento…", "Recursos…", "Uso de recursos…", Linha, "Medições…", "Ordens de serviço…", "Custos realizados…", "Indicadores…");
         Titulos(a.Item("Conta")).Should().Equal("Entrar ou criar conta…", "Sair da conta", Linha, // Bloco 45
             "Usar esta obra no Telegram", "Buscar do Telegram", "Conectar o Telegram…"); // Bloco 49
         Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Sobre o ProjectPlanner…");
@@ -182,6 +182,7 @@ public partial class MenuPrincipalTests
             (a.Vm.RelatorioFotograficoCommand, "Relatório fotográfico"),
             (a.Vm.FotosDoProjetoCommand, "Fotos do projeto"),
             (a.Vm.MedicoesCommand, "Medições"),
+            (a.Vm.OrdensDeServicoCommand, "Ordens de serviço"),
             (a.Vm.OrcamentoCommand, "Orçamento"),
             (a.Vm.IndicadoresCommand, "Indicadores"),
             (a.Vm.FisicoFinanceiroCommand, "Cronograma físico-financeiro"),

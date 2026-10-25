@@ -238,6 +238,23 @@ namespace ProjectPlanner.Data.Migrations
                     b.ToTable("OrcamentoDoProjeto", (string)null);
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.OrdensRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("OrdensDeServicoDoProjeto", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.PredecessoraRegistro", b =>
                 {
                     b.Property<int>("Id")
@@ -514,6 +531,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
                         .WithOne()
                         .HasForeignKey("ProjectPlanner.Data.OrcamentoRegistro", "ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.OrdensRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.OrdensRegistro", "ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

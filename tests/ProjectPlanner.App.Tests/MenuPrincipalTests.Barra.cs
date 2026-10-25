@@ -21,7 +21,7 @@ public partial class MenuPrincipalTests
         a.Janela.BotoesDaBarra.Select(b => (string)b.Tag!).Should().Equal(a.Vm.Barra.Botoes.Select(b => b.Id), "a barra segue o catálogo");
         a.Janela.BotoesDaBarra.Select(b => Avalonia.Automation.AutomationProperties.GetName(b))
             .Should().Equal(a.Vm.Barra.Botoes.Select(b => b.Nome));
-        NaBarra(a).Should().HaveCount(39, "com a janela larga cabem todos");
+        NaBarra(a).Should().HaveCount(40, "com a janela larga cabem todos");
         (a.Janela.BotaoMais.IsVisible, a.Janela.AcessoRapido.Children.OfType<Border>().Count(d => d.IsVisible)).Should().Be((false, 7)); // 8 grupos
         var mac = AtalhosDeTeclado.EhMac;
         ((string)ToolTip.GetTip(BotaoDaBarra(a, "novo"))!).Should().Be(AtalhosDeTeclado.Dica("Novo projeto", AcaoComAtalho.Novo, mac));
@@ -70,14 +70,14 @@ public partial class MenuPrincipalTests
             a.Clicar("Exibir", "Barra de ícones", "Arquivo", nome);
         Pintar(a);
 
-        NaBarra(a).Should().NotContain(["novo", "abrir", "salvar", "exportarCsv", "imprimirGantt"]).And.HaveCount(34);
+        NaBarra(a).Should().NotContain(["novo", "abrir", "salvar", "exportarCsv", "imprimirGantt"]).And.HaveCount(35);
         a.Ambiente.PreferenciasInterface.Salvo!.OcultosNaBarra.Should().Equal("novo", "abrir", "salvar", "exportarCsv", "imprimirGantt");
         a.Janela.AcessoRapido.Children.OfType<Border>().First().IsVisible.Should().BeFalse("não há botão antes do primeiro divisor");
         a.Janela.AcessoRapido.Children.OfType<Border>().Count(d => d.IsVisible).Should().Be(6);
 
         a.Clicar("Exibir", "Barra de ícones", "Mostrar todos os botões");
         Pintar(a);
-        NaBarra(a).Should().HaveCount(39);
+        NaBarra(a).Should().HaveCount(40);
         a.Ambiente.PreferenciasInterface.Salvo!.OcultosNaBarra.Should().BeNull();
     });
 
@@ -86,7 +86,7 @@ public partial class MenuPrincipalTests
     {
         var a = Abrir(amb => amb.PreferenciasInterface.Salvo = new PreferenciasInterface(false, TemaDaInterface.Claro, ["medicoes", "assistente"]));
 
-        NaBarra(a).Should().NotContain(["medicoes", "assistente"]).And.HaveCount(37);
+        NaBarra(a).Should().NotContain(["medicoes", "assistente"]).And.HaveCount(38);
         a.Item("Exibir", "Barra de ícones", "Obra", "Medições").IsChecked.Should().BeFalse();
         a.Janela.AcessoRapido.Children.OfType<Border>().Last().IsVisible.Should().BeFalse("o Assistente, sozinho no último grupo, saiu");
 
@@ -123,6 +123,6 @@ public partial class MenuPrincipalTests
         Pintar(a);
         a.Janela.Width = 1700;
         Pintar(a);
-        (NaBarra(a).Count(), a.Janela.BotaoMais.IsVisible).Should().Be((39, false));
+        (NaBarra(a).Count(), a.Janela.BotaoMais.IsVisible).Should().Be((40, false));
     });
 }

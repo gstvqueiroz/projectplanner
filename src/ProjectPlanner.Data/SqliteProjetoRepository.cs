@@ -330,6 +330,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 Dados = FormatoDosCustos.Serializar(cronograma),
             });
 
+        if (!cronograma.OrdensDeServico.Vazio)
+            contexto.Ordens.Add(new OrdensRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDasOrdens.Versao,
+                Dados = FormatoDasOrdens.Serializar(cronograma),
+            });
+
         if (FormatoDoRelatorio.TemDados(cronograma))
             contexto.Relatorio.Add(new RelatorioRegistro
             {
@@ -463,6 +471,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             if (custos.Versao != FormatoDosCustos.Versao)
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem os custos num formato desconhecido.");
             FormatoDosCustos.Ler(custos.Dados, cronograma);
+        }
+
+        // As ordens de serviço (Bloco 58).
+        if (contexto.Ordens.AsNoTracking().FirstOrDefault() is { } ordens)
+        {
+            if (ordens.Versao != FormatoDasOrdens.Versao)
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem as ordens de serviço num formato desconhecido.");
+            FormatoDasOrdens.Ler(ordens.Dados, cronograma);
         }
 
         // Dados da obra e histórico dos relatórios (Bloco 27); um JSON que não dá para ler é recusado como os outros dados.

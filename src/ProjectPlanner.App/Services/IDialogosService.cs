@@ -79,6 +79,9 @@ public interface IDialogosService
     /// <summary>Mostra Projeto > Cronograma físico-financeiro… (Bloco 35) e espera ser fechada.</summary>
     Task MostrarFisicoFinanceiroAsync(ViewModels.FisicoFinanceiroViewModel fisicoFinanceiro);
 
+    /// <summary>Bloco 58: mostra Projeto > Ordens de serviço… e espera ser fechada.</summary>
+    Task MostrarOrdensDeServicoAsync(ViewModels.OrdensDeServicoViewModel ordens);
+
     /// <summary>Bloco 57: mostra Arquivo > Imprimir o Gantt… e espera ser fechada.</summary>
     Task MostrarImpressaoDoGanttAsync(ViewModels.GanttImpressoViewModel impressao);
 

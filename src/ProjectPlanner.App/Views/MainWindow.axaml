@@ -231,6 +231,9 @@
                     <!-- Bloco 36 -->
                     <MenuItem Header="Medições…" Command="{Binding MedicoesCommand}"
                               ToolTip.Tip="Os boletins de medição (por quantidade ou %), com retenção, reajuste e glosas, os aditivos e o plano de medições" />
+                    <!-- Bloco 58 -->
+                    <MenuItem Header="Ordens de serviço…" Command="{Binding OrdensDeServicoCommand}"
+                              ToolTip.Tip="As OS da obra para a equipe e os empreiteiros: itens e preços do orçamento, emissão, aceite, execução, conferência e o PDF para assinar" />
                     <!-- Bloco 37 -->
                     <MenuItem Header="Custos realizados…" Command="{Binding CustosRealizadosCommand}"
                               ToolTip.Tip="As notas, as folhas e as locações da obra, por tarefa e categoria (para o custo real e o IDC)" />
@@ -389,6 +392,11 @@
                             ToolTip.Tip="Medições: os boletins, os aditivos e o plano de medições" AutomationProperties.Name="Medições">
                         <!-- Prancheta com um visto -->
                         <Path Data="M4.5,2.5 H2.5 V15 H13.5 V2.5 H11.5 M5.5,1 H10.5 V4 H5.5 Z M5,9.5 L7,11.5 L11,7.5" />
+                    </Button>
+                    <Button Tag="ordensDeServico" Classes="acessoRapido" Command="{Binding OrdensDeServicoCommand}"
+                            ToolTip.Tip="Ordens de serviço: emitir para a equipe ou o empreiteiro, acompanhar, conferir e imprimir" AutomationProperties.Name="Ordens de serviço">
+                        <!-- Folha com o canto dobrado e uma chave de boca -->
+                        <Path Data="M2.5,1.5 H9.5 L12.5,4.5 V8 M9.5,1.5 V4.5 H12.5 M2.5,1.5 V14.5 H8 M4.5,6 H9 M4.5,8.5 H7.5 M9.5,14.5 L13,11 M12.2,9.3 A1.8,1.8 0 1 0 14.7,11.8 L13.6,11.6 L13.2,10.8 L13.4,9.7 Z" />
                     </Button>
                     <Button Tag="orcamento" Classes="acessoRapido" Command="{Binding OrcamentoCommand}"
                             ToolTip.Tip="Orçamento: a planilha com as composições da SINAPI, o BDI e as sugestões da IA" AutomationProperties.Name="Orçamento">

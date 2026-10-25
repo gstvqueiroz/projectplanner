@@ -190,6 +190,11 @@ public sealed class DialogosAvalonia : IDialogosService
     public Task MostrarFisicoFinanceiroAsync(ViewModels.FisicoFinanceiroViewModel fisicoFinanceiro) =>
         new FisicoFinanceiroWindow(fisicoFinanceiro).ShowDialog(JanelaPrincipal);
 
+    // ---- Bloco 58 ----
+
+    public Task MostrarOrdensDeServicoAsync(ViewModels.OrdensDeServicoViewModel ordens) =>
+        new OrdensDeServicoWindow(ordens).ShowDialog(JanelaPrincipal);
+
     // ---- Bloco 57 ----
 
     public Task MostrarImpressaoDoGanttAsync(ViewModels.GanttImpressoViewModel impressao) =>

@@ -305,6 +305,18 @@ public sealed class DialogosFalsos : IDialogosService
 
     public string? PlanilhaEscolhida { get; set; }
 
+    // ---- Bloco 58 ----
+
+    public List<OrdensDeServicoViewModel> OrdensDeServico { get; } = [];
+
+    public Func<OrdensDeServicoViewModel, Task>? AoMostrarOrdensDeServico { get; set; }
+
+    public Task MostrarOrdensDeServicoAsync(OrdensDeServicoViewModel ordens)
+    {
+        OrdensDeServico.Add(ordens);
+        return AoMostrarOrdensDeServico?.Invoke(ordens) ?? Task.CompletedTask;
+    }
+
     // ---- Bloco 57 ----
 
     public List<GanttImpressoViewModel> ImpressoesDoGantt { get; } = [];

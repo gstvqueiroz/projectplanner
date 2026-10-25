@@ -305,6 +305,18 @@ public sealed class DialogosFalsos : IDialogosService
 
     public string? PlanilhaEscolhida { get; set; }
 
+    // ---- Bloco 57 ----
+
+    public List<GanttImpressoViewModel> ImpressoesDoGantt { get; } = [];
+
+    public Func<GanttImpressoViewModel, Task>? AoMostrarImpressaoDoGantt { get; set; }
+
+    public Task MostrarImpressaoDoGanttAsync(GanttImpressoViewModel impressao)
+    {
+        ImpressoesDoGantt.Add(impressao);
+        return AoMostrarImpressaoDoGantt?.Invoke(impressao) ?? Task.CompletedTask;
+    }
+
     public Task MostrarFisicoFinanceiroAsync(FisicoFinanceiroViewModel fisicoFinanceiro)
     {
         FisicosFinanceiros.Add(fisicoFinanceiro);

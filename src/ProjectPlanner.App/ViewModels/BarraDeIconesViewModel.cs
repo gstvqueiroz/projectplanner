@@ -52,6 +52,7 @@ public sealed partial class BarraDeIconesViewModel
             B("abrir", "Abrir projeto", GrupoDaBarra.Arquivo),
             B("salvar", "Salvar", GrupoDaBarra.Arquivo),
             B("exportarCsv", "Exportar para CSV", GrupoDaBarra.Arquivo),
+            B("imprimirGantt", "Imprimir o Gantt", GrupoDaBarra.Arquivo),
             B("desfazer", "Desfazer", GrupoDaBarra.Edicao),
             B("refazer", "Refazer", GrupoDaBarra.Edicao),
             B("adicionar", "Adicionar tarefa", GrupoDaBarra.Tarefa),

@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.57.0
+
+**Imprimir o Gantt** (Arquivo > Imprimir o Gantt…, ⌘P no Mac ou Ctrl+P no Windows, e o botão da impressora na barra).
+
+- **Folha:** A4, A3, A2, A1, A0, Carta ou Ofício (216 × 330 mm), em paisagem ou retrato.
+- **Escala do tempo:** "ajustar à largura da folha" (a obra inteira numa folha de largura) ou dias, semanas e meses. Nas
+  escalas fixas, uma obra longa é dividida em folhas lado a lado para emendar; a tabela sai na primeira folha de cada
+  fileira, e o rodapé diz o período de cada uma.
+- **Colunas da tabela:** EDT, nome (com o recuo da EDT), duração, início, término, % concluído e predecessoras, cada uma
+  opcional.
+- **No desenho:** caminho crítico em vermelho, linha de base, vínculos (setas), linha de hoje, nomes ao lado das barras,
+  prazos, sábados e domingos sombreados. Muitas tarefas são divididas em páginas.
+- **Tarefas:** todas, como na tela (sem as dos resumos recolhidos) ou só até o 1º, 2º ou 3º nível da EDT.
+- **Legenda** em todas as folhas, cabeçalho com a obra, as datas e a linha de base, e "Página X de Y".
+- **Prévia** de cada página na própria janela. **Salvar PDF…** grava o arquivo; **Imprimir…** abre o PDF no leitor do
+  sistema para imprimir (escolha na impressora a mesma folha).
+
 ## 0.56.0
 
 **Mais atalhos na barra de ícones** (12 botões novos; cada um pode ser escondido em Exibir > Barra de ícones).

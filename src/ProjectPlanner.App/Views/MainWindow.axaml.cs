@@ -527,6 +527,7 @@ public partial class MainWindow : Window
                      (ItemAssistente, AcaoComAtalho.Assistente), (ItemIrParaTarefa, AcaoComAtalho.IrParaTarefa),
                      (ItemDesfazer, AcaoComAtalho.Desfazer), (ItemRefazer, AcaoComAtalho.Refazer),
                      (ItemCopiar, AcaoComAtalho.Copiar), (ItemColar, AcaoComAtalho.Colar), (ItemDuplicar, AcaoComAtalho.Duplicar),
+                     (ItemImprimirGantt, AcaoComAtalho.ImprimirGantt),
                  })
             item.InputGesture = AtalhosDeTeclado.Gesto(acao, mac);
 
@@ -536,6 +537,7 @@ public partial class MainWindow : Window
                      ("Salvar", AcaoComAtalho.Salvar), ("Recalcular cronograma", AcaoComAtalho.Recalcular),
                      ("Dividido", AcaoComAtalho.Dividido), ("Somente Tabela", AcaoComAtalho.SomenteTabela),
                      ("Somente Gantt", AcaoComAtalho.SomenteGantt), ("Assistente", AcaoComAtalho.Assistente),
+                     ("Imprimir o Gantt", AcaoComAtalho.ImprimirGantt),
                  })
         {
             var botao = AcessoRapido.Children.OfType<Button>()
@@ -586,6 +588,7 @@ public partial class MainWindow : Window
             AcaoComAtalho.Copiar => (vm.CopiarTarefaCommand, null),
             AcaoComAtalho.Colar => (vm.ColarTarefaCommand, null),
             AcaoComAtalho.Duplicar => (vm.DuplicarTarefaCommand, null),
+            AcaoComAtalho.ImprimirGantt => (vm.ImprimirGanttCommand, null),
             _ => ((System.Windows.Input.ICommand?)null, (object?)null),
         };
         if (comando?.CanExecute(parametro) == true)

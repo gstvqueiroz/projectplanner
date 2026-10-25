@@ -104,7 +104,7 @@ public partial class MenuPrincipalTests
             .Should().Equal("Arquivo", "Editar", "Exibir", "Inserir", "Tarefa", "Projeto", "Conta", "Ajuda");
         a.Item("Inserir").IsVisible.Should().BeFalse("Inserir fica oculto até ter a primeira funcionalidade");
         a.Item("Inserir").Items.Should().BeEmpty();
-        Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…",
+        Titulos(a.Item("Arquivo")).Should().Equal("Novo", "Abrir…", Linha, "Salvar", "Salvar como…", Linha, "Relatório fotográfico…", "Exportar para CSV…", "Imprimir o Gantt…",
             "Abrir a pasta de cópias de segurança");
         Titulos(a.Item("Editar")).Should().Equal("Desfazer", "Refazer", Linha, "Copiar tarefa", "Colar tarefa", "Duplicar tarefa");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha de base", "Linha Hoje", Linha,
@@ -165,6 +165,7 @@ public partial class MenuPrincipalTests
             (a.Vm.AbrirProjetoCommand, "Abrir projeto"),
             (a.Vm.SalvarProjetoCommand, "Salvar"),
             (a.Vm.ExportarCsvCommand, "Exportar para CSV"),
+            (a.Vm.ImprimirGanttCommand, "Imprimir o Gantt"),
             (a.Vm.DesfazerAlteracaoCommand, "Desfazer"),
             (a.Vm.RefazerAlteracaoCommand, "Refazer"),
             (a.Vm.AdicionarTarefaCommand, "Adicionar tarefa"),

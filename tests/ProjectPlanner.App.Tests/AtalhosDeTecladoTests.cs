@@ -19,6 +19,8 @@ public class AtalhosDeTecladoTests
     [InlineData(AcaoComAtalho.Desfazer, true, "⌘Z")]
     [InlineData(AcaoComAtalho.Refazer, true, "⇧⌘Z")]
     [InlineData(AcaoComAtalho.Duplicar, false, "Ctrl+D")]
+    [InlineData(AcaoComAtalho.ImprimirGantt, true, "⌘P")]
+    [InlineData(AcaoComAtalho.ImprimirGantt, false, "Ctrl+P")]
     public void Texto_DeCadaPlataforma(AcaoComAtalho acao, bool mac, string texto)
     {
         AtalhosDeTeclado.Texto(acao, mac).Should().Be(texto);

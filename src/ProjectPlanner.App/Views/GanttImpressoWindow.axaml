@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.GanttImpressoWindow"
+        x:DataType="vm:GanttImpressoViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="780" MinWidth="820" MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 57: a folha, a escala, as colunas e o desenho à esquerda; a prévia de cada página à direita. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,10,0,2" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <!-- Resumo, mensagens e botões -->
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button x:Name="SalvarPdf" Content="Salvar PDF…" Command="{Binding SalvarPdfCommand}" />
+                <Button x:Name="Imprimir" Classes="accent" Content="Imprimir…" Command="{Binding ImprimirCommand}"
+                        ToolTip.Tip="Abre o PDF no leitor do sistema, para imprimir na folha escolhida" />
+                <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+            </StackPanel>
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="Resumo" Text="{Binding Resumo}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap"
+                           IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" FontSize="12" TextWrapping="Wrap"
+                           IsVisible="{Binding Mensagem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Escolhas -->
+        <ScrollViewer DockPanel.Dock="Left" Width="290" Margin="0,0,16,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="4" Margin="0,0,10,0">
+                <TextBlock Classes="secao" Text="Folha" Margin="0,0,0,2" />
+                <ComboBox x:Name="Folha" ItemsSource="{Binding Folhas}" SelectedItem="{Binding FolhaEscolhida}" HorizontalAlignment="Stretch" />
+                <ComboBox x:Name="Orientacao" ItemsSource="{Binding Orientacoes}" SelectedItem="{Binding OrientacaoEscolhida}" HorizontalAlignment="Stretch" />
+
+                <TextBlock Classes="secao" Text="Escala do tempo" />
+                <ComboBox x:Name="Escala" ItemsSource="{Binding Escalas}" SelectedItem="{Binding EscalaEscolhida}" HorizontalAlignment="Stretch" />
+
+                <TextBlock Classes="secao" Text="Tarefas" />
+                <ComboBox x:Name="Nivel" ItemsSource="{Binding Niveis}" SelectedItem="{Binding NivelEscolhido}" HorizontalAlignment="Stretch" />
+
+                <TextBlock Classes="secao" Text="Colunas da tabela" />
+                <WrapPanel ItemSpacing="10">
+                    <CheckBox Content="EDT" IsChecked="{Binding ColunaEdt}" />
+                    <CheckBox Content="Nome" IsChecked="{Binding ColunaNome}" />
+                    <CheckBox Content="Duração" IsChecked="{Binding ColunaDuracao}" />
+                    <CheckBox Content="Início" IsChecked="{Binding ColunaInicio}" />
+                    <CheckBox Content="Término" IsChecked="{Binding ColunaTermino}" />
+                    <CheckBox Content="% concluído" IsChecked="{Binding ColunaConcluido}" />
+                    <CheckBox Content="Predecessoras" IsChecked="{Binding ColunaPredecessoras}" />
+                </WrapPanel>
+
+                <TextBlock Classes="secao" Text="No desenho" />
+                <CheckBox x:Name="CaminhoCritico" Content="Caminho crítico em vermelho" IsChecked="{Binding CaminhoCritico}" />
+                <CheckBox Content="Linha de base" IsChecked="{Binding LinhaDeBase}" IsEnabled="{Binding TemLinhaDeBase}" />
+                <CheckBox Content="Vínculos (setas)" IsChecked="{Binding Vinculos}" />
+                <CheckBox Content="Linha de hoje" IsChecked="{Binding Hoje}" />
+                <CheckBox Content="Nomes ao lado das barras" IsChecked="{Binding NomesNasBarras}" />
+                <CheckBox Content="Sábados e domingos sombreados" IsChecked="{Binding FinsDeSemana}" />
+                <CheckBox x:Name="Legenda" Content="Legenda" IsChecked="{Binding Legenda}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Prévia -->
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,0,0,8">
+                <Button x:Name="Anterior" Content="‹ Anterior" Command="{Binding PaginaAnteriorCommand}" />
+                <TextBlock x:Name="TextoDaPagina" Text="{Binding TextoDaPagina}" VerticalAlignment="Center" MinWidth="110" TextAlignment="Center" />
+                <Button x:Name="Proxima" Content="Próxima ›" Command="{Binding ProximaPaginaCommand}" />
+            </StackPanel>
+            <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="4" Padding="12">
+                <Image x:Name="Previa" Stretch="Uniform" />
+            </Border>
+        </DockPanel>
+    </DockPanel>
+</Window>

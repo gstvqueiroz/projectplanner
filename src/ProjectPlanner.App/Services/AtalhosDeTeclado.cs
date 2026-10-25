@@ -21,6 +21,7 @@ public enum AcaoComAtalho
     Copiar,
     Colar,
     Duplicar,
+    ImprimirGantt,
 }
 
 /// <param name="Comando">Com a tecla de comando da plataforma: ⌘ no Mac, Ctrl no Windows.</param>
@@ -56,6 +57,7 @@ public static class AtalhosDeTeclado
         new(AcaoComAtalho.Copiar, Key.C, ForaDoTexto: true),
         new(AcaoComAtalho.Colar, Key.V, ForaDoTexto: true),
         new(AcaoComAtalho.Duplicar, Key.D, ForaDoTexto: true),
+        new(AcaoComAtalho.ImprimirGantt, Key.P),
     ];
 
     public static Atalho De(AcaoComAtalho acao) => Todos.Single(a => a.Acao == acao);

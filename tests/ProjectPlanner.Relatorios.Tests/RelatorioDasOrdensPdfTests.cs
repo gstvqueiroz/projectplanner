@@ -28,10 +28,12 @@ public sealed class RelatorioDasOrdensPdfTests
         return lista;
     }
 
-    private static byte[] Pdf(RelatorioDasOrdens r)
+    private static readonly CabecalhoDoRelatorio Cabecalho = new("Residência Silva", new DadosDaObra("Maria Silva", null, null), "Eng. Ana Souza", "CREA 12345", null);
+
+    private static byte[] Pdf(RelatorioDasOrdens r, bool detalhar = false)
     {
         using var destino = new MemoryStream();
-        new GeradorRelatorioDasOrdensPdf().Gerar(r, "Residência Silva", new DadosDaObra("Maria Silva", null, null), "01/11/2026 10:00", destino);
+        new GeradorRelatorioDasOrdensPdf().Gerar(r, Cabecalho, new Dictionary<Guid, string>(), "01/11/2026 10:00", destino, detalhar);
         return destino.ToArray();
     }
 
@@ -39,7 +41,7 @@ public sealed class RelatorioDasOrdensPdfTests
 
     [Theory]
     [InlineData(0, 1)]
-    [InlineData(6, 1)]
+    [InlineData(6, 2)]
     [InlineData(60, 4)]
     public void Pdf_UmaPaginaOuMais(int ordens, int paginas)
     {
@@ -47,5 +49,41 @@ public sealed class RelatorioDasOrdensPdfTests
 
         Encoding.ASCII.GetString(pdf, 0, 5).Should().Be("%PDF-");
         Paginas(pdf).Should().Be(paginas);
+    }
+
+    // Bloco 65: com as medições e os pagamentos (os gráficos por mês) e o detalhe de cada OS no fim.
+    [Fact]
+    public void Pdf_ComGraficosEDetalhe_TemMaisPaginas()
+    {
+        var ordens = Ordens(8);
+        ordens[0] = ordens[0].RegistrarPagamento(ordens[0].Medicoes[0].Id, new PagamentoDaMedicao(new DateOnly(2026, 10, 25), "NF 1", []), Agora);
+        var r = RelatorioDasOrdens.Montar(ordens, new FiltroDoRelatorioDasOrdens(), new DateOnly(2026, 11, 1));
+
+        r.PorMes.Should().Equal(new MesNoRelatorio(new DateOnly(2026, 10, 1), 6000, 3000));
+        var simples = Paginas(Pdf(r));
+        Paginas(Pdf(r, detalhar: true)).Should().BeGreaterThan(simples);
+        File.WriteAllBytes("/private/tmp/claude-501/-Users-gustavodossantosqueiroz-Documents-Project/c210a034-3e6a-4dd5-9d65-1c296228fb41/scratchpad/relatorio-os-65.pdf", Pdf(r, detalhar: true));
+    }
+
+    [Fact]
+    public void Boletim_PdfEExcel()
+    {
+        var os = Ordens(1)[0];
+        var boletim = BoletimDaOrdem.Montar(os, os.Medicoes[0].Id);
+        using var pdf = new MemoryStream();
+        new GeradorBoletimDaOrdemPdf().Gerar(boletim, Cabecalho, new Dictionary<Guid, string>(), "01/11/2026 10:00", pdf);
+        using var excel = new MemoryStream();
+        new GeradorOrdensExcel().Boletim(boletim, Cabecalho, new Dictionary<Guid, string>(), Agora, excel);
+        using var relatorio = new MemoryStream();
+        new GeradorOrdensExcel().Relatorio(RelatorioDasOrdens.Montar(Ordens(6), new FiltroDoRelatorioDasOrdens(), new DateOnly(2026, 11, 1)), Cabecalho,
+            new Dictionary<Guid, string>(), Agora, relatorio);
+
+        Paginas(pdf.ToArray()).Should().Be(1);
+        File.WriteAllBytes("/private/tmp/claude-501/-Users-gustavodossantosqueiroz-Documents-Project/c210a034-3e6a-4dd5-9d65-1c296228fb41/scratchpad/boletim-os.pdf", pdf.ToArray());
+        relatorio.Position = 0;
+        using var livro = DocumentFormat.OpenXml.Packaging.SpreadsheetDocument.Open(relatorio, false);
+        livro.WorkbookPart!.Workbook.Sheets!.Elements<DocumentFormat.OpenXml.Spreadsheet.Sheet>().Select(a => a.Name!.Value)
+            .Should().Equal("Resumo", "OS", "Itens", "Medições", "Por mês");
+        excel.Length.Should().BeGreaterThan(0);
     }
 }

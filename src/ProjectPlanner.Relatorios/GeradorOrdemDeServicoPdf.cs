@@ -11,7 +11,10 @@ namespace ProjectPlanner.Relatorios;
 /// <param name="DadosDaObra">Contratante, contrato e endereço (os do relatório fotográfico).</param>
 /// <param name="Tarefas">A EDT e o nome de cada tarefa ("2.3 Alvenaria"), para a coluna das tarefas.</param>
 /// <param name="GeradoEm">"25/10/2026 15:00".</param>
-public sealed record CabecalhoDaOrdem(string Obra, DadosDaObra DadosDaObra, IReadOnlyDictionary<Guid, string> Tarefas, string GeradoEm);
+/// <param name="Responsavel">Bloco 65: o responsável técnico (das preferências do relatório), na assinatura do emitente.</param>
+/// <param name="Logotipo">Bloco 65: o logotipo da empresa, no alto.</param>
+public sealed record CabecalhoDaOrdem(string Obra, DadosDaObra DadosDaObra, IReadOnlyDictionary<Guid, string> Tarefas, string GeradoEm,
+    string? Responsavel = null, byte[]? Logotipo = null);
 
 /// <summary>
 /// Bloco 58: a ordem de serviço em PDF (A4 retrato), para imprimir e assinar: o número e a obra, o executante e as datas, o
@@ -82,7 +85,7 @@ public sealed class GeradorOrdemDeServicoPdf
             }
             y = Itens(c, ordem, blocos[b], cabecalho, y, ultimo: b == blocos.Count - 1, f);
             if (b == blocos.Count - 1 && fimNaMesma)
-                Fim(c, ordem, y + 14, f);
+                Fim(c, ordem, y + 14, f, cabecalho.Responsavel);
             Rodape(c, cabecalho, b + 1, total, f);
             documento.EndPage();
         }
@@ -90,7 +93,7 @@ public sealed class GeradorOrdemDeServicoPdf
         {
             var c = documento.BeginPage(Largura, Altura);
             Continuacao(c, ordem, cabecalho, f);
-            Fim(c, ordem, Margem + 70, f);
+            Fim(c, ordem, Margem + 70, f, cabecalho.Responsavel);
             Rodape(c, cabecalho, total, total, f);
             documento.EndPage();
         }
@@ -102,7 +105,14 @@ public sealed class GeradorOrdemDeServicoPdf
         var d = o.Dados;
         Escrever(c, "ORDEM DE SERVIÇO", Margem, Margem + 6, f.Negrito(10), Cinza);
         Direita(c, o.Codigo, Limite, Margem + 22, f.Negrito(22), Destaque);
-        Escrever(c, Cortar(cab.Obra, f.Negrito(16), Limite - Margem - 130), Margem, Margem + 28, f.Negrito(16), Texto);
+        var reservado = 130f;
+        if (cab.Logotipo is { Length: > 0 } logo) // Bloco 65: o logotipo à esquerda do número
+        {
+            var direitaDoLogo = Limite - f.Negrito(22).MeasureText(o.Codigo) - 14;
+            GeradorBoletimPdf.DesenharLogotipo(c, logo, new SKRect(direitaDoLogo - 110, Margem - 6, direitaDoLogo, Margem + 30));
+            reservado = Limite - direitaDoLogo + 120;
+        }
+        Escrever(c, Cortar(cab.Obra, f.Negrito(16), Limite - Margem - reservado), Margem, Margem + 28, f.Negrito(16), Texto);
         var y = Margem + 44f;
         foreach (var linha in new[] { cab.DadosDaObra.Contratante is { } ct ? $"Contratante: {ct}" : null, cab.DadosDaObra.Contrato is { } ctr ? $"Contrato: {ctr}" : null,
                      cab.DadosDaObra.Endereco is { } end ? $"Endereço: {end}" : null }.OfType<string>())
@@ -153,20 +163,28 @@ public sealed class GeradorOrdemDeServicoPdf
         Escrever(c, Cortar($"{cab.Obra} · {o.Dados.Titulo}", f.Normal(10), Limite - Margem - 110), Margem, Margem + 26, f.Normal(10), Texto);
     }
 
-    // A tabela: item, tarefa, descrição, unidade, quantidade, preço unitário e total; no último bloco, o total da OS.
+    // A tabela: item, tarefa, descrição, unidade, quantidade, (Bloco 65: com medições, o medido e o %), preço unitário e total; no
+    // último bloco, o total da OS.
     private float Itens(SKCanvas c, OrdemDeServico o, List<(int Indice, ItemDaOrdem Item)> itens, CabecalhoDaOrdem cab, float y, bool ultimo, Fontes f)
     {
-        float[] x = [Margem, Margem + 26, Margem + 76, Limite - 196, Limite - 164, Limite - 112, Limite - 56];
+        var comMedicoes = o.Medicoes.Count > 0;
+        // O começo de cada coluna; as numéricas vão alinhadas à direita da seguinte.
+        float[] x = comMedicoes
+            ? [Margem, Margem + 26, Margem + 76, Limite - 286, Limite - 254, Limite - 202, Limite - 150, Limite - 112, Limite - 56]
+            : [Margem, Margem + 26, Margem + 76, Limite - 196, Limite - 164, Limite - 112, Limite - 56];
+        string[] titulos = comMedicoes
+            ? ["Item", "Tarefa", "Descrição", "Un", "Quant.", "Medido", "%", "Preço un.", "Total"]
+            : ["Item", "Tarefa", "Descrição", "Un", "Quant.", "Preço un.", "Total"];
+        float Fim(int i) => i + 1 < x.Length ? x[i + 1] : Limite;
         using var fundo = new SKPaint { Color = Faixa };
         using var traco = new SKPaint { Color = Linha, StrokeWidth = 0.6f };
         c.DrawRect(new SKRect(Margem, y, Limite, y + AlturaDoItem), fundo);
-        var cabecalho = new[] { "Item", "Tarefa", "Descrição", "Un", "Quant.", "Preço un.", "Total" };
-        for (var i = 0; i < cabecalho.Length; i++)
+        for (var i = 0; i < titulos.Length; i++)
         {
             if (i >= 4)
-                Direita(c, cabecalho[i], (i + 1 < x.Length ? x[i + 1] : Limite) - 4, y + 12.5f, f.Negrito(8));
+                Direita(c, titulos[i], Fim(i) - 4, y + 12.5f, f.Negrito(8));
             else
-                Escrever(c, cabecalho[i], x[i] + 3, y + 12.5f, f.Negrito(8), Texto);
+                Escrever(c, titulos[i], x[i] + 3, y + 12.5f, f.Negrito(8), Texto);
         }
         y += AlturaDoItem;
         foreach (var (indice, item) in itens)
@@ -176,9 +194,17 @@ public sealed class GeradorOrdemDeServicoPdf
             Escrever(c, Cortar(edt, f.Normal(8), x[2] - x[1] - 6), x[1] + 3, y + 12.5f, f.Normal(8), Texto);
             Escrever(c, Cortar(item.Descricao, f.Normal(8), x[3] - x[2] - 6), x[2] + 3, y + 12.5f, f.Normal(8), Texto);
             Escrever(c, Cortar(item.Unidade, f.Normal(8), x[4] - x[3] - 4), x[3] + 3, y + 12.5f, f.Normal(8), Texto);
-            Direita(c, Numero(item.Quantidade), x[5] - 4, y + 12.5f, f.Normal(8));
-            Direita(c, Moeda.Formatar(item.PrecoUnitario), x[6] - 4, y + 12.5f, f.Normal(8));
-            Direita(c, Moeda.Formatar(item.Total), Limite - 4, y + 12.5f, f.Normal(8));
+            var numeros = new List<string> { Numero(item.Quantidade) };
+            if (comMedicoes)
+            {
+                var medido = o.MedidoDoItem(indice - 1);
+                numeros.Add(Numero(medido));
+                numeros.Add(item.Quantidade == 0 ? "—" : $"{(medido / item.Quantidade * 100).ToString("0", Brasil)}%");
+            }
+            numeros.Add(Moeda.Formatar(item.PrecoUnitario));
+            numeros.Add(Moeda.Formatar(item.Total));
+            for (var k = 0; k < numeros.Count; k++)
+                Direita(c, numeros[k], Fim(4 + k) - 4, y + 12.5f, f.Normal(8));
             y += AlturaDoItem;
             c.DrawLine(Margem, y, Limite, y, traco);
         }
@@ -190,7 +216,8 @@ public sealed class GeradorOrdemDeServicoPdf
         if (ultimo)
         {
             c.DrawRect(new SKRect(Margem, y, Limite, y + AlturaDoItem), fundo);
-            Escrever(c, "Total da OS", x[2] + 3, y + 12.5f, f.Negrito(9), Texto);
+            Escrever(c, comMedicoes ? $"Total da OS · medido {Moeda.ComSimbolo(o.TotalMedido)} ({(o.Total == 0 ? 0 : o.TotalMedido / o.Total * 100).ToString("0", Brasil)}%)" : "Total da OS",
+                x[2] + 3, y + 12.5f, f.Negrito(9), Texto);
             Direita(c, Moeda.ComSimbolo(o.Total), Limite - 4, y + 12.5f, f.Negrito(9));
             y += AlturaDoItem;
         }
@@ -211,7 +238,7 @@ public sealed class GeradorOrdemDeServicoPdf
         return altura + 130; // as assinaturas
     }
 
-    private void Fim(SKCanvas c, OrdemDeServico o, float y, Fontes f)
+    private void Fim(SKCanvas c, OrdemDeServico o, float y, Fontes f, string? responsavel = null)
     {
         var d = o.Dados;
         if (d.Observacoes is { } obs)
@@ -283,7 +310,7 @@ public sealed class GeradorOrdemDeServicoPdf
                 Escrever(c, Cortar(nome, f.Normal(8), largura), x, y + 23, f.Normal(8), Cinza);
             Escrever(c, "Data: ____/____/______", x, y + (nome is null ? 24 : 35), f.Normal(8), Cinza);
         }
-        Assinatura(Margem, "Emitente (engenharia da obra)", null);
+        Assinatura(Margem, "Emitente (engenharia da obra)", responsavel);
         Assinatura(Margem + largura + 30, "Executante: de acordo", d.Executante);
         y += 62;
         c.DrawLine(Margem, y, Margem + largura, y, tracoDaAssinatura);

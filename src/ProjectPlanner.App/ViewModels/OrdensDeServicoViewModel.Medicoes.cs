@@ -7,6 +7,7 @@ using ProjectPlanner.Core;
 using ProjectPlanner.Core.Indicadores;
 using ProjectPlanner.Core.OrdensDeServico;
 using ProjectPlanner.Core.Planejamento;
+using ProjectPlanner.Relatorios;
 
 namespace ProjectPlanner.App.ViewModels;
 
@@ -214,6 +215,44 @@ public sealed partial class OrdensDeServicoViewModel
         Mensagem = $"Pagamento da {m.Codigo} desfeito; os custos dele saíram dos custos realizados.";
         if (nova.NoTelegram && _publicar is not null)
             _ = AtualizarNoTelegramAsync(nova);
+    }
+
+    // ---- Bloco 65: o boletim de medição da OS ----
+
+    [RelayCommand]
+    private Task BoletimPdf(MedicaoNaTela? linha) => ExportarBoletim(linha, "pdf", "PDF",
+        (b, cabecalho, destino) => new GeradorBoletimDaOrdemPdf().Gerar(b, cabecalho, _nomes, Agora.ToString("dd/MM/yyyy HH:mm", CultureInfo.GetCultureInfo("pt-BR")), destino));
+
+    [RelayCommand]
+    private Task BoletimExcel(MedicaoNaTela? linha) => ExportarBoletim(linha, "xlsx", "Excel",
+        (b, cabecalho, destino) => new GeradorOrdensExcel().Boletim(b, cabecalho, _nomes, Agora, destino));
+
+    private async Task ExportarBoletim(MedicaoNaTela? linha, string extensao, string formato,
+        Action<BoletimDaOrdem, Core.Relatorios.CabecalhoDoRelatorio, Stream> gerar)
+    {
+        if (Ordem is not { } o || linha is null)
+            return;
+        var boletim = BoletimDaOrdem.Montar(o, linha.Medicao.Id);
+        var nome = string.Concat($"{o.Codigo} {linha.Medicao.Codigo} - Boletim de medição".Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        if (await _dialogos.SalvarComoAsync($"Boletim de medição da {o.Codigo} {linha.Medicao.Codigo} em {formato}", nome, extensao) is not { } caminho)
+            return;
+        var cabecalho = _cabecalho();
+        var temporario = caminho + ".tmp";
+        try
+        {
+            await Task.Run(() =>
+            {
+                using (var destino = File.Create(temporario))
+                    gerar(boletim, cabecalho, destino);
+                File.Move(temporario, caminho, overwrite: true);
+            });
+            Mensagem = $"Salvo em {Path.GetFileName(caminho)}.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            try { File.Delete(temporario); } catch (Exception) { /* nada a fazer */ }
+            Mensagem = $"Não foi possível salvar: {ex.Message}";
+        }
     }
 
     [RelayCommand]

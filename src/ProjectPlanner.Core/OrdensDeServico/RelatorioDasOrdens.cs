@@ -47,6 +47,9 @@ public sealed record FiltroDoRelatorioDasOrdens(DateOnly? De = null, DateOnly? A
     }
 }
 
+/// <summary>Bloco 65: um mês no relatório: o medido (pela data das medições) e o pago (pela data dos pagamentos e da liberação).</summary>
+public sealed record MesNoRelatorio(DateOnly Mes, decimal Medido, decimal Pago);
+
 /// <summary>Bloco 64: um executante no relatório: quantas OS, o contratado, o medido, o pago, o que falta pagar e os prazos.</summary>
 public sealed record ExecutanteNoRelatorio(string Nome, int Ordens, decimal Valor, decimal Medido, decimal Pago, decimal APagar, string? Prazos);
 
@@ -71,6 +74,9 @@ public sealed record RelatorioDasOrdens(
     IReadOnlyList<OrdemDeServico> Vencidas,
     IReadOnlyList<OrdemDeServico> ParaConferir)
 {
+    /// <summary>Bloco 65: o medido e o pago de cada mês (sem as canceladas), do primeiro ao último mês com movimento.</summary>
+    public IReadOnlyList<MesNoRelatorio> PorMes { get; init; } = [];
+
     public bool Vazio => Ordens.Count == 0;
 
     public int? DiasDeAtraso(OrdemDeServico ordem) => TextosDaOrdem.DiasDeAtraso(ordem, Hoje);
@@ -105,6 +111,16 @@ public sealed record RelatorioDasOrdens(
             .Select(g => new ExecutanteNoRelatorio(g.Key, g.Count(), g.Sum(o => o.Total), g.Sum(o => o.TotalMedido), g.Sum(o => o.TotalPago),
                 g.Sum(o => o.APagar), TextosDaOrdem.Prazos(g)))
             .ToList();
+        // Bloco 65: o medido e o pago por mês (o pago é o líquido de cada pagamento e a retenção liberada).
+        static DateOnly Mes(DateOnly d) => new(d.Year, d.Month, 1);
+        var movimentos = validas.SelectMany(o => o.Medicoes.Select(m => (Mes: Mes(m.Data), Medido: m.Valor, Pago: 0m))
+                .Concat(o.Medicoes.Where(m => m.Paga).Select(m => (Mes: Mes(m.Pagamento!.Data), Medido: 0m, Pago: m.Valor - o.RetencaoDe(m))))
+                .Concat(o.Liberacao is { } l ? [(Mes: Mes(l.Data), Medido: 0m, Pago: l.Valor)] : []))
+            .ToList();
+        var porMes = new List<MesNoRelatorio>();
+        if (movimentos.Count > 0)
+            for (var mes = movimentos.Min(m => m.Mes); mes <= movimentos.Max(m => m.Mes); mes = mes.AddMonths(1))
+                porMes.Add(new MesNoRelatorio(mes, movimentos.Where(m => m.Mes == mes).Sum(m => m.Medido), movimentos.Where(m => m.Mes == mes).Sum(m => m.Pago)));
         return new RelatorioDasOrdens(filtro, hoje, lista,
             [.. lista.GroupBy(o => o.Situacao).OrderBy(g => g.Key).Select(g => (g.Key, g.Count()))],
             porExecutante,
@@ -112,6 +128,6 @@ public sealed record RelatorioDasOrdens(
             validas.Sum(o => o.Retido), validas.Where(o => TextosDaOrdem.EmAndamento(o.Situacao)).Sum(o => o.PorMedir),
             TextosDaOrdem.Prazos(lista),
             [.. lista.Where(o => o.Vencida(hoje))],
-            [.. lista.Where(o => o.Situacao == SituacaoDaOrdem.Concluida)]);
+            [.. lista.Where(o => o.Situacao == SituacaoDaOrdem.Concluida)]) { PorMes = porMes };
     }
 }

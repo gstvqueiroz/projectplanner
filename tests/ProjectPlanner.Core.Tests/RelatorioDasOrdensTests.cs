@@ -46,3 +46,28 @@ public class RelatorioDasOrdensTests
         RelatorioDasOrdens.Montar(Ordens(), new FiltroDoRelatorioDasOrdens(Situacoes: SituacoesDoRelatorio.Encerradas), Hoje).Ordens.Select(o => o.Numero).Should().Equal(3);
     }
 }
+
+// Bloco 65: o boletim de medição da OS.
+public class BoletimDaOrdemTests
+{
+    private static readonly DateTime Agora = new(2026, 10, 1, 9, 0, 0);
+
+    [Fact]
+    public void Boletim_AnteriorNestaAcumuladoSaldo_RetencaoELiquido()
+    {
+        var dados = new DadosDaOrdem("Alvenaria", TipoDeExecutante.Terceiro, "Construtora Silva", null, null, null,
+            [new ItemDaOrdem(null, "Alvenaria", "m²", 100, 30), new ItemDaOrdem(null, "Verga", "m", 10, 15)], null, null, FormaDePagamentoDaOrdem.PorMedicao,
+            null, null, retencao: 5);
+        var os = OrdemDeServico.Nova(Guid.NewGuid(), 3, dados, Agora).Emitir(Agora).Aceitar(Agora)
+            .Medir(Guid.NewGuid(), new DateOnly(2026, 10, 5), [40, 0], Agora).Medir(Guid.NewGuid(), new DateOnly(2026, 10, 12), [20, 10], Agora);
+
+        var b = BoletimDaOrdem.Montar(os, os.Medicoes[1].Id);
+
+        b.Titulo.Should().Be("OS-003 · Boletim de medição M2");
+        b.Linhas.Select(l => (l.Anterior, l.NestaMedicao, l.Acumulado, l.Saldo, l.Percentual, l.ValorNestaMedicao)).Should().Equal(
+            (40m, 20m, 60m, 40m, 60m, 600m), (0m, 10m, 10m, 0m, 100m, 150m));
+        (b.ValorNestaMedicao, b.MedidoAnterior, b.MedidoAcumulado, b.Saldo, b.Retencao, b.Liquido, b.PercentualAcumulado)
+            .Should().Be((750m, 1200m, 1950m, 1200m, 37.5m, 712.5m, 61.9m));
+        FluentActions.Invoking(() => BoletimDaOrdem.Montar(os, Guid.NewGuid())).Should().Throw<DomainValidationException>();
+    }
+}

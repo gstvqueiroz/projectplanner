@@ -56,6 +56,9 @@ public static class TextosDaOrdem
 
     public static string Texto(TipoDeExecutante tipo) => tipo == TipoDeExecutante.EquipePropria ? "Equipe própria" : "Terceiro (empreiteiro)";
 
+    /// <summary>Bloco 65: "equipe própria" ou "empreiteiro", para ir entre parênteses depois do nome.</summary>
+    public static string TipoCurto(TipoDeExecutante tipo) => tipo == TipoDeExecutante.EquipePropria ? "equipe própria" : "empreiteiro";
+
     public static string Texto(FormaDePagamentoDaOrdem forma) => forma switch
     {
         FormaDePagamentoDaOrdem.Empreitada => "Empreitada (preço fechado)",

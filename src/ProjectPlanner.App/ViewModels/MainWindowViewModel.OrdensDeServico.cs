@@ -22,7 +22,27 @@ public sealed partial class MainWindowViewModel
     private Task RelatorioDasOrdens()
     {
         Recalcular();
-        return _dialogos.MostrarRelatorioDasOrdensAsync(new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio));
+        return _dialogos.MostrarRelatorioDasOrdensAsync(new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio, CabecalhoDosRelatorios));
+    }
+
+    /// <summary>
+    /// Bloco 65: o cabeçalho dos relatórios das OS: a obra (do projeto) e quem emite, com o logotipo (as preferências do relatório
+    /// fotográfico, as mesmas do boletim do contrato).
+    /// </summary>
+    internal Core.Relatorios.CabecalhoDoRelatorio CabecalhoDosRelatorios()
+    {
+        var preferencias = _preferenciasRelatorio.Carregar();
+        byte[]? logotipo = null;
+        try
+        {
+            if (preferencias.Logotipo is { } arquivo && File.Exists(arquivo))
+                logotipo = File.ReadAllBytes(arquivo);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Sem o logotipo, os relatórios saem do mesmo jeito.
+        }
+        return new Core.Relatorios.CabecalhoDoRelatorio(_cronograma.Nome, _cronograma.Obra, preferencias.Responsavel, preferencias.Registro, logotipo);
     }
 
     void IEdicaoCronograma.AbrirOrdens(TarefaViewModel linha)
@@ -40,7 +60,7 @@ public sealed partial class MainWindowViewModel
                 o.Situacao.ToString(), CancellationToken.None)
             : null;
         await _dialogos.MostrarOrdensDeServicoAsync(new OrdensDeServicoViewModel(_cronograma, _dialogos, _relogio, OrdensMudaram,
-            TarefaSelecionada?.Tarefa.Id, publicar, ordem, criarNova));
+            TarefaSelecionada?.Tarefa.Id, publicar, ordem, criarNova, CabecalhoDosRelatorios));
         AtualizarOrdensNasLinhas();
     }
 

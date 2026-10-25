@@ -121,6 +121,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     private readonly TimeProvider _relogio;
     private readonly Action<string, bool> _mudou;
     private readonly Func<OrdemDeServico, bool, Task<int>>? _publicar;
+    private readonly Func<Core.Relatorios.CabecalhoDoRelatorio> _cabecalho;
     private readonly IReadOnlyDictionary<Guid, string> _nomes;
     private readonly IReadOnlyDictionary<Guid, string> _edt;
     private bool _carregando;
@@ -133,9 +134,11 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     /// Telegram.
     /// </param>
     public OrdensDeServicoViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio, Action<string, bool> mudou,
-        Guid? tarefaSelecionada = null, Func<OrdemDeServico, bool, Task<int>>? publicar = null, Guid? ordemInicial = null, bool criarNova = false)
+        Guid? tarefaSelecionada = null, Func<OrdemDeServico, bool, Task<int>>? publicar = null, Guid? ordemInicial = null, bool criarNova = false,
+        Func<Core.Relatorios.CabecalhoDoRelatorio>? cabecalho = null)
     {
         _publicar = publicar;
+        _cabecalho = cabecalho ?? (() => new Core.Relatorios.CabecalhoDoRelatorio(cronograma.Nome, cronograma.Obra, null, null, null));
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(dialogos);
         ArgumentNullException.ThrowIfNull(relogio);
@@ -161,7 +164,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     public RelatorioDasOrdensViewModel NovoRelatorio()
     {
         SalvarSePreciso();
-        return new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio);
+        return new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio, _cabecalho);
     }
 
     public string Titulo => $"Ordens de serviço — {_cronograma.Nome}";
@@ -835,8 +838,12 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
 
     private bool TemSelecionadaParaPdf() => Ordem is not null;
 
-    private CabecalhoDaOrdem CabecalhoDoPdf() =>
-        new(_cronograma.Nome, _cronograma.Obra, _nomes, Agora.ToString("dd/MM/yyyy HH:mm", Brasil));
+    private CabecalhoDaOrdem CabecalhoDoPdf()
+    {
+        var c = _cabecalho();
+        var responsavel = string.Join(" · ", new[] { c.Responsavel, c.Registro }.Where(t => !string.IsNullOrWhiteSpace(t)));
+        return new(_cronograma.Nome, _cronograma.Obra, _nomes, Agora.ToString("dd/MM/yyyy HH:mm", Brasil), responsavel.Length > 0 ? responsavel : null, c.Logotipo);
+    }
 
     private string NomeDoArquivo(OrdemDeServico o) =>
         string.Concat($"{o.Codigo} - {o.Dados.Titulo}".Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));

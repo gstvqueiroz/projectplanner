@@ -212,6 +212,12 @@
                                     <DataTemplate x:DataType="vm:MedicaoNaTela">
                                         <DockPanel Margin="0,2">
                                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                                                <!-- Bloco 65 -->
+                                                <Button Content="Boletim PDF…"
+                                                        Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).BoletimPdfCommand}" CommandParameter="{Binding}"
+                                                        ToolTip.Tip="O boletim de medição desta medição, para pagar o executante: anterior, nesta, acumulado, retenção e líquido" />
+                                                <Button Content="Excel…"
+                                                        Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).BoletimExcelCommand}" CommandParameter="{Binding}" />
                                                 <Button Content="Pagar…" IsVisible="{Binding !Paga}"
                                                         Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PagarMedicaoCommand}" CommandParameter="{Binding}"
                                                         ToolTip.Tip="Registra o pagamento e lança o valor nos custos realizados (por tarefa)" />

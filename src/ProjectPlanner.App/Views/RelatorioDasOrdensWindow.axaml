@@ -4,14 +4,16 @@
         x:Class="ProjectPlanner.App.Views.RelatorioDasOrdensWindow"
         x:DataType="vm:RelatorioDasOrdensViewModel"
         Title="{Binding Titulo}"
-        Width="640" Height="360" MinWidth="560" MinHeight="320"
+        Width="680" Height="400" MinWidth="600" MinHeight="360"
         WindowStartupLocation="CenterOwner">
 
     <!-- Bloco 64: o filtro do relatório das OS e o PDF (salvar ou imprimir) ou o CSV. -->
     <DockPanel Margin="16">
         <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                <Button x:Name="ExportarCsv" Content="Exportar CSV…" Command="{Binding ExportarCsvCommand}" />
+                <Button x:Name="ExportarCsv" Content="CSV…" Command="{Binding ExportarCsvCommand}" />
+                <Button x:Name="ExportarExcel" Content="Excel…" Command="{Binding ExportarExcelCommand}"
+                        ToolTip.Tip="O relatório em abas: Resumo, OS, Itens, Medições e Por mês (números de verdade, para somar e filtrar)" />
                 <Button x:Name="Imprimir" Content="Imprimir…" Command="{Binding ImprimirCommand}" />
                 <Button x:Name="SalvarPdf" Classes="accent" Content="Salvar PDF…" Command="{Binding SalvarPdfCommand}" />
                 <Button Content="Fechar" Click="Fechar" IsCancel="True" />
@@ -33,6 +35,7 @@
                 <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" x:Name="Executante" ItemsSource="{Binding Executantes}" SelectedItem="{Binding ExecutanteEscolhido}"
                           HorizontalAlignment="Stretch" />
             </Grid>
+            <CheckBox x:Name="Detalhar" IsChecked="{Binding Detalhar}" Content="Incluir no PDF o detalhe de cada OS (itens com o medido, medições e pagamentos)" />
             <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10">
                 <TextBlock x:Name="Resumo" Text="{Binding Resumo}" TextWrapping="Wrap" FontWeight="SemiBold" />
             </Border>

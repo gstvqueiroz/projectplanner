@@ -9,7 +9,8 @@ namespace ProjectPlanner.Relatorios;
 /// <summary>
 /// Bloco 64: o relatório das ordens de serviço em PDF (A4 paisagem): o cabeçalho com a obra e o filtro, os números (OS,
 /// contratado, medido, pago, a pagar, por medir), as situações e os prazos, o que pede atenção (vencidas e para conferir), o
-/// resumo por executante e a lista de todas as OS do filtro, em quantas páginas precisar.
+/// resumo por executante e a lista de todas as OS do filtro, em quantas páginas precisar. Bloco 65: o logotipo, os gráficos (por
+/// executante; medido e pago por mês) e, se pedido, o detalhe de cada OS (itens com o medido, medições e pagamentos).
 /// </summary>
 public sealed class GeradorRelatorioDasOrdensPdf
 {
@@ -36,7 +37,7 @@ public sealed class GeradorRelatorioDasOrdensPdf
         ("A pagar", 54, true), // somam a largura útil (770 pontos)
     ];
 
-    private sealed class Pagina(SKDocument documento, Fontes fontes, string obra, string subtitulo)
+    private sealed class Pagina(SKDocument documento, Fontes fontes, string obra, string subtitulo, byte[]? logotipo)
     {
         public SKCanvas Tela { get; private set; } = null!;
         public float Y { get; set; }
@@ -48,8 +49,14 @@ public sealed class GeradorRelatorioDasOrdensPdf
                 documento.EndPage();
             Tela = documento.BeginPage(Largura, Altura);
             Numero++;
+            var direita = Limite;
+            if (logotipo is { Length: > 0 })
+            {
+                GeradorBoletimPdf.DesenharLogotipo(Tela, logotipo, new SKRect(Limite - 130, Margem - 4, Limite, Margem + 40));
+                direita = Limite - 140;
+            }
             Escrever(Tela, "RELATÓRIO DAS ORDENS DE SERVIÇO", Margem, Margem + 4, fontes.Negrito(10), Cinza);
-            Escrever(Tela, Cortar(obra, fontes.Negrito(16), Limite - Margem), Margem, Margem + 26, fontes.Negrito(16), Texto);
+            Escrever(Tela, Cortar(obra, fontes.Negrito(16), direita - Margem), Margem, Margem + 26, fontes.Negrito(16), Texto);
             Escrever(Tela, Cortar(subtitulo, fontes.Normal(9), Limite - Margem - 60), Margem, Margem + 42, fontes.Normal(9), Cinza);
             Direita(Tela, $"Página {Numero}", Limite, Altura - Margem + 14, fontes.Normal(8), Cinza);
             Y = Margem + 64;
@@ -67,10 +74,15 @@ public sealed class GeradorRelatorioDasOrdensPdf
         public void Fim() => documento.EndPage();
     }
 
-    public void Gerar(RelatorioDasOrdens relatorio, string obra, DadosDaObra dadosDaObra, string geradoEm, Stream destino)
+    /// <param name="tarefas">A EDT e o nome de cada tarefa, para o detalhe das OS.</param>
+    /// <param name="detalhar">Bloco 65: inclui o detalhe de cada OS no fim.</param>
+    public void Gerar(RelatorioDasOrdens relatorio, CabecalhoDoRelatorio cabecalho, IReadOnlyDictionary<Guid, string> tarefas, string geradoEm, Stream destino,
+        bool detalhar = false)
     {
         ArgumentNullException.ThrowIfNull(relatorio);
+        ArgumentNullException.ThrowIfNull(cabecalho);
         ArgumentNullException.ThrowIfNull(destino);
+        var (obra, dadosDaObra) = (cabecalho.Obra, cabecalho.DadosDaObra);
         using var f = new Fontes();
         using var documento = SKDocument.CreatePdf(destino, new SKDocumentPdfMetadata
         {
@@ -79,7 +91,9 @@ public sealed class GeradorRelatorioDasOrdensPdf
             Producer = "ProjectPlanner",
         });
         var contratante = dadosDaObra.Contratante is { } c ? $"{c} · " : "";
-        var p = new Pagina(documento, f, obra, $"{contratante}{relatorio.Filtro.Texto} · gerado em {geradoEm}");
+        var responsavel = string.Join(" · ", new[] { cabecalho.Responsavel, cabecalho.Registro }.Where(t => !string.IsNullOrWhiteSpace(t)));
+        var p = new Pagina(documento, f, obra, $"{contratante}{relatorio.Filtro.Texto} · gerado em {geradoEm}" + (responsavel.Length > 0 ? $" · {responsavel}" : ""),
+            cabecalho.Logotipo);
         p.Nova();
         Numeros(p, relatorio, f);
         if (relatorio.Vazio)
@@ -89,9 +103,12 @@ public sealed class GeradorRelatorioDasOrdensPdf
             documento.Close();
             return;
         }
+        Graficos(p, relatorio, f);
         Atencao(p, relatorio, f);
         PorExecutante(p, relatorio, f);
         Lista(p, relatorio, f);
+        if (detalhar)
+            Detalhe(p, relatorio, tarefas, f);
         p.Fim();
         documento.Close();
     }
@@ -131,6 +148,150 @@ public sealed class GeradorRelatorioDasOrdensPdf
             p.Y += 14;
         }
         p.Y += 6;
+    }
+
+    private static readonly SKColor CorDoContratado = new(0xBB, 0xDE, 0xFB);
+    private static readonly SKColor CorDoMedido = new(0x42, 0xA5, 0xF5);
+    private static readonly SKColor CorDoPago = new(0x15, 0x65, 0xC0);
+
+    // Bloco 65: dois gráficos lado a lado: por executante (contratado, medido e pago) e o medido e o pago de cada mês.
+    private static void Graficos(Pagina p, RelatorioDasOrdens r, Fontes f)
+    {
+        if (r.PorExecutante.Count == 0 && r.PorMes.Count == 0)
+            return;
+        const float altura = 150;
+        p.Garantir(altura + 30);
+        var meio = Margem + (Limite - Margem) / 2;
+        var topo = p.Y;
+        // A legenda, uma para os dois.
+        var xl = Margem;
+        foreach (var (texto, cor) in new[] { ("Contratado", CorDoContratado), ("Medido", CorDoMedido), ("Pago", CorDoPago) })
+        {
+            using var tinta = new SKPaint { Color = cor };
+            p.Tela.DrawRect(new SKRect(xl, topo - 7, xl + 9, topo + 2), tinta);
+            Escrever(p.Tela, texto, xl + 13, topo + 1, f.Normal(8), Texto);
+            xl += 24 + f.Normal(8).MeasureText(texto);
+        }
+        topo += 12;
+        if (r.PorExecutante.Count > 0)
+            BarrasPorExecutante(p.Tela, r, new SKRect(Margem, topo, meio - 16, topo + altura), f);
+        if (r.PorMes.Count > 0)
+            ColunasPorMes(p.Tela, r, new SKRect(r.PorExecutante.Count > 0 ? meio + 16 : Margem, topo, Limite, topo + altura), f);
+        p.Y = topo + altura + 18;
+    }
+
+    private static void BarrasPorExecutante(SKCanvas c, RelatorioDasOrdens r, SKRect area, Fontes f)
+    {
+        Escrever(c, "POR EXECUTANTE", area.Left, area.Top + 8, f.Negrito(8), Cinza);
+        var lista = r.PorExecutante.OrderByDescending(e => e.Valor).Take(6).ToList();
+        var maximo = Math.Max(1, lista.Max(e => e.Valor));
+        var rotulo = 110f;
+        var largura = area.Width - rotulo - 70;
+        var faixa = Math.Min(28, (area.Height - 18) / lista.Count);
+        var espessura = Math.Min(16, faixa - 6);
+        for (var i = 0; i < lista.Count; i++)
+        {
+            var e = lista[i];
+            var y = area.Top + 18 + i * faixa;
+            Escrever(c, Cortar(e.Nome, f.Normal(8), rotulo - 6), area.Left, y + espessura / 2 + 3, f.Normal(8), Texto);
+            float X(decimal v) => area.Left + rotulo + (float)(v / maximo) * largura;
+            foreach (var (valor, cor, encolher) in new[] { (e.Valor, CorDoContratado, 0f), (e.Medido, CorDoMedido, espessura * 0.2f), (e.Pago, CorDoPago, espessura * 0.35f) })
+            {
+                using var tinta = new SKPaint { Color = cor, IsAntialias = true };
+                c.DrawRect(new SKRect(area.Left + rotulo, y + encolher, Math.Max(area.Left + rotulo + 1, X(valor)), y + espessura - encolher), tinta);
+            }
+            Escrever(c, Abreviar(e.Valor), X(e.Valor) + 4, y + espessura / 2 + 3, f.Normal(7.5f), Cinza);
+        }
+    }
+
+    private static void ColunasPorMes(SKCanvas c, RelatorioDasOrdens r, SKRect area, Fontes f)
+    {
+        Escrever(c, "MEDIDO E PAGO POR MÊS", area.Left, area.Top + 8, f.Negrito(8), Cinza);
+        var meses = r.PorMes.TakeLast(12).ToList();
+        var maximo = Math.Max(1, meses.Max(m => Math.Max(m.Medido, m.Pago)));
+        var (topo, fundo) = (area.Top + 22, area.Bottom - 14);
+        using var eixo = new SKPaint { Color = Linha, StrokeWidth = 0.6f };
+        c.DrawLine(area.Left, fundo, area.Right, fundo, eixo);
+        var largura = area.Width / meses.Count;
+        var coluna = Math.Min(14, largura / 2 - 3);
+        for (var i = 0; i < meses.Count; i++)
+        {
+            var m = meses[i];
+            var centro = area.Left + largura * i + largura / 2;
+            float Y(decimal v) => fundo - (float)(v / maximo) * (fundo - topo);
+            using (var medido = new SKPaint { Color = CorDoMedido, IsAntialias = true })
+                c.DrawRect(new SKRect(centro - coluna - 1, Y(m.Medido), centro - 1, fundo), medido);
+            using (var pago = new SKPaint { Color = CorDoPago, IsAntialias = true })
+                c.DrawRect(new SKRect(centro + 1, Y(m.Pago), centro + coluna + 1, fundo), pago);
+            var mes = m.Mes.ToString("MMM/yy", Brasil).Replace(".", "");
+            Escrever(c, mes, centro - f.Normal(7).MeasureText(mes) / 2, fundo + 10, f.Normal(7), Cinza);
+            if (Math.Max(m.Medido, m.Pago) > 0)
+            {
+                var valor = Abreviar(Math.Max(m.Medido, m.Pago));
+                Escrever(c, valor, centro - f.Normal(6.5f).MeasureText(valor) / 2, Y(Math.Max(m.Medido, m.Pago)) - 3, f.Normal(6.5f), Cinza);
+            }
+        }
+    }
+
+    /// <summary>"R$ 12,3 mil", "R$ 1,2 mi", "R$ 850".</summary>
+    private static string Abreviar(decimal valor) => valor switch
+    {
+        >= 1_000_000 => $"R$ {(valor / 1_000_000).ToString("0.#", Brasil)} mi",
+        >= 1_000 => $"R$ {(valor / 1_000).ToString("0.#", Brasil)} mil",
+        _ => $"R$ {valor.ToString("0", Brasil)}",
+    };
+
+    // Bloco 65: o detalhe de cada OS: os itens com o medido e o %, as medições e os pagamentos.
+    private static void Detalhe(Pagina p, RelatorioDasOrdens r, IReadOnlyDictionary<Guid, string> tarefas, Fontes f)
+    {
+        p.Nova();
+        Escrever(p.Tela, "DETALHE DE CADA ORDEM DE SERVIÇO", Margem, p.Y + 4, f.Negrito(8), Cinza);
+        p.Y += 14;
+        (string, float, bool)[] colunas = [("Tarefa", 50, false), ("Descrição", 300, false), ("Un", 40, false), ("Contratado", 80, true), ("Medido", 80, true),
+            ("%", 50, true), ("Preço un.", 80, true), ("Total", 90, true)];
+        foreach (var o in r.Ordens)
+        {
+            p.Garantir(AlturaDaLinha * 4 + 20);
+            Escrever(p.Tela, Cortar($"{o.Codigo} · {o.Dados.Titulo}", f.Negrito(10), Limite - Margem - 200), Margem, p.Y + 10, f.Negrito(10), Destaque);
+            Direita(p.Tela, TextosDaOrdem.Texto(o.Situacao), Limite, p.Y + 10, f.Normal(9), Cinza);
+            p.Y += 15;
+            var linha = string.Join(" · ", new[]
+            {
+                o.Dados.Executante ?? "sem executante", TextosDaOrdem.Texto(o.Dados.FormaDePagamento).ToLower(Brasil),
+                o.Dados.Prazo is { } prazo ? $"prazo {prazo.ToString("dd/MM/yyyy", Brasil)}" : null,
+                o.Conclusao is { } fim ? $"concluída em {fim.ToString("dd/MM/yyyy", Brasil)}" : null,
+                o.Dados.Retencao > 0 ? $"retenção {o.Dados.Retencao.ToString("0.##", Brasil)}%" : null,
+            }.OfType<string>());
+            Escrever(p.Tela, Cortar(linha, f.Normal(8.5f), Limite - Margem), Margem, p.Y + 8, f.Normal(8.5f), Texto);
+            p.Y += 13;
+            Cabecalho(p, colunas, f);
+            for (var i = 0; i < o.Dados.Itens.Count; i++)
+            {
+                if (p.Garantir(AlturaDaLinha))
+                    Cabecalho(p, colunas, f);
+                var item = o.Dados.Itens[i];
+                var medido = o.MedidoDoItem(i);
+                var edt = item.TarefaId is { } id && tarefas.TryGetValue(id, out var t) ? t.Split(' ')[0] : "—";
+                Celulas(p, colunas, [edt, item.Descricao, item.Unidade, Moeda.FormatarQuantidade(item.Quantidade), Moeda.FormatarQuantidade(medido),
+                    item.Quantidade == 0 ? "—" : $"{(medido / item.Quantidade * 100).ToString("0", Brasil)}%", Moeda.Formatar(item.PrecoUnitario), Moeda.Formatar(item.Total)], f, Texto);
+            }
+            foreach (var m in o.Medicoes)
+            {
+                p.Garantir(13);
+                var pago = m.Pagamento is { } pg ? $"paga em {pg.Data.ToString("dd/MM/yyyy", Brasil)}{(pg.Documento is { } doc ? $" ({doc})" : "")}" : "a pagar";
+                var retida = o.RetencaoDe(m) > 0 ? $" · retido {Moeda.ComSimbolo(o.RetencaoDe(m))}" : "";
+                Escrever(p.Tela, $"{m.Codigo} · {m.Data.ToString("dd/MM/yyyy", Brasil)} · {Moeda.ComSimbolo(m.Valor)} · {pago}{retida}", Margem + 8, p.Y + 10,
+                    f.Normal(8.5f), Texto);
+                p.Y += 13;
+            }
+            if (o.Liberacao is { } l)
+            {
+                p.Garantir(13);
+                Escrever(p.Tela, $"Retenção de {Moeda.ComSimbolo(l.Valor)} liberada em {l.Data.ToString("dd/MM/yyyy", Brasil)}", Margem + 8, p.Y + 10, f.Normal(8.5f), Texto);
+                p.Y += 13;
+            }
+            p.Y += 12;
+        }
     }
 
     // As vencidas e as que esperam a conferência.

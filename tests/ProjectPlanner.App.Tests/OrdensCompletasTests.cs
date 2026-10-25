@@ -94,4 +94,48 @@ public sealed class OrdensCompletasTests : IDisposable
         await _vm.AbrirTelaAsync(new TelaParaAbrir(TelasDoPrograma.RelatorioDasOrdens, null, null, null, null, false));
         _ambiente.Dialogos.RelatoriosDasOrdens.Should().ContainSingle();
     }
+
+    // ---- Bloco 65 ----
+
+    [Fact]
+    public async Task BoletimDaMedicao_EmPdfEExcel()
+    {
+        var tela = NovaEmitida();
+        tela.AceitarCommand.Execute(null);
+        tela.ItensParaMedir[0].NestaMedicao = "40";
+        tela.RegistrarMedicaoCommand.Execute(null);
+        _ambiente.Dialogos.ArquivoExportado = Path.Combine(_pasta, "boletim");
+
+        await tela.BoletimPdfCommand.ExecuteAsync(tela.MedicoesNaTela[0]);
+        await tela.BoletimExcelCommand.ExecuteAsync(tela.MedicoesNaTela[0]);
+
+        _ambiente.Dialogos.Exportacoes.Select(e => (e.Titulo, e.Nome, e.Extensao)).Should().Equal(
+            ("Boletim de medição da OS-001 M1 em PDF", "OS-001 M1 - Boletim de medição", "pdf"),
+            ("Boletim de medição da OS-001 M1 em Excel", "OS-001 M1 - Boletim de medição", "xlsx"));
+        Encoding.ASCII.GetString(await File.ReadAllBytesAsync(Path.Combine(_pasta, "boletim.pdf")), 0, 5).Should().Be("%PDF-");
+        Encoding.ASCII.GetString(await File.ReadAllBytesAsync(Path.Combine(_pasta, "boletim.xlsx")), 0, 2).Should().Be("PK");
+    }
+
+    [Fact]
+    public async Task Relatorio_EmExcel_EComODetalheDeCadaOS()
+    {
+        var tela = NovaEmitida();
+        tela.AceitarCommand.Execute(null);
+        tela.ItensParaMedir[0].NestaMedicao = "40";
+        tela.RegistrarMedicaoCommand.Execute(null);
+        var relatorio = tela.NovoRelatorio();
+        _ambiente.Dialogos.ArquivoExportado = Path.Combine(_pasta, "relatorio");
+
+        await relatorio.ExportarExcelCommand.ExecuteAsync(null);
+        await relatorio.SalvarPdfCommand.ExecuteAsync(null);
+        var simples = await File.ReadAllBytesAsync(Path.Combine(_pasta, "relatorio.pdf"));
+        relatorio.Detalhar = true;
+        await relatorio.SalvarPdfCommand.ExecuteAsync(null);
+        var detalhado = await File.ReadAllBytesAsync(Path.Combine(_pasta, "relatorio.pdf"));
+
+        Encoding.ASCII.GetString(await File.ReadAllBytesAsync(Path.Combine(_pasta, "relatorio.xlsx")), 0, 2).Should().Be("PK");
+        int Paginas(byte[] pdf) => System.Text.RegularExpressions.Regex.Matches(Encoding.Latin1.GetString(pdf), @"/Type\s*/Page\b").Count;
+        Paginas(detalhado).Should().BeGreaterThan(Paginas(simples), "o detalhe de cada OS vai no fim");
+        relatorio.Relatorio.PorMes.Single().Medido.Should().Be(1200m);
+    }
 }

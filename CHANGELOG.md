@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.65.0
+
+**Relatórios das ordens de serviço aprimorados.**
+
+- **Boletim de medição da OS** (os botões "Boletim PDF…" e "Excel…" em cada medição, na tela da OS): para pagar o
+  executante, com cada item (contratado, anterior, nesta medição, acumulado, saldo, % e valores), o resumo (medido nas
+  anteriores, nesta, acumulado, saldo, retenção e o **líquido a pagar**), se já foi paga e as assinaturas do executante, da
+  engenharia (o responsável técnico) e da aprovação.
+- **Relatório das OS:**
+  - **gráficos:** por executante (contratado, medido e pago) e o medido e o pago de cada mês;
+  - **"Incluir o detalhe de cada OS"**: no fim do PDF, cada OS com os itens (contratado, medido e %), as medições e os
+    pagamentos;
+  - **Excel**, com as abas Resumo, OS, Itens, Medições e Por mês (números de verdade, para somar e filtrar).
+- **O PDF da OS** mostra o medido e o % de cada item quando já há medições, e as medições com os pagamentos.
+- **Logotipo e responsável técnico** (os das preferências do relatório fotográfico, os mesmos do boletim do contrato) no PDF
+  da OS, no boletim e no relatório das OS.
+
 ## 0.64.0
 
 **Ordens de serviço completas: relatório, atalhos e Gantt.**

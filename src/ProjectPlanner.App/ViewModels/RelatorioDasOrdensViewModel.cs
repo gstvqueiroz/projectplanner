@@ -23,13 +23,20 @@ public sealed partial class RelatorioDasOrdensViewModel : ViewModelBase
     private readonly Cronograma _cronograma;
     private readonly IDialogosService _dialogos;
     private readonly TimeProvider _relogio;
+    private readonly Func<Core.Relatorios.CabecalhoDoRelatorio> _cabecalho;
+    private readonly IReadOnlyDictionary<Guid, string> _tarefas;
 
-    public RelatorioDasOrdensViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio)
+    /// <param name="cabecalho">Bloco 65: a obra e quem emite, com o logotipo.</param>
+    public RelatorioDasOrdensViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio,
+        Func<Core.Relatorios.CabecalhoDoRelatorio>? cabecalho = null)
     {
         ArgumentNullException.ThrowIfNull(cronograma);
         ArgumentNullException.ThrowIfNull(dialogos);
         ArgumentNullException.ThrowIfNull(relogio);
         (_cronograma, _dialogos, _relogio) = (cronograma, dialogos, relogio);
+        _cabecalho = cabecalho ?? (() => new Core.Relatorios.CabecalhoDoRelatorio(cronograma.Nome, cronograma.Obra, null, null, null));
+        var edt = cronograma.NumeracaoEdt();
+        _tarefas = cronograma.Tarefas.ToDictionary(t => t.Id, t => $"{edt[t.Id]} {t.Nome}");
         Executantes = [TodosOsExecutantes, .. cronograma.OrdensDeServico.Todas.Select(o => o.Dados.Executante).OfType<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase).Order()];
         (SituacaoEscolhida, ExecutanteEscolhido) = (Situacoes[0], TodosOsExecutantes);
@@ -62,6 +69,9 @@ public sealed partial class RelatorioDasOrdensViewModel : ViewModelBase
     [ObservableProperty] public partial string Resumo { get; private set; } = "";
 
     [ObservableProperty] public partial string Mensagem { get; private set; } = "";
+
+    /// <summary>Bloco 65: o PDF traz, no fim, o detalhe de cada OS (os itens com o medido, as medições e os pagamentos).</summary>
+    [ObservableProperty] public partial bool Detalhar { get; set; }
 
     public FiltroDoRelatorioDasOrdens Filtro() => new(
         De is { } de ? DateOnly.FromDateTime(de) : null, Ate is { } ate ? DateOnly.FromDateTime(ate) : null, SituacaoEscolhida.Valor,
@@ -133,7 +143,18 @@ public sealed partial class RelatorioDasOrdensViewModel : ViewModelBase
     }
 
     private void GerarPdf(Stream destino) =>
-        new GeradorRelatorioDasOrdensPdf().Gerar(Relatorio, _cronograma.Nome, _cronograma.Obra, Agora.ToString("dd/MM/yyyy HH:mm", Brasil), destino);
+        new GeradorRelatorioDasOrdensPdf().Gerar(Relatorio, _cabecalho(), _tarefas, Agora.ToString("dd/MM/yyyy HH:mm", Brasil), destino, Detalhar);
+
+    /// <summary>Bloco 65: o relatório em Excel, com as abas Resumo, OS, Itens, Medições e Por mês.</summary>
+    [RelayCommand]
+    private async Task ExportarExcel()
+    {
+        if (await _dialogos.SalvarComoAsync("Exportar o relatório das OS em Excel", NomeDoArquivo, "xlsx") is not { } caminho)
+            return;
+        var (relatorio, cabecalho, agora) = (Relatorio, _cabecalho(), Agora);
+        if (await Gravar(caminho, destino => new GeradorOrdensExcel().Relatorio(relatorio, cabecalho, _tarefas, agora, destino)))
+            Mensagem = $"Salvo em {Path.GetFileName(caminho)}.";
+    }
 
     // Grava num temporário e troca no fim (um arquivo aberto no leitor não fica pela metade).
     private async Task<bool> Gravar(string caminho, Action<Stream> gravar)

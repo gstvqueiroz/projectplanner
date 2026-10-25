@@ -3,6 +3,17 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.63.1
+
+Correções nos dois erros do assistente.
+
+- **"Your credit balance is too low"**: a conta da Anthropic do servidor ficou sem crédito. Agora o servidor não mostra mais
+  esse erro: os pedidos do Claude (Padrão e Máximo) vão sozinhos para o Gemini do mesmo porte (Gemini 3 Flash e 3.1 Pro),
+  cobrando o que o Gemini custou, e voltam ao Claude em até 15 minutos depois que houver crédito. O dono do servidor fica
+  sabendo no painel (/admin, erros do servidor) e por e-mail (no máximo a cada 6 horas). Vale também para o Telegram.
+- **"A resposta do assistente ficou longa demais e veio cortada"**: o pedido ao Gemini agora tem um teto de saída (32 mil
+  tokens, como o do Claude) e, se a resposta vier cortada no meio, o assistente tenta mais uma vez pedindo uma resposta curta.
+
 ## 0.63.0
 
 **A IA cria e altera as ordens de serviço** (no chat do programa e no Telegram).

@@ -30,6 +30,7 @@ builder.Services.AddSingleton<IEnviadorDeEmail>(s =>
 builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.AddHttpClient(Ia.ClienteDaAnthropic, c => c.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.AddSingleton<CatalogoDeModelos>();
+builder.Services.AddSingleton<SaudeDosProvedores>(); // 0.63.1
 // Bloco 49: o Telegram (webhook → fila → atendente, que usa o assistente do programa com o Gemini medido).
 builder.Services.AddHttpClient(ClienteDoTelegram.Cliente, c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddTransient<MedidorDeTokens>();

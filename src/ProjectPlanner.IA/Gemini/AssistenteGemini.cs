@@ -37,14 +37,38 @@ public sealed class AssistenteGemini : IAssistenteIA
 
     public bool EstaConfigurado => true;
 
+    /// <summary>0.63.1: o teto da resposta (o mesmo do Claude no servidor): uma resposta que entra em repetição para aqui, e não no do modelo.</summary>
+    public const int TokensDeSaida = 32_000;
+
+    /// <summary>0.63.1: o que vai junto do pedido na segunda tentativa, quando a primeira resposta veio cortada.</summary>
+    public const string PedidoDeRespostaCurta =
+        "(A sua resposta anterior a este pedido passou do limite e veio cortada. Responda de novo, de forma curta: a mensagem em até " +
+        "8 linhas e só os campos necessários, sem repetir texto.)";
+
     public async Task<RespostaIA> EnviarAsync(PedidoIA pedido, CancellationToken cancelamento)
     {
         ArgumentNullException.ThrowIfNull(pedido);
         var corpo = await MontarCorpoAsync(pedido, cancelamento);
+        var (texto, fim) = await ChamarAsync(corpo, pedido, cancelamento);
+        try
+        {
+            return FormatoDaResposta.Interpretar(texto, cortada: fim == "MAX_TOKENS");
+        }
+        catch (ErroDoAssistenteException) when (fim == "MAX_TOKENS")
+        {
+            // 0.63.1: a resposta veio cortada no meio do JSON (às vezes o modelo entra em repetição): tenta uma vez, pedindo curta.
+            var partes = corpo["contents"]!.AsArray()[^1]!["parts"]!.AsArray();
+            partes.Add(new JsonObject { ["text"] = PedidoDeRespostaCurta });
+            (texto, fim) = await ChamarAsync(corpo, pedido, cancelamento);
+            return FormatoDaResposta.Interpretar(texto, cortada: fim == "MAX_TOKENS");
+        }
+    }
+
+    private async Task<(string Texto, string? Fim)> ChamarAsync(JsonObject corpo, PedidoIA pedido, CancellationToken cancelamento)
+    {
         using var resposta = await ChamadaGemini.ExecutarAsync(_http, _acesso, HttpMethod.Post, $"models/{Modelo}:generateContent",
             corpo.ToJsonString(), Modelo, pedido.Canal == CanaisDaConversa.Telegram ? RotinasDeIa.Telegram : RotinasDeIa.Chat, cancelamento);
-        var (texto, fim) = LerResposta(resposta.RootElement);
-        return FormatoDaResposta.Interpretar(texto, cortada: fim == "MAX_TOKENS");
+        return LerResposta(resposta.RootElement);
     }
 
     // ---- O formato da resposta (Bloco 24): o Gemini é obrigado a devolver {mensagem, alteracoes} ----
@@ -233,6 +257,7 @@ public sealed class AssistenteGemini : IAssistenteIA
             {
                 ["responseMimeType"] = "application/json",
                 ["responseSchema"] = EsquemaDaResposta(),
+                ["maxOutputTokens"] = TokensDeSaida,
             },
         };
     }

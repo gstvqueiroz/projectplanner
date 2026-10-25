@@ -123,6 +123,28 @@ public sealed class GeminiTests : IDisposable
         await enviar.Should().ThrowAsync<ErroDoAssistenteException>().WithMessage("A resposta do assistente ficou longa demais e veio cortada*");
     }
 
+    // 0.63.1: cortada no meio do JSON, tenta uma vez pedindo resposta curta (e o pedido tem o teto de saída).
+    [Fact]
+    public async Task Resposta_Cortada_TentaDeNovoPedindoCurta()
+    {
+        const string cortado = """{"mensagem": "Montei", "alteracoes": [{"acao": "criar", "ref": "n1", "no""";
+        var corpos = new List<string>();
+        _servidor.Responder = async (pedido, _) =>
+        {
+            corpos.Add(await pedido.Content!.ReadAsStringAsync());
+            return corpos.Count == 1
+                ? ManipuladorFalso.Json(200, ManipuladorFalso.Resposta(cortado, "MAX_TOKENS"))
+                : ManipuladorFalso.Json(200, ManipuladorFalso.Resposta("""{"mensagem": "OS proposta.", "alteracoes": []}""", "STOP"));
+        };
+
+        var resposta = await Assistente().EnviarAsync(Pedido("Invente uma OS"), CancellationToken.None);
+
+        resposta.Texto.Should().Be("OS proposta.");
+        corpos.Should().HaveCount(2);
+        corpos[0].Should().Contain($"\"maxOutputTokens\":{AssistenteGemini.TokensDeSaida}").And.NotContain("passou do limite");
+        corpos[1].Should().Contain("passou do limite e veio cortada");
+    }
+
     [Fact]
     public async Task Enviar_SemContexto_AvisaQueNaoHaProjeto()
     {

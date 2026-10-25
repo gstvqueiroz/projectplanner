@@ -329,4 +329,38 @@ public sealed class ClaudeTests : IDisposable
         s.NoBanco(b => b.UsosDeIa.Single().CustoEmMicrodolares).Should().Be(205);
         s.Gemini.Pedidos.Should().BeEmpty();
     }
+
+    // 0.63.1: a conta da Anthropic sem crédito: o pedido vai ao Gemini do mesmo porte, o dono fica sabendo (painel e e-mail, uma
+    // vez), e os pedidos seguintes nem tentam o Claude por 15 minutos.
+    [Fact]
+    public async Task AnthropicSemCredito_VaiAoGemini_AvisaUmaVez_ENaoTentaDeNovo()
+    {
+        _s.Dispose();
+        using var s = new Servidor(new() { ["Admin:Email"] = "dono@exemplo.com" }, catalogoDoCodigo: true);
+        var sessao = await s.CriarConta();
+        s.Claude.Status = HttpStatusCode.BadRequest;
+        s.Claude.Resposta = """{"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."}}""";
+        async Task<HttpResponseMessage> Pedir()
+        {
+            var pedido = new HttpRequestMessage(HttpMethod.Post, "/v1/ia/models/claude-haiku-5-5:generateContent")
+            {
+                Content = new StringContent(PedidoDoPrograma, Encoding.UTF8, "application/json"),
+            };
+            pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessao.Acesso);
+            return await s.CreateClient().SendAsync(pedido);
+        }
+
+        var r = await Pedir();
+
+        r.StatusCode.Should().Be(HttpStatusCode.OK);
+        r.Headers.GetValues(Rotas.Ia.CabecalhoDoModeloUsado).Single().Should().Be("gemini-3-flash-preview");
+        (s.Claude.Pedidos.Count, s.Gemini.Pedidos.Count).Should().Be((1, 1));
+        s.NoBanco(b => b.FalhasDoServidor.Single().Tipo).Should().Be("Anthropic sem crédito");
+        s.NoBanco(b => b.UsosDeIa.Single().Modelo).Should().Be("gemini-3-flash-preview", "cobra o que respondeu");
+        s.Emails.Ultimo.Should().Match<EmailEnviado>(e => e.Para == "dono@exemplo.com" && e.Assunto.Contains("sem crédito"));
+
+        (await Pedir()).StatusCode.Should().Be(HttpStatusCode.OK);
+        (s.Claude.Pedidos.Count, s.Gemini.Pedidos.Count, s.NoBanco(b => b.FalhasDoServidor.Count())).Should().Be((1, 2, 1),
+            "nos 15 minutos seguintes, vai direto ao Gemini, sem avisar de novo");
+    }
 }

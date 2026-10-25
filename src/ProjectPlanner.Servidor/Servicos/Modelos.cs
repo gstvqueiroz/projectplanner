@@ -45,6 +45,20 @@ public sealed class CatalogoDeModelos(IOptions<OpcoesDoServidor> opcoes)
 
     public ModeloDeIa? Achar(string id) => Todos.FirstOrDefault(m => m.Id == id);
 
+    /// <summary>
+    /// 0.63.1: quem atende no lugar de um modelo do Claude quando a Anthropic está fora (sem crédito): o Gemini do mesmo porte
+    /// (o Máximo vai ao Avançado; o Padrão, ao Intermediário). Nulo para um modelo do Gemini ou sem a chave do Gemini.
+    /// </summary>
+    public ModeloDeIa? Substituto(ModeloDeIa modelo)
+    {
+        ArgumentNullException.ThrowIfNull(modelo);
+        if (modelo.Provedor != Provedores.Anthropic)
+            return null;
+        var gemini = Todos.Where(m => m.Provedor == Provedores.Gemini && Disponivel(m)).ToList();
+        var alvo = modelo.Nivel == Niveis.Maximo ? Niveis.Avancado : Niveis.Intermediario;
+        return gemini.FirstOrDefault(m => m.Nivel == alvo) ?? gemini.FirstOrDefault();
+    }
+
     /// <summary>A chave do provedor do modelo está configurada?</summary>
     public bool Disponivel(ModeloDeIa modelo) => modelo.Provedor switch
     {

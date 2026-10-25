@@ -92,7 +92,8 @@ public static class Ia
     }
 
     private static async Task<IResult> Gerar(string modelo, HttpContext http, ClaimsPrincipal quem, BancoDoServidor banco, CatalogoDeModelos catalogo,
-        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, IEnviadorDeEmail email, CancellationToken c)
+        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, IEnviadorDeEmail email,
+        SaudeDosProvedores saude, CancellationToken c)
     {
         var config = opcoes.Value;
         var planos = config.Planos;
@@ -109,9 +110,19 @@ public static class Ia
             return Falha(413, $"O pedido passa de {config.Limites.MegabytesPorPedido} MB. Mande menos fotos ou anexos menores.");
 
         var log = logs.CreateLogger(typeof(Ia));
-        var resultado = escolhido!.Provedor == Provedores.Anthropic
+        // 0.63.1: com a Anthropic sem crédito, o Claude nem é tentado: vai direto ao substituto no Gemini.
+        if (escolhido!.Provedor == Provedores.Anthropic && saude.AnthropicSemCredito && catalogo.Substituto(escolhido) is { } direto)
+            escolhido = direto;
+        var resultado = escolhido.Provedor == Provedores.Anthropic
             ? await PeloClaude(escolhido, corpo, config.Anthropic, clientes, log, c)
             : await PeloGemini(escolhido, corpo, config.Gemini, clientes, log, c);
+        if (resultado.SemCredito && catalogo.Substituto(escolhido) is { } substituto)
+        {
+            if (saude.MarcarSemCredito())
+                await SaudeDosProvedores.AvisarAsync(banco, config, email, relogio.GetUtcNow().UtcDateTime, log, c);
+            escolhido = substituto;
+            resultado = await PeloGemini(escolhido, corpo, config.Gemini, clientes, log, c);
+        }
         if (resultado.Falha is not null)
             return resultado.Falha;
 
@@ -135,7 +146,7 @@ public static class Ia
     /// não basta) custa o real, como qualquer pedido, e fica na rotina "triagem".
     /// </summary>
     private static async Task<IResult> Avaliar(PedidoDeTriagem pedido, ClaimsPrincipal quem, BancoDoServidor banco, CatalogoDeModelos catalogo,
-        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, CancellationToken c)
+        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, SaudeDosProvedores saude, CancellationToken c)
     {
         if (await Usuarios.Atual(quem, banco) is not { } usuario)
             return Falha(401, "Sessão vencida: entre de novo.");
@@ -149,6 +160,9 @@ public static class Ia
 
         var (complexidade, motivo) = pedido.Montagem ? (Triagem.Complexa, "montar o cronograma completo") // 0.55.1
             : Triagem.PelaRegra(pedido) is { } pelaRegra ? (pelaRegra, "pedido curto") : ("", "");
+        // 0.63.1: com a Anthropic sem crédito, a triagem fica na regra (o pedido mesmo vai ao Gemini, no Gerar).
+        if (complexidade.Length == 0 && padrao.Provedor == Provedores.Anthropic && saude.AnthropicSemCredito)
+            (complexidade, motivo) = (Triagem.Simples, "");
         if (complexidade.Length == 0)
         {
             var log = logs.CreateLogger(typeof(Ia));
@@ -156,6 +170,8 @@ public static class Ia
             var resultado = padrao.Provedor == Provedores.Anthropic
                 ? await PeloClaude(padrao, corpo, config.Anthropic, clientes, log, c)
                 : await PeloGemini(padrao, corpo, config.Gemini, clientes, log, c);
+            if (resultado.SemCredito)
+                saude.MarcarSemCredito(); // o aviso vai no primeiro pedido de verdade (Gerar)
             if (resultado.Falha is null && Triagem.Ler(resultado.Resposta!) is { } lida)
                 (complexidade, motivo) = lida;
             else
@@ -190,7 +206,8 @@ public static class Ia
         });
     }
 
-    private sealed record Resultado(byte[]? Resposta, TokensDoPedido Tokens, IResult? Falha)
+    /// <param name="SemCredito">0.63.1: a Anthropic recusou por falta de crédito na conta do servidor.</param>
+    private sealed record Resultado(byte[]? Resposta, TokensDoPedido Tokens, IResult? Falha, bool SemCredito = false)
     {
         public static Resultado Erro(IResult falha) => new(null, default, falha);
     }
@@ -287,6 +304,9 @@ public static class Ia
             }
             if (status is 401 or 403 or 404)
                 return Resultado.Erro(Configuracao(log, "Claude", status, modelo.Id));
+            if (SaudeDosProvedores.EhFaltaDeCredito(status, texto))
+                return new Resultado(null, default,
+                    Falha(503, "A IA do Claude está indisponível agora. Escolha o nível Intermediário (Gemini) e tente de novo."), SemCredito: true);
             if (status is 429 or 529)
                 return Resultado.Erro(Falha(503, "A IA está muito procurada agora. Espere um pouco e tente de novo."));
             if (status >= 500)

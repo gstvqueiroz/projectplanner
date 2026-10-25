@@ -59,7 +59,8 @@ public sealed class ConversasDoTelegram
 /// Telegram): a resposta volta ao chat, e as atualizações propostas vão para a caixa, para o usuário conferir no programa.
 /// </summary>
 public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDoServidor> opcoes, CatalogoDeModelos catalogo, IClienteDoTelegram telegram,
-    IHttpClientFactory clientes, ConversasDoTelegram conversas, IEnviadorDeEmail email, TimeProvider relogio, ILogger<AtendenteDoTelegram> log)
+    IHttpClientFactory clientes, ConversasDoTelegram conversas, IEnviadorDeEmail email, TimeProvider relogio, ILogger<AtendenteDoTelegram> log,
+    SaudeDosProvedores saude)
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -270,6 +271,9 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             await telegram.EnviarAsync(chatId, Rotas.Ia.SemChave, c);
             return;
         }
+        // 0.63.1: com a Anthropic sem crédito, o Telegram vai direto ao substituto no Gemini.
+        if (saude.AnthropicSemCredito && catalogo.Substituto(modelo) is { } direto)
+            modelo = direto;
         ContextoDoProjeto? retrato;
         try
         {
@@ -285,12 +289,24 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         TokensDoPedido tokens;
         using (var medicao = MedidorDeTokens.Abrir())
         {
+            Task<RespostaIA> Perguntar(ModeloDeIa m) => (m.Provedor == Provedores.Anthropic
+                    ? new AssistenteGemini(clientes.CreateClient(PonteParaOClaude.Cliente), "pela-ponte", m.Id) // a chave de verdade fica na ponte
+                    : new AssistenteGemini(clientes.CreateClient(MedidorDeTokens.Cliente), opcoes.Value.Gemini.Chave!, m.Id))
+                .EnviarAsync(new PedidoIA(ComAutor(autor, texto), [], conversas.Historico(chatId), retrato) { Canal = CanaisDaConversa.Telegram }, c);
             try
             {
-                var assistente = modelo.Provedor == Provedores.Anthropic
-                    ? new AssistenteGemini(clientes.CreateClient(PonteParaOClaude.Cliente), "pela-ponte", modelo.Id) // a chave de verdade fica na ponte
-                    : new AssistenteGemini(clientes.CreateClient(MedidorDeTokens.Cliente), opcoes.Value.Gemini.Chave!, modelo.Id);
-                resposta = await assistente.EnviarAsync(new PedidoIA(ComAutor(autor, texto), [], conversas.Historico(chatId), retrato) { Canal = CanaisDaConversa.Telegram }, c);
+                try
+                {
+                    resposta = await Perguntar(modelo);
+                }
+                catch (ErroDoAssistenteException ex) when (modelo.Provedor == Provedores.Anthropic
+                                                           && SaudeDosProvedores.EhFaltaDeCredito(400, ex.Message) && catalogo.Substituto(modelo) is not null)
+                {
+                    if (saude.MarcarSemCredito())
+                        await SaudeDosProvedores.AvisarAsync(banco, opcoes.Value, email, agora, log, c);
+                    modelo = catalogo.Substituto(modelo)!;
+                    resposta = await Perguntar(modelo);
+                }
             }
             catch (ErroDoAssistenteException ex)
             {

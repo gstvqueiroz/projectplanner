@@ -9,7 +9,16 @@ public static class TiposDeAtualizacao
     public const string Inicio = "inicio";
     public const string LinhaDeBase = "linhaDeBase";
 
-    public static IReadOnlyList<string> Todos { get; } = [Percentual, Medicao, Custo, Inicio, LinhaDeBase];
+    /// <summary>Bloco 63: criar uma ordem de serviço (sem "os") ou alterar uma em rascunho (com "os").</summary>
+    public const string Os = "os";
+
+    /// <summary>Bloco 63: levar uma OS a outra situação (emitir, aceitar, iniciar, concluir, conferir, cancelar…).</summary>
+    public const string SituacaoOs = "situacaoOs";
+
+    public static IReadOnlyList<string> Todos { get; } = [Percentual, Medicao, Custo, Inicio, LinhaDeBase, Os, SituacaoOs];
+
+    /// <summary>Bloco 63: as ações de "situacaoOs".</summary>
+    public static IReadOnlyList<string> AcoesDaOs { get; } = ["emitir", "aceitar", "recusar", "iniciar", "concluir", "conferir", "reprovar", "cancelar", "rascunho"];
 }
 
 /// <summary>
@@ -25,6 +34,18 @@ public static class TiposDeAtualizacao
 /// <param name="Data">custo: a data (AAAA-MM-DD); inicio: a data mínima de início ("não iniciar antes de").</param>
 /// <param name="Categoria">custo: material, mão de obra, equipamento, serviço, administração ou outros.</param>
 /// <param name="Nome">linhaDeBase: o nome (opcional).</param>
+/// <param name="Os">Bloco 63: o número da OS (os: para alterar; situacaoOs: qual).</param>
+/// <param name="Titulo">os: o serviço em poucas palavras.</param>
+/// <param name="Executante">os: a equipe ou o empreiteiro.</param>
+/// <param name="TipoDeExecutante">os: "equipe" (própria) ou "terceiro".</param>
+/// <param name="Tarefas">os: os Nº das tarefas da OS ("3, 4"); uma etapa traz as de dentro.</param>
+/// <param name="NovaTarefa">os: o nome de uma tarefa que ainda não existe no cronograma (criada junto, para a OS).</param>
+/// <param name="Duracao">os, com nova tarefa: a duração em dias úteis.</param>
+/// <param name="Apos">os, com nova tarefa: o Nº da predecessora (a nova entra logo depois dela, no mesmo nível).</param>
+/// <param name="Prazo">os: o prazo (AAAA-MM-DD); o início vai em "de".</param>
+/// <param name="Pagamento">os: "empreitada", "medicao" ou "diaria".</param>
+/// <param name="Retencao">os: a retenção de garantia em %.</param>
+/// <param name="Acao">situacaoOs: emitir, aceitar, recusar, iniciar, concluir, conferir, reprovar, cancelar ou rascunho.</param>
 public sealed record AtualizacaoDaObra(
     string Tipo,
     string? Tarefa = null,
@@ -38,7 +59,19 @@ public sealed record AtualizacaoDaObra(
     string? Descricao = null,
     decimal? Valor = null,
     string? Documento = null,
-    string? Nome = null);
+    string? Nome = null,
+    int? Os = null,
+    string? Titulo = null,
+    string? Executante = null,
+    string? TipoDeExecutante = null,
+    string? Tarefas = null,
+    string? NovaTarefa = null,
+    int? Duracao = null,
+    string? Apos = null,
+    string? Prazo = null,
+    string? Pagamento = null,
+    decimal? Retencao = null,
+    string? Acao = null);
 
 /// <summary>Bloco 42: de onde vêm as fotos que o assistente pede para importar.</summary>
 public static class OrigensDasFotos

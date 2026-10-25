@@ -133,6 +133,19 @@ public sealed class AssistenteGemini : IAssistenteIA
                     ["valor"] = Tipo("NUMBER"),
                     ["documento"] = Tipo("STRING"),
                     ["nome"] = Tipo("STRING"),
+                    // Bloco 63: as ordens de serviço.
+                    ["os"] = Tipo("INTEGER"),
+                    ["titulo"] = Tipo("STRING"),
+                    ["executante"] = Tipo("STRING"),
+                    ["tipoDeExecutante"] = Tipo("STRING", ["equipe", "terceiro"]),
+                    ["tarefas"] = Tipo("STRING"),
+                    ["novaTarefa"] = Tipo("STRING"),
+                    ["duracao"] = Tipo("INTEGER"),
+                    ["apos"] = Tipo("STRING"),
+                    ["prazo"] = Tipo("STRING"),
+                    ["pagamento"] = Tipo("STRING", ["empreitada", "medicao", "diaria"]),
+                    ["retencao"] = Tipo("NUMBER"),
+                    ["acao"] = Tipo("STRING", [.. TiposDeAtualizacao.AcoesDaOs]),
                 }, "tipo")),
                 ["abrir"] = Objeto(new JsonObject
                 {

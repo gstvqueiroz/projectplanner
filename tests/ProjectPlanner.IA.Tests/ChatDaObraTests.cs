@@ -29,6 +29,23 @@ public sealed class ChatDaObraTests
         FormatoDaResposta.ComoJson(r).Should().Contain("\"atualizacoesPropostas\":5");
     }
 
+    [Fact]
+    public void Atualizacoes_DeOrdemDeServico_Chegam()
+    {
+        var r = FormatoDaResposta.Interpretar("""
+            {"mensagem": "Proponho a OS.", "alteracoes": [], "atualizacoes": [
+              {"tipo": "os", "titulo": "Reparo da calha", "executante": "Zé Calheiro", "tipoDeExecutante": "terceiro", "novaTarefa": "Reparo da calha",
+               "duracao": 2, "apos": "3", "prazo": "2026-10-10", "pagamento": "empreitada", "retencao": 5, "valor": 800},
+              {"tipo": "situacaoOs", "os": 2, "acao": "cancelar", "descricao": "empreiteiro saiu"}
+            ]}
+            """);
+
+        r.Atualizacoes.Should().Equal(
+            new AtualizacaoDaObra("os", Valor: 800, Titulo: "Reparo da calha", Executante: "Zé Calheiro", TipoDeExecutante: "terceiro", NovaTarefa: "Reparo da calha",
+                Duracao: 2, Apos: "3", Prazo: "2026-10-10", Pagamento: "empreitada", Retencao: 5),
+            new AtualizacaoDaObra("situacaoOs", Descricao: "empreiteiro saiu", Os: 2, Acao: "cancelar"));
+    }
+
     // A correção da 0.41.1: o % vinha como "100%" ou no "valor", e o cartão recusava ("o % precisa ir de 0 a 100").
     [Theory]
     [InlineData("\"percentual\": \"100%\"")]

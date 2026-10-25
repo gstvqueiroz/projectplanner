@@ -1,5 +1,6 @@
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.Core.OrdensDeServico;
+using ProjectPlanner.IA;
 using ProjectPlanner.IA.Conta;
 
 namespace ProjectPlanner.App.Tests;
@@ -114,5 +115,26 @@ public sealed partial class TelegramNoProgramaTests
             .Should().Be((IdDe("Fundação"), true, "João: gabarito pronto #os1", "Da OS-001, citada na legenda."));
         var outra = lote.Single(l => l.Arquivo == "telegram-2.jpg");
         (outra.TarefaFixada, outra.Legenda).Should().Be((false, "Bia: vista geral"));
+    }
+
+    // ---- Bloco 63 ----
+
+    [Fact]
+    public async Task PedidoDeOSPeloTelegram_ViraCartao_EAplicarCriaAOS()
+    {
+        _ambiente.Conta.Conectar(plano: "profissional");
+        await _vm.UsarObraNoTelegramCommand.ExecuteAsync(null);
+        _ambiente.Telegram.Caixas[Projeto] =
+        [
+            new ItemDoTelegram(Guid.NewGuid(), ItemDoTelegram.DeAtualizacoes, DateTime.UtcNow, "João: abre uma OS da alvenaria para a Construtora Silva", null,
+                [new AtualizacaoDaObra("os", Titulo: "Alvenaria", Executante: "Construtora Silva", Tarefas: "2")], [new TarefaDoTelegram(2, IdDe("Alvenaria"))]),
+        ];
+
+        await _vm.BuscarDoTelegramCommand.ExecuteAsync(null);
+
+        var cartao = _vm.Assistente.Mensagens[^1].Cartao!;
+        cartao.Itens.Single().Texto.Should().Be("Nova OS: Alvenaria · Construtora Silva · tarefas 2 Alvenaria");
+        await _vm.Assistente.AplicarCartaoCommand.ExecuteAsync(cartao);
+        _vm.Cronograma.OrdensDeServico.Todas.Single().Dados.Tarefas.Single().Should().Be(IdDe("Alvenaria"));
     }
 }

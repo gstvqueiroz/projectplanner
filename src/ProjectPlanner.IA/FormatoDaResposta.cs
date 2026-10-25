@@ -206,7 +206,11 @@ public static class FormatoDaResposta
                 ?? (tipo == TiposDeAtualizacao.Percentual ? Decimal(item, "valor") ?? Decimal(item, "quantidade") : null);
             lista.Add(new AtualizacaoDaObra(tipo, Curto(item, "tarefa"), percentual, Decimal(item, "quantidade"), Inteiro(item, "medicao"),
                 Curto(item, "de"), Curto(item, "ate"), Curto(item, "data"), Curto(item, "categoria"), Curto(item, "descricao"), Decimal(item, "valor"),
-                Curto(item, "documento"), Curto(item, "nome")));
+                Curto(item, "documento"), Curto(item, "nome"),
+                // Bloco 63: as ordens de serviço.
+                Inteiro(item, "os"), Curto(item, "titulo"), Curto(item, "executante"), Curto(item, "tipoDeExecutante"), Curto(item, "tarefas"),
+                Curto(item, "novaTarefa"), Inteiro(item, "duracao"), Curto(item, "apos"), Curto(item, "prazo"), Curto(item, "pagamento"),
+                Decimal(item, "retencao"), Curto(item, "acao")));
             if (lista.Count == MaximoDeAtualizacoes)
                 break;
         }

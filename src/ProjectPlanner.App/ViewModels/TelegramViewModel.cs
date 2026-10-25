@@ -19,7 +19,9 @@ public sealed partial class TelegramViewModel(ITelegramDaConta telegram, IDialog
         "privado). A equipe não precisa de conta: as fotos e as mensagens com #atualizacao vão para a caixa da obra, o bot " +
         "só responde quando é marcado, e os créditos são os seus. /papel muda o que cada um pode fazer.\n\n" +
         "Ordens de serviço: em Projeto > Ordens de serviço…, a OS emitida vai ao grupo com os botões Aceitar, Comecei e Terminei; " +
-        "o que a equipe tocar volta em Conta > Buscar do Telegram. Foto com \"#os14\" na legenda vai para a tarefa da OS-014.";
+        "o que a equipe tocar volta em Conta > Buscar do Telegram. Foto com \"#os14\" na legenda vai para a tarefa da OS-014. " +
+        "Também dá para pedir ao bot (marcando-o no grupo): \"abre uma OS da alvenaria para a Construtora Silva\", \"cancela a OS 3\": " +
+        "o pedido vira um cartão para você aplicar.";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TextoDaSituacao), nameof(PodeDesligar))]

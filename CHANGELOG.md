@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.63.0
+
+**A IA cria e altera as ordens de serviço** (no chat do programa e no Telegram).
+
+- Peça ao assistente: "abre uma OS da alvenaria e do reboco para a Construtora Silva, prazo 15/10, com 5% de retenção",
+  "muda o prazo da OS 3 para dia 20", "emite a OS 3", "cancela a OS 2, o empreiteiro saiu". O pedido vira um cartão; nada
+  muda antes de você clicar em Aplicar (e o Desfazer volta tudo).
+- **A OS fica sempre ligada às tarefas.** Se o serviço ainda não está no cronograma ("abre uma OS para consertar a calha,
+  2 dias, depois do telhado"), a tarefa nova é criada junto, depois da predecessora e no mesmo nível, e a OS fica ligada a
+  ela, com as datas do cronograma.
+- **Pelo Telegram:** os mesmos pedidos (marcando o bot no grupo, ou no chat privado) vão para a caixa da obra e viram o
+  cartão em Conta > Buscar do Telegram. As perguntas sobre as OS já eram respondidas desde a 0.61.0.
+- Uma OS emitida não muda os dados: a IA propõe antes voltar a rascunho.
+
 ## 0.62.0
 
 **Ordens de serviço: retenção, cópia, fotos e prazos.**

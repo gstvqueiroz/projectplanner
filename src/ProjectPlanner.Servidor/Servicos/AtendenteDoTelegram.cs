@@ -71,7 +71,8 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         "Fale da obra como falaria com o engenheiro:\n" +
         "• \"quanto já medi?\", \"o que está atrasado?\"\n" +
         "• \"a alvenaria está em 60%\", \"gastei R$ 1.200 de cimento na fundação\"\n" +
-        "• mande fotos (com uma legenda, se quiser)\n\n" +
+        "• mande fotos (com uma legenda, se quiser)\n" +
+        "• \"abre uma OS do reboco para o João\", \"quais OS estão vencidas?\", \"cancela a OS 3\"\n\n" +
         "As atualizações e as fotos ficam na caixa de entrada da obra: confira e aplique no programa (Conta > Buscar do Telegram).\n" +
         "/obra mostra e troca a obra · /sair desliga este chat da conta.\n\n" +
         "Com a equipe: crie um grupo da obra, ponha o bot nele e mande /obra lá.";

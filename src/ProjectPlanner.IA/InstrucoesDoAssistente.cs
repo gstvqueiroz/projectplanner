@@ -42,7 +42,17 @@ public static class InstrucoesDoAssistente
         "tem Valor, não proponha medição: explique que é preciso preencher a coluna Valor, aplicar o orçamento ou importar os " +
         "valores. Para o % concluído use atualizacoes, não alteracoes. Números sem símbolos (percentual: 100, " +
         "não \"100%\"). As atualizações só valem depois que o usuário clica em Aplicar no cartão: na mensagem, diga o que você " +
-        "propôs e peça para ele conferir e aplicar; nunca diga que já atualizou.";
+        "propôs e peça para ele conferir e aplicar; nunca diga que já atualizou.\n" +
+        "ORDENS DE SERVIÇO. As OS da obra estão na situação da obra (OS-003…). Para criar uma OS, proponha em \"atualizacoes\" o " +
+        "tipo os sem número: titulo, executante, tipoDeExecutante (equipe ou terceiro), tarefas (os Nº das tarefas que ela cobre, " +
+        "separados por vírgula; uma etapa traz as de dentro), de (início) e prazo (AAAA-MM-DD; vazios, vêm do cronograma), " +
+        "pagamento (empreitada, medicao ou diaria), retencao (% de garantia, se pedirem) e valor (o total, só se o usuário disser; " +
+        "senão os preços vêm do orçamento). A OS é sempre ligada a tarefas do cronograma: se o serviço ainda não existe nele, " +
+        "use novaTarefa (o nome), duracao (dias úteis) e apos (o Nº da predecessora): a tarefa é criada junto, depois da " +
+        "predecessora, e a OS fica ligada a ela; não crie a OS solta. Para alterar uma OS em rascunho, o tipo os com o número em " +
+        "os e só os campos que mudam. Para levar uma OS a outra situação, o tipo situacaoOs com os e acao (emitir, aceitar, " +
+        "recusar, iniciar, concluir, conferir, reprovar, cancelar ou rascunho) e, para recusar, reprovar ou cancelar, o motivo " +
+        "em descricao. Uma OS emitida não muda os dados: proponha antes acao rascunho.";
 
     /// <summary>Bloco 38: como o assistente responde sobre o orçamento e pede as sugestões de orçamento.</summary>
     public const string Orcamento =
@@ -114,8 +124,9 @@ public static class InstrucoesDoAssistente
         "(até 6 linhas), em texto simples, sem tabelas. Responda perguntas sobre a obra pelo retrato abaixo. Mande sempre " +
         "\"alteracoes\" vazia e não use \"abrir\", \"importarFotos\", perguntas nem plano: daqui não dá para mudar a estrutura do " +
         "cronograma nem abrir telas (se pedirem, diga que isso se faz no programa). Atualizações da obra (% concluído, medição, " +
-        "custo, não iniciar antes de, linha de base) vão em \"atualizacoes\", como sempre: elas ficam guardadas e o usuário " +
-        "confere e aplica quando abrir a obra no programa. Na mensagem, diga o que foi anotado.";
+        "custo, não iniciar antes de, linha de base) e as ordens de serviço (criar, alterar, mudar a situação; uma tarefa nova " +
+        "para a OS vai junto, em novaTarefa) vão em \"atualizacoes\", como sempre: elas ficam guardadas e o usuário confere e " +
+        "aplica quando abrir a obra no programa. Na mensagem, diga o que foi anotado.";
 
     /// <summary>Os campos opcionais da resposta (Bloco 26): tipo, ficha, perguntas e plano.</summary>
     public const string RespostasEstruturadas =

@@ -87,7 +87,11 @@ public static class InstrucoesDoAssistente
         "predecessoras (calendário de segunda a sexta).\n" +
         "Ao montar um cronograma de obra, organize em etapas (resumos, em ordem de execução) com tarefas de durações " +
         "realistas em dias úteis, predecessoras coerentes (inclusive entre etapas, ligando subtarefas) e marcos nas " +
-        "entregas importantes. Na mensagem, resuma o que fez e as premissas que usou (área, padrão, equipe, etapas).";
+        "entregas importantes. Na mensagem, resuma o que fez e as premissas que usou (área, padrão, equipe, etapas).\n" +
+        "TAMANHO DA RESPOSTA. Em cada alteração, mande só os campos que ela usa (nada de campos vazios ou nulos). Num cronograma " +
+        "grande, crie no máximo cerca de 100 tarefas por resposta: se a obra pedir mais, monte as primeiras etapas completas " +
+        "(tarefas e vínculos) e diga na mensagem quais etapas faltam, para o usuário pedir \"continue\". Uma resposta longa " +
+        "demais chega cortada e nada é aplicado.";
 
     public static string Montar(ContextoDoProjeto? contexto) => Montar(contexto, null);
 

@@ -61,6 +61,7 @@ public sealed class TriagemTests : IDisposable
         var dados = corpo["contents"]![0]!["parts"]![0]!["text"]!.GetValue<string>();
         dados.Should().Contain("Anexos: 2 (2 KB no total)").And.Contain("Tarefas na obra: 45").And.Contain(new string('b', 2_000) + "…");
         corpo["generationConfig"]!["responseSchema"]!["properties"]!["complexidade"]!["enum"]!.AsArray().Count.Should().Be(3);
+        corpo["generationConfig"]!.AsObject().ContainsKey("temperature").Should().BeFalse("0.53.1: o Haiku 5.5 recusa temperatura diferente do padrão");
     }
 
     [Fact]

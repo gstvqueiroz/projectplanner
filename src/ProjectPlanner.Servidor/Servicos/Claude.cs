@@ -80,8 +80,7 @@ public static class TradutorClaude
 
         var maximo = configuracao?["maxOutputTokens"]?.GetValue<int>() is { } m && m > 0 ? Math.Min(m, maximoDeTokens) : maximoDeTokens;
         pedido["max_tokens"] = maximo;
-        if (configuracao?["temperature"] is JsonValue temperatura)
-            pedido["temperature"] = Math.Clamp(temperatura.GetValue<double>(), 0, 1);
+        // 0.53.1: a temperatura não vai. O Haiku 5.5 e o Sonnet 5.5 recusam (400) qualquer valor diferente do padrão.
         if (esquema is not null)
         {
             pedido["tools"] = new JsonArray(new JsonObject
@@ -93,6 +92,35 @@ public static class TradutorClaude
             pedido["tool_choice"] = new JsonObject { ["type"] = "auto" };
         }
         return pedido;
+    }
+
+    /// <summary>
+    /// 0.53.1: a resposta (já no formato do Gemini) veio sem o objeto JSON pedido, e não foi por falta de espaço (uma resposta
+    /// cortada não melhora repetindo).
+    /// </summary>
+    public static bool SemOFormato(byte[] respostaGemini)
+    {
+        try
+        {
+            var raiz = JsonNode.Parse(respostaGemini);
+            var candidato = raiz?["candidates"]?[0];
+            if (candidato?["finishReason"]?.GetValue<string>() == "MAX_TOKENS")
+                return false;
+            var texto = candidato?["content"]?["parts"]?[0]?["text"]?.GetValue<string>()?.Trim() ?? "";
+            return !(texto.StartsWith('{') && JsonNode.Parse(texto) is JsonObject);
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>0.53.1: acrescenta à última mensagem do usuário o lembrete de responder pela ferramenta (para a nova tentativa).</summary>
+    public static void Lembrar(JsonObject pedido)
+    {
+        if (pedido["messages"] is JsonArray { Count: > 0 } mensagens && mensagens[^1] is JsonObject ultima
+            && ultima["role"]?.GetValue<string>() == "user" && ultima["content"] is JsonArray conteudo)
+            conteudo.Add(new JsonObject { ["type"] = "text", ["text"] = "(Lembrete: " + InstrucaoDaFerramenta + ")" });
     }
 
     /// <summary>A resposta do Claude no formato do Gemini, e os tokens para a cobrança.</summary>

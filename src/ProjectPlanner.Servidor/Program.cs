@@ -26,8 +26,9 @@ builder.Services.AddSingleton<EmailNoLog>();
 builder.Services.AddSingleton<EmailPorSmtp>();
 builder.Services.AddSingleton<IEnviadorDeEmail>(s =>
     string.IsNullOrWhiteSpace(Opcoes(s).Email.Smtp) ? s.GetRequiredService<EmailNoLog>() : s.GetRequiredService<EmailPorSmtp>());
-builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.FromMinutes(5));
-builder.Services.AddHttpClient(Ia.ClienteDaAnthropic, c => c.Timeout = TimeSpan.FromMinutes(5));
+// 0.53.1: 10 minutos (um cronograma grande, com o modelo pensando antes, passava de 5).
+builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.FromMinutes(10));
+builder.Services.AddHttpClient(Ia.ClienteDaAnthropic, c => c.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.AddSingleton<CatalogoDeModelos>();
 // Bloco 49: o Telegram (webhook → fila → atendente, que usa o assistente do programa com o Gemini medido).
 builder.Services.AddHttpClient(ClienteDoTelegram.Cliente, c => c.Timeout = TimeSpan.FromSeconds(60));

@@ -104,6 +104,9 @@ public sealed class GeminiDeTeste : HttpMessageHandler
     public ConcurrentQueue<string?> Versoes { get; } = new();
     public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
     public string Resposta { get; set; } = RespostaPadrao;
+
+    /// <summary>Respostas para os próximos pedidos, uma por pedido; vazia, vale <see cref="Resposta"/>.</summary>
+    public ConcurrentQueue<string> Proximas { get; } = new();
     public Exception? Erro { get; set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage pedido, CancellationToken cancelamento)
@@ -115,7 +118,8 @@ public sealed class GeminiDeTeste : HttpMessageHandler
             pedido.Content is null ? "" : await pedido.Content.ReadAsStringAsync(cancelamento)));
         if (Erro is not null)
             throw Erro;
-        return new HttpResponseMessage(Status) { Content = new StringContent(Resposta, Encoding.UTF8, "application/json") };
+        var resposta = Proximas.TryDequeue(out var proxima) ? proxima : Resposta;
+        return new HttpResponseMessage(Status) { Content = new StringContent(resposta, Encoding.UTF8, "application/json") };
     }
 }
 

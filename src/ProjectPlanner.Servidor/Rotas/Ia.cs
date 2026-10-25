@@ -241,6 +241,23 @@ public static class Ia
         {
             return Resultado.Erro(Falha(400, "O pedido de IA veio num formato que o servidor não entendeu. Atualize o programa."));
         }
+        var primeira = await UmaVezNoClaude(modelo, pedido, anthropic, clientes, log, c);
+        // 0.53.1: com a ferramenta só como opção (tool_choice auto), o Claude às vezes responde em texto, sem o JSON. O
+        // programa mostraria o texto e não mudaria nada ("não gerou o cronograma"): repete uma vez, lembrando o formato.
+        if (primeira.Falha is null && pedido.ContainsKey("tools") && TradutorClaude.SemOFormato(primeira.Resposta!))
+        {
+            log.LogWarning("O Claude respondeu sem o formato pedido ({Modelo}); repetindo uma vez", modelo.Id);
+            TradutorClaude.Lembrar(pedido);
+            var segunda = await UmaVezNoClaude(modelo, pedido, anthropic, clientes, log, c);
+            if (segunda.Falha is null)
+                return segunda with { Tokens = primeira.Tokens.Mais(segunda.Tokens) };
+        }
+        return primeira;
+    }
+
+    private static async Task<Resultado> UmaVezNoClaude(ModeloDeIa modelo, JsonObject pedido, OpcoesDaAnthropic anthropic, IHttpClientFactory clientes,
+        ILogger log, CancellationToken c)
+    {
         var chave = anthropic.Chave!;
         using var mensagem = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(anthropic.Endereco), "messages"))
         {

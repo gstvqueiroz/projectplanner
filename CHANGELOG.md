@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.53.1
+
+Correções para quando a IA não gerava o cronograma.
+
+- **O nível Automático mandava "monte o cronograma" ao modelo mais barato.** A triagem pedia ao Haiku uma configuração que
+  ele recusa, falhava sempre e caía no pedido simples. Agora a triagem funciona, e os pedidos grandes vão ao Sonnet, com a
+  confirmação de custo.
+- **Às vezes o Claude respondia em texto, sem o formato combinado,** e o programa mostrava o texto sem mudar nada no
+  cronograma. Agora o servidor percebe e pede de novo uma vez, lembrando o formato.
+- **Cronogramas grandes saíam cortados.** O Haiku e o Sonnet pensam antes de responder, e esse pensamento entrava no
+  limite de tamanho. O limite dobrou (32 mil tokens), o tempo de espera passou de 5 para 10 minutos, e o assistente monta
+  até cerca de 100 tarefas por vez: numa obra maior, ele monta as primeiras etapas e você pede "continue".
+
 ## 0.53.0
 
 **Grupos do Telegram por obra** (Bloco 53): a equipe trabalha junto no mesmo grupo.

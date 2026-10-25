@@ -53,8 +53,11 @@ public sealed class OpcoesDaAnthropic
     public string Endereco { get; set; } = "https://api.anthropic.com/v1/";
     public string Versao { get; set; } = "2023-06-01";
 
-    /// <summary>O máximo de tokens de resposta (a API da Anthropic exige um).</summary>
-    public int MaximoDeTokens { get; set; } = 16_000;
+    /// <summary>
+    /// O máximo de tokens de resposta, que a API da Anthropic exige (0.53.1: de 16 mil para 32 mil). O Haiku 5.5 e o Sonnet 5.5 pensam antes de responder,
+    /// e esse pensamento conta aqui: com 16 mil, um cronograma grande saía cortado.
+    /// </summary>
+    public int MaximoDeTokens { get; set; } = 32_000;
 }
 
 /// <summary>Bloco 46: um modelo liberado, com o nível, quem o atende e o preço (US$ por milhão de tokens).</summary>

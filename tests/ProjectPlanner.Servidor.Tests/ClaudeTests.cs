@@ -53,9 +53,9 @@ public sealed class ClaudeTests : IDisposable
     {
         var pedido = TradutorClaude.Pedido(JsonNode.Parse(PedidoDoPrograma)!, "claude-opus-5-5", 16_000);
 
-        (pedido["model"]!.GetValue<string>(), pedido["system"]![0]!["text"]!.GetValue<string>(), pedido["max_tokens"]!.GetValue<int>(), pedido["temperature"]!.GetValue<double>())
-            .Should().Be(("claude-opus-5-5", "Você é o assistente.\n\nResponda em português.\n\n" + TradutorClaude.InstrucaoDaFerramenta, 16_000, 1.0),
-                "o máximo e a temperatura ficam nos limites do Claude, e as instruções pedem a ferramenta");
+        (pedido["model"]!.GetValue<string>(), pedido["system"]![0]!["text"]!.GetValue<string>(), pedido["max_tokens"]!.GetValue<int>(), pedido.ContainsKey("temperature"))
+            .Should().Be(("claude-opus-5-5", "Você é o assistente.\n\nResponda em português.\n\n" + TradutorClaude.InstrucaoDaFerramenta, 16_000, false),
+                "o máximo fica no limite do servidor, a temperatura não vai (0.53.1: o Haiku e o Sonnet 5.5 recusam) e as instruções pedem a ferramenta");
         // Bloco 50: as instruções (com o retrato da obra) vão num bloco só, marcado para o cache.
         (pedido["system"]!.AsArray().Count, pedido["system"]![0]!["cache_control"]!.ToJsonString()).Should().Be((1, """{"type":"ephemeral"}"""));
         var mensagens = pedido["messages"]!.AsArray();
@@ -229,6 +229,39 @@ public sealed class ClaudeTests : IDisposable
 
         _s.Claude.Erro = new HttpRequestException("sem rede");
         (await Gerar(acesso, RotaDoClaude, PedidoDoPrograma)).StatusCode.Should().Be(HttpStatusCode.GatewayTimeout);
+    }
+
+    [Fact]
+    public async Task SemOFormato_RepeteUmaVezComOLembrete_ECobraAsDuas_CortadaNaoRepete()
+    {
+        // 0.53.1: o Claude respondeu em texto, sem chamar a ferramenta: o programa não mudaria nada. O servidor repete uma vez.
+        var acesso = await ContaProfissional();
+        _s.Claude.Proximas.Enqueue("""
+            {"content":[{"type":"text","text":"Aqui está o cronograma: 1. Fundação, 2. Alvenaria"}],"stop_reason":"end_turn","usage":{"input_tokens":100,"output_tokens":50}}
+            """);
+        _s.Claude.Proximas.Enqueue(Servidor.ClaudeDeTeste);
+
+        var r = await Gerar(acesso, RotaDoClaude, PedidoDoPrograma);
+
+        JsonNode.Parse(await r.Content.ReadAsStringAsync())!["candidates"]![0]!["content"]!["parts"]![0]!["text"]!.GetValue<string>()
+            .Should().Be("""{"mensagem":"Olá do Claude","alteracoes":[]}""");
+        var pedidos = _s.Claude.Pedidos.ToList();
+        pedidos.Should().HaveCount(2);
+        JsonNode.Parse(pedidos[1].Corpo)!["messages"]!.AsArray()[^1]!["content"]!.AsArray()[^1]!["text"]!.GetValue<string>()
+            .Should().StartWith("(Lembrete: Formato da resposta:");
+        _s.NoBanco(b => b.UsosDeIa.Single()).TokensDeEntrada.Should().Be(1600, "as duas tentativas são cobradas: 100 + 1.500");
+
+        // Cortada pelo tamanho: repetir não adianta.
+        _s.Claude.Proximas.Enqueue("""
+            {"content":[{"type":"text","text":"{ cortada no meio, sem fechar"}],"stop_reason":"max_tokens","usage":{"input_tokens":100,"output_tokens":50}}
+            """);
+        (await Gerar(acesso, RotaDoClaude, PedidoDoPrograma)).StatusCode.Should().Be(HttpStatusCode.OK);
+        _s.Claude.Pedidos.Should().HaveCount(3);
+        // Sem esquema (uma conversa sem formato), texto é a resposta certa.
+        _s.Claude.Proximas.Enqueue("""{"content":[{"type":"text","text":"Oi!"}],"stop_reason":"end_turn","usage":{}}""");
+        (await Gerar(acesso, RotaDoClaude, """{"contents":[{"role":"user","parts":[{"text":"Oi"}]}]}""")).StatusCode.Should().Be(HttpStatusCode.OK);
+        _s.Claude.Pedidos.Should().HaveCount(4);
+        TradutorClaude.SemOFormato("nada"u8.ToArray()).Should().BeTrue();
     }
 
     [Fact]

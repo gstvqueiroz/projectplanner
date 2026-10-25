@@ -580,7 +580,7 @@ public sealed class GeminiTests : IDisposable
         var provedor = new ProvedorGemini(_http);
         using var cliente = ProvedorGemini.CriarHttpClient();
 
-        (provedor.Nome, provedor.ModeloPadrao, cliente.Timeout).Should().Be(("Gemini (Google)", "gemini-2.5-flash", TimeSpan.FromMinutes(5)));
+        (provedor.Nome, provedor.ModeloPadrao, cliente.Timeout).Should().Be(("Gemini (Google)", "gemini-2.5-flash", TimeSpan.FromMinutes(10))); // 0.53.1
         provedor.CriarAssistente(Chave, " models/gemini-2.5-pro").Should().BeOfType<AssistenteGemini>()
             .Which.Modelo.Should().Be("gemini-2.5-pro");
         var semHttp = () => new ProvedorGemini(null!);

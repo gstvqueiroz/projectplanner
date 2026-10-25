@@ -91,7 +91,6 @@ public static partial class Triagem
             ["generationConfig"] = new JsonObject
             {
                 ["responseMimeType"] = "application/json",
-                ["temperature"] = 0,
                 ["maxOutputTokens"] = 300,
                 ["responseSchema"] = new JsonObject
                 {

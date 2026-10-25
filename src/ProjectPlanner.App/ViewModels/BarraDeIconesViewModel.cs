@@ -13,6 +13,7 @@ public enum GrupoDaBarra
     Planejamento,
     Obra,
     Exibicao,
+    Conta,
     Assistente,
 }
 
@@ -50,6 +51,7 @@ public sealed partial class BarraDeIconesViewModel
             B("novo", "Novo projeto", GrupoDaBarra.Arquivo),
             B("abrir", "Abrir projeto", GrupoDaBarra.Arquivo),
             B("salvar", "Salvar", GrupoDaBarra.Arquivo),
+            B("exportarCsv", "Exportar para CSV", GrupoDaBarra.Arquivo),
             B("desfazer", "Desfazer", GrupoDaBarra.Edicao),
             B("refazer", "Refazer", GrupoDaBarra.Edicao),
             B("adicionar", "Adicionar tarefa", GrupoDaBarra.Tarefa),
@@ -61,17 +63,28 @@ public sealed partial class BarraDeIconesViewModel
             B("recursosDaTarefa", "Recursos da tarefa", GrupoDaBarra.Tarefa),
             B("irParaTarefa", "Ir para a tarefa", GrupoDaBarra.Planejamento),
             B("linhaDeBase", "Salvar linha de base", GrupoDaBarra.Planejamento),
+            B("linhasDeBase", "Linhas de base", GrupoDaBarra.Planejamento),
+            B("importarValores", "Importar valores", GrupoDaBarra.Planejamento),
             B("relatorio", "Relatório fotográfico", GrupoDaBarra.Obra),
             B("fotosDoProjeto", "Fotos do projeto", GrupoDaBarra.Obra),
             B("medicoes", "Medições", GrupoDaBarra.Obra),
             B("orcamento", "Orçamento", GrupoDaBarra.Obra),
             B("indicadores", "Indicadores", GrupoDaBarra.Obra),
+            B("fisicoFinanceiro", "Cronograma físico-financeiro", GrupoDaBarra.Obra),
+            B("resumo", "Resumo do projeto", GrupoDaBarra.Obra),
+            B("recursosDoProjeto", "Recursos do projeto", GrupoDaBarra.Obra),
+            B("usoDeRecursos", "Uso de recursos", GrupoDaBarra.Obra),
+            B("custosRealizados", "Custos realizados", GrupoDaBarra.Obra),
             B("dividido", "Dividido", GrupoDaBarra.Exibicao),
             B("somenteTabela", "Somente Tabela", GrupoDaBarra.Exibicao),
             B("somenteGantt", "Somente Gantt", GrupoDaBarra.Exibicao),
             B("caminhoCritico", "Caminho crítico", GrupoDaBarra.Exibicao),
             B("linhaDeBaseNoGantt", "Linha de base no Gantt", GrupoDaBarra.Exibicao),
             B("linhaHoje", "Linha de hoje", GrupoDaBarra.Exibicao),
+            B("conta", "Minha conta", GrupoDaBarra.Conta),
+            B("conectarTelegram", "Conectar o Telegram", GrupoDaBarra.Conta),
+            B("obraNoTelegram", "Usar esta obra no Telegram", GrupoDaBarra.Conta),
+            B("buscarDoTelegram", "Buscar do Telegram", GrupoDaBarra.Conta),
             B("assistente", "Assistente", GrupoDaBarra.Assistente),
         ];
         Carregar();
@@ -93,6 +106,7 @@ public sealed partial class BarraDeIconesViewModel
         GrupoDaBarra.Planejamento => "Planejamento",
         GrupoDaBarra.Obra => "Obra",
         GrupoDaBarra.Exibicao => "Exibição",
+        GrupoDaBarra.Conta => "Conta e Telegram",
         _ => "Assistente",
     };
 

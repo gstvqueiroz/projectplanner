@@ -3,6 +3,18 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.56.0
+
+**Mais atalhos na barra de ícones** (12 botões novos; cada um pode ser escondido em Exibir > Barra de ícones).
+
+- **Conta e Telegram** (grupo novo): Minha conta, Conectar o Telegram, Usar esta obra no Telegram (fica destacado quando a
+  obra já está no Telegram) e Buscar do Telegram.
+- **Relatórios e obra:** Cronograma físico-financeiro, Resumo do projeto, Recursos do projeto, Uso de recursos e Custos
+  realizados.
+- **Planejamento:** Linhas de base e Importar valores.
+- **Arquivo:** Exportar para CSV.
+- Numa janela estreita, os que não cabem continuam no "»".
+
 ## 0.55.2
 
 Correção no servidor: a causa do "Erro no servidor" ao montar o cronograma.

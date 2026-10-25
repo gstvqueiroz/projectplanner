@@ -288,6 +288,11 @@
                         <!-- Disquete -->
                         <Path Data="M2.5,1.5 H11 L14.5,5 V14.5 H1.5 V2.5 Z M4.5,1.5 V5.5 H10.5 V1.5 M4.5,14.5 V9.5 H11.5 V14.5" />
                     </Button>
+                    <Button Tag="exportarCsv" Classes="acessoRapido" Command="{Binding ExportarCsvCommand}"
+                            ToolTip.Tip="Exportar para CSV: a tabela de tarefas numa planilha" AutomationProperties.Name="Exportar para CSV">
+                        <!-- Tabela com uma seta saindo -->
+                        <Path Data="M1.5,2.5 H10.5 V13.5 H1.5 Z M1.5,6 H10.5 M1.5,9.75 H10.5 M5,2.5 V13.5 M9.5,8 H15 M13,6 L15,8 L13,10" />
+                    </Button>
                     <Border Classes="divisor" />
                     <!-- Bloco 30: a dica mostra o nome da alteração (MainWindow.axaml.cs, MostrarAtalhos). -->
                     <Button x:Name="BotaoDesfazer" Tag="desfazer" Classes="acessoRapido" Command="{Binding DesfazerAlteracaoCommand}"
@@ -351,6 +356,16 @@
                         <!-- Barra com a linha de base embaixo e um alfinete -->
                         <Path Data="M1.5,3 H10.5 V6.5 H1.5 Z M1.5,10.5 H14.5 M1.5,13.5 H10.5 M13,2 V7.5 M11.5,3.5 H14.5" />
                     </Button>
+                    <Button Tag="linhasDeBase" Classes="acessoRapido" Command="{Binding GerenciarLinhasDeBaseCommand}"
+                            ToolTip.Tip="Linhas de base: comparar, renomear e apagar as linhas de base guardadas" AutomationProperties.Name="Linhas de base">
+                        <!-- Três barras empilhadas -->
+                        <Path Data="M1.5,2 H10 V5 H1.5 Z M1.5,8 H14.5 M1.5,11 H12 M1.5,14 H9" />
+                    </Button>
+                    <Button Tag="importarValores" Classes="acessoRapido" Command="{Binding ImportarValoresCommand}"
+                            ToolTip.Tip="Importar valores: os valores das tarefas de uma planilha (Excel ou CSV)" AutomationProperties.Name="Importar valores">
+                        <!-- Planilha com uma seta entrando -->
+                        <Path Data="M5,2.5 H14.5 V13.5 H5 Z M5,6 H14.5 M5,9.75 H14.5 M9.5,2.5 V13.5 M1,8 H7 M5,6 L7,8 L5,10" />
+                    </Button>
                     <Border Classes="divisor" />
                     <Button Tag="relatorio" Classes="acessoRapido" Command="{Binding RelatorioFotograficoCommand}"
                             ToolTip.Tip="Relatório fotográfico: as fotos do período em PDF ou Word" AutomationProperties.Name="Relatório fotográfico">
@@ -376,6 +391,31 @@
                             ToolTip.Tip="Indicadores: valor agregado (IDP e IDC), Curva S, etapas e atrasos" AutomationProperties.Name="Indicadores">
                         <!-- Velocímetro -->
                         <Path Data="M1.5,12 A6.5,6.5 0 0 1 14.5,12 Z M8,12 L11,7 M4,9.5 L5,10.1 M8,6.5 V7.7 M12,9.5 L11,10.1" />
+                    </Button>
+                    <Button Tag="fisicoFinanceiro" Classes="acessoRapido" Command="{Binding FisicoFinanceiroCommand}"
+                            ToolTip.Tip="Cronograma físico-financeiro: os valores por período e a Curva S, em PDF ou Excel" AutomationProperties.Name="Cronograma físico-financeiro">
+                        <!-- Colunas com a Curva S -->
+                        <Path Data="M1.5,14.5 H14.5 M1.5,14.5 V1.5 M4,14.5 V11.5 M7,14.5 V9 M10,14.5 V6.5 M13,14.5 V4.5 M2.5,12.5 C6,12.5 8,3 14,3" />
+                    </Button>
+                    <Button Tag="resumo" Classes="acessoRapido" Command="{Binding ResumoDoProjetoCommand}"
+                            ToolTip.Tip="Resumo do projeto: datas, duração, custo, andamento e caminho crítico" AutomationProperties.Name="Resumo do projeto">
+                        <!-- Folha com uma lista -->
+                        <Path Data="M3,1.5 H13 V14.5 H3 Z M5.5,4.5 H10.5 M5.5,7.5 H10.5 M5.5,10.5 H8.5" />
+                    </Button>
+                    <Button Tag="recursosDoProjeto" Classes="acessoRapido" Command="{Binding RecursosDoProjetoCommand}"
+                            ToolTip.Tip="Recursos do projeto: profissionais, materiais e equipamentos, com o custo" AutomationProperties.Name="Recursos do projeto">
+                        <!-- Duas pessoas -->
+                        <Path Data="M5.5,2 A2.25,2.25 0 1 0 5.5,6.5 A2.25,2.25 0 1 0 5.5,2 M1,14 A4.5,4.5 0 0 1 10,14 M11,3 A2,2 0 1 0 11,7 A2,2 0 1 0 11,3 M11.5,9.5 A3.5,3.5 0 0 1 15,13" />
+                    </Button>
+                    <Button Tag="usoDeRecursos" Classes="acessoRapido" Command="{Binding UsoDeRecursosCommand}"
+                            ToolTip.Tip="Uso de recursos: o histograma, as superalocações e o nivelamento" AutomationProperties.Name="Uso de recursos">
+                        <!-- Histograma com a linha do disponível -->
+                        <Path Data="M1.5,14.5 H14.5 M3,14.5 V9 H5.5 V14.5 M7,14.5 V3.5 H9.5 V14.5 M11,14.5 V7 H13.5 V14.5 M1.5,6 H14.5" />
+                    </Button>
+                    <Button Tag="custosRealizados" Classes="acessoRapido" Command="{Binding CustosRealizadosCommand}"
+                            ToolTip.Tip="Custos realizados: as notas e os gastos lançados na obra" AutomationProperties.Name="Custos realizados">
+                        <!-- Moeda com o cifrão -->
+                        <Path Data="M8,1.5 A6.5,6.5 0 1 0 8,14.5 A6.5,6.5 0 1 0 8,1.5 M10,5.5 C9.5,4.5 6,4.3 6,6.2 C6,8 10,7.6 10,9.6 C10,11.6 6.4,11.4 6,10.4 M8,3.5 V12.5" />
                     </Button>
                     <Border Classes="divisor" />
                     <!-- Modos de visualização: o do modo atual fica marcado (classe ativo). -->
@@ -415,6 +455,28 @@
                             ToolTip.Tip="Linha de hoje: a linha tracejada do dia de hoje no Gantt" AutomationProperties.Name="Linha de hoje">
                         <!-- Linha vertical tracejada sobre as barras -->
                         <Path Data="M8,1 V3 M8,5.5 V7.5 M8,10 V12 M8,14 V15.5 M1.5,5 H6 M10,10.5 H14.5" />
+                    </Button>
+                    <Border Classes="divisor" />
+                    <!-- Conta e Telegram -->
+                    <Button Tag="conta" Classes="acessoRapido" Command="{Binding ContaCommand}"
+                            ToolTip.Tip="Minha conta: o plano, os créditos e os pagamentos" AutomationProperties.Name="Minha conta">
+                        <!-- Pessoa num círculo -->
+                        <Path Data="M8,1.5 A6.5,6.5 0 1 0 8,14.5 A6.5,6.5 0 1 0 8,1.5 M8,4.5 A2,2 0 1 0 8,8.5 A2,2 0 1 0 8,4.5 M4.2,12.6 A4.5,4 0 0 1 11.8,12.6" />
+                    </Button>
+                    <Button Tag="conectarTelegram" Classes="acessoRapido" Command="{Binding ConectarTelegramCommand}"
+                            ToolTip.Tip="Conectar o Telegram: ligar o seu chat do bot à conta" AutomationProperties.Name="Conectar o Telegram">
+                        <!-- Avião de papel -->
+                        <Path Data="M1.5,7.5 L14.5,2 L11.5,14 L7.5,10 Z M7.5,10 L14.5,2 M7.5,10 V13.5 L9.5,11.5" />
+                    </Button>
+                    <Button Tag="obraNoTelegram" Classes="acessoRapido" Command="{Binding UsarObraNoTelegramCommand}" Classes.ativo="{Binding ObraNoTelegram}"
+                            ToolTip.Tip="Usar esta obra no Telegram (destacado: a obra já está no Telegram; clique para tirar)" AutomationProperties.Name="Usar esta obra no Telegram">
+                        <!-- Avião de papel com um visto -->
+                        <Path Data="M1.5,7 L12,2.5 L10,11 L6.5,8.5 Z M6.5,8.5 L12,2.5 M9.5,12.5 L11,14 L14.5,10.5" />
+                    </Button>
+                    <Button Tag="buscarDoTelegram" Classes="acessoRapido" Command="{Binding BuscarDoTelegramCommand}"
+                            ToolTip.Tip="Buscar do Telegram: as fotos e as atualizações que chegaram para esta obra" AutomationProperties.Name="Buscar do Telegram">
+                        <!-- Caixa de entrada com uma seta -->
+                        <Path Data="M1.5,9.5 H5 L6,11.5 H10 L11,9.5 H14.5 V14.5 H1.5 Z M8,1.5 V8 M5.5,5.5 L8,8 L10.5,5.5" />
                     </Button>
                     <Border Classes="divisor" />
                     <Button Tag="assistente" Classes="acessoRapido" Classes.ativo="{Binding Assistente.Visivel}"

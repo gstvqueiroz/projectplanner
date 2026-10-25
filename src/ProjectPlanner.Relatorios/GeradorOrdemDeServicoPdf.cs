@@ -128,7 +128,8 @@ public sealed class GeradorOrdemDeServicoPdf
         Campo("EXECUTANTE", d.Executante, Margem + 10, y + 16, meio - Margem - 20);
         Campo("TIPO", TextosDaOrdem.Texto(d.Tipo), meio + 10, y + 16, Limite - meio - 20);
         Campo("CONTATO", d.Contato, Margem + 10, y + 46, meio - Margem - 20);
-        Campo("PAGAMENTO", TextosDaOrdem.Texto(d.FormaDePagamento), meio + 10, y + 46, Limite - meio - 20);
+        Campo("PAGAMENTO", TextosDaOrdem.Texto(d.FormaDePagamento) + (d.Retencao > 0 ? $" · retenção de {d.Retencao.ToString("0.##", Brasil)}%" : ""),
+            meio + 10, y + 46, Limite - meio - 20);
         var terco = (Limite - Margem) / 3;
         Campo("EMISSÃO", Data(o.Emissao), Margem + 10, y + 76 - 0, terco - 20);
         Campo("INÍCIO PREVISTO", Data(d.InicioPrevisto), Margem + terco + 10, y + 76, terco - 20);
@@ -252,7 +253,9 @@ public sealed class GeradorOrdemDeServicoPdf
                     Margem + 270, y, f.Normal(9), Cinza);
                 y += 12;
             }
-            Escrever(c, $"Medido {Moeda.ComSimbolo(o.TotalMedido)} · pago {Moeda.ComSimbolo(o.TotalPago)} · a pagar {Moeda.ComSimbolo(o.APagar)}",
+            Escrever(c, $"Medido {Moeda.ComSimbolo(o.TotalMedido)} · pago {Moeda.ComSimbolo(o.TotalPago)} · a pagar {Moeda.ComSimbolo(o.APagar)}" +
+                (o.Retido > 0 ? $" (retido {Moeda.ComSimbolo(o.Retido)})" : "") +
+                (o.Liberacao is { } l ? $" · retenção de {Moeda.ComSimbolo(l.Valor)} liberada em {l.Data.ToString("dd/MM/yyyy", Brasil)}" : ""),
                 Margem, y + 2, f.Negrito(8.5f), Texto);
             y += 12;
         }

@@ -34,6 +34,17 @@ public sealed class OrdensDeServicoDoProjeto
         return int.TryParse(digitos, out var numero) ? _ordens.Find(o => o.Numero == numero) : null;
     }
 
+    /// <summary>
+    /// Bloco 62: a OS citada num texto (a legenda de uma foto do Telegram): "OS-14", "#os14", "OS 014"; nula se não cita
+    /// nenhuma desta obra.
+    /// </summary>
+    public OrdemDeServico? CitadaEm(string? texto)
+    {
+        var achado = System.Text.RegularExpressions.Regex.Match(texto ?? "", @"(?<![\p{L}\d])#?os[\s\-#nº°.]*0*(\d{1,4})(?!\d)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return achado.Success && int.TryParse(achado.Groups[1].Value, out var numero) ? _ordens.Find(o => o.Numero == numero) : null;
+    }
+
     /// <summary>As OS que cobrem a tarefa (pelas tarefas da OS ou pelos itens), menos as canceladas.</summary>
     public IReadOnlyList<OrdemDeServico> DaTarefa(Guid tarefaId) =>
         [.. Todas.Where(o => o.Situacao != SituacaoDaOrdem.Cancelada && (o.Dados.Tarefas.Contains(tarefaId) || o.Dados.Itens.Any(i => i.TarefaId == tarefaId)))];

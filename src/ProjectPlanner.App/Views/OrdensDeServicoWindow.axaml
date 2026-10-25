@@ -40,6 +40,8 @@
             </StackPanel>
             <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
                 <TextBlock x:Name="Resumo" Text="{Binding Resumo}" TextWrapping="Wrap" FontSize="12" />
+                <TextBlock x:Name="Prazos" Text="{Binding Prazos}" TextWrapping="Wrap" FontSize="12"
+                           IsVisible="{Binding Prazos, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 <!-- Bloco 60 -->
                 <Expander Header="Por executante" HorizontalAlignment="Stretch" IsVisible="{Binding !SemOrdens}">
                     <ItemsControl x:Name="PorExecutante" ItemsSource="{Binding PorExecutante}">
@@ -115,13 +117,15 @@
                         <Button x:Name="VoltarARascunho" Content="Voltar a rascunho" Command="{Binding VoltarARascunhoCommand}" IsVisible="{Binding PodeVoltarARascunho}" />
                         <Button x:Name="Cancelar" Content="Cancelar OS…" Command="{Binding CancelarCommand}" IsVisible="{Binding PodeCancelar}" />
                         <Button x:Name="ExcluirRascunho" Content="Excluir rascunho" Command="{Binding ExcluirRascunhoCommand}" IsVisible="{Binding PodeEditar}" />
+                        <Button x:Name="Duplicar" Content="Duplicar" Command="{Binding DuplicarCommand}"
+                                ToolTip.Tip="Uma OS nova em rascunho com os mesmos dados (um serviço que se repete)" />
                     </WrapPanel>
                 </StackPanel>
 
                 <ScrollViewer Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="6" Margin="0,0,12,0">
                         <!-- Os dados -->
-                        <Grid ColumnDefinitions="110,*,14,110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding PodeEditar}">
+                        <Grid ColumnDefinitions="110,*,14,110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" IsEnabled="{Binding PodeEditar}">
                             <Grid.Styles>
                                 <Style Selector="Grid > Control">
                                     <Setter Property="Margin" Value="0,3" />
@@ -143,8 +147,12 @@
                             <CalendarDatePicker Grid.Row="3" Grid.Column="1" SelectedDate="{Binding InicioPrevisto}" HorizontalAlignment="Stretch" />
                             <TextBlock Grid.Row="3" Grid.Column="3" Classes="rotulo" Text="Prazo" />
                             <CalendarDatePicker Grid.Row="3" Grid.Column="4" SelectedDate="{Binding Prazo}" HorizontalAlignment="Stretch" />
-                            <TextBlock Grid.Row="4" Classes="rotulo" Text="Observações" VerticalAlignment="Top" Margin="0,8,0,0" />
-                            <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Observacoes}" AcceptsReturn="True" TextWrapping="Wrap"
+                            <!-- Bloco 62 -->
+                            <TextBlock Grid.Row="4" Classes="rotulo" Text="Retenção (%)" />
+                            <TextBox Grid.Row="4" Grid.Column="1" x:Name="Retencao" Text="{Binding Retencao}" PlaceholderText="0 (sem retenção de garantia)"
+                                     ToolTip.Tip="A retenção de garantia: o % de cada pagamento que fica retido até a liberação, depois da conferência (5% é o comum)" />
+                            <TextBlock Grid.Row="5" Classes="rotulo" Text="Observações" VerticalAlignment="Top" Margin="0,8,0,0" />
+                            <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding Observacoes}" AcceptsReturn="True" TextWrapping="Wrap"
                                      MinHeight="56" PlaceholderText="Segurança, EPIs, material fornecido pela obra, horário…" />
                         </Grid>
 
@@ -214,6 +222,14 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <!-- Bloco 62: a retenção de garantia -->
+                            <DockPanel IsVisible="{Binding TextoDaLiberacao, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <Button DockPanel.Dock="Right" Content="Desfazer liberação" Command="{Binding DesfazerLiberacaoCommand}" IsVisible="{Binding RetencaoLiberada}" />
+                                <Button x:Name="LiberarRetencao" Classes="accent" Content="{Binding TextoDaLiberacao}" Command="{Binding LiberarRetencaoCommand}"
+                                        IsVisible="{Binding PodeLiberarRetencao}"
+                                        ToolTip.Tip="Paga ao executante o que ficou retido (lança nos custos realizados) e a OS fica paga" />
+                                <TextBlock Text="{Binding TextoDaLiberacao}" IsVisible="{Binding RetencaoLiberada}" VerticalAlignment="Center" FontSize="12" />
+                            </DockPanel>
                             <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10" Margin="0,4,0,0" IsVisible="{Binding PodeMedir}">
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="Nova medição: quanto foi executado de cada item desde a última" FontSize="12" FontWeight="SemiBold" />

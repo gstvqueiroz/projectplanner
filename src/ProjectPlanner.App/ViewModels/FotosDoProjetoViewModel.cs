@@ -37,6 +37,12 @@ public sealed partial class FotoNoProjeto(FotoTarefa foto, byte[]? miniatura, st
 /// <summary>As fotos de um dia na linha do tempo.</summary>
 public sealed record GrupoNoProjeto(string Cabecalho, IReadOnlyList<FotoNoProjeto> Fotos);
 
+/// <summary>
+/// Bloco 62: o que se sabe de uma foto antes de ler: a legenda (a do Telegram) e as tarefas da OS que ela cita (a tarefa vem
+/// daí, e a IA não troca).
+/// </summary>
+public sealed record DicaDaFoto(string Legenda, IReadOnlyList<Guid> Tarefas, string Origem);
+
 /// <summary>Uma foto lida na importação em lote: a tarefa sugerida pela data, que o usuário pode trocar.</summary>
 public sealed partial class LinhaDaImportacao : ObservableObject
 {
@@ -72,6 +78,9 @@ public sealed partial class LinhaDaImportacao : ObservableObject
     [ObservableProperty] public partial string Confianca { get; set; } = "";
 
     [ObservableProperty] public partial string Justificativa { get; set; } = "";
+
+    /// <summary>Bloco 62: a tarefa veio da OS citada na legenda (a classificação da IA não troca).</summary>
+    public bool TarefaFixada { get; internal set; }
 
     /// <summary>A IA está pouco segura da tarefa: confira.</summary>
     [ObservableProperty] public partial bool Duvidosa { get; set; }
@@ -415,6 +424,9 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
     /// <summary>Lê os arquivos (do diálogo ou soltos na janela) e monta a tabela, sem importar ainda.</summary>
     public Task LerLoteAsync(IEnumerable<string> caminhos) => LerLoteAsync(caminhos, soNovas: false);
 
+    /// <summary>Bloco 62: as dicas de cada arquivo do lote (pelo caminho), para a legenda e a tarefa.</summary>
+    public IReadOnlyDictionary<string, DicaDaFoto> Dicas { get; set; } = new Dictionary<string, DicaDaFoto>();
+
     private async Task LerLoteAsync(IEnumerable<string> caminhos, bool soNovas)
     {
         var lista = caminhos.ToList();
@@ -434,6 +446,15 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
             Ocupado = false;
             Progresso = "";
         }
+    }
+
+    // Bloco 62: a tarefa da OS para a foto: a única, ou a que estava prevista na data dela, ou a primeira.
+    private OpcaoDeTarefa? TarefaDaDica(DicaDaFoto dica, DateTime data, IReadOnlyList<OpcaoDeTarefa> opcoes)
+    {
+        var tarefas = dica.Tarefas.Select(id => _cronograma.Tarefas.FirstOrDefault(t => t.Id == id)).OfType<Core.Tarefa>().Where(t => !t.EhResumo).ToList();
+        var escolhida = tarefas.FirstOrDefault(t => (t.InicioMaisCedo ?? t.DataInicio).Date <= data.Date && (t.TerminoMaisCedo ?? t.DataTermino).Date >= data.Date)
+                        ?? tarefas.FirstOrDefault();
+        return escolhida is null ? null : opcoes.FirstOrDefault(o => o.Id == escolhida.Id);
     }
 
     private string? AvisoDeData(Guid tarefaId, DateTime data) =>
@@ -465,10 +486,18 @@ public sealed partial class FotosDoProjetoViewModel : ViewModelBase
                 Lote.Add(new LinhaDaImportacao(lida, opcoes, OpcaoNaoImportar, $"Já está no projeto, em \"{edt[dona.Id]} {dona.Nome}\"."));
                 continue;
             }
+            if (Dicas.TryGetValue(lida.Caminho, out var dica) && TarefaDaDica(dica, importada.DataFoto, opcoes) is { } daOrdem)
+            {
+                Lote.Add(new LinhaDaImportacao(lida, opcoes, daOrdem, $"Da {dica.Origem}, citada na legenda.", AvisoDeData)
+                    { Legenda = dica.Legenda, TarefaFixada = true });
+                continue;
+            }
             var sugerida = SugestaoDeTarefa.Sugerir(_cronograma, importada.DataFoto);
-            Lote.Add(sugerida is null
+            var linhaNova = sugerida is null
                 ? new LinhaDaImportacao(lida, opcoes, OpcaoNaoImportar, "Nenhuma tarefa prevista nesse dia: escolha uma.", AvisoDeData)
-                : new LinhaDaImportacao(lida, opcoes, opcoes.First(o => o.Id == sugerida.Id), "Sugerida pela data da foto.", AvisoDeData));
+                : new LinhaDaImportacao(lida, opcoes, opcoes.First(o => o.Id == sugerida.Id), "Sugerida pela data da foto.", AvisoDeData);
+            linhaNova.Legenda = dica?.Legenda ?? "";
+            Lote.Add(linhaNova);
         }
         foreach (var linha in Lote)
         {

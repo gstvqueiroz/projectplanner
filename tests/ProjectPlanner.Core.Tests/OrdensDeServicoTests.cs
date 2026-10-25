@@ -233,4 +233,66 @@ public class OrdensDeServicoTests
         PagamentoDasOrdens.PercentualDasTarefas(os).Should().BeEquivalentTo(new Dictionary<Guid, int> { [a] = 44, [b] = 100 },
             "a tarefa A tem R$ 3.400 contratados (100 m² × 30 + andaime 400) e R$ 1.500 medidos");
     }
+
+    // ---- Bloco 62 ----
+
+    [Fact]
+    public void Retencao_PagaOLiquido_RetemAteLiberar_EOsCustosBatemComOTotal()
+    {
+        var (a, b) = (Guid.NewGuid(), Guid.NewGuid());
+        var dados = new DadosDaOrdem("Alvenaria", TipoDeExecutante.Terceiro, "Construtora Silva", null, null, [a, b],
+            [new ItemDaOrdem(a, "Alvenaria", "m²", 100, 30), new ItemDaOrdem(b, "Verga", "m", 10, 15.33m)], null, null,
+            FormaDePagamentoDaOrdem.PorMedicao, null, null, retencao: 5);
+        FluentActions.Invoking(() => new DadosDaOrdem("x", TipoDeExecutante.Terceiro, null, null, null, null, null, null, null,
+            FormaDePagamentoDaOrdem.Empreitada, null, null, retencao: 31)).Should().Throw<DomainValidationException>().WithMessage("*0 a 30%*");
+        var os = OrdemDeServico.Nova(Guid.NewGuid(), 1, dados, Agora).Emitir(Agora).Aceitar(Agora).Concluir(Agora)
+            .MedirOQueFalta(Guid.NewGuid(), new DateOnly(2026, 10, 1), Agora).Conferir(Agora);
+        var m = os.Medicoes.Single();
+        var lancamentos = PagamentoDasOrdens.Lancamentos(os, m, new DateOnly(2026, 10, 2), null);
+
+        os = os.RegistrarPagamento(m.Id, new PagamentoDaMedicao(new DateOnly(2026, 10, 2), null, [.. lancamentos.Select(l => l.Id)]), Agora);
+
+        (os.Total, os.RetencaoDe(m), os.TotalPago, os.Retido, os.APagar, os.Situacao).Should().Be((3153.30m, 157.67m, 2995.63m, 157.67m, 157.67m, SituacaoDaOrdem.Conferida));
+        lancamentos.Sum(l => l.Valor).Should().Be(2995.63m);
+        os.PodeLiberarRetencao.Should().BeTrue();
+        var daRetencao = PagamentoDasOrdens.LancamentosDaRetencao(os, new DateOnly(2026, 12, 1), "RPA 9");
+        daRetencao.Sum(l => l.Valor).Should().Be(157.67m);
+        daRetencao.Select(l => (l.TarefaId, l.Documento)).Should().Equal((a, "RPA 9"), (b, "RPA 9"));
+
+        os = os.LiberarRetencao(new DateOnly(2026, 12, 1), "RPA 9", [.. daRetencao.Select(l => l.Id)], Agora);
+
+        (os.Situacao, os.TotalPago, os.Retido, os.Historico[^2].Descricao).Should().Be((SituacaoDaOrdem.Paga, 3153.30m, 0m, "Retenção liberada: R$ 157,67"));
+        os.Invoking(o => o.DesfazerPagamento(m.Id, Agora)).Should().Throw<DomainValidationException>().WithMessage("*desfaça a liberação*");
+        os.DesfazerLiberacao(Agora).Situacao.Should().Be(SituacaoDaOrdem.Conferida);
+    }
+
+    [Fact]
+    public void Duplicar_RascunhoComOsMesmosDados_VerificacaoDesmarcada()
+    {
+        var original = Nova().Emitir(Agora).Aceitar(Agora).MarcarVerificacao(0, true);
+
+        var copia = original.Duplicar(Guid.NewGuid(), 9, Agora);
+
+        (copia.Codigo, copia.Situacao, copia.Dados.Titulo, copia.Total, copia.Dados.Verificacao[0].Feito).Should().Be(("OS-009", SituacaoDaOrdem.Rascunho, original.Dados.Titulo, original.Total, false));
+        copia.Historico.Single().Descricao.Should().Be("Criada como cópia da OS-001");
+    }
+
+    [Theory]
+    [InlineData("alvenaria do térreo OS-14", 14)]
+    [InlineData("#os14 pronto", 14)]
+    [InlineData("João: Os 014 rejunte", 14)]
+    [InlineData("OS nº 3", 3)]
+    [InlineData("fotos dos ossos 14", null)]
+    [InlineData("sem número", null)]
+    [InlineData("OS-99", null)]
+    public void CitadaEm_AchaAOSPelaLegenda(string legenda, int? numero)
+    {
+        var c = new Cronograma("Obra", Seg);
+        foreach (var n in new[] { 3, 14 })
+            c.OrdensDeServico.Adicionar(OrdemDeServico.Nova(Guid.NewGuid(), n, Dados(), Agora));
+
+        c.OrdensDeServico.CitadaEm(legenda)?.Numero.Should().Be(numero);
+        if (numero is null)
+            c.OrdensDeServico.CitadaEm(legenda).Should().BeNull();
+    }
 }

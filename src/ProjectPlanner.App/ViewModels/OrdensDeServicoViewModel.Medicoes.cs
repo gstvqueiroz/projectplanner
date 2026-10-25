@@ -28,15 +28,16 @@ public sealed partial class ItemParaMedir(int indice, ItemDaOrdem item, decimal 
 }
 
 /// <summary>Bloco 60: uma medição na ficha: "M1 · 01/10/2026 · R$ 1.400,00" e se foi paga.</summary>
-public sealed record MedicaoNaTela(MedicaoDaOrdem Medicao)
+/// <param name="Retencao">Bloco 62: a retenção de garantia desta medição (zero sem retenção).</param>
+public sealed record MedicaoNaTela(MedicaoDaOrdem Medicao, decimal Retencao = 0)
 {
     private static readonly CultureInfo Brasil = CultureInfo.GetCultureInfo("pt-BR");
 
     public string Texto => $"{Medicao.Codigo} · {Medicao.Data.ToString("dd/MM/yyyy", Brasil)} · {Moeda.ComSimbolo(Medicao.Valor)}";
 
-    public string Situacao => Medicao.Pagamento is { } p
+    public string Situacao => (Medicao.Pagamento is { } p
         ? $"paga em {p.Data.ToString("dd/MM/yyyy", Brasil)}" + (p.Documento is { } doc ? $" ({doc})" : "")
-        : "a pagar";
+        : "a pagar") + (Retencao > 0 ? $" · retenção {Moeda.ComSimbolo(Retencao)}" : "");
 
     public bool Paga => Medicao.Paga;
 }
@@ -60,8 +61,58 @@ public sealed partial class OrdensDeServicoViewModel
     /// <summary>"Medido R$ 1.400,00 de R$ 3.800,00 (36%) · pago R$ 0,00 · a pagar R$ 1.400,00".</summary>
     public string ResumoDasMedicoes => Ordem is { Total: > 0 } o
         ? $"Medido {Moeda.ComSimbolo(o.TotalMedido)} de {Moeda.ComSimbolo(o.Total)} ({Math.Floor(o.TotalMedido / o.Total * 100):0}%) · " +
-          $"pago {Moeda.ComSimbolo(o.TotalPago)} · a pagar {Moeda.ComSimbolo(o.APagar)}"
+          $"pago {Moeda.ComSimbolo(o.TotalPago)} · a pagar {Moeda.ComSimbolo(o.APagar)}" +
+          (o.Retido > 0 ? $" (retido {Moeda.ComSimbolo(o.Retido)})" : "")
         : "";
+
+    // ---- Bloco 62: retenção de garantia ----
+
+    public bool PodeLiberarRetencao => Ordem?.PodeLiberarRetencao == true;
+
+    public bool RetencaoLiberada => Ordem?.Liberacao is not null;
+
+    /// <summary>"Liberar a retenção (R$ 157,67)…" ou "Retenção liberada em 01/12/2026 (RPA 9)".</summary>
+    public string TextoDaLiberacao => Ordem switch
+    {
+        { Liberacao: { } l } => $"Retenção de {Moeda.ComSimbolo(l.Valor)} liberada em {l.Data.ToString("dd/MM/yyyy", CultureInfo.GetCultureInfo("pt-BR"))}" +
+                                (l.Documento is { } doc ? $" ({doc})" : ""),
+        { PodeLiberarRetencao: true } o => $"Liberar a retenção ({Moeda.ComSimbolo(o.Retido)})…",
+        _ => "",
+    };
+
+    /// <summary>Paga a retenção ao executante (lança nos custos realizados, por tarefa) e a OS fica paga.</summary>
+    [RelayCommand(CanExecute = nameof(PodeLiberarRetencao))]
+    private async Task LiberarRetencao()
+    {
+        var o = Ordem!;
+        if (await _dialogos.PedirTextoAsync("Liberar a retenção",
+                $"Documento do pagamento da retenção da {o.Codigo} ({Moeda.ComSimbolo(o.Retido)}): NF, recibo, PIX… Em branco, fica \"{o.Codigo}/retenção\".") is not { } documento)
+            return;
+        var lancamentos = PagamentoDasOrdens.LancamentosDaRetencao(o, Hoje, documento);
+        var nova = o.LiberarRetencao(Hoje, documento, [.. lancamentos.Select(l => l.Id)], Agora);
+        foreach (var l in lancamentos)
+            _cronograma.Custos.Adicionar(l);
+        _cronograma.OrdensDeServico.Substituir(nova);
+        _mudou($"Liberar a retenção da {o.Codigo}", false);
+        Atualizar();
+        Mensagem = $"Retenção de {Moeda.ComSimbolo(nova.Liberacao!.Valor)} liberada nos custos realizados. A {o.Codigo} está paga.";
+        if (nova.NoTelegram && _publicar is not null)
+            _ = AtualizarNoTelegramAsync(nova);
+    }
+
+    [RelayCommand(CanExecute = nameof(RetencaoLiberada))]
+    private void DesfazerLiberacao()
+    {
+        var o = Ordem!;
+        var liberacao = o.Liberacao!;
+        var nova = o.DesfazerLiberacao(Agora);
+        foreach (var id in liberacao.Lancamentos.Where(id => _cronograma.Custos.Lancamentos.Any(l => l.Id == id)))
+            _cronograma.Custos.Remover(id);
+        _cronograma.OrdensDeServico.Substituir(nova);
+        _mudou($"Desfazer a liberação da retenção da {o.Codigo}", false);
+        Atualizar();
+        Mensagem = "Liberação da retenção desfeita; os custos dela saíram dos custos realizados.";
+    }
 
     [ObservableProperty] public partial DateTime? DataDaMedicao { get; set; }
 
@@ -73,12 +124,13 @@ public sealed partial class OrdensDeServicoViewModel
         MedicoesNaTela.Clear();
         ItensParaMedir.Clear();
         foreach (var m in o?.Medicoes ?? [])
-            MedicoesNaTela.Add(new MedicaoNaTela(m));
+            MedicoesNaTela.Add(new MedicaoNaTela(m, o!.RetencaoDe(m)));
         if (o is not null && o.PodeMedir)
             for (var i = 0; i < o.Dados.Itens.Count; i++)
                 ItensParaMedir.Add(new ItemParaMedir(i, o.Dados.Itens[i], o.MedidoDoItem(i)));
         DataDaMedicao = Agora.Date;
-        foreach (var nome in new[] { nameof(PodeMedir), nameof(MostraMedicoes), nameof(ResumoDasMedicoes) })
+        foreach (var nome in new[] { nameof(PodeMedir), nameof(MostraMedicoes), nameof(ResumoDasMedicoes), nameof(PodeLiberarRetencao),
+                     nameof(TextoDaLiberacao), nameof(RetencaoLiberada) })
             OnPropertyChanged(nome);
     }
 
@@ -136,7 +188,9 @@ public sealed partial class OrdensDeServicoViewModel
         _mudou($"Pagamento da {o.Codigo} {m.Codigo}", false);
         Atualizar();
         var categoria = Categorias.Texto(o.Dados.Tipo == TipoDeExecutante.EquipePropria ? CategoriaDeCusto.MaoDeObra : CategoriaDeCusto.Terceiros);
-        Mensagem = $"Pagamento da {m.Codigo} registrado: {Moeda.ComSimbolo(m.Valor)} nos custos realizados ({categoria.ToLowerInvariant()})." +
+        var retido = o.RetencaoDe(m);
+        Mensagem = $"Pagamento da {m.Codigo} registrado: {Moeda.ComSimbolo(m.Valor - retido)} nos custos realizados ({categoria.ToLowerInvariant()})." +
+                   (retido > 0 ? $" {Moeda.ComSimbolo(retido)} ficam retidos até a liberação." : "") +
                    (nova.Situacao == SituacaoDaOrdem.Paga ? $" A {o.Codigo} está paga." : "");
         if (nova.NoTelegram && _publicar is not null)
             _ = AtualizarNoTelegramAsync(nova);
@@ -191,7 +245,7 @@ public sealed partial class OrdensDeServicoViewModel
     {
         if (await _dialogos.SalvarComoAsync("Exportar as ordens de serviço em CSV", $"Ordens de serviço - {_cronograma.Nome}", "csv") is not { } caminho)
             return;
-        var texto = Csv(_cronograma.OrdensDeServico.Todas);
+        var texto = Csv(_cronograma.OrdensDeServico.Todas, Hoje);
         var temporario = caminho + ".tmp";
         try
         {
@@ -206,15 +260,17 @@ public sealed partial class OrdensDeServicoViewModel
         }
     }
 
-    internal static string Csv(IEnumerable<OrdemDeServico> ordens)
+    internal static string Csv(IEnumerable<OrdemDeServico> ordens, DateOnly hoje)
     {
         var brasil = CultureInfo.GetCultureInfo("pt-BR");
         static string Numero(decimal v) => v.ToString("0.00", CultureInfo.GetCultureInfo("pt-BR"));
         string Data(DateOnly? d) => d?.ToString("dd/MM/yyyy", brasil) ?? "";
         return TabelaCsv.Gerar(
-            ["OS", "Serviço", "Executante", "Tipo", "Situação", "Emissão", "Prazo", "Conclusão", "Valor (R$)", "Medido (R$)", "Pago (R$)", "A pagar (R$)"],
+            ["OS", "Serviço", "Executante", "Tipo", "Situação", "Emissão", "Prazo", "Conclusão", "Dias de atraso", "Valor (R$)", "Medido (R$)", "Pago (R$)",
+             "A pagar (R$)", "Retido (R$)"],
             ordens.Select(o => (IReadOnlyList<string>)[o.Codigo, TabelaCsv.TextoLivre(o.Dados.Titulo), TabelaCsv.TextoLivre(o.Dados.Executante ?? ""),
                 TextosDaOrdem.Texto(o.Dados.Tipo), TextosDaOrdem.Texto(o.Situacao), Data(o.Emissao), Data(o.Dados.Prazo), Data(o.Conclusao),
-                Numero(o.Total), Numero(o.TotalMedido), Numero(o.TotalPago), Numero(o.APagar)]));
+                TextosDaOrdem.DiasDeAtraso(o, hoje)?.ToString(brasil) ?? "", Numero(o.Total), Numero(o.TotalMedido), Numero(o.TotalPago), Numero(o.APagar),
+                Numero(o.Retido)]));
     }
 }

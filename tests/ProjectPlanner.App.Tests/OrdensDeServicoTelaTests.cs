@@ -290,7 +290,74 @@ public sealed class OrdensDeServicoTelaTests : IDisposable
         await tela.ExportarCsvCommand.ExecuteAsync(null);
 
         var linhas = (await File.ReadAllTextAsync(Path.Combine(_pasta, "lista.csv"))).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        linhas[0].Should().Be("\uFEFFOS;Serviço;Executante;Tipo;Situação;Emissão;Prazo;Conclusão;Valor (R$);Medido (R$);Pago (R$);A pagar (R$)".TrimStart('\uFEFF'));
-        linhas[1].Should().Be("OS-001;Alvenaria;Construtora Silva;Terceiro (empreiteiro);Aceita;28/09/2026;02/10/2026;;3400,00;300,00;0,00;300,00");
+        linhas[0].Should().Be("\uFEFFOS;Serviço;Executante;Tipo;Situação;Emissão;Prazo;Conclusão;Dias de atraso;Valor (R$);Medido (R$);Pago (R$);A pagar (R$);Retido (R$)".TrimStart('\uFEFF'));
+        linhas[1].Should().Be("OS-001;Alvenaria;Construtora Silva;Terceiro (empreiteiro);Aceita;28/09/2026;02/10/2026;;;3400,00;300,00;0,00;300,00;0,00");
+    }
+
+    // ---- Bloco 62 ----
+
+    [Fact]
+    public async Task Retencao_NaFicha_NoPagamento_ELiberacaoNoFim()
+    {
+        _alvenaria.Tarefa.DefinirUnidade("m²");
+        _alvenaria.Tarefa.DefinirQuantidade(100);
+        var tela = Abrir(_alvenaria);
+        tela.NovaOrdemCommand.Execute(null);
+        (tela.Executante, tela.Retencao) = ("Construtora Silva", "5%");
+        tela.Itens[0].Preco = "30";
+        tela.EmitirCommand.Execute(null);
+        tela.Ordem!.Dados.Retencao.Should().Be(5);
+        tela.Retencao.Should().Be("5");
+        tela.AceitarCommand.Execute(null);
+        tela.ConcluirCommand.Execute(null);
+        tela.ConferirCommand.Execute(null);
+        _ambiente.Dialogos.TextoDigitado = "NF 9";
+
+        await tela.PagarMedicaoCommand.ExecuteAsync(tela.MedicoesNaTela[0]);
+
+        tela.Mensagem.Should().Be("Pagamento da M1 registrado: R$ 2.850,00 nos custos realizados (serviços de terceiros). R$ 150,00 ficam retidos até a liberação.");
+        tela.MedicoesNaTela[0].Situacao.Should().Be("paga em 28/09/2026 (NF 9) · retenção R$ 150,00");
+        (tela.Ordem!.Situacao, tela.PodeLiberarRetencao, tela.TextoDaLiberacao).Should().Be((SituacaoDaOrdem.Conferida, true, "Liberar a retenção (R$ 150,00)…"));
+        tela.ResumoDasMedicoes.Should().EndWith("a pagar R$ 150,00 (retido R$ 150,00)");
+
+        _ambiente.Dialogos.TextoDigitado = "";
+        await tela.LiberarRetencaoCommand.ExecuteAsync(null);
+
+        (tela.Ordem!.Situacao, Cronograma.Custos.Total, tela.TextoDaLiberacao).Should().Be((SituacaoDaOrdem.Paga, 3000m, "Retenção de R$ 150,00 liberada em 28/09/2026"));
+        tela.DesfazerLiberacaoCommand.Execute(null);
+        (tela.Ordem!.Situacao, Cronograma.Custos.Total).Should().Be((SituacaoDaOrdem.Conferida, 2850m));
+    }
+
+    [Fact]
+    public void Duplicar_CriaRascunhoIgual_ESelecionaACopia()
+    {
+        var tela = Abrir(_alvenaria);
+        tela.NovaOrdemCommand.Execute(null);
+        tela.Executante = "Equipe do João";
+        tela.EmitirCommand.Execute(null);
+
+        tela.DuplicarCommand.Execute(null);
+
+        (tela.Cabecalho, tela.Executante, tela.Itens.Count).Should().Be(("OS-002 · Rascunho", "Equipe do João", 1));
+        tela.Mensagem.Should().StartWith("OS-002 criada como cópia da OS-001");
+    }
+
+    [Fact]
+    public void Prazos_ConcluidasNoPrazoEAtrasadas_NaListaEPorExecutante()
+    {
+        var tela = Abrir(_alvenaria);
+        foreach (var prazo in new[] { new DateTime(2026, 9, 30), new DateTime(2026, 9, 25) })
+        {
+            tela.NovaOrdemCommand.Execute(null);
+            tela.Executante = "Equipe";
+            (tela.InicioPrevisto, tela.Prazo) = (new DateTime(2026, 9, 21), prazo);
+            tela.EmitirCommand.Execute(null);
+            tela.IniciarCommand.Execute(null);
+            tela.ConcluirCommand.Execute(null); // hoje, 28/09
+        }
+
+        tela.Prazos.Should().Be("Prazos: 1 de 2 concluídas no prazo (50%); atraso médio de 3 dias.");
+        tela.PorExecutante.Single().Valor.Should().EndWith("· prazos: 1 de 2 concluídas no prazo (50%); atraso médio de 3 dias");
+        OrdensDeServicoViewModel.Csv(Cronograma.OrdensDeServico.Todas, new DateOnly(2026, 9, 28)).Split("\r\n")[2].Split(';')[8].Should().Be("3");
     }
 }

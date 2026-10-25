@@ -81,12 +81,12 @@ public sealed partial class FotosDoProjetoViewModel
                     if (respostas.FirstOrDefault(r => r.Id == fotos[i].Id) is not { } r)
                         continue;
                     var linha = grupo[i];
-                    if (r.Tarefa is { } t && ids.TryGetValue(t, out var tarefaId) && linha.Tarefas.FirstOrDefault(o => o.Id == tarefaId) is { } opcao)
+                    if (!linha.TarefaFixada && r.Tarefa is { } t && ids.TryGetValue(t, out var tarefaId) && linha.Tarefas.FirstOrDefault(o => o.Id == tarefaId) is { } opcao)
                     {
                         linha.Situacao = opcao == linha.TarefaEscolhida ? "A IA confirmou a tarefa da data." : "Escolhida pela IA pelo que aparece na foto.";
                         linha.TarefaEscolhida = opcao;
                     }
-                    linha.Legenda = r.Legenda ?? linha.Legenda;
+                    linha.Legenda = linha.Legenda.Length > 0 ? linha.Legenda : r.Legenda ?? ""; // a legenda do Telegram vale mais
                     linha.Local = r.Local ?? linha.Local;
                     linha.PercentualSugerido = r.Percentual;
                     linha.Confianca = r.Tarefa is null ? "IA: não soube a tarefa" : r.Confianca switch

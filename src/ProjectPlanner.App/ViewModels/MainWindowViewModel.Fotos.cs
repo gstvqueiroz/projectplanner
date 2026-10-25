@@ -26,9 +26,14 @@ public sealed partial class MainWindowViewModel
     /// Bloco 42 (o chat): abre Fotos do projeto > Importar em lote com as fotos anexadas (ou as novas da pasta da obra) e a IA
     /// já as classificando; o usuário confere e importa.
     /// </summary>
-    public async Task ImportarFotosAsync(string origem, IReadOnlyList<string> caminhos)
+    public Task ImportarFotosAsync(string origem, IReadOnlyList<string> caminhos) => ImportarFotosAsync(origem, caminhos, null);
+
+    /// <param name="dicas">Bloco 62: a legenda e as tarefas (da OS citada) de cada arquivo, pelo caminho.</param>
+    public async Task ImportarFotosAsync(string origem, IReadOnlyList<string> caminhos, IReadOnlyDictionary<string, DicaDaFoto>? dicas)
     {
         var fotos = NovasFotosDoProjeto();
+        if (dicas is not null)
+            fotos.Dicas = dicas;
         fotos.AbaEscolhida = FotosDoProjetoViewModel.AbaImportacao;
         var leitura = origem == OrigensDasFotos.Pasta ? fotos.BuscarNaPastaDaObraCommand.ExecuteAsync(null) : fotos.ImportarComIaAsync(caminhos);
         await _dialogos.MostrarFotosDoProjetoAsync(fotos);

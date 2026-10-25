@@ -82,7 +82,7 @@ public static class TextosDaOrdem
         if (datas.Length > 0)
             linhas.Add(char.ToUpper(datas[0], brasil) + datas[1..]);
         if (comValores)
-            linhas.Add($"Pagamento: {Texto(d.FormaDePagamento)}");
+            linhas.Add($"Pagamento: {Texto(d.FormaDePagamento)}" + (d.Retencao > 0 ? $" · retenção de garantia de {d.Retencao.ToString("0.##", brasil)}%" : ""));
         linhas.Add("");
         linhas.Add("Itens:");
         foreach (var item in d.Itens)
@@ -105,6 +105,37 @@ public static class TextosDaOrdem
             linhas.Add("Verificação: " + string.Join(" · ", d.Verificacao.Select(v => $"{(v.Feito ? "☑" : "☐")} {v.Texto}")));
         }
         return string.Join("\n", linhas);
+    }
+
+    /// <summary>
+    /// Bloco 62: os dias de atraso: na concluída, da conclusão depois do prazo (0 se no prazo); na que está na rua, de hoje
+    /// depois do prazo (só se venceu). Nulo sem prazo ou sem como medir.
+    /// </summary>
+    public static int? DiasDeAtraso(OrdemDeServico ordem, DateOnly hoje)
+    {
+        ArgumentNullException.ThrowIfNull(ordem);
+        if (ordem.Dados.Prazo is not { } prazo)
+            return null;
+        if (ordem.Conclusao is { } conclusao)
+            return Math.Max(0, conclusao.DayNumber - prazo.DayNumber);
+        return ordem.Vencida(hoje) ? hoje.DayNumber - prazo.DayNumber : null;
+    }
+
+    /// <summary>
+    /// Bloco 62: "Prazos: 3 de 4 concluídas no prazo (75%); atraso médio de 2 dias" sobre as OS concluídas com prazo; nulo sem
+    /// nenhuma.
+    /// </summary>
+    public static string? Prazos(IEnumerable<OrdemDeServico> ordens)
+    {
+        ArgumentNullException.ThrowIfNull(ordens);
+        var atrasos = ordens.Where(o => o.Situacao != SituacaoDaOrdem.Cancelada && o.Conclusao is not null && o.Dados.Prazo is not null)
+            .Select(o => DiasDeAtraso(o, default)!.Value).ToList();
+        if (atrasos.Count == 0)
+            return null;
+        var noPrazo = atrasos.Count(a => a == 0);
+        var atrasadas = atrasos.Where(a => a > 0).ToList();
+        return $"Prazos: {noPrazo} de {atrasos.Count} concluída{(atrasos.Count == 1 ? "" : "s")} no prazo ({noPrazo * 100 / atrasos.Count}%)" +
+               (atrasadas.Count == 0 ? "" : $"; atraso médio de {Math.Round(atrasadas.Average(), 1).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))} dia{(atrasadas.Average() == 1 ? "" : "s")}") + ".";
     }
 
     /// <summary>Bloco 61: "OS-003 · Em execução (vencida em 02/10)" ou "OS-005 · Rascunho", para a dica da tarefa.</summary>
@@ -226,7 +257,7 @@ public sealed record DadosDaOrdem
     /// <exception cref="DomainValidationException">Sem título, textos longos, prazo antes do início, itens demais.</exception>
     public DadosDaOrdem(string? titulo, TipoDeExecutante tipo, string? executante, Guid? recursoId, string? contato, IEnumerable<Guid>? tarefas,
         IEnumerable<ItemDaOrdem>? itens, DateOnly? inicioPrevisto, DateOnly? prazo, FormaDePagamentoDaOrdem formaDePagamento, string? observacoes,
-        IEnumerable<ItemDeVerificacao>? verificacao)
+        IEnumerable<ItemDeVerificacao>? verificacao, decimal retencao = 0)
     {
         var t = titulo?.Trim();
         if (string.IsNullOrEmpty(t))
@@ -245,6 +276,9 @@ public sealed record DadosDaOrdem
         var listaDeItens = (itens ?? []).ToList();
         if (listaDeItens.Count > MaximoDeItens)
             throw new DomainValidationException(nameof(Itens), $"A OS tem {listaDeItens.Count} itens; o máximo é {MaximoDeItens}.");
+        if (retencao is < 0 or > RetencaoMaxima)
+            throw new DomainValidationException(nameof(Retencao), $"A retenção vai de 0 a {RetencaoMaxima}%.");
+        Retencao = Math.Round(retencao, 2, MidpointRounding.AwayFromZero);
         (Titulo, Tipo, Executante, RecursoId, Contato, Tarefas, Itens, InicioPrevisto, Prazo, FormaDePagamento, Observacoes, Verificacao) =
             (t, tipo, e, recursoId, c, [.. (tarefas ?? []).Distinct()], listaDeItens, inicioPrevisto, prazo, formaDePagamento, o, [.. verificacao ?? []]);
     }
@@ -281,7 +315,15 @@ public sealed record DadosDaOrdem
 
     /// <summary>A mesma OS com a lista de verificação trocada (marcar o que foi feito, durante a execução).</summary>
     internal DadosDaOrdem ComVerificacao(IReadOnlyList<ItemDeVerificacao> verificacao) =>
-        new(Titulo, Tipo, Executante, RecursoId, Contato, Tarefas, Itens, InicioPrevisto, Prazo, FormaDePagamento, Observacoes, verificacao);
+        new(Titulo, Tipo, Executante, RecursoId, Contato, Tarefas, Itens, InicioPrevisto, Prazo, FormaDePagamento, Observacoes, verificacao, Retencao);
+
+    public const decimal RetencaoMaxima = 30;
+
+    /// <summary>
+    /// Bloco 62: a retenção de garantia, em % de cada pagamento (5% é o comum); fica retida até a liberação, depois da
+    /// conferência. Zero sem retenção.
+    /// </summary>
+    public decimal Retencao { get; }
 
     private static string? Opcional(string? texto, int maximo, string nome)
     {
@@ -319,7 +361,7 @@ public sealed record OrdemDeServico
     /// <summary>A OS como estava no arquivo (sem conferir o fluxo).</summary>
     /// <exception cref="DomainValidationException">Id vazio, número menor que 1 ou situação desconhecida.</exception>
     public static OrdemDeServico Restaurar(Guid id, int numero, DadosDaOrdem dados, SituacaoDaOrdem situacao, DateOnly? emissao, DateOnly? conclusao,
-        IEnumerable<EventoDaOrdem> historico, bool noTelegram = false, IEnumerable<MedicaoDaOrdem>? medicoes = null)
+        IEnumerable<EventoDaOrdem> historico, bool noTelegram = false, IEnumerable<MedicaoDaOrdem>? medicoes = null, LiberacaoDaRetencao? liberacao = null)
     {
         ArgumentNullException.ThrowIfNull(dados);
         if (id == Guid.Empty)
@@ -331,7 +373,7 @@ public sealed record OrdemDeServico
         var lista = (medicoes ?? []).ToList();
         if (lista.Any(m => m.Quantidades.Count != dados.Itens.Count))
             throw new DomainValidationException(nameof(Medicoes), "Uma medição não tem a quantidade de cada item.");
-        return new OrdemDeServico(id, numero, dados, situacao, emissao, conclusao, [.. historico]) { NoTelegram = noTelegram, Medicoes = lista };
+        return new OrdemDeServico(id, numero, dados, situacao, emissao, conclusao, [.. historico]) { NoTelegram = noTelegram, Medicoes = lista, Liberacao = liberacao };
     }
 
     public Guid Id { get; }
@@ -364,7 +406,57 @@ public sealed record OrdemDeServico
 
     public decimal TotalMedido => Medicoes.Sum(m => m.Valor);
 
-    public decimal TotalPago => Medicoes.Where(m => m.Paga).Sum(m => m.Valor);
+    /// <summary>O que foi pago ao executante: o líquido das medições pagas e a retenção liberada.</summary>
+    public decimal TotalPago => Medicoes.Where(m => m.Paga).Sum(m => m.Valor - RetencaoDe(m)) + (Liberacao?.Valor ?? 0);
+
+    // ---- Bloco 62: retenção de garantia ----
+
+    /// <summary>A retenção de uma medição (o % da OS sobre o valor dela).</summary>
+    public decimal RetencaoDe(MedicaoDaOrdem medicao) => Math.Round(medicao.Valor * Dados.Retencao / 100, 2, MidpointRounding.AwayFromZero);
+
+    /// <summary>A retenção das medições pagas que ainda não foi liberada.</summary>
+    public decimal Retido => Medicoes.Where(m => m.Paga).Sum(RetencaoDe) - (Liberacao?.Valor ?? 0);
+
+    /// <summary>A retenção liberada (paga) ao executante; nula antes disso.</summary>
+    public LiberacaoDaRetencao? Liberacao { get; private init; }
+
+    /// <summary>Conferida, com tudo medido e pago, falta só liberar a retenção.</summary>
+    public bool PodeLiberarRetencao => Situacao == SituacaoDaOrdem.Conferida && Liberacao is null && PorMedir == 0 && Medicoes.All(m => m.Paga) && Retido > 0;
+
+    /// <summary>Paga a retenção ao executante (a OS fica paga).</summary>
+    /// <exception cref="DomainValidationException">Ainda não dá para liberar (falta conferir, medir ou pagar).</exception>
+    public OrdemDeServico LiberarRetencao(DateOnly data, string? documento, IReadOnlyList<Guid> lancamentos, DateTime quando, string? autor = null)
+    {
+        if (!PodeLiberarRetencao)
+            throw new DomainValidationException(nameof(Liberacao), $"A retenção da {Codigo} se libera depois de conferida, com tudo medido e pago.");
+        var valor = Retido;
+        var nova = this with
+        {
+            Liberacao = new LiberacaoDaRetencao(data, string.IsNullOrWhiteSpace(documento) ? null : documento.Trim(), valor, lancamentos),
+            Historico = [.. Historico, new EventoDaOrdem(quando, Situacao, $"Retenção liberada: R$ {Planejamento.Moeda.Formatar(valor)}", Autor(autor))],
+        };
+        return nova.MarcarComoPaga(quando, autor);
+    }
+
+    /// <summary>Desfaz a liberação da retenção (a OS volta a conferida).</summary>
+    public OrdemDeServico DesfazerLiberacao(DateTime quando, string? autor = null)
+    {
+        if (Liberacao is null)
+            throw new DomainValidationException(nameof(Liberacao), $"A retenção da {Codigo} não foi liberada.");
+        var nova = this with
+        {
+            Liberacao = null,
+            Historico = [.. Historico, new EventoDaOrdem(quando, Situacao, "Liberação da retenção desfeita", Autor(autor))],
+        };
+        return nova.Situacao == SituacaoDaOrdem.Paga ? nova.VoltarAConferida(quando, autor) : nova;
+    }
+
+    /// <summary>Bloco 62: um rascunho novo com os mesmos dados (a verificação desmarcada), para um serviço que se repete.</summary>
+    public OrdemDeServico Duplicar(Guid id, int numero, DateTime quando) =>
+        Nova(id, numero, Dados.ComVerificacao([.. Dados.Verificacao.Select(v => new ItemDeVerificacao(v.Texto))]), quando) with
+        {
+            Historico = [new EventoDaOrdem(quando, SituacaoDaOrdem.Rascunho, $"Criada como cópia da {Codigo}")],
+        };
 
     /// <summary>O que já foi medido e ainda não foi pago.</summary>
     public decimal APagar => TotalMedido - TotalPago;
@@ -453,6 +545,8 @@ public sealed record OrdemDeServico
         var medicao = Medicoes.FirstOrDefault(m => m.Id == medicaoId) ?? throw new DomainValidationException(nameof(Medicoes), "A medição não é desta OS.");
         if (!medicao.Paga)
             throw new DomainValidationException(nameof(Medicoes), $"A {medicao.Codigo} não foi paga.");
+        if (Liberacao is not null)
+            throw new DomainValidationException(nameof(Medicoes), "A retenção já foi liberada: desfaça a liberação antes.");
         var nova = this with
         {
             Medicoes = [.. Medicoes.Select(m => m.Id == medicaoId ? m with { Pagamento = null } : m)],

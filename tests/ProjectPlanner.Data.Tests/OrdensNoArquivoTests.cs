@@ -64,7 +64,7 @@ public sealed class OrdensNoArquivoTests : TesteComArquivo
     [InlineData(1, "{ ruim")]
     [InlineData(1, """{"ordens":[{"id":"6f9619ff-8b86-d011-b42d-00cf4fc964ff","numero":0,"situacao":"Rascunho","titulo":"x","tipo":"Terceiro","formaDePagamento":"Empreitada"}]}""")]
     [InlineData(1, """{"ordens":[{"id":"6f9619ff-8b86-d011-b42d-00cf4fc964ff","numero":1,"situacao":"Voando","titulo":"x","tipo":"Terceiro","formaDePagamento":"Empreitada"}]}""")]
-    [InlineData(3, """{"ordens":[]}""")]
+    [InlineData(4, """{"ordens":[]}""")]
     public void OrdensComDefeito_ArquivoRecusado(int versao, string dados)
     {
         var c = new Cronograma("Obra", Segunda);
@@ -76,5 +76,26 @@ public sealed class OrdensNoArquivoTests : TesteComArquivo
         var abrir = () => Repositorio.Abrir(Caminho);
 
         abrir.Should().Throw<InvalidDataException>();
+    }
+
+    [Fact]
+    public void Retencao_ELiberacao_VoltamIguais_NaVersao3()
+    {
+        var c = new Cronograma("Obra", Segunda);
+        var agora = new DateTime(2026, 9, 28, 9, 30, 0);
+        var dados = new DadosDaOrdem("Alvenaria", TipoDeExecutante.Terceiro, "Construtora Silva", null, null, null,
+            [new ItemDaOrdem(null, "Alvenaria", "m²", 100, 30)], null, null, FormaDePagamentoDaOrdem.PorMedicao, null, null, retencao: 5);
+        var os = OrdemDeServico.Nova(Guid.NewGuid(), 1, dados, agora).Emitir(agora).Aceitar(agora).Concluir(agora)
+            .MedirOQueFalta(Guid.NewGuid(), new DateOnly(2026, 10, 5), agora).Conferir(agora);
+        os = os.RegistrarPagamento(os.Medicoes[0].Id, new PagamentoDaMedicao(new DateOnly(2026, 10, 6), null, []), agora)
+            .LiberarRetencao(new DateOnly(2026, 12, 1), "RPA 9", [Guid.NewGuid()], agora);
+        c.OrdensDeServico.Adicionar(os);
+        Repositorio.Salvar(c, Caminho);
+
+        var lida = Repositorio.Abrir(Caminho).OrdensDeServico.Todas.Single();
+
+        Versao("OrdensDeServicoDoProjeto").Should().Be(3);
+        (lida.Dados.Retencao, lida.Situacao, lida.TotalPago, lida.Retido).Should().Be((5m, SituacaoDaOrdem.Paga, 3000m, 0m));
+        lida.Liberacao.Should().BeEquivalentTo(os.Liberacao);
     }
 }

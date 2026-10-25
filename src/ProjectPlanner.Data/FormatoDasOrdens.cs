@@ -7,14 +7,21 @@ namespace ProjectPlanner.Data;
 
 /// <summary>
 /// As ordens de serviço (Bloco 58) em JSON, na tabela OrdensDeServicoDoProjeto; os enums vão como texto. Versão 2 (Bloco 60):
-/// as medições e os pagamentos; sem eles o arquivo continua na versão 1, que a 0.58 lê.
+/// as medições e os pagamentos; sem eles o arquivo continua na versão 1, que a 0.58 lê. Versão 3 (Bloco 62): a retenção de
+/// garantia e a liberação dela.
 /// </summary>
 internal static class FormatoDasOrdens
 {
-    public const int Versao = 2;
+    public const int Versao = 3;
 
-    /// <summary>A versão que vai no arquivo: a 1 enquanto nenhuma OS tem medição.</summary>
-    public static int VersaoDe(Cronograma cronograma) => cronograma.OrdensDeServico.Todas.Any(o => o.Medicoes.Count > 0) ? Versao : 1;
+    /// <summary>A versão que vai no arquivo: a menor que guarda tudo o que há nas OS (as versões anteriores leem).</summary>
+    public static int VersaoDe(Cronograma cronograma)
+    {
+        var ordens = cronograma.OrdensDeServico.Todas;
+        if (ordens.Any(o => o.Dados.Retencao > 0 || o.Liberacao is not null))
+            return 3;
+        return ordens.Any(o => o.Medicoes.Count > 0) ? 2 : 1;
+    }
 
     /// <summary>As versões que esta sabe ler.</summary>
     public static bool Conhece(int versao) => versao is >= 1 and <= Versao;
@@ -34,7 +41,9 @@ internal static class FormatoDasOrdens
             [.. o.Dados.Verificacao.Select(v => new Verificacao(v.Texto, v.Feito))],
             [.. o.Historico.Select(e => new Evento(e.Quando, e.Situacao, e.Descricao, e.Autor))], o.NoTelegram ? true : null,
             o.Medicoes.Count == 0 ? null : [.. o.Medicoes.Select(m => new Medicao(m.Id, m.Numero, m.Data, [.. m.Quantidades], m.Valor,
-                m.Pagamento is { } p ? new Pagamento(p.Data, p.Documento, [.. p.Lancamentos]) : null))]))]), Opcoes);
+                m.Pagamento is { } p ? new Pagamento(p.Data, p.Documento, [.. p.Lancamentos]) : null))],
+            o.Dados.Retencao == 0 ? null : o.Dados.Retencao,
+            o.Liberacao is { } l ? new Liberacao(l.Data, l.Documento, l.Valor, [.. l.Lancamentos]) : null))]), Opcoes);
 
     /// <exception cref="InvalidDataException">JSON com defeito ou valores que o domínio recusa.</exception>
     public static void Ler(string json, Cronograma cronograma)
@@ -46,11 +55,12 @@ internal static class FormatoDasOrdens
                 new DadosDaOrdem(o.Titulo, o.Tipo, o.Executante, o.RecursoId, o.Contato, o.Tarefas,
                     (o.Itens ?? []).Select(i => new ItemDaOrdem(i.TarefaId, i.Descricao, i.Unidade, i.Quantidade, i.PrecoUnitario)),
                     o.InicioPrevisto, o.Prazo, o.FormaDePagamento, o.Observacoes,
-                    (o.Verificacao ?? []).Select(v => new ItemDeVerificacao(v.Texto, v.Feito))),
+                    (o.Verificacao ?? []).Select(v => new ItemDeVerificacao(v.Texto, v.Feito)), o.Retencao ?? 0),
                 o.Situacao, o.Emissao, o.Conclusao,
                 (o.Historico ?? []).Select(e => new EventoDaOrdem(e.Quando, e.Situacao, e.Descricao ?? "", e.Autor)), o.NoTelegram == true,
                 (o.Medicoes ?? []).Select(m => new MedicaoDaOrdem(m.Id, m.Numero, m.Data, m.Quantidades ?? [], m.Valor,
-                    m.Pagamento is { } p ? new PagamentoDaMedicao(p.Data, p.Documento, p.Lancamentos ?? []) : null)))).ToList());
+                    m.Pagamento is { } p ? new PagamentoDaMedicao(p.Data, p.Documento, p.Lancamentos ?? []) : null)),
+                o.Liberacao is { } l ? new LiberacaoDaRetencao(l.Data, l.Documento, l.Valor, l.Lancamentos ?? []) : null)).ToList());
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException or DomainValidationException or ArgumentException)
         {
@@ -63,7 +73,9 @@ internal static class FormatoDasOrdens
     private sealed record Ordem(Guid Id, int Numero, SituacaoDaOrdem Situacao, DateOnly? Emissao, DateOnly? Conclusao, string? Titulo,
         TipoDeExecutante Tipo, string? Executante, Guid? RecursoId, string? Contato, List<Guid>? Tarefas, List<Item>? Itens,
         DateOnly? InicioPrevisto, DateOnly? Prazo, FormaDePagamentoDaOrdem FormaDePagamento, string? Observacoes, List<Verificacao>? Verificacao,
-        List<Evento>? Historico, bool? NoTelegram = null, List<Medicao>? Medicoes = null);
+        List<Evento>? Historico, bool? NoTelegram = null, List<Medicao>? Medicoes = null, decimal? Retencao = null, Liberacao? Liberacao = null);
+
+    private sealed record Liberacao(DateOnly Data, string? Documento, decimal Valor, List<Guid>? Lancamentos);
 
     private sealed record Medicao(Guid Id, int Numero, DateOnly Data, List<decimal>? Quantidades, decimal Valor, Pagamento? Pagamento);
 

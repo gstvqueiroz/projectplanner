@@ -2,6 +2,9 @@ using ProjectPlanner.Core.Indicadores;
 
 namespace ProjectPlanner.Core.OrdensDeServico;
 
+/// <summary>Bloco 62: a retenção de garantia paga ao executante no fim: a data, o documento, o valor e os custos lançados.</summary>
+public sealed record LiberacaoDaRetencao(DateOnly Data, string? Documento, decimal Valor, IReadOnlyList<Guid> Lancamentos);
+
 /// <summary>Bloco 60: o pagamento de uma medição: a data, o documento e os custos realizados que ele lançou.</summary>
 /// <param name="Lancamentos">Os ids dos lançamentos de custo (um por tarefa), para desfazer o pagamento.</param>
 public sealed record PagamentoDaMedicao(DateOnly Data, string? Documento, IReadOnlyList<Guid> Lancamentos);
@@ -52,21 +55,43 @@ public static class PagamentoDasOrdens
     /// Os lançamentos de custo do pagamento de uma medição: um por tarefa (o que foi medido nos itens dela; os avulsos, como custo
     /// geral da obra), na categoria do executante (equipe própria: mão de obra; terceiro: serviços de terceiros).
     /// </summary>
+    /// <remarks>Bloco 62: com retenção, lança o líquido (o valor menos a retenção), repartido pelas tarefas.</remarks>
     public static IReadOnlyList<LancamentoDeCusto> Lancamentos(OrdemDeServico ordem, MedicaoDaOrdem medicao, DateOnly data, string? documento)
     {
         ArgumentNullException.ThrowIfNull(ordem);
         ArgumentNullException.ThrowIfNull(medicao);
+        var porTarefa = ordem.Dados.Itens.Select((item, i) => (item.TarefaId, Valor: Math.Round(medicao.Quantidades[i] * item.PrecoUnitario, 2, MidpointRounding.AwayFromZero)))
+            .GroupBy(x => x.TarefaId).Select(g => (Tarefa: g.Key, Valor: g.Sum(x => x.Valor))).ToList();
+        return Repartir(ordem, porTarefa, medicao.Valor - ordem.RetencaoDe(medicao), data, documento ?? "", $"{ordem.Codigo}/{medicao.Codigo}", medicao.Codigo);
+    }
+
+    /// <summary>Bloco 62: os lançamentos da retenção liberada, repartida pelas tarefas como o medido.</summary>
+    public static IReadOnlyList<LancamentoDeCusto> LancamentosDaRetencao(OrdemDeServico ordem, DateOnly data, string? documento)
+    {
+        ArgumentNullException.ThrowIfNull(ordem);
+        var porTarefa = ordem.Dados.Itens.Select((item, i) => (item.TarefaId, Valor: ordem.Medicoes.Sum(m => Math.Round(m.Quantidades[i] * item.PrecoUnitario, 2, MidpointRounding.AwayFromZero))))
+            .GroupBy(x => x.TarefaId).Select(g => (Tarefa: g.Key, Valor: g.Sum(x => x.Valor))).ToList();
+        return Repartir(ordem, porTarefa, ordem.Retido, data, documento ?? "", $"{ordem.Codigo}/retenção", "retenção");
+    }
+
+    // Reparte o total pelas tarefas na proporção do valor de cada uma (o último leva a diferença dos centavos).
+    private static List<LancamentoDeCusto> Repartir(OrdemDeServico ordem, List<(Guid? Tarefa, decimal Valor)> porTarefa, decimal total, DateOnly data,
+        string documento, string documentoPadrao, string rotulo)
+    {
         var categoria = ordem.Dados.Tipo == TipoDeExecutante.EquipePropria ? CategoriaDeCusto.MaoDeObra : CategoriaDeCusto.Terceiros;
-        var doc = string.IsNullOrWhiteSpace(documento) ? $"{ordem.Codigo}/{medicao.Codigo}" : documento.Trim();
+        var doc = string.IsNullOrWhiteSpace(documento) ? documentoPadrao : documento.Trim();
         if (doc.Length > LancamentoDeCusto.TamanhoMaximoDoDocumento)
             doc = doc[..LancamentoDeCusto.TamanhoMaximoDoDocumento];
-        var descricao = $"{ordem.Codigo} {medicao.Codigo} · {ordem.Dados.Executante ?? "executante"}: {ordem.Dados.Titulo}";
+        var descricao = $"{ordem.Codigo} {rotulo} · {ordem.Dados.Executante ?? "executante"}: {ordem.Dados.Titulo}";
         if (descricao.Length > LancamentoDeCusto.TamanhoMaximoDaDescricao)
             descricao = descricao[..(LancamentoDeCusto.TamanhoMaximoDaDescricao - 1)] + "…";
-        return [.. ordem.Dados.Itens.Select((item, i) => (item.TarefaId, Valor: Math.Round(medicao.Quantidades[i] * item.PrecoUnitario, 2, MidpointRounding.AwayFromZero)))
-            .GroupBy(x => x.TarefaId)
-            .Select(g => (Tarefa: g.Key, Valor: g.Sum(x => x.Valor)))
-            .Where(x => x.Valor > 0)
+        var partes = porTarefa.Where(x => x.Valor > 0).ToList();
+        var bruto = partes.Sum(x => x.Valor);
+        if (bruto <= 0 || total <= 0)
+            return [];
+        var valores = partes.Select(x => Math.Round(total * x.Valor / bruto, 2, MidpointRounding.AwayFromZero)).ToList();
+        valores[^1] += total - valores.Sum();
+        return [.. partes.Select((x, i) => (x.Tarefa, Valor: valores[i])).Where(x => x.Valor > 0)
             .Select(x => new LancamentoDeCusto(Guid.NewGuid(), data, x.Tarefa, categoria, descricao, doc, x.Valor))];
     }
 

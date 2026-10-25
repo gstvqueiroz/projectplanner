@@ -89,4 +89,30 @@ public sealed partial class TelegramNoProgramaTests
         (_ambiente.Telegram.Caixas[Projeto].Count, _vm.PendentesDoTelegram).Should().Be((0, 0), "todos foram levados, até o que ficou de lado");
         _vm.TextoDesfazer.Should().StartWith("Desfazer Telegram: OS-001 aceita (João)");
     }
+
+    // ---- Bloco 62 ----
+
+    [Fact]
+    public async Task FotoComAOSNaLegenda_VaiParaATarefaDaOS_ComALegenda()
+    {
+        var tela = await AbrirOrdens(); // a OS-001 é da Fundação
+        tela.EmitirCommand.Execute(null);
+        var (comOs, semOs) = (Guid.NewGuid(), Guid.NewGuid());
+        _ambiente.Telegram.Caixas[Projeto] =
+        [
+            new ItemDoTelegram(comOs, ItemDoTelegram.DeFoto, DateTime.UtcNow, "João: gabarito pronto #os1", "telegram-1.jpg", null, null),
+            new ItemDoTelegram(semOs, ItemDoTelegram.DeFoto, DateTime.UtcNow, "Bia: vista geral", "telegram-2.jpg", null, null),
+        ];
+        _ambiente.Telegram.Fotos[comOs] = [1, 2, 3];
+        _ambiente.Telegram.Fotos[semOs] = [4, 5, 6];
+
+        await _vm.BuscarDoTelegramCommand.ExecuteAsync(null);
+
+        var lote = _ambiente.Dialogos.FotosDoProjeto.Single().Lote;
+        var daOs = lote.Single(l => l.Arquivo == "telegram-1.jpg");
+        (daOs.TarefaEscolhida.Id, daOs.TarefaFixada, daOs.Legenda, daOs.Situacao)
+            .Should().Be((IdDe("Fundação"), true, "João: gabarito pronto #os1", "Da OS-001, citada na legenda."));
+        var outra = lote.Single(l => l.Arquivo == "telegram-2.jpg");
+        (outra.TarefaFixada, outra.Legenda).Should().Be((false, "Bia: vista geral"));
+    }
 }

@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.62.0
+
+**Ordens de serviço: retenção, cópia, fotos e prazos.**
+
+- **Retenção de garantia:** na ficha, "Retenção (%)" (5% é o comum). Cada pagamento lança só o líquido nos custos
+  realizados e guarda a retenção; depois da conferência, com tudo medido e pago, **Liberar a retenção** paga o que ficou
+  retido (também nos custos, por tarefa) e a OS fica paga. Dá para desfazer. A retenção aparece no PDF e no Telegram.
+- **Duplicar:** uma OS nova em rascunho com os mesmos dados, para o serviço que se repete (de pavimento em pavimento).
+- **Fotos do Telegram ligadas à OS:** uma foto com "#os14" (ou "OS-14") na legenda vai para a tarefa da OS-014 na
+  importação (a IA não troca), e a legenda do Telegram vira a legenda da foto.
+- **Prazos:** a lista mostra quantas OS foram concluídas no prazo e o atraso médio, também por executante; o CSV ganhou os
+  dias de atraso e o retido.
+- Um arquivo com retenção não abre nas versões 0.58 a 0.61.
+
 ## 0.61.0
 
 **As ordens de serviço à vista.**

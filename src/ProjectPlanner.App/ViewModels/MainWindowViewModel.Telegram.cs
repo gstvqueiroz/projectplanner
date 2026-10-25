@@ -94,6 +94,7 @@ public sealed partial class MainWindowViewModel
             falhas += await Levar(item) ? 0 : 1;
 
         var pasta = Path.Combine(PastaDasFotosDoTelegram, _cronograma.Id.ToString("N"));
+        var dicas = new Dictionary<string, DicaDaFoto>();
         foreach (var item in itens.Where(i => i.Tipo == ItemDoTelegram.DeFoto))
         {
             try
@@ -103,6 +104,7 @@ public sealed partial class MainWindowViewModel
                 var caminho = Path.Combine(pasta, Path.GetFileName(item.NomeDaFoto ?? $"telegram-{item.Id:N}.jpg"));
                 await File.WriteAllBytesAsync(caminho, bytes);
                 fotos.Add(caminho);
+                dicas[caminho] = DicaDoTelegram(item.Texto); // Bloco 62
                 falhas += await Levar(item) ? 0 : 1;
             }
             catch (Exception ex) when (ex is ErroDaContaException or IOException or UnauthorizedAccessException)
@@ -121,10 +123,22 @@ public sealed partial class MainWindowViewModel
             falhas == 0 ? null : $"{falhas} item(ns) não puderam ser trazidos agora (tente de novo).",
         }.Where(t => t is not null));
         if (fotos.Count > 0)
-            await ImportarFotosAsync(OrigensDasFotos.Anexos, fotos);
+            await ImportarFotosAsync(OrigensDasFotos.Anexos, fotos, dicas);
     }
 
     private bool PodeBuscarDoTelegram() => TelegramDisponivel && ObraNoTelegram;
+
+    /// <summary>
+    /// Bloco 62: a legenda da foto do Telegram ("João: reboco pronto #os14") vira a legenda; a OS citada nela dá as tarefas.
+    /// </summary>
+    private DicaDaFoto DicaDoTelegram(string legenda)
+    {
+        var texto = legenda?.Trim() ?? "";
+        if (_cronograma.OrdensDeServico.CitadaEm(texto) is not { } ordem)
+            return new DicaDaFoto(texto, [], "");
+        var tarefas = ordem.Dados.Tarefas.Concat(ordem.Dados.Itens.Select(i => i.TarefaId).OfType<Guid>()).Distinct().ToList();
+        return new DicaDaFoto(texto, tarefas, ordem.Codigo);
+    }
 
     private async Task<bool> Levar(ItemDoTelegram item)
     {

@@ -189,6 +189,9 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
 
     [ObservableProperty] public partial OrdemNaLista? Selecionada { get; set; }
 
+    /// <summary>Bloco 62: "Prazos: 3 de 4 concluídas no prazo (75%); atraso médio de 2 dias".</summary>
+    public string Prazos { get; private set; } = "";
+
     [ObservableProperty] public partial string Mensagem { get; private set; } = "";
 
     private void Atualizar()
@@ -230,8 +233,11 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         }.OfType<string>());
         PorExecutante = [.. validas.Where(o => o.Situacao != SituacaoDaOrdem.Rascunho).GroupBy(o => o.Dados.Executante ?? "sem executante").OrderBy(g => g.Key)
             .Select(g => new LinhaDoResumoNaTela($"{g.Key} ({Plural(g.Count(), "OS", "OS")})",
-                $"{Moeda.ComSimbolo(g.Sum(o => o.Total))} · medido {Moeda.ComSimbolo(g.Sum(o => o.TotalMedido))} · pago {Moeda.ComSimbolo(g.Sum(o => o.TotalPago))}"))];
+                $"{Moeda.ComSimbolo(g.Sum(o => o.Total))} · medido {Moeda.ComSimbolo(g.Sum(o => o.TotalMedido))} · pago {Moeda.ComSimbolo(g.Sum(o => o.TotalPago))}" +
+                (TextosDaOrdem.Prazos(g) is { } prazos ? $" · {prazos[..1].ToLowerInvariant()}{prazos[1..^1]}" : "")))];
+        Prazos = TextosDaOrdem.Prazos(todas) ?? "";
         OnPropertyChanged(nameof(PorExecutante));
+        OnPropertyChanged(nameof(Prazos));
         OnPropertyChanged(nameof(SemOrdens));
         if (id is { } atual)
         {
@@ -295,6 +301,9 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     [ObservableProperty] public partial DateTime? Prazo { get; set; }
     [ObservableProperty] public partial Escolha<FormaDePagamentoDaOrdem> FormaEscolhida { get; set; } = null!;
     [ObservableProperty] public partial string Observacoes { get; set; } = "";
+
+    /// <summary>Bloco 62: a retenção de garantia (%), como digitada.</summary>
+    [ObservableProperty] public partial string Retencao { get; set; } = "";
     [ObservableProperty] public partial Escolha<PrecoDosItens> PrecoEscolhido { get; set; } = null!;
     [ObservableProperty] public partial string NovaVerificacao { get; set; } = "";
 
@@ -325,7 +334,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     private static readonly HashSet<string> CamposDaFicha =
     [
         nameof(TituloDaOrdem), nameof(TipoEscolhido), nameof(Executante), nameof(Contato), nameof(InicioPrevisto), nameof(Prazo),
-        nameof(FormaEscolhida), nameof(Observacoes),
+        nameof(FormaEscolhida), nameof(Observacoes), nameof(Retencao),
     ];
 
     private void FichaMudou(object? sender, PropertyChangedEventArgs e)
@@ -390,6 +399,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
             FormaEscolhida = Formas.First(f => f.Valor == (d?.FormaDePagamento ?? FormaDePagamentoDaOrdem.Empreitada));
             PrecoEscolhido ??= Precos[0];
             Observacoes = d?.Observacoes ?? "";
+            Retencao = d is { Retencao: > 0 } ? d.Retencao.ToString("0.##", Brasil) : "";
             NovaVerificacao = "";
             foreach (var item in d?.Itens ?? [])
                 Itens.Add(ItemNaFicha.De(item, EdtDe(item.TarefaId)));
@@ -429,7 +439,8 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         return new DadosDaOrdem(TituloDaOrdem, TipoEscolhido.Valor, Executante, recurso?.Id, Contato,
             Tarefas.Where(t => t.Marcada).Select(t => t.Id), itens,
             InicioPrevisto is { } inicio ? DateOnly.FromDateTime(inicio) : null, Prazo is { } prazo ? DateOnly.FromDateTime(prazo) : null,
-            FormaEscolhida.Valor, Observacoes, Verificacao.Select(v => new ItemDeVerificacao(v.Texto, v.Feito)));
+            FormaEscolhida.Valor, Observacoes, Verificacao.Select(v => new ItemDeVerificacao(v.Texto, v.Feito)),
+            Moeda.LerNumero(Retencao.Replace("%", "")) ?? 0);
     }
 
     // Grava a ficha na OS em rascunho (sem mensagem); falso com o motivo.
@@ -455,7 +466,33 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
 
     /// <summary>Uma OS nova em rascunho, com a tarefa selecionada na grid (e as de dentro, se for uma etapa), ou em branco.</summary>
     [RelayCommand]
-    private void NovaOrdem()
+    private void NovaOrdem() => NovaOuCopia(null);
+
+    /// <summary>Bloco 62: um rascunho novo com os dados da OS escolhida (um serviço que se repete, de pavimento em pavimento).</summary>
+    [RelayCommand(CanExecute = nameof(TemSelecionadaParaPdf))]
+    private void Duplicar() => NovaOuCopia(Ordem);
+
+    private void NovaOuCopia(OrdemDeServico? original)
+    {
+        if (original is null)
+        {
+            NovaDoZero();
+            return;
+        }
+        if (!SalvarSePreciso())
+            return;
+        var copia = original.Duplicar(Guid.NewGuid(), _cronograma.OrdensDeServico.ProximoNumero, Agora);
+        _cronograma.OrdensDeServico.Adicionar(copia);
+        _mudou($"Duplicar a {original.Codigo}", false);
+        if (FiltroEscolhido.Valor is FiltroDasOrdens.Vencidas or FiltroDasOrdens.Encerradas)
+            FiltroEscolhido = Filtros[0];
+        Selecionada = null;
+        Atualizar();
+        Selecionada = Lista.First(l => l.Ordem.Id == copia.Id);
+        Mensagem = $"{copia.Codigo} criada como cópia da {original.Codigo}, em rascunho: ajuste o serviço, as tarefas e as datas.";
+    }
+
+    private void NovaDoZero()
     {
         if (!SalvarSePreciso())
             return;
@@ -637,7 +674,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         foreach (var comando in new IRelayCommand[] { SalvarCommand, TrazerItensDasTarefasCommand, AdicionarItemCommand, AdicionarVerificacaoCommand,
                      ExcluirRascunhoCommand, EmitirCommand, AceitarCommand, RecusarCommand, IniciarCommand, ConcluirCommand, ConferirCommand,
                      ReprovarCommand, VoltarARascunhoCommand, CancelarCommand, SalvarPdfCommand, ImprimirCommand, MandarAoTelegramCommand,
-                     RegistrarMedicaoCommand, MedirTudoOQueFaltaCommand })
+                     RegistrarMedicaoCommand, MedirTudoOQueFaltaCommand, DuplicarCommand, LiberarRetencaoCommand, DesfazerLiberacaoCommand })
             comando.NotifyCanExecuteChanged();
     }
 

@@ -19,7 +19,7 @@ public sealed partial class AtendenteDoTelegram
         "• mande fotos da obra (com legenda, se quiser): vão para a caixa da obra;\n" +
         "• escreva #atualizacao e o que mudou (\"#atualizacao alvenaria do 2º piso em 70%\");\n" +
         "• para perguntar, marque o bot (@{0}) ou responda a uma mensagem dele;\n" +
-        "• ordens de serviço: toque nos botões da OS (Aceitar, Comecei, Terminei); /os lista as abertas, /recusar 14 e o motivo recusa.\n\n" +
+        "• ordens de serviço: toque nos botões da OS (Aceitar, Comecei, Terminei); /os lista as abertas, /recusar 14 e o motivo recusa; #os14 na legenda da foto a liga à OS.\n\n" +
         "O resto da conversa do grupo o bot não lê. Tudo vai para a caixa da obra, e o dono confere e aplica no programa.\n" +
         "/equipe mostra os papéis · /papel (respondendo à mensagem de alguém) muda o papel · /obra troca a obra · /sair desliga o grupo.";
 

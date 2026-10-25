@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.RelatorioDasOrdensWindow"
+        x:DataType="vm:RelatorioDasOrdensViewModel"
+        Title="{Binding Titulo}"
+        Width="640" Height="360" MinWidth="560" MinHeight="320"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 64: o filtro do relatório das OS e o PDF (salvar ou imprimir) ou o CSV. -->
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="ExportarCsv" Content="Exportar CSV…" Command="{Binding ExportarCsvCommand}" />
+                <Button x:Name="Imprimir" Content="Imprimir…" Command="{Binding ImprimirCommand}" />
+                <Button x:Name="SalvarPdf" Classes="accent" Content="Salvar PDF…" Command="{Binding SalvarPdfCommand}" />
+                <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+            </StackPanel>
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" />
+        </DockPanel>
+        <StackPanel Spacing="10">
+            <TextBlock Text="O relatório traz os números, as OS que pedem atenção (vencidas e para conferir), o resumo por executante e a lista das OS."
+                       TextWrapping="Wrap" FontSize="12" Opacity="0.75" />
+            <Grid ColumnDefinitions="110,*,12,40,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <TextBlock Text="Emitidas de" VerticalAlignment="Center" />
+                <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding De}" PlaceholderText="o começo" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Column="3" Text="até" VerticalAlignment="Center" />
+                <CalendarDatePicker Grid.Column="4" SelectedDate="{Binding Ate}" PlaceholderText="hoje" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Situação" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" x:Name="Situacao" ItemsSource="{Binding Situacoes}" SelectedItem="{Binding SituacaoEscolhida}"
+                          HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="2" Text="Executante" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" x:Name="Executante" ItemsSource="{Binding Executantes}" SelectedItem="{Binding ExecutanteEscolhido}"
+                          HorizontalAlignment="Stretch" />
+            </Grid>
+            <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10">
+                <TextBlock x:Name="Resumo" Text="{Binding Resumo}" TextWrapping="Wrap" FontWeight="SemiBold" />
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

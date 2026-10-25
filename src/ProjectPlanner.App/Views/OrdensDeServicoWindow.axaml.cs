@@ -15,4 +15,11 @@ public partial class OrdensDeServicoWindow : Window
     }
 
     private void Fechar(object? sender, RoutedEventArgs e) => Close();
+
+    // Bloco 64: o relatório abre por cima desta janela.
+    private async void AbrirRelatorio(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OrdensDeServicoViewModel ordens)
+            await new RelatorioDasOrdensWindow(ordens.NovoRelatorio()).ShowDialog(this);
+    }
 }

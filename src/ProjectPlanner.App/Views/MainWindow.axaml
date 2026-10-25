@@ -234,6 +234,11 @@
                     <!-- Bloco 58 -->
                     <MenuItem Header="Ordens de serviço…" Command="{Binding OrdensDeServicoCommand}"
                               ToolTip.Tip="As OS da obra para a equipe e os empreiteiros: itens e preços do orçamento, emissão, aceite, execução, conferência e o PDF para assinar" />
+                    <!-- Bloco 64 -->
+                    <MenuItem Header="Nova ordem de serviço" Command="{Binding NovaOrdemDeServicoCommand}"
+                              ToolTip.Tip="Uma OS nova em rascunho, com a tarefa (ou a etapa) selecionada na grid" />
+                    <MenuItem Header="Relatório das ordens de serviço…" Command="{Binding RelatorioDasOrdensCommand}"
+                              ToolTip.Tip="O relatório das OS em PDF: números, vencidas, para conferir, por executante e a lista, com filtro por período" />
                     <!-- Bloco 37 -->
                     <MenuItem Header="Custos realizados…" Command="{Binding CustosRealizadosCommand}"
                               ToolTip.Tip="As notas, as folhas e as locações da obra, por tarefa e categoria (para o custo real e o IDC)" />
@@ -397,6 +402,17 @@
                             ToolTip.Tip="Ordens de serviço: emitir para a equipe ou o empreiteiro, acompanhar, conferir e imprimir" AutomationProperties.Name="Ordens de serviço">
                         <!-- Folha com o canto dobrado e uma chave de boca -->
                         <Path Data="M2.5,1.5 H9.5 L12.5,4.5 V8 M9.5,1.5 V4.5 H12.5 M2.5,1.5 V14.5 H8 M4.5,6 H9 M4.5,8.5 H7.5 M9.5,14.5 L13,11 M12.2,9.3 A1.8,1.8 0 1 0 14.7,11.8 L13.6,11.6 L13.2,10.8 L13.4,9.7 Z" />
+                    </Button>
+                    <!-- Bloco 64 -->
+                    <Button Tag="novaOrdemDeServico" Classes="acessoRapido" Command="{Binding NovaOrdemDeServicoCommand}"
+                            ToolTip.Tip="Nova OS: uma ordem de serviço em rascunho com a tarefa (ou a etapa) selecionada" AutomationProperties.Name="Nova ordem de serviço">
+                        <!-- Folha com o canto dobrado e um "+" -->
+                        <Path Data="M2.5,1.5 H9.5 L12.5,4.5 V8 M9.5,1.5 V4.5 H12.5 M2.5,1.5 V14.5 H8.5 M4.5,6 H9 M4.5,8.5 H7.5 M12,9.5 V15 M9.25,12.25 H14.75" />
+                    </Button>
+                    <Button Tag="relatorioDasOrdens" Classes="acessoRapido" Command="{Binding RelatorioDasOrdensCommand}"
+                            ToolTip.Tip="Relatório das OS: números, vencidas, para conferir e por executante, em PDF" AutomationProperties.Name="Relatório das ordens de serviço">
+                        <!-- Folha com barras -->
+                        <Path Data="M2.5,1.5 H13.5 V14.5 H2.5 Z M5,12 V9 M8,12 V6 M11,12 V7.5 M4.5,4 H8" />
                     </Button>
                     <Button Tag="orcamento" Classes="acessoRapido" Command="{Binding OrcamentoCommand}"
                             ToolTip.Tip="Orçamento: a planilha com as composições da SINAPI, o BDI e as sugestões da IA" AutomationProperties.Name="Orçamento">

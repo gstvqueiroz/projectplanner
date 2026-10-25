@@ -32,14 +32,50 @@ public static class LoginComGoogle
 
     /// <exception cref="ErroDaContaException">A pessoa cancelou no Google, ou o tempo acabou.</exception>
     /// <exception cref="OperationCanceledException">Cancelado no programa.</exception>
+    // 0.64.0: no macOS, fechar o ouvinte já parado às vezes lança "Address already in use" (no HttpListener do .NET): isso não
+    // pode esconder o que de fato aconteceu (o cancelamento, o código que chegou).
+    private sealed class FechamentoSeguro(HttpListener ouvinte) : IDisposable
+    {
+        public void Dispose()
+        {
+            try
+            {
+                ouvinte.Close();
+            }
+            catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException)
+            {
+                // nada a fazer: a porta é liberada com o processo
+            }
+        }
+    }
+
+    // 0.64.0: a porta livre pode ser tomada entre achá-la e abrir o ouvinte (outro programa, ou outro login ao mesmo tempo):
+    // tenta outra porta algumas vezes.
+    private static (HttpListener Ouvinte, Uri Volta) Ouvir()
+    {
+        for (var tentativa = 1; ; tentativa++)
+        {
+            var volta = new Uri($"http://127.0.0.1:{PortaLivre()}/");
+            var ouvinte = new HttpListener();
+            ouvinte.Prefixes.Add(volta.AbsoluteUri);
+            try
+            {
+                ouvinte.Start();
+                return (ouvinte, volta);
+            }
+            catch (HttpListenerException) when (tentativa < 5)
+            {
+                ouvinte.Close();
+            }
+        }
+    }
+
     public static async Task<CodigoDoGoogle> ObterCodigoAsync(string clientId, Func<Uri, Task> abrirNavegador, CancellationToken cancelamento)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
         ArgumentNullException.ThrowIfNull(abrirNavegador);
-        var volta = new Uri($"http://127.0.0.1:{PortaLivre()}/");
-        using var ouvinte = new HttpListener();
-        ouvinte.Prefixes.Add(volta.AbsoluteUri);
-        ouvinte.Start();
+        var (ouvinte, volta) = Ouvir();
+        using var fechar = new FechamentoSeguro(ouvinte);
 
         var verificador = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
         var estado = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(16));

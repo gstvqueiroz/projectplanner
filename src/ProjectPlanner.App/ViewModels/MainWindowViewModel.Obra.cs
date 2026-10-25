@@ -168,6 +168,12 @@ public sealed partial class MainWindowViewModel
             case TelasDoPrograma.LinhasDeBase:
                 await GerenciarLinhasDeBaseCommand.ExecuteAsync(null);
                 break;
+            case TelasDoPrograma.OrdensDeServico: // Bloco 64
+                await OrdensDeServicoCommand.ExecuteAsync(null);
+                break;
+            case TelasDoPrograma.RelatorioDasOrdens:
+                await RelatorioDasOrdensCommand.ExecuteAsync(null);
+                break;
         }
     }
 }

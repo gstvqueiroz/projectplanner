@@ -57,6 +57,10 @@
                 </Expander>
                 <Button x:Name="ExportarCsv" Content="Exportar a lista (CSV)…" Command="{Binding ExportarCsvCommand}" HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center" IsVisible="{Binding !SemOrdens}" />
+                <!-- Bloco 64 -->
+                <Button x:Name="Relatorio" Content="Relatório das OS…" Click="AbrirRelatorio" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" IsVisible="{Binding !SemOrdens}"
+                        ToolTip.Tip="O relatório em PDF: números, vencidas, para conferir, por executante e a lista, com filtro por período" />
             </StackPanel>
             <Panel Margin="0,8,0,0">
                 <TextBlock Text="{x:Static vm:OrdensDeServicoViewModel.TextoSemOrdens}" TextWrapping="Wrap" Opacity="0.7" IsVisible="{Binding SemOrdens}" />

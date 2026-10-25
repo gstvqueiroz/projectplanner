@@ -3,6 +3,24 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.64.0
+
+**Ordens de serviço completas: relatório, atalhos e Gantt.**
+
+- **Relatório das ordens de serviço** (Projeto > Relatório das ordens de serviço…, o botão novo da barra e o botão na tela das
+  OS): em PDF (A4 deitado), com os números (OS, contratado, medido, pago, a pagar com o retido, por medir), as situações, os
+  prazos (no prazo e atraso médio), o que pede atenção (vencidas e para conferir), o resumo por executante e a lista das OS.
+  Filtro pelo período de emissão, pelas situações (abertas, encerradas, vencidas) e pelo executante. Também salva a lista em
+  CSV e imprime.
+- **Atalhos novos na barra de ícones** (grupo Obra): **Nova ordem de serviço** (abre já com a OS da tarefa selecionada) e
+  **Relatório das OS**. Também no menu Projeto.
+- **Marca "OS" no Gantt:** as barras das tarefas com OS ganham a marca antes do nome (laranja se alguma venceu), com a dica
+  das OS, como na grade.
+- **A IA mede uma OS** ("a OS 3 está em 60%"): o cartão propõe a medição que leva cada item até o % (com o valor), e o % das
+  tarefas acompanha. E abre as telas: "abre as ordens de serviço", "mostra o relatório das OS".
+- Correção: o login com Google às vezes falhava com "Address already in use" (a porta de volta do navegador, no Mac); agora
+  tenta outra porta e o cancelamento do login aparece certo.
+
 ## 0.63.1
 
 Correções nos dois erros do assistente.

@@ -198,7 +198,8 @@ public partial class GanttChartView : UserControl
     private void LayoutMudou(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(GanttViewModel.Layout) or nameof(GanttViewModel.MostrarCaminhoCritico)
-            or nameof(GanttViewModel.MostrarFotos) or nameof(GanttViewModel.MostrarFolga) or nameof(GanttViewModel.MostrarLinhaDeBase))
+            or nameof(GanttViewModel.MostrarFotos) or nameof(GanttViewModel.MostrarFolga) or nameof(GanttViewModel.MostrarLinhaDeBase)
+            or nameof(GanttViewModel.Ordens))
             Desenhar();
         else if (e.PropertyName == nameof(GanttViewModel.TarefaDestacada))
             AtualizarDestaque();
@@ -471,6 +472,8 @@ public partial class GanttChartView : UserControl
             DesenharIconeDeFotos(barra);
             xDoNome += LocalizadorGantt.LadoDoIconeDeFotos + 4;
         }
+        if (viewModel.OrdemDa(barra) is { } ordem) // Bloco 64
+            xDoNome += DesenharMarcaDeOrdem(barra, ordem, xDoNome) + 4;
         Posicionar(Corpo, new TextBlock
         {
             Text = barra.Nome,
@@ -501,6 +504,27 @@ public partial class GanttChartView : UserControl
             IsHitTestVisible = false,
         });
     }
+
+    // Bloco 64: "OS" num contorno arredondado (laranja se alguma OS da tarefa venceu), com a dica das OS; devolve a largura.
+    private double DesenharMarcaDeOrdem(BarraGantt barra, MarcaDeOrdemNoGantt ordem, double x)
+    {
+        var cor = ordem.Vencida ? MarcaDeOrdemVencida : MarcaDeOrdem;
+        var marca = new Border
+        {
+            Child = new TextBlock { Text = "OS", FontSize = 9, FontWeight = FontWeight.SemiBold, Foreground = cor },
+            BorderBrush = cor,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(2, 0),
+            Background = Brushes.Transparent,
+        };
+        ToolTip.SetTip(marca, ordem.Dica);
+        Posicionar(Corpo, marca, x, barra.CentroY - 7);
+        return 18;
+    }
+
+    private static readonly IBrush MarcaDeOrdem = new SolidColorBrush(Color.Parse("#1E88E5"));
+    private static readonly IBrush MarcaDeOrdemVencida = new SolidColorBrush(Color.Parse("#E65100"));
 
     // Uma câmera pequena: corpo arredondado, visor em cima e a lente no meio.
     private void DesenharIconeDeFotos(BarraGantt barra)

@@ -18,7 +18,8 @@ public static class TiposDeAtualizacao
     public static IReadOnlyList<string> Todos { get; } = [Percentual, Medicao, Custo, Inicio, LinhaDeBase, Os, SituacaoOs];
 
     /// <summary>Bloco 63: as ações de "situacaoOs".</summary>
-    public static IReadOnlyList<string> AcoesDaOs { get; } = ["emitir", "aceitar", "recusar", "iniciar", "concluir", "conferir", "reprovar", "cancelar", "rascunho"];
+    public static IReadOnlyList<string> AcoesDaOs { get; } =
+        ["emitir", "aceitar", "recusar", "iniciar", "concluir", "conferir", "reprovar", "cancelar", "rascunho", "medir"];
 }
 
 /// <summary>
@@ -96,9 +97,12 @@ public static class TelasDoPrograma
     public const string FotosDoProjeto = "fotosDoProjeto";
     public const string Resumo = "resumo";
     public const string LinhasDeBase = "linhasDeBase";
+    public const string OrdensDeServico = "ordensDeServico"; // Bloco 64
+    public const string RelatorioDasOrdens = "relatorioDasOrdens";
 
     public static IReadOnlyList<string> Todas { get; } =
-        [Indicadores, Orcamento, Medicoes, Custos, Recursos, UsoDeRecursos, FisicoFinanceiro, RelatorioFotografico, FotosDoProjeto, Resumo, LinhasDeBase];
+        [Indicadores, Orcamento, Medicoes, Custos, Recursos, UsoDeRecursos, FisicoFinanceiro, RelatorioFotografico, FotosDoProjeto, Resumo, LinhasDeBase,
+         OrdensDeServico, RelatorioDasOrdens];
 
     /// <summary>As abas de cada tela que tem abas.</summary>
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Abas { get; } = new Dictionary<string, IReadOnlyList<string>>
@@ -122,6 +126,8 @@ public static class TelasDoPrograma
         FotosDoProjeto => "Fotos do projeto",
         Resumo => "Resumo do projeto",
         LinhasDeBase => "Linhas de base",
+        OrdensDeServico => "Ordens de serviço",
+        RelatorioDasOrdens => "Relatório das ordens de serviço",
         _ => tela,
     };
 }

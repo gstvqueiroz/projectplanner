@@ -29,6 +29,9 @@ public enum EstadoDaLigacao
 /// <summary>O que acontece se o arraste for solto no destino atual: o estado e o texto do rótulo junto ao cursor.</summary>
 public sealed record PrevisaoDeLigacao(EstadoDaLigacao Estado, string Texto);
 
+/// <summary>Bloco 64: a marca "OS" de uma barra: a dica (as OS da tarefa) e se alguma passou do prazo.</summary>
+public sealed record MarcaDeOrdemNoGantt(string Dica, bool Vencida);
+
 /// <summary>
 /// O Gantt ao lado da grid: guarda o último cronograma calculado e o layout dele na escala atual.
 /// O layout é refeito quando o cronograma é recalculado, quando o zoom muda e quando a área visível
@@ -178,6 +181,15 @@ public sealed partial class GanttViewModel : ViewModelBase
         Layout?.Barras.Where(MostraIconeDeFotos).Select(b => b.TarefaId).ToList() ?? [];
 
     public bool MostraIconeDeFotos(BarraGantt barra) => MostrarFotos && barra.QuantidadeDeFotos > 0;
+
+    /// <summary>
+    /// Bloco 64: as tarefas com ordem de serviço (a dica com as OS e se alguma venceu), repassadas pela janela principal: a barra
+    /// ganha a marca "OS" antes do nome.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyDictionary<Guid, MarcaDeOrdemNoGantt> Ordens { get; set; } = new Dictionary<Guid, MarcaDeOrdemNoGantt>();
+
+    public MarcaDeOrdemNoGantt? OrdemDa(BarraGantt barra) => Ordens.GetValueOrDefault(barra.TarefaId);
 
     /// <summary>O usuário clicou no ícone de fotos de uma tarefa; a janela principal abre a galeria.</summary>
     public event Action<Guid>? FotosPedidas;

@@ -13,13 +13,25 @@ public sealed partial class MainWindowViewModel
     [RelayCommand]
     private Task OrdensDeServico() => AbrirOrdensAsync(null);
 
+    /// <summary>Bloco 64: abre as ordens de serviço já com uma OS nova (da tarefa selecionada, se houver).</summary>
+    [RelayCommand]
+    private Task NovaOrdemDeServico() => AbrirOrdensAsync(null, criarNova: true);
+
+    /// <summary>Bloco 64: Projeto > Relatório das ordens de serviço….</summary>
+    [RelayCommand]
+    private Task RelatorioDasOrdens()
+    {
+        Recalcular();
+        return _dialogos.MostrarRelatorioDasOrdensAsync(new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio));
+    }
+
     void IEdicaoCronograma.AbrirOrdens(TarefaViewModel linha)
     {
         TarefaSelecionada = linha;
         _ = AbrirOrdensAsync(_cronograma.OrdensDeServico.DaTarefa(linha.Tarefa.Id).FirstOrDefault()?.Id);
     }
 
-    private async Task AbrirOrdensAsync(Guid? ordem)
+    private async Task AbrirOrdensAsync(Guid? ordem, bool criarNova = false)
     {
         Recalcular(); // as datas da OS nova vêm do cronograma calculado
         var projeto = _cronograma.Id;
@@ -28,7 +40,7 @@ public sealed partial class MainWindowViewModel
                 o.Situacao.ToString(), CancellationToken.None)
             : null;
         await _dialogos.MostrarOrdensDeServicoAsync(new OrdensDeServicoViewModel(_cronograma, _dialogos, _relogio, OrdensMudaram,
-            TarefaSelecionada?.Tarefa.Id, publicar, ordem));
+            TarefaSelecionada?.Tarefa.Id, publicar, ordem, criarNova));
         AtualizarOrdensNasLinhas();
     }
 
@@ -36,12 +48,18 @@ public sealed partial class MainWindowViewModel
     private void AtualizarOrdensNasLinhas()
     {
         var hoje = DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime);
+        var noGantt = new Dictionary<Guid, MarcaDeOrdemNoGantt>();
         foreach (var linha in Tarefas)
         {
             var ordens = _cronograma.OrdensDeServico.DaTarefa(linha.Tarefa.Id);
             linha.OrdensDaTarefa = ordens.Count == 0 ? null : string.Join("\n", ordens.Select(o => TextosDaOrdem.Linha(o, hoje)));
             linha.OrdemVencida = ordens.Any(o => o.Vencida(hoje));
+            if (linha.OrdensDaTarefa is { } dica)
+                noGantt[linha.Tarefa.Id] = new MarcaDeOrdemNoGantt(dica, linha.OrdemVencida);
         }
+        // Bloco 64: a mesma marca nas barras do Gantt (só redesenha se mudou).
+        if (noGantt.Count != Gantt.Ordens.Count || noGantt.Any(o => !Gantt.Ordens.TryGetValue(o.Key, out var antes) || antes != o.Value))
+            Gantt.Ordens = noGantt;
     }
 
     /// <summary>Bloco 61: as OS na situação da obra que vai ao assistente (no programa e no Telegram).</summary>

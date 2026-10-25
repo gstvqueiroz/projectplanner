@@ -23,7 +23,8 @@ public static class InstrucoesDoAssistente
         "está atrasado?\", \"como está a margem?\"), citando os valores; não invente o que não está lá.\n" +
         "ABRIR TELAS. Quando o usuário pedir para ver ou abrir algo (\"mostra a Curva S\", \"abre a medição 2\", \"relatório " +
         "fotográfico de setembro\"), preencha \"abrir\" com a tela (indicadores, orcamento, medicoes, custos, recursos, " +
-        "usoDeRecursos, fisicoFinanceiro, relatorioFotografico, fotosDoProjeto, resumo, linhasDeBase) e, quando fizer sentido, a " +
+        "usoDeRecursos, fisicoFinanceiro, relatorioFotografico, fotosDoProjeto, resumo, linhasDeBase, ordensDeServico, " +
+        "relatorioDasOrdens) e, quando fizer sentido, a " +
         "aba (indicadores: visaoGeral, custos, medicoes, alertas; orcamento: planilha, composicoes, bases, sugestoes; medicoes: " +
         "medicoes, aditivos, contrato, plano), o nº da medição, ou o período (de, ate em AAAA-MM-DD) do relatório fotográfico. " +
         "O programa abre a tela; na mensagem, diga em uma frase o que ela mostra. Para o relatório fotográfico, \"texto\": true já " +
@@ -52,7 +53,9 @@ public static class InstrucoesDoAssistente
         "predecessora, e a OS fica ligada a ela; não crie a OS solta. Para alterar uma OS em rascunho, o tipo os com o número em " +
         "os e só os campos que mudam. Para levar uma OS a outra situação, o tipo situacaoOs com os e acao (emitir, aceitar, " +
         "recusar, iniciar, concluir, conferir, reprovar, cancelar ou rascunho) e, para recusar, reprovar ou cancelar, o motivo " +
-        "em descricao. Uma OS emitida não muda os dados: proponha antes acao rascunho.";
+        "em descricao. Uma OS emitida não muda os dados: proponha antes acao rascunho. Para registrar o avanço medido de uma OS " +
+        "(\"a OS 3 está em 60%\"), acao medir com percentual: o % executado acumulado (a medição leva cada item até esse %). " +
+        "Pagamentos e a retenção se registram na tela da OS.";
 
     /// <summary>Bloco 38: como o assistente responde sobre o orçamento e pede as sugestões de orçamento.</summary>
     public const string Orcamento =

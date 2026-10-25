@@ -134,6 +134,26 @@ public sealed record AlterarOrdem(int Numero, PedidoDeOrdem Pedido, IReadOnlyLis
     }
 }
 
+/// <summary>Bloco 64: uma medição na OS que leva cada item até o % executado acumulado (o medido só aumenta).</summary>
+public sealed record MedirAOrdem(int Numero, decimal Percentual) : OperacaoDaObra
+{
+    /// <summary>As quantidades desta medição: o que falta para cada item chegar ao %.</summary>
+    public static IReadOnlyList<decimal> Quantidades(OrdemDeServico o, decimal percentual) =>
+        [.. o.Dados.Itens.Select((item, i) => Math.Max(0, Math.Round(item.Quantidade * percentual / 100, 4) - o.MedidoDoItem(i)))];
+
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var o = c.OrdensDeServico.Todas.FirstOrDefault(x => x.Numero == Numero)
+                ?? throw new DomainValidationException(nameof(Numero), $"Não há a OS-{Numero:000}.");
+        var nova = o.Medir(Guid.NewGuid(), DateOnly.FromDateTime(agora), Quantidades(o, Percentual), agora, MudarSituacaoDaOrdem.Autor);
+        c.OrdensDeServico.Substituir(nova);
+        // O medido leva o % das tarefas da OS (só para cima), como na tela.
+        foreach (var (id, pct) in PagamentoDasOrdens.PercentualDasTarefas(nova))
+            if (c.Tarefas.FirstOrDefault(t => t.Id == id) is { EhResumo: false } tarefa && pct > tarefa.PercentualConcluido)
+                tarefa.AtualizarPercentualConcluido(pct);
+    }
+}
+
 /// <summary>Bloco 63: leva a OS a outra situação (com o motivo, quando a ação pede).</summary>
 public sealed record MudarSituacaoDaOrdem(int Numero, string Acao, string? Motivo) : OperacaoDaObra
 {
@@ -300,12 +320,22 @@ public static class AtualizacoesDoAssistente
                     "reprovar" => "reprovada na conferência",
                     "cancelar" => "cancelar",
                     "rascunho" => "voltar a rascunho",
+                    "medir" => $"medir até {(a.Percentual is { } pm ? N(pm) : "?")}% executado",
                     _ => acao ?? "?",
                 }}" + (string.IsNullOrWhiteSpace(a.Descricao) ? "" : $" ({a.Descricao.Trim()})");
                 if (a.Os is not { } numero || c.OrdensDeServico.Todas.All(o => o.Numero != numero))
                     return new(texto, null, a.Os is null ? "falta o número da OS" : $"não há a OS-{a.Os:000}");
                 if (acao is null || !TiposDeAtualizacao.AcoesDaOs.Contains(acao))
                     return new(texto, null, "ação desconhecida");
+                if (acao == "medir")
+                {
+                    if (a.Percentual is not { } pct || pct <= 0 || pct > 100)
+                        return new(texto, null, "informe o % executado (de 1 a 100)");
+                    var os = c.OrdensDeServico.Todas.First(o => o.Numero == numero);
+                    var valor = os.Dados.Itens.Select((item, i) => Math.Round(MedirAOrdem.Quantidades(os, pct)[i] * item.PrecoUnitario, 2, MidpointRounding.AwayFromZero)).Sum();
+                    return new($"{texto} · {Moeda.ComSimbolo(valor)} a medir", new MedirAOrdem(numero, pct),
+                        valor == 0 ? $"a {os.Codigo} já está medida até esse %" : null);
+                }
                 return new(texto, new MudarSituacaoDaOrdem(numero, acao, a.Descricao), null);
             }
             case TiposDeAtualizacao.LinhaDeBase:

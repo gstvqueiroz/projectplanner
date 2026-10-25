@@ -305,6 +305,16 @@ public sealed class DialogosFalsos : IDialogosService
 
     public string? PlanilhaEscolhida { get; set; }
 
+    // ---- Bloco 64 ----
+
+    public List<RelatorioDasOrdensViewModel> RelatoriosDasOrdens { get; } = [];
+
+    public Task MostrarRelatorioDasOrdensAsync(RelatorioDasOrdensViewModel relatorio)
+    {
+        RelatoriosDasOrdens.Add(relatorio);
+        return Task.CompletedTask;
+    }
+
     // ---- Bloco 58 ----
 
     public List<OrdensDeServicoViewModel> OrdensDeServico { get; } = [];

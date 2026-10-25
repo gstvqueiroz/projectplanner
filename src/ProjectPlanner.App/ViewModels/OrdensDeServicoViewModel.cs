@@ -133,7 +133,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     /// Telegram.
     /// </param>
     public OrdensDeServicoViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio, Action<string, bool> mudou,
-        Guid? tarefaSelecionada = null, Func<OrdemDeServico, bool, Task<int>>? publicar = null, Guid? ordemInicial = null)
+        Guid? tarefaSelecionada = null, Func<OrdemDeServico, bool, Task<int>>? publicar = null, Guid? ordemInicial = null, bool criarNova = false)
     {
         _publicar = publicar;
         ArgumentNullException.ThrowIfNull(cronograma);
@@ -153,6 +153,15 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         PropertyChanged += FichaMudou;
         Atualizar();
         Selecionada = Lista.FirstOrDefault(l => l.Ordem.Id == ordemInicial) ?? Lista.FirstOrDefault(l => !l.Encerrada) ?? Lista.FirstOrDefault();
+        if (criarNova)
+            NovaOrdem(); // Bloco 64: o botão "Nova OS" da barra
+    }
+
+    /// <summary>Bloco 64: o relatório das OS (a janela abre a partir daqui, por cima desta).</summary>
+    public RelatorioDasOrdensViewModel NovoRelatorio()
+    {
+        SalvarSePreciso();
+        return new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio);
     }
 
     public string Titulo => $"Ordens de serviço — {_cronograma.Nome}";

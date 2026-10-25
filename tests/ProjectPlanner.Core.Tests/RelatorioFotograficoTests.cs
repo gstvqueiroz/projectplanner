@@ -3,7 +3,7 @@ using ProjectPlanner.Core.Relatorios;
 namespace ProjectPlanner.Core.Tests;
 
 // Bloco 27: a montagem do relatório fotográfico (o que entra, a ordem, a numeração, as legendas e as páginas).
-public class RelatorioFotograficoTests
+public partial class RelatorioFotograficoTests
 {
     private static readonly DateTime Seg = new(2026, 9, 28);
     private static readonly CabecalhoDoRelatorio Cabecalho = new("Residência Silva", DadosDaObra.Vazios, "Eng. Ana", "CREA 123", null);

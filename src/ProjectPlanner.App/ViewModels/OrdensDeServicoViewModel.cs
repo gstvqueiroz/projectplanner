@@ -122,6 +122,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     private readonly Action<string, bool> _mudou;
     private readonly Func<OrdemDeServico, bool, Task<int>>? _publicar;
     private readonly Func<Core.Relatorios.CabecalhoDoRelatorio> _cabecalho;
+    private readonly Func<RelatorioFotograficoViewModel>? _relatorioFotografico;
     private readonly IReadOnlyDictionary<Guid, string> _nomes;
     private readonly IReadOnlyDictionary<Guid, string> _edt;
     private bool _carregando;
@@ -135,8 +136,9 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     /// </param>
     public OrdensDeServicoViewModel(Cronograma cronograma, IDialogosService dialogos, TimeProvider relogio, Action<string, bool> mudou,
         Guid? tarefaSelecionada = null, Func<OrdemDeServico, bool, Task<int>>? publicar = null, Guid? ordemInicial = null, bool criarNova = false,
-        Func<Core.Relatorios.CabecalhoDoRelatorio>? cabecalho = null)
+        Func<Core.Relatorios.CabecalhoDoRelatorio>? cabecalho = null, Func<RelatorioFotograficoViewModel>? relatorioFotografico = null)
     {
+        _relatorioFotografico = relatorioFotografico;
         _publicar = publicar;
         _cabecalho = cabecalho ?? (() => new Core.Relatorios.CabecalhoDoRelatorio(cronograma.Nome, cronograma.Obra, null, null, null));
         ArgumentNullException.ThrowIfNull(cronograma);
@@ -158,6 +160,17 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         Selecionada = Lista.FirstOrDefault(l => l.Ordem.Id == ordemInicial) ?? Lista.FirstOrDefault(l => !l.Encerrada) ?? Lista.FirstOrDefault();
         if (criarNova)
             NovaOrdem(); // Bloco 64: o botão "Nova OS" da barra
+    }
+
+    /// <summary>Bloco 66: o relatório fotográfico da OS escolhida (as fotos das tarefas dela, no período dela).</summary>
+    public bool TemRelatorioFotografico => _relatorioFotografico is not null && Ordem is { Situacao: not SituacaoDaOrdem.Rascunho };
+
+    public RelatorioFotograficoViewModel? RelatorioFotograficoDaOrdem()
+    {
+        if (_relatorioFotografico is null || Ordem is not { } o)
+            return null;
+        SalvarSePreciso();
+        return _relatorioFotografico().ParaAOrdem(o.Id);
     }
 
     /// <summary>Bloco 64: o relatório das OS (a janela abre a partir daqui, por cima desta).</summary>
@@ -431,7 +444,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         }
         _fichaMudou = false;
         foreach (var nome in new[] { nameof(TemSelecionada), nameof(Ordem), nameof(Cabecalho), nameof(AvisoDeVencida), nameof(PodeEditar),
-                     nameof(PodeMarcarVerificacao), nameof(MostraVerificacao), nameof(Historico), nameof(TotalDaFicha) })
+                     nameof(PodeMarcarVerificacao), nameof(MostraVerificacao), nameof(Historico), nameof(TotalDaFicha), nameof(TemRelatorioFotografico) })
             OnPropertyChanged(nome);
         CarregarMedicoes(o);
         AtualizarBotoes();

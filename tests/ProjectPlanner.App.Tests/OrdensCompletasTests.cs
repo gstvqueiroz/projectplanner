@@ -138,4 +138,18 @@ public sealed class OrdensCompletasTests : IDisposable
         Paginas(detalhado).Should().BeGreaterThan(Paginas(simples), "o detalhe de cada OS vai no fim");
         relatorio.Relatorio.PorMes.Single().Medido.Should().Be(1200m);
     }
+
+    // ---- Bloco 66 ----
+
+    [Fact]
+    public void RelatorioFotograficoDaOS_PelaTelaDaOS_JaNaOSENoPeriodoDela()
+    {
+        var tela = NovaEmitida(); // a tela que o programa abre já sabe criar o relatório fotográfico
+        tela.TemRelatorioFotografico.Should().BeTrue();
+        var relatorio = tela.RelatorioFotograficoDaOrdem()!;
+
+        (relatorio.TarefasEscolhidas.Valor, relatorio.OrdemEscolhida!.Texto, relatorio.EscolheOrdem).Should()
+            .Be((Core.Relatorios.TarefasDoRelatorio.DeUmaOrdem, "OS-001 · Alvenaria", true));
+        (relatorio.De, relatorio.Ate).Should().Be((new DateTime(2026, 9, 28), (DateTime?)new DateTime(2026, 9, 28)));
+    }
 }

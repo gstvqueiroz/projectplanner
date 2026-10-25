@@ -98,6 +98,10 @@
                             <Button x:Name="MandarAoTelegram" Content="Mandar ao grupo do Telegram" Command="{Binding MandarAoTelegramCommand}"
                                     IsVisible="{Binding PodeMandarAoTelegram}"
                                     ToolTip.Tip="A OS vai ao grupo da obra com os botões Aceitar, Comecei e Terminei; as mudanças seguintes vão junto" />
+                            <!-- Bloco 66 -->
+                            <Button x:Name="RelatorioFotografico" Content="Relatório fotográfico…" Click="AbrirRelatorioFotografico"
+                                    IsVisible="{Binding TemRelatorioFotografico}"
+                                    ToolTip.Tip="As fotos das tarefas desta OS, da emissão à conferência, em PDF ou Word, com os dados da OS na capa" />
                             <Button x:Name="SalvarPdf" Content="Salvar PDF…" Command="{Binding SalvarPdfCommand}" />
                             <Button x:Name="Imprimir" Content="Imprimir…" Command="{Binding ImprimirCommand}"
                                     ToolTip.Tip="Abre o PDF da OS no leitor do sistema, para imprimir e assinar" />

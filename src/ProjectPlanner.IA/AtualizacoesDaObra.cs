@@ -136,7 +136,8 @@ public static class TelasDoPrograma
 /// <param name="Medicao">medicoes: o nº da medição para selecionar.</param>
 /// <param name="De">relatorioFotografico: o início do período (AAAA-MM-DD).</param>
 /// <param name="Texto">Bloco 42, relatorioFotografico: já pedir à IA o texto do andamento.</param>
-public sealed record TelaParaAbrir(string Tela, string? Aba = null, int? Medicao = null, string? De = null, string? Ate = null, bool Texto = false)
+/// <param name="Os">Bloco 66: a OS (relatorioFotografico de uma OS; ordensDeServico já nela).</param>
+public sealed record TelaParaAbrir(string Tela, string? Aba = null, int? Medicao = null, string? De = null, string? Ate = null, bool Texto = false, int? Os = null)
 {
     /// <summary>"Abrir Indicadores › custos".</summary>
     public string Rotulo => $"Abrir {TelasDoPrograma.Nome(Tela)}";

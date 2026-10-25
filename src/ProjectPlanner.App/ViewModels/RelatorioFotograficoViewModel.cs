@@ -49,11 +49,14 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
 
         var edt = cronograma.NumeracaoEdt();
         Ramos = [.. cronograma.Tarefas.Where(t => t.EhResumo).Select(t => new Escolha<Guid>(t.Id, $"{edt[t.Id]} {t.Nome}"))];
+        Ordens = [.. cronograma.OrdensDeServico.Todas.Where(o => o.Situacao != Core.OrdensDeServico.SituacaoDaOrdem.Rascunho)
+            .Select(o => new Escolha<Guid>(o.Id, $"{o.Codigo} · {o.Dados.Titulo}"))];
         var salvas = preferencias.Carregar();
         var (de, ate) = MontadorDoRelatorio.DesdeOUltimo(cronograma, Hoje);
         (De, Ate) = (de.ToDateTime(TimeOnly.MinValue), ate.ToDateTime(TimeOnly.MinValue));
         TarefasEscolhidas = OpcoesDeTarefas[0];
         RamoEscolhido = Ramos.FirstOrDefault();
+        OrdemEscolhida = Ordens.LastOrDefault();
         AgrupamentoEscolhido = OpcoesDeAgrupamento.First(o => o.Valor == salvas.Agrupamento);
         FotosPorPaginaEscolhida = OpcoesDeFotosPorPagina.First(o => o.Valor == salvas.FotosPorPagina);
         (Responsavel, Registro, Logotipo) = (salvas.Responsavel ?? "", salvas.Registro ?? "", salvas.Logotipo);
@@ -86,7 +89,38 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
         new(TarefasDoRelatorio.SoCriticas, "Só as críticas"),
         new(TarefasDoRelatorio.SoAtrasadas, "Só as atrasadas"),
         new(TarefasDoRelatorio.DeUmRamo, "Um resumo (etapa)"),
+        new(TarefasDoRelatorio.DeUmaOrdem, "Uma ordem de serviço"),
     ];
+
+    /// <summary>Bloco 66: as OS que já saíram do rascunho, para o relatório de uma OS.</summary>
+    public IReadOnlyList<Escolha<Guid>> Ordens { get; }
+
+    [ObservableProperty] public partial Escolha<Guid>? OrdemEscolhida { get; set; }
+
+    public bool EscolheOrdem => TarefasEscolhidas.Valor == TarefasDoRelatorio.DeUmaOrdem;
+
+    /// <summary>Bloco 66: o relatório das fotos de uma OS: as tarefas dela, no período dela (da emissão à conferência, ou hoje).</summary>
+    public RelatorioFotograficoViewModel ParaAOrdem(Guid ordem)
+    {
+        if (Ordens.FirstOrDefault(o => o.Valor == ordem) is { } escolhida)
+        {
+            OrdemEscolhida = escolhida;
+            TarefasEscolhidas = OpcoesDeTarefas.First(o => o.Valor == TarefasDoRelatorio.DeUmaOrdem);
+            UsarPeriodoDaOrdem();
+        }
+        return this;
+    }
+
+    /// <summary>O período da OS escolhida.</summary>
+    [RelayCommand]
+    private void UsarPeriodoDaOrdem()
+    {
+        if (OrdemEscolhida is { } o && _cronograma.OrdensDeServico.Obter(o.Valor) is { } ordem)
+        {
+            var (de, ate) = MontadorDoRelatorio.PeriodoDaOrdem(ordem, Hoje);
+            (De, Ate) = (de.ToDateTime(TimeOnly.MinValue), ate.ToDateTime(TimeOnly.MinValue));
+        }
+    }
 
     [ObservableProperty] public partial Escolha<TarefasDoRelatorio> TarefasEscolhidas { get; set; }
 
@@ -208,7 +242,7 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
 
     private static readonly HashSet<string> NaoMudamAPrevia =
         [nameof(Previa), nameof(AvisoDeParecidas), nameof(Erro), nameof(Mensagem), nameof(Gerando), nameof(UltimoArquivo),
-         nameof(EscolheRamo), nameof(ImagemDoLogotipo), nameof(TemLogotipo), nameof(Logotipo),
+         nameof(EscolheRamo), nameof(EscolheOrdem), nameof(ImagemDoLogotipo), nameof(TemLogotipo), nameof(Logotipo),
          nameof(IaOcupada), nameof(AvisoDaIa), nameof(TemFotosForaDoPeriodo)];
 
     private void Mudou(object? sender, PropertyChangedEventArgs e)
@@ -216,7 +250,12 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
         if (!_pronta || NaoMudamAPrevia.Contains(e.PropertyName ?? ""))
             return;
         if (e.PropertyName == nameof(TarefasEscolhidas))
+        {
             OnPropertyChanged(nameof(EscolheRamo));
+            OnPropertyChanged(nameof(EscolheOrdem));
+        }
+        if (e.PropertyName == nameof(OrdemEscolhida) || e.PropertyName == nameof(TarefasEscolhidas) && EscolheOrdem)
+            UsarPeriodoDaOrdem(); // Bloco 66: as fotos da OS são as do período dela
         if (e.PropertyName is nameof(Contratante) or nameof(Contrato) or nameof(Endereco))
             GuardarObra();
         Atualizar();
@@ -318,6 +357,7 @@ public sealed partial class RelatorioFotograficoViewModel : ViewModelBase
         {
             Tarefas = TarefasEscolhidas.Valor,
             Ramo = RamoEscolhido?.Valor,
+            Ordem = OrdemEscolhida?.Valor,
             Tags = MetadadosFoto.LerTags(Tags),
             Agrupamento = AgrupamentoEscolhido.Valor,
             FotosPorPagina = FotosPorPaginaEscolhida.Valor,

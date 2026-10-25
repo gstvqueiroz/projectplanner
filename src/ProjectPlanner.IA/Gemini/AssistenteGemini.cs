@@ -179,6 +179,7 @@ public sealed class AssistenteGemini : IAssistenteIA
                     ["de"] = Tipo("STRING"),
                     ["ate"] = Tipo("STRING"),
                     ["texto"] = Tipo("BOOLEAN"),
+                    ["os"] = Tipo("INTEGER"), // Bloco 66
                 }, "tela"),
                 ["importarFotos"] = Tipo("STRING", [.. OrigensDasFotos.Todas]), // Bloco 42
             },

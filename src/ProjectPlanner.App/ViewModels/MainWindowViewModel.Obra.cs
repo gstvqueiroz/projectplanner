@@ -134,9 +134,10 @@ public sealed partial class MainWindowViewModel
                 await _dialogos.MostrarMedicoesAsync(medicoes);
                 break;
             case TelasDoPrograma.RelatorioFotografico:
-                Recalcular();
-                var relatorio = new RelatorioFotograficoViewModel(_cronograma, _fotos, _preferenciasRelatorio, _dialogos, _relogio, MarcarSemRecalcular, _analista);
-                if (Data(tela.De) is { } de)
+                var relatorio = NovoRelatorioFotografico();
+                if (tela.Os is { } numeroDaOs && _cronograma.OrdensDeServico.Todas.FirstOrDefault(o => o.Numero == numeroDaOs) is { } os) // Bloco 66
+                    relatorio.ParaAOrdem(os.Id);
+                else if (Data(tela.De) is { } de)
                 {
                     (relatorio.De, relatorio.Ate) = (de.ToDateTime(TimeOnly.MinValue),
                         (Data(tela.Ate) is { } ate && ate >= de ? ate : DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime)).ToDateTime(TimeOnly.MinValue));
@@ -169,7 +170,7 @@ public sealed partial class MainWindowViewModel
                 await GerenciarLinhasDeBaseCommand.ExecuteAsync(null);
                 break;
             case TelasDoPrograma.OrdensDeServico: // Bloco 64
-                await OrdensDeServicoCommand.ExecuteAsync(null);
+                await AbrirOrdensAsync(tela.Os is { } n ? _cronograma.OrdensDeServico.Todas.FirstOrDefault(o => o.Numero == n)?.Id : null);
                 break;
             case TelasDoPrograma.RelatorioDasOrdens:
                 await RelatorioDasOrdensCommand.ExecuteAsync(null);

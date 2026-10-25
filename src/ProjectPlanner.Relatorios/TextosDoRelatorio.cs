@@ -38,6 +38,16 @@ public static class TextosDoRelatorio
             if (!string.IsNullOrWhiteSpace(valor))
                 dados.Add((rotulo, valor.Trim()));
         }
+        if (r.Ordem is { } o) // Bloco 66: o relatório de uma OS
+        {
+            Se("Ordem de serviço", $"{o.Codigo} · {o.Dados.Titulo}");
+            Se("Executante", o.Dados.Executante);
+            Se("Situação da OS", Core.OrdensDeServico.TextosDaOrdem.Texto(o.Situacao) +
+                (o.Dados.Prazo is { } prazo ? $" · prazo {prazo.ToString("dd/MM/yyyy", Brasil)}" : ""));
+            if (o.Total > 0)
+                Se("Medido na OS", $"{Core.Planejamento.Moeda.ComSimbolo(o.TotalMedido)} de {Core.Planejamento.Moeda.ComSimbolo(o.Total)} " +
+                                   $"({Math.Floor(o.TotalMedido / o.Total * 100):0}%)");
+        }
         Se("Contratante", c.DadosDaObra.Contratante);
         Se("Contrato", c.DadosDaObra.Contrato);
         Se("Endereço da obra", c.DadosDaObra.Endereco);

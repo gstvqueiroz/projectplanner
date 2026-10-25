@@ -62,6 +62,9 @@
                         <ComboBox x:Name="Tarefas" ItemsSource="{Binding OpcoesDeTarefas}" SelectedItem="{Binding TarefasEscolhidas}" MinWidth="220" />
                         <ComboBox x:Name="Ramo" ItemsSource="{Binding Ramos}" SelectedItem="{Binding RamoEscolhido}" MinWidth="220"
                                   IsVisible="{Binding EscolheRamo}" />
+                        <!-- Bloco 66 -->
+                        <ComboBox x:Name="Ordem" ItemsSource="{Binding Ordens}" SelectedItem="{Binding OrdemEscolhida}" MinWidth="260"
+                                  IsVisible="{Binding EscolheOrdem}" ToolTip.Tip="As fotos das tarefas da OS, no período dela (da emissão à conferência)" />
                     </StackPanel>
                     <TextBlock Grid.Row="2" Classes="rotulo" Text="Só com as tags" />
                     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Tags}" PlaceholderText="vazio: todas (separe por vírgula: antes, depois)" />

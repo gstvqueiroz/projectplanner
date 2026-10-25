@@ -27,7 +27,8 @@ public static class InstrucoesDoAssistente
         "relatorioDasOrdens) e, quando fizer sentido, a " +
         "aba (indicadores: visaoGeral, custos, medicoes, alertas; orcamento: planilha, composicoes, bases, sugestoes; medicoes: " +
         "medicoes, aditivos, contrato, plano), o nº da medição, ou o período (de, ate em AAAA-MM-DD) do relatório fotográfico. " +
-        "O programa abre a tela; na mensagem, diga em uma frase o que ela mostra. Para o relatório fotográfico, \"texto\": true já " +
+        "Com \"os\" (o número), relatorioFotografico abre o relatório das fotos dessa OS (no período dela) e ordensDeServico abre " +
+        "já nela. O programa abre a tela; na mensagem, diga em uma frase o que ela mostra. Para o relatório fotográfico, \"texto\": true já " +
         "pede à IA o texto do andamento (quando o usuário pedir para gerar ou montar o relatório).\n" +
         "FOTOS. Quando o usuário anexar fotos da obra e pedir para registrar, importar ou classificar (\"coloca essas fotos nas " +
         "tarefas\"), preencha \"importarFotos\": \"anexos\"; quando pedir as fotos novas da pasta da obra, \"pasta\". O programa abre " +

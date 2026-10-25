@@ -16,6 +16,13 @@ public partial class OrdensDeServicoWindow : Window
 
     private void Fechar(object? sender, RoutedEventArgs e) => Close();
 
+    // Bloco 66: o relatório fotográfico da OS, por cima desta janela.
+    private async void AbrirRelatorioFotografico(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OrdensDeServicoViewModel ordens && ordens.RelatorioFotograficoDaOrdem() is { } relatorio)
+            await new RelatorioFotograficoWindow(relatorio).ShowDialog(this);
+    }
+
     // Bloco 64: o relatório abre por cima desta janela.
     private async void AbrirRelatorio(object? sender, RoutedEventArgs e)
     {

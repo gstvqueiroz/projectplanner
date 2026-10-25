@@ -60,7 +60,7 @@ public sealed partial class MainWindowViewModel
                 o.Situacao.ToString(), CancellationToken.None)
             : null;
         await _dialogos.MostrarOrdensDeServicoAsync(new OrdensDeServicoViewModel(_cronograma, _dialogos, _relogio, OrdensMudaram,
-            TarefaSelecionada?.Tarefa.Id, publicar, ordem, criarNova, CabecalhoDosRelatorios));
+            TarefaSelecionada?.Tarefa.Id, publicar, ordem, criarNova, CabecalhoDosRelatorios, NovoRelatorioFotografico));
         AtualizarOrdensNasLinhas();
     }
 

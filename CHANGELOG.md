@@ -3,6 +3,18 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.66.0
+
+**Relatório fotográfico das ordens de serviço.**
+
+- Na tela da OS, **Relatório fotográfico…** abre o relatório fotográfico já com as fotos dessa OS: as das tarefas dela (uma
+  etapa traz as de dentro), da emissão até a conferência (ou até hoje). Também em Arquivo > Relatório fotográfico…, na opção
+  de tarefas **"Uma ordem de serviço"**.
+- A **capa** traz a OS (número e serviço), o executante, a situação com o prazo e o medido (R$ e %); cada tarefa mostra o %
+  medido nela na OS. Sai em PDF ou Word, com o logotipo, o texto do andamento pela IA e as assinaturas, como os outros.
+- As fotos do Telegram com "#os14" na legenda já vão para as tarefas da OS, então entram nesse relatório.
+- A IA abre o relatório de uma OS: "monta o relatório fotográfico da OS 3".
+
 ## 0.65.0
 
 **Relatórios das ordens de serviço aprimorados.**

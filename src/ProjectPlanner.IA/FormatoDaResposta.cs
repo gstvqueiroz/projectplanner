@@ -228,7 +228,8 @@ public static class FormatoDaResposta
             ? abas.FirstOrDefault(a => string.Equals(a, Texto(abrir, "aba")?.Trim(), StringComparison.OrdinalIgnoreCase))
             : null;
         return new TelaParaAbrir(tela, aba, Inteiro(abrir, "medicao"), Texto(abrir, "de")?.Trim(), Texto(abrir, "ate")?.Trim(),
-            tela == TelasDoPrograma.RelatorioFotografico && abrir.TryGetProperty("texto", out var texto) && texto.ValueKind == JsonValueKind.True);
+            tela == TelasDoPrograma.RelatorioFotografico && abrir.TryGetProperty("texto", out var texto) && texto.ValueKind == JsonValueKind.True,
+            Inteiro(abrir, "os"));
     }
 
     private static decimal? Decimal(JsonElement objeto, string nome)

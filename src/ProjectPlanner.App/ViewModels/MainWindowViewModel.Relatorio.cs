@@ -15,10 +15,12 @@ public sealed partial class MainWindowViewModel
     public IReadOnlyList<Core.Relatorios.RelatorioGerado> RelatoriosGerados => _cronograma.Relatorios;
 
     [RelayCommand]
-    private Task RelatorioFotografico()
+    private Task RelatorioFotografico() => _dialogos.MostrarRelatorioFotograficoAsync(NovoRelatorioFotografico());
+
+    /// <summary>O relatório fotográfico com o cronograma recalculado (as datas, a situação e o andamento vêm do cálculo).</summary>
+    internal RelatorioFotograficoViewModel NovoRelatorioFotografico()
     {
-        Recalcular(); // as datas, a situação e o andamento do relatório vêm do cálculo
-        return _dialogos.MostrarRelatorioFotograficoAsync(
-            new RelatorioFotograficoViewModel(_cronograma, _fotos, _preferenciasRelatorio, _dialogos, _relogio, MarcarSemRecalcular, _analista));
+        Recalcular();
+        return new RelatorioFotograficoViewModel(_cronograma, _fotos, _preferenciasRelatorio, _dialogos, _relogio, MarcarSemRecalcular, _analista);
     }
 }

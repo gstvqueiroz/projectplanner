@@ -14,6 +14,9 @@ public enum TarefasDoRelatorio
 
     /// <summary>Um resumo e tudo o que está dentro dele.</summary>
     DeUmRamo,
+
+    /// <summary>Bloco 66: as tarefas de uma ordem de serviço (as dela e as dos itens; um resumo traz as de dentro).</summary>
+    DeUmaOrdem,
 }
 
 public enum AgrupamentoDoRelatorio
@@ -34,6 +37,9 @@ public sealed record OpcoesDoRelatorio(DateOnly De, DateOnly Ate)
 
     /// <summary>O resumo do ramo, com <see cref="TarefasDoRelatorio.DeUmRamo"/>.</summary>
     public Guid? Ramo { get; init; }
+
+    /// <summary>Bloco 66: a OS, com <see cref="TarefasDoRelatorio.DeUmaOrdem"/>.</summary>
+    public Guid? Ordem { get; init; }
 
     /// <summary>Só fotos com alguma destas tags (vazia: todas).</summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
@@ -66,6 +72,8 @@ public sealed record OpcoesDoRelatorio(DateOnly De, DateOnly Ate)
             throw new DomainValidationException(nameof(FotosPorPagina), "As fotos por página precisam ser 1, 2, 4 ou 6.");
         if (Tarefas == TarefasDoRelatorio.DeUmRamo && Ramo is null)
             throw new DomainValidationException(nameof(Ramo), "Escolha o resumo do ramo.");
+        if (Tarefas == TarefasDoRelatorio.DeUmaOrdem && Ordem is null)
+            throw new DomainValidationException(nameof(Ordem), "Escolha a ordem de serviço.");
     }
 
     /// <summary>Colunas e linhas de fotos por página: 1 = 1×1, 2 = 1×2, 4 = 2×2, 6 = 2×3.</summary>
@@ -160,6 +168,9 @@ public sealed record RelatorioFotografico(
     /// <summary>Bloco 37: o painel de indicadores no fim do período (com <see cref="OpcoesDoRelatorio.ComIndicadores"/>); nulo sem ele.</summary>
     public Indicadores.PainelDeIndicadores? Indicadores { get; init; }
 
+    /// <summary>Bloco 66: a OS do relatório (com <see cref="TarefasDoRelatorio.DeUmaOrdem"/>); nula nos outros.</summary>
+    public OrdensDeServico.OrdemDeServico? Ordem { get; init; }
+
     public int TotalDeFotos => Grupos.Sum(g => g.Fotos.Count);
 
     /// <summary>
@@ -169,11 +180,13 @@ public sealed record RelatorioFotografico(
     public int TotalDePaginas => 1 + (Texto is null ? 0 : 1) + (Indicadores is null ? 0 : 1) + Paginas.Count + AntesEDepois.Count +
                                  (Opcoes.ComIndice || Opcoes.ComAssinaturas ? 1 : 0);
 
-    /// <summary>"Relatório fotográfico nº 3 · 01/10/2026 a 31/10/2026".</summary>
-    public string Titulo => $"Relatório fotográfico nº {Numero} · {Opcoes.De:dd/MM/yyyy} a {Opcoes.Ate:dd/MM/yyyy}";
+    /// <summary>"Relatório fotográfico nº 3 · 01/10/2026 a 31/10/2026" (Bloco 66: "… da OS-014 · …").</summary>
+    public string Titulo => $"Relatório fotográfico nº {Numero}{(Ordem is { } o ? $" da {o.Codigo}" : "")} · {Opcoes.De:dd/MM/yyyy} a {Opcoes.Ate:dd/MM/yyyy}";
 
     /// <summary>O nome sugerido para o arquivo: "Relatorio-fotografico-03-Residencia Silva".</summary>
-    public string NomeSugerido => $"Relatório fotográfico {Numero:00} - {Cabecalho.Obra}";
+    public string NomeSugerido => Ordem is { } o
+        ? $"Relatório fotográfico {Numero:00} - {o.Codigo} - {Cabecalho.Obra}"
+        : $"Relatório fotográfico {Numero:00} - {Cabecalho.Obra}";
 }
 
 /// <summary>
@@ -198,6 +211,9 @@ public static class MontadorDoRelatorio
         ArgumentNullException.ThrowIfNull(cabecalho);
         opcoes.Validar();
 
+        var ordem = opcoes.Tarefas == TarefasDoRelatorio.DeUmaOrdem
+            ? cronograma.OrdensDeServico.Obter(opcoes.Ordem!.Value) ?? throw new DomainValidationException(nameof(opcoes.Ordem), "A ordem de serviço não existe mais.")
+            : null;
         var dataDeStatus = opcoes.Ate.ToDateTime(TimeOnly.MinValue);
         var andamento = AcompanhamentoDoCronograma.Calcular(cronograma, dataDeStatus);
         var edt = cronograma.NumeracaoEdt();
@@ -225,7 +241,7 @@ public static class MontadorDoRelatorio
             _ => escolhidas
                 .GroupBy(x => x.Tarefa)
                 .OrderBy(g => tarefas.IndexOf(g.Key))
-                .Select(g => (Titulo: nomeDaTarefa[g.Key.Id], Detalhe: (string?)DetalheDaTarefa(g.Key, andamento), Fotos: g.ToList())),
+                .Select(g => (Titulo: nomeDaTarefa[g.Key.Id], Detalhe: (string?)DetalheDaTarefa(g.Key, andamento, ordem), Fotos: g.ToList())),
         };
 
         var proximo = 1;
@@ -245,6 +261,7 @@ public static class MontadorDoRelatorio
             Indicadores = opcoes.ComIndicadores
                 ? Indicadores.PainelDeIndicadores.Montar(cronograma, opcoes.Ate, Planejamento.Periodicidade.Mensal)
                 : null,
+            Ordem = ordem,
         };
     }
 
@@ -311,25 +328,59 @@ public static class MontadorDoRelatorio
     {
         var ramo = opcoes.Tarefas == TarefasDoRelatorio.DeUmRamo
             ? cronograma.DescendentesDe(opcoes.Ramo!.Value).Select(t => t.Id).Append(opcoes.Ramo.Value).ToHashSet()
-            : null;
+            : opcoes.Tarefas == TarefasDoRelatorio.DeUmaOrdem && cronograma.OrdensDeServico.Obter(opcoes.Ordem!.Value) is { } os
+                ? TarefasDaOrdem(cronograma, os)
+                : null;
         var (de, ate) = (opcoes.De.ToDateTime(TimeOnly.MinValue), opcoes.Ate.ToDateTime(TimeOnly.MinValue));
         return cronograma.Tarefas.Where(t => opcoes.Tarefas switch
         {
             TarefasDoRelatorio.SoCriticas => t.EhCritica,
             TarefasDoRelatorio.SoAtrasadas => andamento.TryGetValue(t.Id, out var a) && a.Situacao == SituacaoDaTarefa.Atrasada,
             TarefasDoRelatorio.EmExecucaoNoPeriodo => (t.InicioMaisCedo ?? t.DataInicio).Date <= ate && (t.TerminoMaisCedo ?? t.DataTermino).Date >= de,
-            TarefasDoRelatorio.DeUmRamo => ramo!.Contains(t.Id),
+            TarefasDoRelatorio.DeUmRamo or TarefasDoRelatorio.DeUmaOrdem => ramo?.Contains(t.Id) == true,
             _ => true,
         });
     }
 
     private static string Maiuscula(string texto) => texto.Length == 0 ? texto : char.ToUpper(texto[0], Brasil) + texto[1..];
 
-    private static string DetalheDaTarefa(Tarefa tarefa, IReadOnlyDictionary<Guid, AndamentoDaTarefa> andamento)
+    private static string DetalheDaTarefa(Tarefa tarefa, IReadOnlyDictionary<Guid, AndamentoDaTarefa> andamento, OrdensDeServico.OrdemDeServico? ordem = null)
     {
         var (inicio, termino) = (tarefa.InicioMaisCedo ?? tarefa.DataInicio, tarefa.TerminoMaisCedo ?? tarefa.DataTermino);
         var detalhe = $"Previsto {inicio:dd/MM/yyyy} a {termino:dd/MM/yyyy} · {tarefa.PercentualConcluido}% concluído";
-        return andamento.TryGetValue(tarefa.Id, out var a) ? $"{detalhe} · {a.Texto}" : detalhe;
+        if (andamento.TryGetValue(tarefa.Id, out var a))
+            detalhe = $"{detalhe} · {a.Texto}";
+        // Bloco 66: no relatório de uma OS, o medido da tarefa na OS.
+        if (ordem is not null && OrdensDeServico.PagamentoDasOrdens.PercentualDasTarefas(ordem).TryGetValue(tarefa.Id, out var medido))
+            detalhe = $"{detalhe} · {medido}% medido na {ordem.Codigo}";
+        return detalhe;
+    }
+
+    /// <summary>Bloco 66: as tarefas de uma OS: as dela e as dos itens, com as de dentro de um resumo.</summary>
+    public static HashSet<Guid> TarefasDaOrdem(Cronograma cronograma, OrdensDeServico.OrdemDeServico ordem)
+    {
+        ArgumentNullException.ThrowIfNull(cronograma);
+        ArgumentNullException.ThrowIfNull(ordem);
+        var ids = ordem.Dados.Tarefas.Concat(ordem.Dados.Itens.Select(i => i.TarefaId).OfType<Guid>()).ToHashSet();
+        foreach (var id in ids.ToList())
+            if (cronograma.Tarefas.FirstOrDefault(t => t.Id == id) is { EhResumo: true })
+                foreach (var filha in cronograma.DescendentesDe(id))
+                    ids.Add(filha.Id);
+        return ids;
+    }
+
+    /// <summary>
+    /// Bloco 66: o período das fotos de uma OS: da emissão (no rascunho, da criação) até o último passo, se ela já terminou
+    /// (conferida, paga ou cancelada), ou até hoje.
+    /// </summary>
+    public static (DateOnly De, DateOnly Ate) PeriodoDaOrdem(OrdensDeServico.OrdemDeServico ordem, DateOnly hoje)
+    {
+        ArgumentNullException.ThrowIfNull(ordem);
+        var de = OrdensDeServico.RelatorioDasOrdens.DataDeReferencia(ordem);
+        var ate = ordem.Situacao is OrdensDeServico.SituacaoDaOrdem.Conferida or OrdensDeServico.SituacaoDaOrdem.Paga or OrdensDeServico.SituacaoDaOrdem.Cancelada
+            ? DateOnly.FromDateTime(ordem.Historico[^1].Quando)
+            : hoje;
+        return (de, ate < de ? de : ate);
     }
 
     // Cada grupo começa numa página; uma foto de destaque ocupa a linha inteira quando há duas colunas.

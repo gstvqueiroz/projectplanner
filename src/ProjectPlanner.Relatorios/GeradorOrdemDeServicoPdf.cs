@@ -205,6 +205,8 @@ public sealed class GeradorOrdemDeServicoPdf
             altura += 22 + o.Dados.Verificacao.Count * 14;
         if (o.Historico.Count > 1)
             altura += 22 + Math.Min(o.Historico.Count, 12) * 11;
+        if (o.Medicoes.Count > 0)
+            altura += 34 + o.Medicoes.Count * 12;
         return altura + 130; // as assinaturas
     }
 
@@ -237,6 +239,22 @@ public sealed class GeradorOrdemDeServicoPdf
                 Escrever(c, Cortar(item.Texto, f.Normal(9), Limite - Margem - 16), Margem + 16, y, f.Normal(9), Texto);
                 y += 14;
             }
+        }
+        if (o.Medicoes.Count > 0) // Bloco 60
+        {
+            Escrever(c, "MEDIÇÕES E PAGAMENTOS", Margem, y + 8, f.Negrito(7.5f), Cinza);
+            y += 22;
+            foreach (var m in o.Medicoes)
+            {
+                Escrever(c, $"{m.Codigo} · {m.Data.ToString("dd/MM/yyyy", Brasil)}", Margem, y, f.Normal(9), Texto);
+                Direita(c, Moeda.ComSimbolo(m.Valor), Margem + 250, y, f.Normal(9));
+                Escrever(c, m.Pagamento is { } p ? $"paga em {p.Data.ToString("dd/MM/yyyy", Brasil)}{(p.Documento is { } doc ? $" ({doc})" : "")}" : "a pagar",
+                    Margem + 270, y, f.Normal(9), Cinza);
+                y += 12;
+            }
+            Escrever(c, $"Medido {Moeda.ComSimbolo(o.TotalMedido)} · pago {Moeda.ComSimbolo(o.TotalPago)} · a pagar {Moeda.ComSimbolo(o.APagar)}",
+                Margem, y + 2, f.Negrito(8.5f), Texto);
+            y += 12;
         }
         if (o.Historico.Count > 1)
         {

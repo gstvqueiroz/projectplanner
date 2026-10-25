@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.60.0
+
+**Medição e pagamento das ordens de serviço.**
+
+- **Medições na OS:** depois de aceita, registre quanto foi executado de cada item ("Nova medição", com a data; "Tudo o que
+  falta" preenche o resto). A medição não passa do contratado. O medido leva o % concluído das tarefas da OS (pesado pelo
+  valor dos itens; só aumenta; dá para desligar).
+- **Conferir e aprovar** mede o que ainda faltava como a medição final e leva as tarefas a 100%.
+- **Pagar…** registra o pagamento de uma medição (com o documento: NF, recibo, PIX) e lança o valor nos **custos
+  realizados**, um lançamento por tarefa (os itens avulsos como custo geral), em "serviços de terceiros" para empreiteiro e
+  em "mão de obra" para equipe própria. Assim o custo real, o IDC e a Curva S realizada já contam a OS. **Desfazer
+  pagamento** tira os custos. Conferida, toda medida e toda paga, a OS fica **paga**.
+- **Na lista:** o valor medido a pagar e o que ainda falta medir; **Por executante** mostra o total, o medido e o pago de
+  cada um; **Exportar a lista (CSV)…** leva as OS ao Excel.
+- O PDF da OS mostra as medições e os pagamentos.
+- Um arquivo com medições de OS não abre nas versões 0.58 e 0.59 (elas não conhecem as medições).
+
 ## 0.59.0
 
 **Ordens de serviço no grupo do Telegram** (precisa da obra no Telegram e de um grupo da obra com o bot).

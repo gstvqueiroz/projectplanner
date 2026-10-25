@@ -1,3 +1,4 @@
+using ProjectPlanner.Core.Indicadores;
 using ProjectPlanner.Core.OrdensDeServico;
 using ProjectPlanner.Core.Orcamento;
 
@@ -152,5 +153,84 @@ public class OrdensDeServicoTests
         completo.Titulo.Should().Be("Parede de blocos e mais 1");
         completo.Itens.Select(i => i.PrecoUnitario).Should().Equal(70m, 35m);
         FluentActions.Invoking(() => MontagemDaOrdem.Rascunho(c, [], PrecoDosItens.MaoDeObra)).Should().Throw<DomainValidationException>();
+    }
+
+    // ---- Bloco 60: medições e pagamentos ----
+
+    private static (OrdemDeServico Os, Guid A, Guid B) Medivel(TipoDeExecutante tipo = TipoDeExecutante.Terceiro)
+    {
+        var (a, b) = (Guid.NewGuid(), Guid.NewGuid());
+        var dados = new DadosDaOrdem("Alvenaria e vergas", tipo, "Construtora Silva", null, null, [a, b],
+            [new ItemDaOrdem(a, "Alvenaria", "m²", 100, 30), new ItemDaOrdem(a, "Andaime", "vb", 1, 400), new ItemDaOrdem(b, "Verga", "m", 20, 15),
+             new ItemDaOrdem(null, "Limpeza", "vb", 1, 100)],
+            null, null, FormaDePagamentoDaOrdem.PorMedicao, null, null);
+        return (OrdemDeServico.Nova(Guid.NewGuid(), 3, dados, Agora).Emitir(Agora), a, b);
+    }
+
+    [Fact]
+    public void Medir_Parcial_NoLimiteDoContratado_EOQueFalta()
+    {
+        var (os, _, _) = Medivel();
+        os.Invoking(o => o.Medir(Guid.NewGuid(), new DateOnly(2026, 10, 1), [10, 0, 0, 0], Agora)).Should().Throw<DomainValidationException>()
+            .WithMessage("Não dá para medir a OS-003: ela está \"emitida\".");
+        os = os.Aceitar(Agora);
+
+        os = os.Medir(Guid.NewGuid(), new DateOnly(2026, 10, 1), [40, 0.5m, 0, 0], Agora);
+
+        (os.Medicoes.Single().Codigo, os.TotalMedido, os.Total, os.PorMedir, os.APagar).Should().Be(("M1", 1400m, 3800m, 2400m, 1400m));
+        os.Historico[^1].Descricao.Should().Be("Medição M1: R$ 1.400,00");
+        os.Invoking(o => o.Medir(Guid.NewGuid(), new DateOnly(2026, 10, 2), [61, 0, 0, 0], Agora)).Should().Throw<DomainValidationException>()
+            .WithMessage("\"Alvenaria\" passaria do contratado: 101,00 de 100,00 m².");
+        os.Invoking(o => o.Medir(Guid.NewGuid(), new DateOnly(2026, 10, 2), [0, 0, 0, 0], Agora)).Should().Throw<DomainValidationException>();
+
+        os = os.MedirOQueFalta(Guid.NewGuid(), new DateOnly(2026, 10, 9), Agora);
+        (os.Medicoes[1].Codigo, os.Medicoes[1].Quantidades, os.PorMedir).Should().BeEquivalentTo(("M2", new[] { 60m, 0.5m, 20m, 1m }, 0m));
+        os.MedirOQueFalta(Guid.NewGuid(), new DateOnly(2026, 10, 9), Agora).Should().BeSameAs(os, "não falta nada");
+    }
+
+    [Fact]
+    public void Pagamento_ConferidaTodaPaga_FicaPaga_EDesfazerVoltaAConferida()
+    {
+        var (os, _, _) = Medivel();
+        os = os.Aceitar(Agora).Medir(Guid.NewGuid(), new DateOnly(2026, 10, 1), [50, 1, 0, 0], Agora);
+        var m1 = os.Medicoes[0].Id;
+        os = os.RegistrarPagamento(m1, new PagamentoDaMedicao(new DateOnly(2026, 10, 2), "NF 10", []), Agora);
+        (os.TotalPago, os.Situacao, os.Historico[^1].Descricao).Should().Be((1900m, SituacaoDaOrdem.Aceita, "Pagamento da M1: R$ 1.900,00 (NF 10)"));
+        os.Invoking(o => o.RemoverMedicao(m1, Agora)).Should().Throw<DomainValidationException>().WithMessage("A M1 já foi paga: desfaça o pagamento antes.");
+
+        os = os.Concluir(Agora).MedirOQueFalta(Guid.NewGuid(), new DateOnly(2026, 10, 9), Agora).Conferir(Agora);
+        os = os.RegistrarPagamento(os.Medicoes[1].Id, new PagamentoDaMedicao(new DateOnly(2026, 10, 10), null, []), Agora);
+
+        (os.Situacao, os.APagar).Should().Be((SituacaoDaOrdem.Paga, 0m));
+        os = os.DesfazerPagamento(m1, Agora);
+        (os.Situacao, os.TotalPago).Should().Be((SituacaoDaOrdem.Conferida, 1900m));
+        os.RemoverMedicao(m1, Agora).Medicoes.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Lancamentos_UmPorTarefa_NaCategoriaDoExecutante_EOAvulsoComoCustoGeral()
+    {
+        var (os, a, b) = Medivel();
+        os = os.Aceitar(Agora).Medir(Guid.NewGuid(), new DateOnly(2026, 10, 1), [10, 1, 4, 1], Agora);
+
+        var lancamentos = PagamentoDasOrdens.Lancamentos(os, os.Medicoes[0], new DateOnly(2026, 10, 3), null);
+
+        lancamentos.Select(l => (l.TarefaId, l.Valor, l.Categoria, l.Documento)).Should().Equal(
+            (a, 700m, CategoriaDeCusto.Terceiros, "OS-003/M1"), (b, 60m, CategoriaDeCusto.Terceiros, "OS-003/M1"), (null, 100m, CategoriaDeCusto.Terceiros, "OS-003/M1"));
+        lancamentos[0].Descricao.Should().Be("OS-003 M1 · Construtora Silva: Alvenaria e vergas");
+        var (propria, _, _) = Medivel(TipoDeExecutante.EquipePropria);
+        propria = propria.Aceitar(Agora).Medir(Guid.NewGuid(), new DateOnly(2026, 10, 1), [0, 0, 0, 1], Agora);
+        PagamentoDasOrdens.Lancamentos(propria, propria.Medicoes[0], new DateOnly(2026, 10, 3), " RPA 5 ").Single()
+            .Should().Match<LancamentoDeCusto>(l => l.Categoria == CategoriaDeCusto.MaoDeObra && l.Documento == "RPA 5" && l.TarefaId == null);
+    }
+
+    [Fact]
+    public void PercentualDasTarefas_PeloMedidoNosItensDeCadaUma()
+    {
+        var (os, a, b) = Medivel();
+        os = os.Aceitar(Agora).Medir(Guid.NewGuid(), new DateOnly(2026, 10, 1), [50, 0, 20, 1], Agora);
+
+        PagamentoDasOrdens.PercentualDasTarefas(os).Should().BeEquivalentTo(new Dictionary<Guid, int> { [a] = 44, [b] = 100 },
+            "a tarefa A tem R$ 3.400 contratados (100 m² × 30 + andaime 400) e R$ 1.500 medidos");
     }
 }

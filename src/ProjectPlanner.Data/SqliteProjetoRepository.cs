@@ -334,7 +334,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             contexto.Ordens.Add(new OrdensRegistro
             {
                 ProjetoId = cronograma.Id,
-                Versao = FormatoDasOrdens.Versao,
+                Versao = FormatoDasOrdens.VersaoDe(cronograma),
                 Dados = FormatoDasOrdens.Serializar(cronograma),
             });
 
@@ -476,7 +476,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
         // As ordens de serviço (Bloco 58).
         if (contexto.Ordens.AsNoTracking().FirstOrDefault() is { } ordens)
         {
-            if (ordens.Versao != FormatoDasOrdens.Versao)
+            if (!FormatoDasOrdens.Conhece(ordens.Versao))
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem as ordens de serviço num formato desconhecido.");
             FormatoDasOrdens.Ler(ordens.Dados, cronograma);
         }

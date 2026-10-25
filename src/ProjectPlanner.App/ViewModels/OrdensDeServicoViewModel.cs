@@ -216,14 +216,22 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         var andamento = todas.Count(o => TextosDaOrdem.EmAndamento(o.Situacao));
         var vencidas = todas.Count(o => o.Vencida(Hoje));
         var rascunhos = todas.Count(o => o.Situacao == SituacaoDaOrdem.Rascunho);
-        var emAberto = todas.Where(o => TextosDaOrdem.EmAndamento(o.Situacao) || o.Situacao == SituacaoDaOrdem.Conferida).Sum(o => o.Total);
+        // Bloco 60: a pagar é o medido e não pago; por medir, o resto do contratado das OS que estão na rua.
+        var validas = todas.Where(o => o.Situacao != SituacaoDaOrdem.Cancelada).ToList();
+        var aPagar = validas.Sum(o => o.APagar);
+        var porMedir = validas.Where(o => TextosDaOrdem.EmAndamento(o.Situacao)).Sum(o => o.PorMedir);
         Resumo = todas.Count == 0 ? "" : string.Join(" · ", new[]
         {
             Plural(andamento, "em andamento", "em andamento"),
             vencidas == 0 ? null : Plural(vencidas, "vencida", "vencidas"),
-            emAberto == 0 ? null : $"{Moeda.ComSimbolo(emAberto)} a pagar",
+            aPagar == 0 ? null : $"{Moeda.ComSimbolo(aPagar)} medido a pagar",
+            porMedir == 0 ? null : $"{Moeda.ComSimbolo(porMedir)} por medir",
             rascunhos == 0 ? null : Plural(rascunhos, "rascunho", "rascunhos"),
         }.OfType<string>());
+        PorExecutante = [.. validas.Where(o => o.Situacao != SituacaoDaOrdem.Rascunho).GroupBy(o => o.Dados.Executante ?? "sem executante").OrderBy(g => g.Key)
+            .Select(g => new LinhaDoResumoNaTela($"{g.Key} ({Plural(g.Count(), "OS", "OS")})",
+                $"{Moeda.ComSimbolo(g.Sum(o => o.Total))} · medido {Moeda.ComSimbolo(g.Sum(o => o.TotalMedido))} · pago {Moeda.ComSimbolo(g.Sum(o => o.TotalPago))}"))];
+        OnPropertyChanged(nameof(PorExecutante));
         OnPropertyChanged(nameof(SemOrdens));
         if (id is { } atual)
         {
@@ -272,6 +280,9 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
     public string AvisoDeVencida => Ordem is { } o && o.Vencida(Hoje) ? $"Passou do prazo ({o.Dados.Prazo!.Value.ToString("dd/MM/yyyy", Brasil)})." : "";
 
     public bool PodeEditar => Ordem?.PodeEditar == true;
+
+    /// <summary>A lista de verificação aparece no rascunho (para montar) e quando tem algum ponto.</summary>
+    public bool MostraVerificacao => PodeEditar || Verificacao.Count > 0;
 
     /// <summary>A verificação se marca no rascunho (a lista) e durante a execução e a conferência.</summary>
     public bool PodeMarcarVerificacao => PodeEditar || Ordem?.Situacao is SituacaoDaOrdem.Aceita or SituacaoDaOrdem.EmExecucao or SituacaoDaOrdem.Concluida;
@@ -398,8 +409,9 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         }
         _fichaMudou = false;
         foreach (var nome in new[] { nameof(TemSelecionada), nameof(Ordem), nameof(Cabecalho), nameof(AvisoDeVencida), nameof(PodeEditar),
-                     nameof(PodeMarcarVerificacao), nameof(Historico), nameof(TotalDaFicha) })
+                     nameof(PodeMarcarVerificacao), nameof(MostraVerificacao), nameof(Historico), nameof(TotalDaFicha) })
             OnPropertyChanged(nome);
+        CarregarMedicoes(o);
         AtualizarBotoes();
     }
 
@@ -624,12 +636,14 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
             OnPropertyChanged(nome);
         foreach (var comando in new IRelayCommand[] { SalvarCommand, TrazerItensDasTarefasCommand, AdicionarItemCommand, AdicionarVerificacaoCommand,
                      ExcluirRascunhoCommand, EmitirCommand, AceitarCommand, RecusarCommand, IniciarCommand, ConcluirCommand, ConferirCommand,
-                     ReprovarCommand, VoltarARascunhoCommand, CancelarCommand, SalvarPdfCommand, ImprimirCommand, MandarAoTelegramCommand })
+                     ReprovarCommand, VoltarARascunhoCommand, CancelarCommand, SalvarPdfCommand, ImprimirCommand, MandarAoTelegramCommand,
+                     RegistrarMedicaoCommand, MedirTudoOQueFaltaCommand })
             comando.NotifyCanExecuteChanged();
     }
 
     // Aplica um passo à OS escolhida (troca na lista, entra no Desfazer) e mostra a mensagem.
-    private bool Executar(Func<OrdemDeServico> passo, string descricao, string mensagem, bool tarefasMudaram = false)
+    /// <param name="atualizarTarefas">Bloco 60: o medido leva o % das tarefas da OS (se a opção está ligada).</param>
+    private bool Executar(Func<OrdemDeServico> passo, string descricao, string mensagem, bool atualizarTarefas = false)
     {
         OrdemDeServico nova;
         try
@@ -642,6 +656,7 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
             return false;
         }
         _cronograma.OrdensDeServico.Substituir(nova);
+        var tarefasMudaram = atualizarTarefas && AtualizarTarefas && AtualizarTarefasCom(nova);
         _mudou(descricao, tarefasMudaram);
         Atualizar();
         Mensagem = mensagem;
@@ -734,11 +749,15 @@ public sealed partial class OrdensDeServicoViewModel : ViewModelBase
         Executar(() => o.Concluir(Agora), $"Concluir a {o.Codigo}", $"{o.Codigo} concluída pelo executante: falta a conferência.");
     }
 
+    /// <summary>Aprova o serviço; o que ainda não foi medido vira a medição final (Bloco 60), e as tarefas vão ao % medido.</summary>
     [RelayCommand(CanExecute = nameof(PodeConferir))]
     private void Conferir()
     {
         var o = Ordem!;
-        Executar(() => o.Conferir(Agora), $"Conferir a {o.Codigo}", $"{o.Codigo} conferida e aprovada.");
+        var falta = o.PorMedir;
+        Executar(() => o.MedirOQueFalta(Guid.NewGuid(), Hoje, Agora).Conferir(Agora), $"Conferir a {o.Codigo}",
+            falta > 0 ? $"{o.Codigo} conferida e aprovada; o que faltava medir ({Moeda.ComSimbolo(falta)}) virou a medição final, para pagar."
+                : $"{o.Codigo} conferida e aprovada.", atualizarTarefas: true);
     }
 
     [RelayCommand(CanExecute = nameof(PodeConferir))]

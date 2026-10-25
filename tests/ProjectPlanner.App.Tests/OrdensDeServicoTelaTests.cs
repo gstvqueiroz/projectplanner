@@ -65,7 +65,7 @@ public sealed class OrdensDeServicoTelaTests : IDisposable
         (os.Situacao, os.Dados.Executante, os.Total).Should().Be((SituacaoDaOrdem.Emitida, "Construtora Silva", 2500m));
         (tela.Cabecalho, tela.PodeEditar, tela.PodeAceitar, tela.PodeEmitir).Should().Be(("OS-001 · Emitida", false, true, false));
         tela.Lista.Single().Detalhe.Should().Be("Construtora Silva · prazo 02/10 · R$ 2.500,00");
-        tela.Resumo.Should().Be("1 em andamento · R$ 2.500,00 a pagar");
+        tela.Resumo.Should().Be("1 em andamento · R$ 2.500,00 por medir");
     }
 
     [Fact]
@@ -92,6 +92,7 @@ public sealed class OrdensDeServicoTelaTests : IDisposable
 
         (tela.Ordem!.Situacao, tela.Ordem.Total, tela.PodeCancelar).Should().Be((SituacaoDaOrdem.Conferida, 3200m, false));
         tela.Historico[0].Should().Be("28/09/2026 12:00 · Conferida e aprovada");
+        tela.Historico[1].Should().Be("28/09/2026 12:00 · Medição M1: R$ 3.200,00", "o que faltava medir virou a medição final");
         tela.Historico.Should().Contain("28/09/2026 12:00 · Recusada: Preço baixo");
 
         _vm.DesfazerAlteracaoCommand.Execute(null);
@@ -171,7 +172,7 @@ public sealed class OrdensDeServicoTelaTests : IDisposable
         tela.FiltroEscolhido = tela.Filtros.Single(f => f.Valor == FiltroDasOrdens.Vencidas);
 
         tela.Lista.Select(l => (l.Codigo, l.Situacao)).Should().Equal(("OS-001", "Emitida · vencida"));
-        tela.Resumo.Should().Be("1 em andamento · 1 vencida · R$ 3.000,00 a pagar · 1 rascunho");
+        tela.Resumo.Should().Be("1 em andamento · 1 vencida · R$ 3.000,00 por medir · 1 rascunho");
         tela.FiltroEscolhido = tela.Filtros.Single(f => f.Valor == FiltroDasOrdens.Encerradas);
         tela.Lista.Should().BeEmpty();
     }
@@ -190,5 +191,106 @@ public sealed class OrdensDeServicoTelaTests : IDisposable
 
         await tela.ExcluirRascunhoCommand.ExecuteAsync(null);
         (Cronograma.OrdensDeServico.Vazio, tela.Mensagem).Should().Be((true, "OS-001 excluída."));
+    }
+
+    // ---- Bloco 60: medição e pagamento ----
+
+    // Uma OS de 100 m² de alvenaria a R$ 30 e um andaime avulso, aceita.
+    private OrdensDeServicoViewModel Aceita(string tipo = "Terceiro")
+    {
+        _alvenaria.Tarefa.DefinirUnidade("m²");
+        _alvenaria.Tarefa.DefinirQuantidade(100);
+        var tela = Abrir(_alvenaria);
+        tela.NovaOrdemCommand.Execute(null);
+        tela.Executante = "Construtora Silva";
+        tela.TipoEscolhido = tela.Tipos.Single(t => t.Valor.ToString() == tipo);
+        tela.Itens[0].Preco = "30";
+        tela.AdicionarItemCommand.Execute(null);
+        (tela.Itens[1].Descricao, tela.Itens[1].Preco) = ("Andaime", "400");
+        tela.EmitirCommand.Execute(null);
+        tela.AceitarCommand.Execute(null);
+        return tela;
+    }
+
+    [Fact]
+    public void Medicao_Parcial_LevaO_PercentualDaTarefa_ENaoPassaDoContratado()
+    {
+        var tela = Aceita();
+        (tela.MostraMedicoes, tela.PodeMedir).Should().Be((true, true));
+        tela.ItensParaMedir.Select(i => (i.Descricao, i.Contratado, i.JaMedido)).Should().Equal(("Alvenaria", "100,00 m²", "0,00 m²"), ("Andaime", "1,00 vb", "0,00 vb"));
+
+        tela.ItensParaMedir[0].NestaMedicao = "40";
+        tela.RegistrarMedicaoCommand.Execute(null);
+
+        tela.MedicoesNaTela.Select(m => (m.Texto, m.Situacao)).Should().Equal(("M1 · 28/09/2026 · R$ 1.200,00", "a pagar"));
+        tela.ResumoDasMedicoes.Should().Be("Medido R$ 1.200,00 de R$ 3.400,00 (35%) · pago R$ 0,00 · a pagar R$ 1.200,00");
+        _alvenaria.Tarefa.PercentualConcluido.Should().Be(40, "o medido leva o % da tarefa");
+        tela.ItensParaMedir[0].JaMedido.Should().Be("40,00 m²");
+        tela.Resumo.Should().Be("1 em andamento · R$ 1.200,00 medido a pagar · R$ 2.200,00 por medir");
+
+        tela.ItensParaMedir[0].NestaMedicao = "70";
+        tela.RegistrarMedicaoCommand.Execute(null);
+        tela.Mensagem.Should().Be("\"Alvenaria\" passaria do contratado: 110,00 de 100,00 m².");
+        tela.MedicoesNaTela.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task Pagar_LancaOsCustos_PorTarefa_EDesfazerTira()
+    {
+        var tela = Aceita();
+        tela.MedirTudoOQueFaltaCommand.Execute(null);
+        tela.ItensParaMedir.Select(i => i.NestaMedicao).Should().Equal("100,00", "1,00");
+        tela.RegistrarMedicaoCommand.Execute(null);
+        _ambiente.Dialogos.TextoDigitado = "NF 321";
+
+        await tela.PagarMedicaoCommand.ExecuteAsync(tela.MedicoesNaTela[0]);
+
+        Cronograma.Custos.Lancamentos.Select(l => (l.TarefaId, l.Valor, l.Documento, l.Categoria)).Should().Equal(
+            (_alvenaria.Tarefa.Id, 3000m, "NF 321", Core.Indicadores.CategoriaDeCusto.Terceiros), (null, 400m, "NF 321", Core.Indicadores.CategoriaDeCusto.Terceiros));
+        tela.MedicoesNaTela[0].Situacao.Should().Be("paga em 28/09/2026 (NF 321)");
+        tela.Mensagem.Should().Be("Pagamento da M1 registrado: R$ 3.400,00 nos custos realizados (serviços de terceiros).");
+        tela.PorExecutante.Single().Should().Be(new LinhaDoResumoNaTela("Construtora Silva (1 OS)", "R$ 3.400,00 · medido R$ 3.400,00 · pago R$ 3.400,00"));
+
+        await tela.DesfazerPagamentoCommand.ExecuteAsync(tela.MedicoesNaTela[0]);
+        (Cronograma.Custos.Vazio, tela.MedicoesNaTela[0].Paga).Should().Be((true, false));
+        _vm.DesfazerAlteracaoCommand.Execute(null);
+        Cronograma.Custos.Lancamentos.Should().HaveCount(2, "o Desfazer do programa volta o pagamento");
+    }
+
+    [Fact]
+    public async Task Conferir_MedeOQueFalta_TarefaA100_EPagarDeixaPaga()
+    {
+        var tela = Aceita("EquipePropria");
+        tela.ItensParaMedir[0].NestaMedicao = "50";
+        tela.RegistrarMedicaoCommand.Execute(null);
+        tela.ConcluirCommand.Execute(null);
+
+        tela.ConferirCommand.Execute(null);
+
+        tela.Mensagem.Should().Be("OS-001 conferida e aprovada; o que faltava medir (R$ 1.900,00) virou a medição final, para pagar.");
+        (tela.MedicoesNaTela.Count, _alvenaria.Tarefa.PercentualConcluido, tela.PodeMedir).Should().Be((2, 100, false));
+        _ambiente.Dialogos.TextoDigitado = "";
+        await tela.PagarMedicaoCommand.ExecuteAsync(tela.MedicoesNaTela[0]);
+        await tela.PagarMedicaoCommand.ExecuteAsync(tela.MedicoesNaTela[1]);
+
+        (tela.Ordem!.Situacao, tela.Mensagem).Should().Be((SituacaoDaOrdem.Paga,
+            "Pagamento da M2 registrado: R$ 1.900,00 nos custos realizados (mão de obra). A OS-001 está paga."));
+        Cronograma.Custos.Lancamentos.Select(l => l.Documento).Should().Equal(["OS-001/M1", "OS-001/M2", "OS-001/M2"],
+            "a M1 só mediu a alvenaria; a M2, o resto da alvenaria e o andaime (avulso, custo geral)");
+    }
+
+    [Fact]
+    public async Task ExportarCsv_ListaAsOS_ComOsValores()
+    {
+        var tela = Aceita();
+        tela.ItensParaMedir[0].NestaMedicao = "10";
+        tela.RegistrarMedicaoCommand.Execute(null);
+        _ambiente.Dialogos.ArquivoExportado = Path.Combine(_pasta, "lista");
+
+        await tela.ExportarCsvCommand.ExecuteAsync(null);
+
+        var linhas = (await File.ReadAllTextAsync(Path.Combine(_pasta, "lista.csv"))).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        linhas[0].Should().Be("\uFEFFOS;Serviço;Executante;Tipo;Situação;Emissão;Prazo;Conclusão;Valor (R$);Medido (R$);Pago (R$);A pagar (R$)".TrimStart('\uFEFF'));
+        linhas[1].Should().Be("OS-001;Alvenaria;Construtora Silva;Terceiro (empreiteiro);Aceita;28/09/2026;02/10/2026;;3400,00;300,00;0,00;300,00");
     }
 }

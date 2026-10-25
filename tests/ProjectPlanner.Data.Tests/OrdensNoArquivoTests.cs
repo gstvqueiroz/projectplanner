@@ -35,13 +35,36 @@ public sealed class OrdensNoArquivoTests : TesteComArquivo
         lida.Historico.Should().Equal(os.Historico);
         aberta[1].Dados.Executante.Should().BeNull();
         (lida.NoTelegram, aberta[1].NoTelegram).Should().Be((true, false));
+        Versao("OrdensDeServicoDoProjeto").Should().Be(1, "sem medições, a 0.58 lê");
+    }
+
+    [Fact]
+    public void Medicoes_EPagamentos_VoltamIguais_NaVersao2()
+    {
+        var c = new Cronograma("Obra", Segunda);
+        var agora = new DateTime(2026, 9, 28, 9, 30, 0);
+        var dados = new DadosDaOrdem("Alvenaria", TipoDeExecutante.Terceiro, "Construtora Silva", null, null, null,
+            [new ItemDaOrdem(null, "Alvenaria", "m²", 100, 30), new ItemDaOrdem(null, "Verga", "m", 10, 15)], null, null,
+            FormaDePagamentoDaOrdem.PorMedicao, null, null);
+        var lancamento = Guid.NewGuid();
+        var os = OrdemDeServico.Nova(Guid.NewGuid(), 1, dados, agora).Emitir(agora).Aceitar(agora)
+            .Medir(Guid.NewGuid(), new DateOnly(2026, 10, 5), [40, 0], agora).Medir(Guid.NewGuid(), new DateOnly(2026, 10, 12), [20.5m, 10], agora);
+        os = os.RegistrarPagamento(os.Medicoes[0].Id, new PagamentoDaMedicao(new DateOnly(2026, 10, 6), "NF 77", [lancamento]), agora);
+        c.OrdensDeServico.Adicionar(os);
+        Repositorio.Salvar(c, Caminho);
+
+        var lida = Repositorio.Abrir(Caminho).OrdensDeServico.Todas.Single();
+
+        Versao("OrdensDeServicoDoProjeto").Should().Be(2);
+        lida.Medicoes.Should().BeEquivalentTo(os.Medicoes);
+        (lida.TotalMedido, lida.TotalPago, lida.MedidoDoItem(0)).Should().Be((1965m, 1200m, 60.5m));
     }
 
     [Theory]
     [InlineData(1, "{ ruim")]
     [InlineData(1, """{"ordens":[{"id":"6f9619ff-8b86-d011-b42d-00cf4fc964ff","numero":0,"situacao":"Rascunho","titulo":"x","tipo":"Terceiro","formaDePagamento":"Empreitada"}]}""")]
     [InlineData(1, """{"ordens":[{"id":"6f9619ff-8b86-d011-b42d-00cf4fc964ff","numero":1,"situacao":"Voando","titulo":"x","tipo":"Terceiro","formaDePagamento":"Empreitada"}]}""")]
-    [InlineData(2, """{"ordens":[]}""")]
+    [InlineData(3, """{"ordens":[]}""")]
     public void OrdensComDefeito_ArquivoRecusado(int versao, string dados)
     {
         var c = new Cronograma("Obra", Segunda);

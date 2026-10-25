@@ -44,4 +44,16 @@ public sealed class OrdemDeServicoPdfTests
         Encoding.ASCII.GetString(pdf, 0, 5).Should().Be("%PDF-");
         Paginas(pdf).Should().Be(paginas);
     }
+
+    [Fact]
+    public void Pdf_ComMedicoesEPagamentos_CabeNumaPagina()
+    {
+        var o = Ordem(3);
+        o = o.Medir(Guid.NewGuid(), new DateOnly(2026, 10, 30), [12.5m, 10, 0], Agora).Medir(Guid.NewGuid(), new DateOnly(2026, 11, 6), [0, 15, 20], Agora);
+        o = o.RegistrarPagamento(o.Medicoes[0].Id, new PagamentoDaMedicao(new DateOnly(2026, 11, 1), "NF 77", []), Agora);
+
+        var pdf = Pdf(o);
+
+        Paginas(pdf).Should().Be(1);
+    }
 }

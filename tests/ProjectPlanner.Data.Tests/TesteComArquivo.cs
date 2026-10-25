@@ -32,6 +32,15 @@ public abstract class TesteComArquivo : IDisposable
         return (long)comando.ExecuteScalar()!;
     }
 
+    /// <summary>A versão gravada numa tabela de dados em JSON (a da primeira linha).</summary>
+    protected long Versao(string tabela)
+    {
+        using var conexao = Conectar();
+        using var comando = conexao.CreateCommand();
+        comando.CommandText = $"SELECT Versao FROM {tabela}";
+        return (long)comando.ExecuteScalar()!;
+    }
+
     protected IReadOnlyList<string> Tabelas()
     {
         using var conexao = Conectar();

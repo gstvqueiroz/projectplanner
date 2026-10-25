@@ -289,7 +289,7 @@ public sealed record OrdemDeServico
     /// <summary>A OS como estava no arquivo (sem conferir o fluxo).</summary>
     /// <exception cref="DomainValidationException">Id vazio, número menor que 1 ou situação desconhecida.</exception>
     public static OrdemDeServico Restaurar(Guid id, int numero, DadosDaOrdem dados, SituacaoDaOrdem situacao, DateOnly? emissao, DateOnly? conclusao,
-        IEnumerable<EventoDaOrdem> historico, bool noTelegram = false)
+        IEnumerable<EventoDaOrdem> historico, bool noTelegram = false, IEnumerable<MedicaoDaOrdem>? medicoes = null)
     {
         ArgumentNullException.ThrowIfNull(dados);
         if (id == Guid.Empty)
@@ -298,7 +298,10 @@ public sealed record OrdemDeServico
             throw new DomainValidationException(nameof(Numero), "O número da OS começa em 1.");
         if (!Enum.IsDefined(situacao))
             throw new DomainValidationException(nameof(Situacao), "Situação de OS desconhecida.");
-        return new OrdemDeServico(id, numero, dados, situacao, emissao, conclusao, [.. historico]) { NoTelegram = noTelegram };
+        var lista = (medicoes ?? []).ToList();
+        if (lista.Any(m => m.Quantidades.Count != dados.Itens.Count))
+            throw new DomainValidationException(nameof(Medicoes), "Uma medição não tem a quantidade de cada item.");
+        return new OrdemDeServico(id, numero, dados, situacao, emissao, conclusao, [.. historico]) { NoTelegram = noTelegram, Medicoes = lista };
     }
 
     public Guid Id { get; }
@@ -323,6 +326,112 @@ public sealed record OrdemDeServico
     public bool NoTelegram { get; private init; }
 
     public OrdemDeServico MandadaAoTelegram() => this with { NoTelegram = true };
+
+    // ---- Bloco 60: medições e pagamentos ----
+
+    /// <summary>As medições, da primeira à última.</summary>
+    public IReadOnlyList<MedicaoDaOrdem> Medicoes { get; private init; } = [];
+
+    public decimal TotalMedido => Medicoes.Sum(m => m.Valor);
+
+    public decimal TotalPago => Medicoes.Where(m => m.Paga).Sum(m => m.Valor);
+
+    /// <summary>O que já foi medido e ainda não foi pago.</summary>
+    public decimal APagar => TotalMedido - TotalPago;
+
+    /// <summary>O que ainda não foi medido (o contratado menos o medido).</summary>
+    public decimal PorMedir => Math.Max(0, Total - TotalMedido);
+
+    /// <summary>A quantidade do item (pela posição) já medida, em todas as medições.</summary>
+    public decimal MedidoDoItem(int indice) => Medicoes.Sum(m => m.Quantidades[indice]);
+
+    /// <summary>Mede-se a partir do aceite até a conferência.</summary>
+    public bool PodeMedir => Situacao is SituacaoDaOrdem.Aceita or SituacaoDaOrdem.EmExecucao or SituacaoDaOrdem.Concluida or SituacaoDaOrdem.Conferida;
+
+    /// <summary>Uma medição com a quantidade de cada item nesta medição (na ordem dos itens).</summary>
+    /// <exception cref="DomainValidationException">Fora da execução, quantidades erradas, nada medido ou mais que o contratado.</exception>
+    public OrdemDeServico Medir(Guid id, DateOnly data, IReadOnlyList<decimal> quantidades, DateTime quando, string? autor = null)
+    {
+        ArgumentNullException.ThrowIfNull(quantidades);
+        if (!PodeMedir)
+            throw new DomainValidationException(nameof(Medicoes), $"Não dá para medir a {Codigo}: ela está \"{TextosDaOrdem.Texto(Situacao).ToLowerInvariant()}\".");
+        if (quantidades.Count != Dados.Itens.Count)
+            throw new DomainValidationException(nameof(Medicoes), "A medição precisa da quantidade de cada item.");
+        if (quantidades.All(q => q == 0))
+            throw new DomainValidationException(nameof(Medicoes), "Informe a quantidade medida de pelo menos um item.");
+        for (var i = 0; i < quantidades.Count; i++)
+        {
+            var item = Dados.Itens[i];
+            if (quantidades[i] < 0)
+                throw new DomainValidationException(nameof(Medicoes), $"A quantidade medida de \"{item.Descricao}\" não pode ser negativa.");
+            if (MedidoDoItem(i) + quantidades[i] > item.Quantidade)
+                throw new DomainValidationException(nameof(Medicoes),
+                    $"\"{item.Descricao}\" passaria do contratado: {Planejamento.Moeda.FormatarQuantidade(MedidoDoItem(i) + quantidades[i])} de " +
+                    $"{Planejamento.Moeda.FormatarQuantidade(item.Quantidade)} {item.Unidade}.");
+        }
+        var valor = Dados.Itens.Select((item, i) => Math.Round(quantidades[i] * item.PrecoUnitario, 2, MidpointRounding.AwayFromZero)).Sum();
+        var medicao = new MedicaoDaOrdem(id, Medicoes.Count == 0 ? 1 : Medicoes.Max(m => m.Numero) + 1, data, quantidades, valor);
+        return this with
+        {
+            Medicoes = [.. Medicoes, medicao],
+            Historico = [.. Historico, new EventoDaOrdem(quando, Situacao, $"Medição {medicao.Codigo}: R$ {Planejamento.Moeda.Formatar(valor)}", Autor(autor))],
+        };
+    }
+
+    /// <summary>Uma medição com tudo o que falta medir; a mesma OS se não falta nada.</summary>
+    public OrdemDeServico MedirOQueFalta(Guid id, DateOnly data, DateTime quando, string? autor = null)
+    {
+        var falta = Dados.Itens.Select((item, i) => item.Quantidade - MedidoDoItem(i)).ToList();
+        return falta.All(q => q <= 0) ? this : Medir(id, data, falta, quando, autor);
+    }
+
+    /// <summary>Tira uma medição que ainda não foi paga.</summary>
+    /// <exception cref="DomainValidationException">A medição não existe ou já foi paga.</exception>
+    public OrdemDeServico RemoverMedicao(Guid id, DateTime quando, string? autor = null)
+    {
+        var medicao = Medicoes.FirstOrDefault(m => m.Id == id) ?? throw new DomainValidationException(nameof(Medicoes), "A medição não é desta OS.");
+        if (medicao.Paga)
+            throw new DomainValidationException(nameof(Medicoes), $"A {medicao.Codigo} já foi paga: desfaça o pagamento antes.");
+        return this with
+        {
+            Medicoes = [.. Medicoes.Where(m => m.Id != id)],
+            Historico = [.. Historico, new EventoDaOrdem(quando, Situacao, $"Medição {medicao.Codigo} retirada", Autor(autor))],
+        };
+    }
+
+    /// <summary>Registra o pagamento de uma medição; conferida, toda medida e toda paga, a OS fica paga.</summary>
+    /// <exception cref="DomainValidationException">A medição não existe ou já foi paga.</exception>
+    public OrdemDeServico RegistrarPagamento(Guid medicaoId, PagamentoDaMedicao pagamento, DateTime quando, string? autor = null)
+    {
+        ArgumentNullException.ThrowIfNull(pagamento);
+        var medicao = Medicoes.FirstOrDefault(m => m.Id == medicaoId) ?? throw new DomainValidationException(nameof(Medicoes), "A medição não é desta OS.");
+        if (medicao.Paga)
+            throw new DomainValidationException(nameof(Medicoes), $"A {medicao.Codigo} já foi paga.");
+        var nova = this with
+        {
+            Medicoes = [.. Medicoes.Select(m => m.Id == medicaoId ? m with { Pagamento = pagamento } : m)],
+            Historico = [.. Historico, new EventoDaOrdem(quando, Situacao,
+                $"Pagamento da {medicao.Codigo}: R$ {Planejamento.Moeda.Formatar(medicao.Valor)}" + (pagamento.Documento is { } doc ? $" ({doc})" : ""), Autor(autor))],
+        };
+        return nova.Situacao == SituacaoDaOrdem.Conferida && nova.PorMedir == 0 && nova.APagar == 0 ? nova.MarcarComoPaga(quando, autor) : nova;
+    }
+
+    /// <summary>Desfaz o pagamento de uma medição (a OS paga volta a conferida).</summary>
+    /// <exception cref="DomainValidationException">A medição não existe ou não foi paga.</exception>
+    public OrdemDeServico DesfazerPagamento(Guid medicaoId, DateTime quando, string? autor = null)
+    {
+        var medicao = Medicoes.FirstOrDefault(m => m.Id == medicaoId) ?? throw new DomainValidationException(nameof(Medicoes), "A medição não é desta OS.");
+        if (!medicao.Paga)
+            throw new DomainValidationException(nameof(Medicoes), $"A {medicao.Codigo} não foi paga.");
+        var nova = this with
+        {
+            Medicoes = [.. Medicoes.Select(m => m.Id == medicaoId ? m with { Pagamento = null } : m)],
+            Historico = [.. Historico, new EventoDaOrdem(quando, Situacao, $"Pagamento da {medicao.Codigo} desfeito", Autor(autor))],
+        };
+        return nova.Situacao == SituacaoDaOrdem.Paga ? nova.VoltarAConferida(quando, autor) : nova;
+    }
+
+    private static string? Autor(string? autor) => string.IsNullOrWhiteSpace(autor) ? null : autor.Trim();
 
     /// <summary>
     /// Bloco 59: o passo que alguém deu pelo Telegram (aceitar, recusar, iniciar, concluir), com o nome da pessoa no histórico.

@@ -38,7 +38,24 @@
                         ToolTip.Tip="Uma OS em rascunho com a tarefa (ou a etapa) selecionada na grid: itens, quantidades, preços e datas vêm do cronograma" />
                 <ComboBox x:Name="Filtro" ItemsSource="{Binding Filtros}" SelectedItem="{Binding FiltroEscolhido}" HorizontalAlignment="Stretch" />
             </StackPanel>
-            <TextBlock DockPanel.Dock="Bottom" x:Name="Resumo" Text="{Binding Resumo}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0" />
+            <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
+                <TextBlock x:Name="Resumo" Text="{Binding Resumo}" TextWrapping="Wrap" FontSize="12" />
+                <!-- Bloco 60 -->
+                <Expander Header="Por executante" HorizontalAlignment="Stretch" IsVisible="{Binding !SemOrdens}">
+                    <ItemsControl x:Name="PorExecutante" ItemsSource="{Binding PorExecutante}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LinhaDoResumoNaTela">
+                                <StackPanel Margin="0,2">
+                                    <TextBlock Text="{Binding Rotulo}" FontSize="12" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Valor}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Expander>
+                <Button x:Name="ExportarCsv" Content="Exportar a lista (CSV)…" Command="{Binding ExportarCsvCommand}" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" IsVisible="{Binding !SemOrdens}" />
+            </StackPanel>
             <Panel Margin="0,8,0,0">
                 <TextBlock Text="{x:Static vm:OrdensDeServicoViewModel.TextoSemOrdens}" TextWrapping="Wrap" Opacity="0.7" IsVisible="{Binding SemOrdens}" />
                 <ListBox x:Name="Lista" ItemsSource="{Binding Lista}" SelectedItem="{Binding Selecionada}" IsVisible="{Binding !SemOrdens}">
@@ -172,6 +189,62 @@
                                       ToolTip.Tip="O preço que vem da composição do orçamento (sem BDI: é o que se paga ao executante)" />
                         </WrapPanel>
 
+                        <!-- Bloco 60: medições e pagamentos -->
+                        <StackPanel Spacing="4" IsVisible="{Binding MostraMedicoes}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" x:Name="ResumoDasMedicoes" Text="{Binding ResumoDasMedicoes}" FontSize="12" VerticalAlignment="Bottom" />
+                                <TextBlock Classes="secao" Text="Medições e pagamentos" />
+                            </DockPanel>
+                            <ItemsControl x:Name="Medicoes" ItemsSource="{Binding MedicoesNaTela}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MedicaoNaTela">
+                                        <DockPanel Margin="0,2">
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                                                <Button Content="Pagar…" IsVisible="{Binding !Paga}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).PagarMedicaoCommand}" CommandParameter="{Binding}"
+                                                        ToolTip.Tip="Registra o pagamento e lança o valor nos custos realizados (por tarefa)" />
+                                                <Button Content="Tirar" IsVisible="{Binding !Paga}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).RemoverMedicaoCommand}" CommandParameter="{Binding}" />
+                                                <Button Content="Desfazer pagamento" IsVisible="{Binding Paga}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:OrdensDeServicoViewModel)DataContext).DesfazerPagamentoCommand}" CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Texto}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Situacao}" VerticalAlignment="Center" Margin="12,0,0,0" FontSize="12" Opacity="0.75" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10" Margin="0,4,0,0" IsVisible="{Binding PodeMedir}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Nova medição: quanto foi executado de cada item desde a última" FontSize="12" FontWeight="SemiBold" />
+                                    <Grid ColumnDefinitions="*,110,110,120">
+                                        <TextBlock Classes="cabecalhoDosItens" Text="Item" />
+                                        <TextBlock Grid.Column="1" Classes="cabecalhoDosItens" Text="Contratado" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Classes="cabecalhoDosItens" Text="Já medido" TextAlignment="Right" />
+                                        <TextBlock Grid.Column="3" Classes="cabecalhoDosItens" Text="Nesta medição" TextAlignment="Right" />
+                                    </Grid>
+                                    <ItemsControl x:Name="ItensParaMedir" ItemsSource="{Binding ItensParaMedir}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ItemParaMedir">
+                                                <Grid ColumnDefinitions="*,110,110,120" Margin="0,2">
+                                                    <TextBlock Text="{Binding Descricao}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Contratado}" VerticalAlignment="Center" TextAlignment="Right" FontSize="12" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding JaMedido}" VerticalAlignment="Center" TextAlignment="Right" FontSize="12" />
+                                                    <TextBox Grid.Column="3" Text="{Binding NestaMedicao}" TextAlignment="Right" Margin="8,0,0,0" PlaceholderText="0" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <WrapPanel ItemSpacing="8" LineSpacing="6">
+                                        <CalendarDatePicker SelectedDate="{Binding DataDaMedicao}" Width="150" />
+                                        <CheckBox Content="Atualizar o % concluído das tarefas" IsChecked="{Binding AtualizarTarefas}" />
+                                        <Button Content="Tudo o que falta" Command="{Binding MedirTudoOQueFaltaCommand}" />
+                                        <Button x:Name="RegistrarMedicao" Classes="accent" Content="Registrar medição" Command="{Binding RegistrarMedicaoCommand}" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
                         <!-- As tarefas -->
                         <Expander Header="Tarefas da OS" Margin="0,8,0,0" HorizontalAlignment="Stretch">
                             <ScrollViewer MaxHeight="220">
@@ -186,7 +259,7 @@
                         </Expander>
 
                         <!-- A verificação -->
-                        <TextBlock Classes="secao" Text="Lista de verificação" />
+                        <TextBlock Classes="secao" Text="Lista de verificação" IsVisible="{Binding MostraVerificacao}" />
                         <ItemsControl x:Name="Verificacao" ItemsSource="{Binding Verificacao}" IsEnabled="{Binding PodeMarcarVerificacao}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:VerificacaoNaFicha">

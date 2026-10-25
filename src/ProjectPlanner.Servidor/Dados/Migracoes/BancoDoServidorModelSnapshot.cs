@@ -136,6 +136,31 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.ToTable("CodigosDoTelegram");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.GrupoDoTelegram", b =>
+                {
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ObraId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Titulo")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ChatId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("GruposDoTelegram");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.ItemDaCaixa", b =>
                 {
                     b.Property<Guid>("Id")
@@ -178,6 +203,32 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.HasIndex("UsuarioId", "ObraId");
 
                     b.ToTable("CaixaDeEntrada");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.MembroDoGrupo", b =>
+                {
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("PessoaId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("DesdeEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Papel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("ChatId", "PessoaId");
+
+                    b.ToTable("MembrosDosGrupos");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.ObraNoServidor", b =>

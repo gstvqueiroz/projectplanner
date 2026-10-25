@@ -14,7 +14,10 @@ public sealed partial class TelegramViewModel(ITelegramDaConta telegram, IDialog
     public const string ComoUsar =
         "No Telegram, pergunte sobre a obra (\"quanto já medi?\"), mande atualizações (\"a alvenaria está em 60%\") e fotos. As " +
         "atualizações e as fotos ficam esperando no servidor: no programa, Conta > Buscar do Telegram mostra o cartão para " +
-        "conferir e aplicar. O bot só enxerga as obras marcadas em Conta > Usar esta obra no Telegram.";
+        "conferir e aplicar. O bot só enxerga as obras marcadas em Conta > Usar esta obra no Telegram.\n\n" +
+        "Com a equipe: crie um grupo no Telegram para a obra, ponha o bot nele e mande /obra lá (você, que ligou o chat " +
+        "privado). A equipe não precisa de conta: as fotos e as mensagens com #atualizacao vão para a caixa da obra, o bot " +
+        "só responde quando é marcado, e os créditos são os seus. /papel muda o que cada um pode fazer.";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TextoDaSituacao), nameof(PodeDesligar))]

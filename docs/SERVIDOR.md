@@ -317,6 +317,37 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
 - **Ficou para depois:** um limite de resposta por rotina. O ganho é pequeno (a saída do Haiku é barata) e uma resposta
   cortada estraga o JSON. O roteamento automático entre os níveis é o Bloco 51.
 
+## Bloco 53 (0.53.0, feito): grupos do Telegram por obra
+
+Decisões do usuário: a conversa privada continua (o resumo de todas as obras), e cada obra pode ter um grupo com a equipe,
+com papéis; os créditos são do dono; fotos e #atualizacao vão para a caixa, a IA só responde quando é marcada, e nada muda a
+obra sem o dono aplicar no programa.
+
+- **Ligar:** o dono (com o chat privado do bot já ligado à conta) põe o bot no grupo e manda `/obra` (lista as obras dele)
+  e `/obra 1`. O servidor reconhece o dono pelo id dele no Telegram, que é o do chat privado ligado. Um grupo é de uma obra
+  e de uma conta (tabela `GruposDoTelegram`).
+- **Papéis** (tabela `MembrosDosGrupos`; quem fala com o bot entra como "campo"):
+  - `acompanhar`: só pergunta (as atualizações que a IA propuser para essa pessoa não vão para a caixa);
+  - `campo`: também manda fotos e `#atualizacao`;
+  - `engenharia`: também muda os papéis. O dono é sempre engenharia.
+  - `/papel campo` (respondendo à mensagem da pessoa) muda o papel; `/equipe` lista; `/sair` (só o dono) desliga o grupo.
+- **O que gasta e o que não:** a conversa do grupo é ignorada (não vai à IA nem fica guardada). O bot só age:
+  - numa **foto**: vai para a caixa, **sem IA**;
+  - numa mensagem com **`#atualizacao`**: passa pelo Padrão para virar o cartão de atualizações;
+  - quando é **marcado** (`@NomeDoBot`) ou quando **respondem a ele**.
+  As respostas e a caixa levam o nome de quem falou ("João: alvenaria em 70%"). Os créditos são do dono (rotina "telegram"),
+  e o limite de mensagens por minuto conta só o que é para o bot.
+- **Supergrupo:** quando o Telegram transforma o grupo em supergrupo (o id do chat muda), a ligação e os papéis vão junto.
+
+### Configurar o bot para grupos (uma vez, no @BotFather)
+
+Por padrão, um bot em grupo só recebe comandos e respostas a ele: **não vê as fotos, as menções nem o #atualizacao**.
+1. No Telegram, abra o **@BotFather**, mande `/setprivacy`, escolha o bot e toque em **Disable**.
+2. Se o bot já estava num grupo, **tire e ponha de novo** (a mudança vale para quem entra depois).
+3. Confira também `/setjoingroups` → **Enable** (o padrão), para poder pôr o bot em grupos.
+
+O servidor recebe então as mensagens do grupo, mas descarta na hora as que não são para o bot (não guarda nem manda à IA).
+
 ## Bloco 51 (0.52.0, feito): o nível Automático
 
 Decisões do usuário: o Automático vira o padrão para todos (quem escolheu de propósito um nível forte continua nele) e

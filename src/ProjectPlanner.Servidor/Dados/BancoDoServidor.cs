@@ -162,6 +162,43 @@ public sealed class VinculoDoTelegram
     public DateTime CriadoEm { get; set; }
 }
 
+/// <summary>
+/// Bloco 53: um grupo do Telegram ligado a uma obra. O dono (quem ligou, pelo chat privado já ligado à conta) paga os créditos;
+/// a equipe não precisa de conta.
+/// </summary>
+public sealed class GrupoDoTelegram
+{
+    public long ChatId { get; set; }
+    public Guid UsuarioId { get; set; }
+    public Guid ObraId { get; set; }
+    public string? Titulo { get; set; }
+    public DateTime CriadoEm { get; set; }
+}
+
+/// <summary>Bloco 53: quem fala num grupo ligado, e o papel (o que pode fazer lá).</summary>
+public sealed class MembroDoGrupo
+{
+    public const string Acompanhar = "acompanhar";
+    public const string Campo = "campo";
+    public const string Engenharia = "engenharia";
+
+    public static IReadOnlyList<string> Papeis { get; } = [Acompanhar, Campo, Engenharia];
+
+    public long ChatId { get; set; }
+
+    /// <summary>O id do usuário no Telegram.</summary>
+    public long PessoaId { get; set; }
+    public string Nome { get; set; } = "";
+    public string Papel { get; set; } = Campo;
+    public DateTime DesdeEm { get; set; }
+
+    /// <summary>Pode mandar fotos e #atualizacao para a caixa da obra.</summary>
+    public bool Envia => Papel is Campo or Engenharia;
+
+    /// <summary>Pode mudar os papéis da equipe (o dono também pode, sempre).</summary>
+    public bool Gerencia => Papel == Engenharia;
+}
+
 /// <summary>Bloco 49: o código que liga o Telegram à conta (guardado só o hash, vale 15 minutos).</summary>
 public sealed class CodigoDoTelegram
 {
@@ -212,6 +249,8 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
     public DbSet<VinculoDoTelegram> VinculosDoTelegram => Set<VinculoDoTelegram>();
     public DbSet<CodigoDoTelegram> CodigosDoTelegram => Set<CodigoDoTelegram>();
     public DbSet<ItemDaCaixa> CaixaDeEntrada => Set<ItemDaCaixa>();
+    public DbSet<GrupoDoTelegram> GruposDoTelegram => Set<GrupoDoTelegram>(); // Bloco 53
+    public DbSet<MembroDoGrupo> MembrosDosGrupos => Set<MembroDoGrupo>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -274,6 +313,21 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
             i.HasIndex(x => new { x.UsuarioId, x.ObraId });
             i.Property(x => x.Tipo).HasMaxLength(20);
             i.Property(x => x.NomeDaFoto).HasMaxLength(200);
+        });
+        modelo.Entity<GrupoDoTelegram>(g =>
+        {
+            g.HasKey(x => x.ChatId);
+            g.Property(x => x.ChatId).ValueGeneratedNever();
+            g.HasIndex(x => x.UsuarioId);
+            g.Property(x => x.Titulo).HasMaxLength(200);
+        });
+        modelo.Entity<MembroDoGrupo>(m =>
+        {
+            m.HasKey(x => new { x.ChatId, x.PessoaId });
+            m.Property(x => x.Nome).HasMaxLength(120);
+            m.Property(x => x.Papel).HasMaxLength(20);
+            m.Ignore(x => x.Envia);
+            m.Ignore(x => x.Gerencia);
         });
     }
 }

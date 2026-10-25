@@ -58,7 +58,7 @@ public sealed class ConversasDoTelegram
 /// guarda fotos na caixa de entrada e, no texto, chama o mesmo assistente do programa com o retrato da obra (no canal
 /// Telegram): a resposta volta ao chat, e as atualizações propostas vão para a caixa, para o usuário conferir no programa.
 /// </summary>
-public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDoServidor> opcoes, CatalogoDeModelos catalogo, IClienteDoTelegram telegram,
+public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDoServidor> opcoes, CatalogoDeModelos catalogo, IClienteDoTelegram telegram,
     IHttpClientFactory clientes, ConversasDoTelegram conversas, IEnviadorDeEmail email, TimeProvider relogio, ILogger<AtendenteDoTelegram> log)
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -73,7 +73,8 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         "• \"a alvenaria está em 60%\", \"gastei R$ 1.200 de cimento na fundação\"\n" +
         "• mande fotos (com uma legenda, se quiser)\n\n" +
         "As atualizações e as fotos ficam na caixa de entrada da obra: confira e aplique no programa (Conta > Buscar do Telegram).\n" +
-        "/obra mostra e troca a obra · /sair desliga este chat da conta.";
+        "/obra mostra e troca a obra · /sair desliga este chat da conta.\n\n" +
+        "Com a equipe: crie um grupo da obra, ponha o bot nele e mande /obra lá.";
 
     public const string NaoRespondeu = "Não consegui responder agora. Tente de novo em instantes.";
 
@@ -90,6 +91,12 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         var texto = (Texto(mensagem, "text") ?? Texto(mensagem, "caption") ?? "").Trim();
         var nome = mensagem.TryGetProperty("from", out var de) ? Texto(de, "first_name") : null;
         var agora = relogio.GetUtcNow().UtcDateTime;
+        // Bloco 53: num grupo, a conversa da equipe é ignorada; só o que é para o bot conta (e só isso entra no limite).
+        if (Texto(chat, "type") is "group" or "supergroup")
+        {
+            await AtenderNoGrupoAsync(mensagem, chat, chatId, texto, agora, c);
+            return;
+        }
         if (!conversas.Permitir(chatId, agora, Config.MensagensPorMinuto))
         {
             await telegram.EnviarAsync(chatId, "Muitas mensagens seguidas. Espere um minuto e mande de novo.", c);
@@ -205,7 +212,9 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
             "\n\nPara trocar, mande /obra e o número (por exemplo, /obra 2).", c);
     }
 
-    private async Task FotoAsync(long chatId, Usuario usuario, ObraNoServidor obra, JsonElement fotos, string legenda, DateTime agora, CancellationToken c)
+    /// <param name="autor">Bloco 53: quem mandou, num grupo (vai junto na caixa, para o programa mostrar).</param>
+    private async Task FotoAsync(long chatId, Usuario usuario, ObraNoServidor obra, JsonElement fotos, string legenda, DateTime agora, CancellationToken c,
+        string? autor = null)
     {
         var maior = fotos.EnumerateArray().Last(); // o Telegram manda os tamanhos do menor para o maior
         var tamanho = maior.TryGetProperty("file_size", out var t) && t.TryGetInt64(out var n) ? n : 0;
@@ -228,15 +237,18 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         }
         banco.CaixaDeEntrada.Add(new ItemDaCaixa
         {
-            Id = Guid.NewGuid(), UsuarioId = usuario.Id, ObraId = obra.Id, Tipo = ItemDaCaixa.DeFoto, CriadoEm = agora, Texto = legenda.Length > 1000 ? legenda[..1000] : legenda,
+            Id = Guid.NewGuid(), UsuarioId = usuario.Id, ObraId = obra.Id, Tipo = ItemDaCaixa.DeFoto, CriadoEm = agora, Texto = Cortar(ComAutor(autor, legenda)),
             Foto = bytes, NomeDaFoto = $"telegram-{agora:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..6]}.jpg",
         });
         await banco.SaveChangesAsync(c);
-        await telegram.EnviarAsync(chatId, $"📷 Foto guardada na caixa da obra {obra.Nome}" + (legenda.Length > 0 ? $" (\"{legenda}\")" : "") +
+        await telegram.EnviarAsync(chatId, $"📷 Foto{(autor is null ? "" : $" de {autor}")} guardada na caixa da obra {obra.Nome}" + (legenda.Length > 0 ? $" (\"{legenda}\")" : "") +
             ". Ela aparece para importar quando você abrir a obra no programa (Conta > Buscar do Telegram).", c);
     }
 
-    private async Task PerguntaAsync(long chatId, Usuario usuario, ObraNoServidor obra, string texto, DateTime agora, CancellationToken c)
+    /// <param name="autor">Bloco 53: quem perguntou, num grupo (a IA e a caixa sabem quem foi).</param>
+    /// <param name="aceitaAtualizacoes">Bloco 53: falso para quem só acompanha: as atualizações propostas não vão para a caixa.</param>
+    private async Task PerguntaAsync(long chatId, Usuario usuario, ObraNoServidor obra, string texto, DateTime agora, CancellationToken c,
+        string? autor = null, bool aceitaAtualizacoes = true)
     {
         var planos = opcoes.Value.Planos;
         var saldo = await Rotas.Cotas.SaldoAsync(banco, usuario, planos, relogio);
@@ -272,7 +284,7 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
                 var assistente = modelo.Provedor == Provedores.Anthropic
                     ? new AssistenteGemini(clientes.CreateClient(PonteParaOClaude.Cliente), "pela-ponte", modelo.Id) // a chave de verdade fica na ponte
                     : new AssistenteGemini(clientes.CreateClient(MedidorDeTokens.Cliente), opcoes.Value.Gemini.Chave!, modelo.Id);
-                resposta = await assistente.EnviarAsync(new PedidoIA(texto, [], conversas.Historico(chatId), retrato) { Canal = CanaisDaConversa.Telegram }, c);
+                resposta = await assistente.EnviarAsync(new PedidoIA(ComAutor(autor, texto), [], conversas.Historico(chatId), retrato) { Canal = CanaisDaConversa.Telegram }, c);
             }
             catch (ErroDoAssistenteException ex)
             {
@@ -288,12 +300,14 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         Rotas.Cotas.Debitar(usuario, saldo, custo);
 
         var mensagem = resposta.Texto.Trim();
-        if (resposta.Atualizacoes.Count > 0)
+        if (resposta.Atualizacoes.Count > 0 && !aceitaAtualizacoes)
+            mensagem += "\n\n(Quem só acompanha a obra não manda atualizações: peça ao dono para mudar o seu papel com /papel.)";
+        else if (resposta.Atualizacoes.Count > 0)
         {
             banco.CaixaDeEntrada.Add(new ItemDaCaixa
             {
                 Id = Guid.NewGuid(), UsuarioId = usuario.Id, ObraId = obra.Id, Tipo = ItemDaCaixa.DeAtualizacoes, CriadoEm = agora,
-                Texto = texto.Length > 1000 ? texto[..1000] : texto,
+                Texto = Cortar(ComAutor(autor, texto)),
                 Conteudo = JsonSerializer.Serialize(resposta.Atualizacoes, Json),
                 Tarefas = JsonSerializer.Serialize(retrato?.Tarefas.Select(t => new TarefaDaCaixa(t.Numero, t.Id)) ?? [], Json),
             });
@@ -302,10 +316,14 @@ public sealed class AtendenteDoTelegram(BancoDoServidor banco, IOptions<OpcoesDo
         }
         await banco.SaveChangesAsync(c);
         await Painel.ConferirAlertaAsync(banco, opcoes.Value, email, agora, log, c);
-        conversas.Guardar(chatId, new MensagemChat(AutorMensagem.Usuario, texto, relogio.GetLocalNow(), []),
+        conversas.Guardar(chatId, new MensagemChat(AutorMensagem.Usuario, ComAutor(autor, texto), relogio.GetLocalNow(), []),
             new MensagemChat(AutorMensagem.Assistente, resposta.Texto, relogio.GetLocalNow(), []));
         await telegram.EnviarAsync(chatId, mensagem.Length == 0 ? "Anotado." : mensagem, c);
     }
+
+    private static string ComAutor(string? autor, string texto) => autor is null ? texto : $"{autor}: {texto}";
+
+    private static string Cortar(string texto) => texto.Length > 1000 ? texto[..1000] : texto;
 
     private static string? Texto(JsonElement objeto, string nome) =>
         objeto.TryGetProperty(nome, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;

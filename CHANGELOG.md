@@ -3,6 +3,21 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.53.0
+
+**Grupos do Telegram por obra** (Bloco 53): a equipe trabalha junto no mesmo grupo.
+
+- Crie um grupo no Telegram para a obra, ponha o bot nele e mande **/obra** (você, que já ligou o chat privado). A equipe
+  não precisa de conta, e os créditos são os seus.
+- O técnico manda **fotos** (vão para a caixa da obra sem gastar IA) e mensagens com **#atualizacao** ("#atualizacao
+  alvenaria em 70%"). O engenheiro, o chefe ou quem precisar **marca o bot** para perguntar ("@bot o que está atrasado?").
+- **A conversa normal do grupo é ignorada** e não gasta nada.
+- **Papéis:** acompanhar (só pergunta), campo (manda fotos e atualizações) e engenharia (também muda os papéis).
+  Responda à mensagem de alguém com **/papel campo** para mudar; **/equipe** mostra quem é quem.
+- Tudo vai para a caixa da obra com o nome de quem mandou, e você confere e aplica no programa (Conta > Buscar do
+  Telegram), como antes.
+- Configuração única no @BotFather: `/setprivacy` → Disable (ver docs/SERVIDOR.md), para o bot ver as fotos do grupo.
+
 ## 0.52.0
 
 O nível **Automático**: a IA escolhe o modelo certo para cada pedido (Bloco 51).

@@ -60,10 +60,13 @@ public sealed class ColunaNomeDaTarefa : DataGridTextColumn
         DockPanel.SetDock(fotos, Dock.Right);
         var alerta = AlertaDeFoto();
         DockPanel.SetDock(alerta, Dock.Right);
+        var ordens = MarcaDeOrdens();
+        DockPanel.SetDock(ordens, Dock.Right);
         celula.Children.Add(expandir);
         celula.Children.Add(losango);
         celula.Children.Add(fotos);
         celula.Children.Add(alerta);
+        celula.Children.Add(ordens);
         celula.Children.Add(nome);
         celula.Bind(Layoutable.MarginProperty,
             new Binding(nameof(TarefaViewModel.Nivel)) { Converter = Conversores.RecuoDoNivel });
@@ -104,6 +107,36 @@ public sealed class ColunaNomeDaTarefa : DataGridTextColumn
         botao.Bind(ToolTip.TipProperty, new Binding(nameof(TarefaViewModel.DicaDasFotos)));
         botao.Bind(Visual.IsVisibleProperty, new Binding(nameof(TarefaViewModel.TemFotos)));
         botao.Bind(Button.CommandProperty, new Binding(nameof(TarefaViewModel.GerenciarFotosCommand)));
+        return botao;
+    }
+
+    // Bloco 61: "OS" no fim do nome das tarefas que têm ordem de serviço (laranja se alguma venceu). Clicar abre as OS.
+    private static readonly IBrush CorDasOrdens = new SolidColorBrush(Color.Parse("#1E88E5"));
+    private static readonly IBrush CorDaOrdemVencida = new SolidColorBrush(Color.Parse("#E65100"));
+    private static readonly Avalonia.Data.Converters.FuncValueConverter<bool, IBrush> CorDaMarca = new(vencida => vencida ? CorDaOrdemVencida : CorDasOrdens);
+
+    private static Button MarcaDeOrdens()
+    {
+        var texto = new TextBlock { Text = "OS", FontSize = 10, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        texto.Bind(TextBlock.ForegroundProperty, new Binding(nameof(TarefaViewModel.OrdemVencida)) { Converter = CorDaMarca });
+        var moldura = new Border { Child = texto, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(3), Padding = new Thickness(3, 0) };
+        moldura.Bind(Border.BorderBrushProperty, new Binding(nameof(TarefaViewModel.OrdemVencida)) { Converter = CorDaMarca });
+        var botao = new Button
+        {
+            Content = moldura,
+            Padding = new Thickness(2, 0),
+            Margin = new Thickness(4, 0, 0, 0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Focusable = false,
+            Cursor = new Cursor(StandardCursorType.Hand),
+        };
+        botao.Classes.Add("marcaDeOrdens");
+        Avalonia.Automation.AutomationProperties.SetName(botao, "Ordens de serviço da tarefa");
+        botao.Bind(ToolTip.TipProperty, new Binding(nameof(TarefaViewModel.DicaDasOrdens)));
+        botao.Bind(Visual.IsVisibleProperty, new Binding(nameof(TarefaViewModel.TemOrdens)));
+        botao.Bind(Button.CommandProperty, new Binding(nameof(TarefaViewModel.AbrirOrdensCommand)));
         return botao;
     }
 

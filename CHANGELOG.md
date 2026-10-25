@@ -3,6 +3,17 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.61.0
+
+**As ordens de serviço à vista.**
+
+- **Marca "OS" na grade:** as tarefas com ordem de serviço ganham a marca "OS" no fim do nome (azul; laranja se alguma
+  passou do prazo). A dica mostra cada OS da tarefa, com a situação, o prazo e o executante; clicar abre as ordens de
+  serviço já na OS da tarefa.
+- **Aviso ao abrir a obra:** "Ordens de serviço: 1 vencida, 2 esperando a conferência".
+- **O assistente enxerga as OS** (no programa e no Telegram): pergunte "quais OS estão vencidas?", "quanto falta pagar à
+  Construtora Silva?" ou "o que está esperando conferência?". Ele só consulta; as OS continuam sendo mudadas na tela delas.
+
 ## 0.60.0
 
 **Medição e pagamento das ordens de serviço.**

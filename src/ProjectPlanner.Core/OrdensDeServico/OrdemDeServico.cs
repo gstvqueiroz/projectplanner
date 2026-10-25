@@ -107,6 +107,36 @@ public static class TextosDaOrdem
         return string.Join("\n", linhas);
     }
 
+    /// <summary>Bloco 61: "OS-003 · Em execução (vencida em 02/10)" ou "OS-005 · Rascunho", para a dica da tarefa.</summary>
+    public static string Linha(OrdemDeServico ordem, DateOnly hoje)
+    {
+        ArgumentNullException.ThrowIfNull(ordem);
+        var brasil = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+        var prazo = ordem.Dados.Prazo is { } p && EmAndamento(ordem.Situacao) && ordem.Situacao != SituacaoDaOrdem.Concluida
+            ? ordem.Vencida(hoje) ? $" (vencida em {p.ToString("dd/MM", brasil)})" : $" (prazo {p.ToString("dd/MM", brasil)})"
+            : "";
+        return $"{ordem.Codigo} · {Texto(ordem.Situacao)}{prazo}" + (ordem.Dados.Executante is { } e ? $" · {e}" : "");
+    }
+
+    /// <summary>
+    /// Bloco 61: o aviso ao abrir a obra: as OS vencidas e as que esperam a conferência; nulo se não há nada esperando.
+    /// </summary>
+    public static string? Aviso(IEnumerable<OrdemDeServico> ordens, DateOnly hoje)
+    {
+        ArgumentNullException.ThrowIfNull(ordens);
+        var lista = ordens.ToList();
+        var vencidas = lista.Count(o => o.Vencida(hoje));
+        var conferir = lista.Count(o => o.Situacao == SituacaoDaOrdem.Concluida);
+        if (vencidas == 0 && conferir == 0)
+            return null;
+        var partes = new[]
+        {
+            vencidas == 0 ? null : vencidas == 1 ? "1 vencida" : $"{vencidas} vencidas",
+            conferir == 0 ? null : conferir == 1 ? "1 esperando a conferência" : $"{conferir} esperando a conferência",
+        }.OfType<string>();
+        return $"Ordens de serviço: {string.Join(", ", partes)} (Projeto > Ordens de serviço…).";
+    }
+
     /// <summary>Emitida, aceita, em execução ou concluída: está na rua, esperando alguém.</summary>
     public static bool EmAndamento(SituacaoDaOrdem situacao) =>
         situacao is SituacaoDaOrdem.Emitida or SituacaoDaOrdem.Aceita or SituacaoDaOrdem.EmExecucao or SituacaoDaOrdem.Concluida;

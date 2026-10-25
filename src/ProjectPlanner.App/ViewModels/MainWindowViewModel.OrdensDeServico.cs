@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.Core;
 using ProjectPlanner.Core.OrdensDeServico;
+using ProjectPlanner.Core.Planejamento;
 using ProjectPlanner.IA;
 using ProjectPlanner.IA.Conta;
 
@@ -10,7 +11,15 @@ namespace ProjectPlanner.App.ViewModels;
 public sealed partial class MainWindowViewModel
 {
     [RelayCommand]
-    private Task OrdensDeServico()
+    private Task OrdensDeServico() => AbrirOrdensAsync(null);
+
+    void IEdicaoCronograma.AbrirOrdens(TarefaViewModel linha)
+    {
+        TarefaSelecionada = linha;
+        _ = AbrirOrdensAsync(_cronograma.OrdensDeServico.DaTarefa(linha.Tarefa.Id).FirstOrDefault()?.Id);
+    }
+
+    private async Task AbrirOrdensAsync(Guid? ordem)
     {
         Recalcular(); // as datas da OS nova vêm do cronograma calculado
         var projeto = _cronograma.Id;
@@ -18,8 +27,42 @@ public sealed partial class MainWindowViewModel
             ? (o, comValores) => _telegram!.PublicarOrdemAsync(projeto, o.Id, o.Numero, o.Dados.Titulo, TextosDaOrdem.ParaOTelegram(o, comValores),
                 o.Situacao.ToString(), CancellationToken.None)
             : null;
-        return _dialogos.MostrarOrdensDeServicoAsync(new OrdensDeServicoViewModel(_cronograma, _dialogos, _relogio, OrdensMudaram,
-            TarefaSelecionada?.Tarefa.Id, publicar));
+        await _dialogos.MostrarOrdensDeServicoAsync(new OrdensDeServicoViewModel(_cronograma, _dialogos, _relogio, OrdensMudaram,
+            TarefaSelecionada?.Tarefa.Id, publicar, ordem));
+        AtualizarOrdensNasLinhas();
+    }
+
+    /// <summary>Bloco 61: a marca "OS" de cada linha da grid (as OS da tarefa, menos as canceladas) e se alguma venceu.</summary>
+    private void AtualizarOrdensNasLinhas()
+    {
+        var hoje = DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime);
+        foreach (var linha in Tarefas)
+        {
+            var ordens = _cronograma.OrdensDeServico.DaTarefa(linha.Tarefa.Id);
+            linha.OrdensDaTarefa = ordens.Count == 0 ? null : string.Join("\n", ordens.Select(o => TextosDaOrdem.Linha(o, hoje)));
+            linha.OrdemVencida = ordens.Any(o => o.Vencida(hoje));
+        }
+    }
+
+    /// <summary>Bloco 61: as OS na situação da obra que vai ao assistente (no programa e no Telegram).</summary>
+    private IEnumerable<string> OrdensParaOAssistente()
+    {
+        var hoje = DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime);
+        var ordens = _cronograma.OrdensDeServico.Todas.Where(o => o.Situacao != SituacaoDaOrdem.Cancelada).ToList();
+        if (ordens.Count == 0)
+            yield break;
+        var edt = _cronograma.NumeracaoEdt();
+        yield return $"Ordens de serviço: {ordens.Count}; em andamento {ordens.Count(o => TextosDaOrdem.EmAndamento(o.Situacao))}, " +
+                     $"vencidas {ordens.Count(o => o.Vencida(hoje))}, esperando conferência {ordens.Count(o => o.Situacao == SituacaoDaOrdem.Concluida)}; " +
+                     $"medido a pagar {Moeda.ComSimbolo(ordens.Sum(o => o.APagar))}; por medir {Moeda.ComSimbolo(ordens.Where(o => TextosDaOrdem.EmAndamento(o.Situacao)).Sum(o => o.PorMedir))} " +
+                     "(o usuário cria e muda as OS em Projeto > Ordens de serviço…; o assistente não muda as OS).";
+        foreach (var o in ordens.TakeLast(40))
+        {
+            var tarefas = string.Join(", ", o.Dados.Tarefas.Where(edt.ContainsKey).Select(id => edt[id]));
+            yield return $"{TextosDaOrdem.Linha(o, hoje)}: {o.Dados.Titulo}; {TextosDaOrdem.Texto(o.Dados.Tipo).ToLowerInvariant()}; " +
+                         $"{TextosDaOrdem.Texto(o.Dados.FormaDePagamento).ToLowerInvariant()}; valor {Moeda.ComSimbolo(o.Total)}, medido {Moeda.ComSimbolo(o.TotalMedido)}, " +
+                         $"pago {Moeda.ComSimbolo(o.TotalPago)}" + (tarefas.Length > 0 ? $"; tarefas {tarefas}" : "") + ".";
+        }
     }
 
     /// <summary>
@@ -49,7 +92,10 @@ public sealed partial class MainWindowViewModel
             }
         }
         if (mudancas.Count > 0)
+        {
             OrdensMudaram($"Telegram: {string.Join(", ", mudancas)}", false);
+            AtualizarOrdensNasLinhas();
+        }
         return (mudancas, ignorados);
     }
 

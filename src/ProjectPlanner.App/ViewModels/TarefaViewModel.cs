@@ -37,6 +37,9 @@ public interface IEdicaoCronograma
     /// <summary>O usuário clicou na câmera desta linha: abre a galeria de fotos da tarefa.</summary>
     void GerenciarFotos(TarefaViewModel linha);
 
+    /// <summary>Bloco 61: abre as ordens de serviço com a primeira OS da tarefa escolhida.</summary>
+    void AbrirOrdens(TarefaViewModel linha);
+
     /// <summary>Uma alteração foi aplicada: marca o projeto como alterado e recalcula.</summary>
     void TarefaAlterada(string descricao);
 
@@ -155,6 +158,25 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
     public bool TemAlertaDeFoto => AlertaDeFoto is not null;
 
     public string DicaDoAlertaDeFoto => $"{AlertaDeFoto} — abrir a galeria";
+
+    /// <summary>
+    /// Bloco 61: as OS da tarefa, uma por linha ("OS-003 · Em execução (prazo 02/10) · Construtora Silva"); nulo sem OS.
+    /// Calculado pela tela principal.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemOrdens), nameof(DicaDasOrdens))]
+    public partial string? OrdensDaTarefa { get; set; }
+
+    /// <summary>Bloco 61: alguma OS da tarefa passou do prazo (a marca fica na cor de aviso).</summary>
+    [ObservableProperty] public partial bool OrdemVencida { get; set; }
+
+    public bool TemOrdens => OrdensDaTarefa is not null;
+
+    public string DicaDasOrdens => $"{OrdensDaTarefa}\n— abrir as ordens de serviço";
+
+    /// <summary>Bloco 61: a marca "OS" da coluna Nome abre as ordens de serviço desta tarefa.</summary>
+    [RelayCommand]
+    private void AbrirOrdens() => _edicao.AbrirOrdens(this);
 
     /// <summary>A câmera da coluna Nome: abre a galeria desta tarefa.</summary>
     [RelayCommand]

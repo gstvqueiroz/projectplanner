@@ -73,6 +73,7 @@ public sealed partial class MainWindowViewModel
             linhas.Add($"Fotos: {fotos} no projeto; a mais recente de {c.Tarefas.SelectMany(t => t.Fotos).Max(f => f.DataFoto):dd/MM/yyyy}.");
         if (c.Relatorios.Count > 0)
             linhas.Add($"Relatórios fotográficos: {c.Relatorios.Count}; o último até {c.Relatorios.Max(r => r.Ate):dd/MM/yyyy}.");
+        linhas.AddRange(OrdensParaOAssistente()); // Bloco 61
         return linhas;
     }
 

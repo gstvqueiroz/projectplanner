@@ -52,7 +52,10 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
         "- estimativa (grupo composições): tarefa, descricao (o serviço, como numa planilha orçamentária), unidade, custoMateriais e " +
         "custoMaoDeObra (custo direto por unidade, em reais, sem BDI; mão de obra já com encargos; equipamentos junto da mão de " +
         "obra). Use só quando nenhuma candidata serve, ou não há base, e o serviço precisa de preço; seja coerente com a base " +
-        "(estado e mês) quando houver. Na justificativa, diga em que se baseia (serviço parecido, faixa usual). Tarefas que já têm " +
+        "(estado e mês) quando houver. Na justificativa, diga em que se baseia (serviço parecido, faixa usual). Se o serviço usa mão " +
+        "de obra, mande também \"equipe\": as funções (como Pedreiro e Servente; Eletricista; Encanador), quantas pessoas de cada " +
+        "uma por dia, coerentes com a duração e a quantidade da tarefa, e o custoPorDia de uma pessoa de cada função, com encargos, " +
+        "na região da obra; o programa cria esses profissionais como recursos da obra. Tarefas que já têm " +
         "Valor informado (preço de empreiteiro) ficam como estão, a menos que o foco peça.\n" +
         "- quantidade (grupo quantidades): tarefa, valor e unidade (a da composição escolhida ou sugerida). Para tarefas sem " +
         "quantidade ou com quantidade estimada antes, a partir da ficha da obra (área construída, pavimentos, pé-direito, " +
@@ -150,11 +153,25 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
                         ["valor"] = Tipo("NUMBER"),
                         ["custoMateriais"] = Tipo("NUMBER"),
                         ["custoMaoDeObra"] = Tipo("NUMBER"),
+                        // Bloco 54: a equipe de uma estimativa.
+                        ["equipe"] = new JsonObject
+                        {
+                            ["type"] = "ARRAY",
+                            ["items"] = new JsonObject
+                            {
+                                ["type"] = "OBJECT",
+                                ["properties"] = new JsonObject
+                                {
+                                    ["funcao"] = Tipo("STRING"), ["quantidade"] = Tipo("NUMBER"), ["custoPorDia"] = Tipo("NUMBER"),
+                                },
+                                ["required"] = new JsonArray("funcao", "quantidade"),
+                            },
+                        },
                         ["justificativa"] = Tipo("STRING"),
                     },
                     ["required"] = new JsonArray("tipo", "justificativa"),
                     ["propertyOrdering"] = new JsonArray("tipo", "tarefa", "recurso", "codigo", "descricao", "unidade", "valor", "custoMateriais",
-                        "custoMaoDeObra", "justificativa"),
+                        "custoMaoDeObra", "equipe", "justificativa"),
                 },
             },
         },
@@ -189,7 +206,8 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
                 TiposDeSugestaoIA.Estimativa when tarefa is not null && Decimal(item, "custoMateriais") is var m && Decimal(item, "custoMaoDeObra") is var mo
                     && m is null or >= 0 and <= 10_000_000 && mo is null or >= 0 and <= 10_000_000 && (m ?? 0) + (mo ?? 0) > 0
                     && (unidade ?? tarefa.Unidade) is { Length: > 0 } und =>
-                    new(tipo, justificativa, tarefa.Id, Descricao: descricao ?? tarefa.Nome, Unidade: und, CustoDeMateriais: m ?? 0, CustoDeMaoDeObra: mo ?? 0),
+                    new(tipo, justificativa, tarefa.Id, Descricao: descricao ?? tarefa.Nome, Unidade: und, CustoDeMateriais: m ?? 0, CustoDeMaoDeObra: mo ?? 0,
+                        Equipe: tarefa.Dias > 0 ? Equipe(item) : null),
                 TiposDeSugestaoIA.Quantidade when tarefa is not null && valor is > 0 and <= 999_999_999 =>
                     new(tipo, justificativa, tarefa.Id, Unidade: unidade, Valor: Math.Round(valor.Value, 4)),
                 TiposDeSugestaoIA.Duracao when tarefa is not null && tarefa.Dias > 0 && valor is >= 1 and <= 2000 && Math.Round(valor.Value) != tarefa.Dias =>
@@ -217,6 +235,25 @@ public sealed class ConsultorGemini : IConsultorDeOrcamento
                 sugestoes.Add(s);
         }
         return new RespostaDoConsultor(Limitar(Texto(raiz, "resumo"), 1000) ?? "", sugestoes);
+    }
+
+    /// <summary>Bloco 54: a equipe de uma estimativa (as funções repetidas, sem nome ou com quantidades absurdas ficam de fora).</summary>
+    private static IReadOnlyList<PessoaDaEquipe>? Equipe(JsonElement item)
+    {
+        var equipe = new List<PessoaDaEquipe>();
+        foreach (var pessoa in Lista(item, "equipe"))
+        {
+            if (equipe.Count == LimitesDoConsultor.FuncoesNaEquipe)
+                break;
+            var funcao = Limitar(Texto(pessoa, "funcao")?.Trim(), 60);
+            var quantidade = Decimal(pessoa, "quantidade");
+            var custo = Decimal(pessoa, "custoPorDia");
+            if (string.IsNullOrWhiteSpace(funcao) || quantidade is not (> 0 and <= LimitesDoConsultor.PessoasPorFuncao)
+                || equipe.Any(p => string.Equals(p.Funcao, funcao, StringComparison.CurrentCultureIgnoreCase)))
+                continue;
+            equipe.Add(new PessoaDaEquipe(funcao, Math.Round(quantidade.Value, 2), custo is >= 0 and <= 100_000 ? Math.Round(custo.Value, 2) : null));
+        }
+        return equipe.Count == 0 ? null : equipe;
     }
 
     private static bool Pedido(string tipo, GruposDeSugestao grupos) => tipo switch

@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.54.0
+
+**A obra completa: cronograma, orçamento e recursos** (Bloco 54).
+
+- **Depois de montar o cronograma**, o painel do assistente mostra o botão **Estimar orçamento e recursos desta obra**.
+  Ele abre Projeto > Orçamento com as sugestões da IA para todas as tarefas: preços (da base SINAPI, se importada, ou
+  estimados), quantidades e equipes. Você confere e aplica as que quiser.
+- **Pedindo junto** ("monte o cronograma de uma casa de 100 m² com orçamento"), o assistente monta o cronograma e já abre
+  as sugestões do orçamento.
+- **As equipes viram recursos.** A estimativa da IA traz a equipe de cada tarefa (por exemplo, 2 pedreiros e 2 serventes, com
+  o custo do dia). Ao aplicar, esses profissionais entram como recursos da obra e são atribuídos à tarefa, e o uso de
+  recursos e o nivelamento passam a funcionar mesmo sem a base SINAPI.
+- **Obras grandes** vão à IA em partes de 30 tarefas, para a resposta não sair cortada; as sugestões se juntam na tela.
+
 ## 0.53.1
 
 Correções para quando a IA não gerava o cronograma.

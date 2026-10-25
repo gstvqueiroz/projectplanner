@@ -52,7 +52,10 @@ public static class InstrucoesDoAssistente
         "\"orcamento\" com o pedido resumido (por exemplo, \"composições e quantidades das vedações\" ou \"revisar o orçamento " +
         "todo\"); o programa abre Projeto > Orçamento… com as sugestões da IA (composições da base SINAPI importada, preços " +
         "estimados quando a base não tem o serviço, quantidades, revisão e equipes) para o usuário conferir e aceitar. Na mensagem, " +
-        "diga isso em uma frase. Se a ficha não tem a área construída e o pedido envolve quantidades, você pode perguntar antes.";
+        "diga isso em uma frase. Se a ficha não tem a área construída e o pedido envolve quantidades, você pode perguntar antes. " +
+        "Se o usuário pedir o cronograma junto com o orçamento, os custos ou os recursos (equipes), monte o cronograma nas " +
+        "\"alteracoes\" e preencha também \"orcamento\" com \"orçamento completo da obra: composições ou preços estimados, " +
+        "quantidades e equipes de todas as tarefas\": o programa aplica o cronograma e em seguida abre as sugestões.";
 
     /// <summary>Como o assistente altera o cronograma: o formato da resposta, as ações e as regras do programa.</summary>
     public const string Alteracoes =

@@ -288,6 +288,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     {
         AtualizarInteracoes();
         RefazerMelhorCommand.NotifyCanExecuteChanged();
+        EstimarOrcamentoCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Aviso sobre um anexo que não deu para incluir (arquivo sumiu, sem permissão).</summary>
@@ -335,6 +336,8 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     private async Task EnviarAsync(string texto, IReadOnlyList<AnexoIA> anexos, bool planoAgora = false, string? modelo = null)
     {
         ModeloMelhor = null;
+        PodeEstimarOrcamento = false;
+        var criadas = 0;
         var historico = Mensagens.Select(m => m.Mensagem).Where(m => !m.EhErro).ToList();
         var doUsuario = new MensagemChat(AutorMensagem.Usuario, texto, _relogio.GetLocalNow(), anexos);
         Acrescentar(doUsuario);
@@ -388,6 +391,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
             }
             if (geracao == _geracao)
             {
+                criadas = TarefasCriadas(r, alteracoes); // Bloco 54
                 Conduzir(r, alteracoes);
                 pedidoDeOrcamento = r.PedidoDeOrcamento;
                 // Bloco 41: as atualizações da obra viram um cartão (conferido pelo retrato desta resposta).
@@ -417,6 +421,8 @@ public sealed partial class AssistenteViewModel : ViewModelBase
             // Bloco 51: uma resposta que não mexeu na obra pode ser refeita com um modelo melhor.
             OferecerRefazer(texto, anexos, escolha, !resposta.EhErro && alteracoes is null && cartao is null && tela is null
                 && pedidoDeOrcamento is null && importarFotos is null && (resposta.Resposta is null || resposta.Resposta.Tipo == TipoDeResposta.Resposta));
+            // Bloco 54: montou um cronograma (e não pediu o orçamento junto): oferece estimar o orçamento e os recursos.
+            PodeEstimarOrcamento = !resposta.EhErro && criadas >= TarefasParaOferecerOrcamento && pedidoDeOrcamento is null;
         }
         // Bloco 41: a tela que o usuário pediu para ver.
         if (tela is not null && !resposta.EhErro && geracao == _geracao)

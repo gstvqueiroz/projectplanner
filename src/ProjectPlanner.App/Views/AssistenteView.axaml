@@ -206,6 +206,11 @@
                               Content="Não perguntar de novo nesta conversa" />
                 </StackPanel>
             </Border>
+            <!-- Bloco 54: depois de montar um cronograma, o orçamento e os recursos da obra inteira -->
+            <Button x:Name="EstimarOrcamento" DockPanel.Dock="Bottom" Classes="accent" Margin="8,4,8,0" HorizontalAlignment="Left" FontSize="12"
+                    Content="{x:Static vm:AssistenteViewModel.TextoDoEstimarOrcamento}" Command="{Binding EstimarOrcamentoCommand}"
+                    IsVisible="{Binding PodeEstimarOrcamento}"
+                    ToolTip.Tip="Abre Projeto &gt; Orçamento com as sugestões da IA para todas as tarefas: composições da base SINAPI (se importada) ou preços estimados, quantidades e equipes. Você confere e aplica as que quiser." />
             <Button x:Name="RefazerMelhor" DockPanel.Dock="Bottom" Classes="plano" Margin="8,4,8,0" HorizontalAlignment="Left" FontSize="12"
                     Content="{Binding TextoDoRefazer}" Command="{Binding RefazerMelhorCommand}" IsVisible="{Binding PodeRefazerMelhor}"
                     ToolTip.Tip="Manda a última pergunta de novo, para um modelo mais forte (gasta mais créditos)" />

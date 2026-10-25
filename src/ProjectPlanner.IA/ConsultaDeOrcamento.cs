@@ -93,7 +93,14 @@ public sealed record SugestaoDaIA(
     string? Unidade = null,
     decimal? Valor = null,
     decimal? CustoDeMateriais = null,
-    decimal? CustoDeMaoDeObra = null);
+    decimal? CustoDeMaoDeObra = null,
+    IReadOnlyList<PessoaDaEquipe>? Equipe = null);
+
+/// <summary>
+/// Bloco 54: uma função na equipe de uma tarefa, como a IA estimou: "Pedreiro", quantas pessoas por dia na duração da tarefa e
+/// o custo de um dia de cada uma (com encargos), se ela informou.
+/// </summary>
+public sealed record PessoaDaEquipe(string Funcao, decimal Quantidade, decimal? CustoPorDia = null);
 
 /// <summary>A resposta: um resumo curto e as sugestões.</summary>
 public sealed record RespostaDoConsultor(string Resumo, IReadOnlyList<SugestaoDaIA> Sugestoes);
@@ -123,6 +130,13 @@ public static class LimitesDoConsultor
     public const int Sugestoes = 300;
 
     public const int TamanhoDaJustificativa = 400;
+
+    /// <summary>Bloco 54: as tarefas de cada consulta quando o orçamento é da obra inteira (em lotes, para a resposta não sair cortada).</summary>
+    public const int TarefasPorLote = 30;
+
+    /// <summary>Bloco 54: funções na equipe de uma estimativa, e pessoas de cada uma por dia.</summary>
+    public const int FuncoesNaEquipe = 6;
+    public const int PessoasPorFuncao = 50;
 }
 
 /// <summary>Sem chave de API: avisa que é preciso configurar o assistente.</summary>

@@ -108,15 +108,38 @@ public sealed partial class OrcamentoViewModel
             return;
         }
         var tabela = TabelaEscolhida;
-        var consulta = ConsultaDeOrcamento.Montar(_cronograma, tabela, Foco, Grupos);
+        // Bloco 54: numa obra grande, a consulta vai em partes (uma resposta com tudo sairia cortada), e as sugestões se juntam.
+        var lotes = ConsultaDeOrcamento.Lotes(_cronograma);
         using var cancelamento = _consulta = new CancellationTokenSource();
         Consultando = true;
-        TextoDaConsulta = $"Pedindo sugestões à IA ({consulta.Tamanho})… isso pode levar um minuto.";
+        var todas = new List<SugestaoDeOrcamento>();
+        var resumos = new List<string>();
+        var falhas = new List<string>();
         try
         {
-            var resposta = await _consultor.SugerirAsync(consulta.Pedido, cancelamento.Token);
-            Mostrar(consulta.Traduzir(resposta), tabela);
-            TextoDaConsulta = (resposta.Resumo.Length > 0 ? resposta.Resumo + " " : "") + ContarSugestoes();
+            for (var i = 0; i < lotes.Count; i++)
+            {
+                var consulta = ConsultaDeOrcamento.Montar(_cronograma, tabela, Foco, Grupos, lotes.Count == 1 ? null : lotes[i]);
+                TextoDaConsulta = lotes.Count == 1
+                    ? $"Pedindo sugestões à IA ({consulta.Tamanho})… isso pode levar um minuto."
+                    : $"Pedindo sugestões à IA: parte {i + 1} de {lotes.Count} ({consulta.Tamanho})… cada parte leva cerca de um minuto.";
+                try
+                {
+                    var resposta = await _consultor.SugerirAsync(consulta.Pedido, cancelamento.Token);
+                    Juntar(todas, consulta.Traduzir(resposta));
+                    if (resposta.Resumo.Length > 0)
+                        resumos.Add(resposta.Resumo);
+                    if (lotes.Count > 1)
+                        Mostrar(todas, tabela); // o que já chegou aparece enquanto as outras partes vêm
+                }
+                catch (ErroDoAssistenteException ex) when (lotes.Count > 1)
+                {
+                    falhas.Add($"A parte {i + 1} de {lotes.Count} não veio ({ex.Message}).");
+                }
+            }
+            Mostrar(todas, tabela);
+            TextoDaConsulta = (resumos.Count == 0 ? "" : (lotes.Count == 1 ? resumos[0] : $"Sugestões em {lotes.Count} partes. {resumos[0]}") + " ") +
+                              (falhas.Count == 0 ? "" : string.Join(" ", falhas) + " Peça de novo para completar. ") + ContarSugestoes();
         }
         catch (OperationCanceledException)
         {
@@ -175,6 +198,19 @@ public sealed partial class OrcamentoViewModel
     {
         if (e.PropertyName == nameof(SugestaoNaTela.Aceita))
             AplicarSugestoesCommand.NotifyCanExecuteChanged();
+    }
+
+    // Bloco 54: as sugestões de uma parte entram nas das anteriores (um BDI só; alertas iguais, uma vez).
+    private static void Juntar(List<SugestaoDeOrcamento> todas, IReadOnlyList<SugestaoDeOrcamento> novas)
+    {
+        foreach (var s in novas)
+        {
+            if (s.Tipo == TipoDeSugestao.Bdi && todas.Any(t => t.Tipo == TipoDeSugestao.Bdi))
+                continue;
+            if (s.Tipo == TipoDeSugestao.Alerta && todas.Any(t => t.Tipo == TipoDeSugestao.Alerta && t.TarefaId == s.TarefaId && t.Descricao == s.Descricao))
+                continue;
+            todas.Add(s);
+        }
     }
 
     private string ContarSugestoes()

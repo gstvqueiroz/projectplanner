@@ -167,6 +167,7 @@ public sealed partial class AssistenteViewModel
     private void RecomecarAutomatico()
     {
         _naoPerguntarNestaConversa = false;
+        PodeEstimarOrcamento = false; // Bloco 54
         Confirmacao?.Escolha.TrySetCanceled();
         ModeloMelhor = null;
         _ultimoEnvio = null;

@@ -25,6 +25,25 @@ Desde o Bloco 24, o assistente **altera o cronograma pelo chat**: pedir "monte o
 100 m²", "acrescente a etapa de cobertura depois da estrutura" ou "a laje leva 8 dias" faz o cronograma mudar na hora
 (ver "Alterações do cronograma pelo chat", abaixo).
 
+## A obra completa: cronograma, orçamento e recursos (Bloco 54)
+
+Decisões do usuário: um botão logo depois de montar (não automático, porque gasta créditos); a IA sugere a equipe de cada
+tarefa, que vira recursos da obra; e a base SINAPI pode ser baixada (Bloco 40) para os preços e os recursos virem dela.
+
+- **O botão:** quando uma resposta do assistente cria 5 tarefas ou mais (um cronograma, não um ajuste), o painel mostra
+  "Estimar orçamento e recursos desta obra". Ele abre Projeto > Orçamento, aba Sugestões, já pedindo o orçamento completo:
+  composições da base (se importada) ou preços estimados, quantidades e equipes de todas as tarefas. Some no próximo envio.
+- **Pedido direto:** "monte o cronograma com orçamento" faz o assistente montar o cronograma e preencher o campo
+  `orcamento`: o programa aplica o cronograma e abre as sugestões em seguida, sem o botão.
+- **Em partes:** uma obra com mais de 30 tarefas vai à IA em partes de 30 (`LimitesDoConsultor.TarefasPorLote`), e as
+  sugestões se juntam na tela (um BDI só, alertas iguais uma vez). Uma parte que falha não perde as outras: a tela avisa qual
+  faltou.
+- **As equipes:** a estimativa da IA traz `equipe` (função, pessoas por dia e o custo de um dia de cada uma, com encargos).
+  Ao aplicar a sugestão, cada função vira um recurso profissional da obra (o de mesmo nome, se já existe; senão um novo, com
+  a origem "Estimativa da IA") atribuído à tarefa. Assim o uso de recursos, o nivelamento e as necessidades por período
+  funcionam também sem a base SINAPI. Com a base, aplicar o orçamento cria a mão de obra e os equipamentos das composições,
+  como antes.
+
 ## O nível Automático (Bloco 51)
 
 Com a conta, o nível **Automático** é o padrão. Antes de cada mensagem do chat, o servidor faz a triagem (ver

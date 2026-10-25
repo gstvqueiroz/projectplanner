@@ -220,4 +220,33 @@ public sealed class ConsultorGeminiTests : IDisposable
         var muitas = new ContextoDoProjeto("Casa", hoje, hoje, hoje, [tarefa], [.. Enumerable.Range(1, 205).Select(i => $"linha {i}")]).ComoTexto();
         muitas.Should().EndWith("- (mais 5 serviços)");
     }
+
+    [Fact]
+    public async Task Estimativa_TrazAEquipe_DaTarefa_SemRepetirNemAbsurdos_ENumMarcoNao()
+    {
+        // Bloco 54
+        Responder(new JsonObject
+        {
+            ["resumo"] = "Estimei.",
+            ["sugestoes"] = new JsonArray(
+                Sugestao("estimativa", "faixa usual", ("tarefa", "T2"), ("descricao", "Pintura"), ("unidade", "m²"), ("custoMaoDeObra", 12),
+                    ("equipe", new JsonArray(
+                        new JsonObject { ["funcao"] = "Pintor", ["quantidade"] = 2, ["custoPorDia"] = 230.456 },
+                        new JsonObject { ["funcao"] = "pintor", ["quantidade"] = 1 },
+                        new JsonObject { ["funcao"] = "Ajudante", ["quantidade"] = 1, ["custoPorDia"] = -5 },
+                        new JsonObject { ["funcao"] = "", ["quantidade"] = 1 },
+                        new JsonObject { ["funcao"] = "Exército", ["quantidade"] = 500 }))),
+                Sugestao("estimativa", "marco", ("tarefa", "T3"), ("descricao", "Entrega"), ("unidade", "un"), ("custoMateriais", 1),
+                    ("equipe", new JsonArray(new JsonObject { ["funcao"] = "Pintor", ["quantidade"] = 1 })))),
+        });
+
+        var resposta = await Consultor().SugerirAsync(Pedido(), default);
+
+        resposta.Sugestoes[0].Equipe.Should().Equal(new PessoaDaEquipe("Pintor", 2, 230.46m), new PessoaDaEquipe("Ajudante", 1, null));
+        resposta.Sugestoes[1].Equipe.Should().BeNull("um marco não tem equipe");
+        var corpo = _servidor.UltimoCorpo;
+        corpo["generationConfig"]!["responseSchema"]!["properties"]!["sugestoes"]!["items"]!["properties"]!["equipe"]!["items"]!["required"]!.ToJsonString()
+            .Should().Be("""["funcao","quantidade"]""");
+        corpo["systemInstruction"]!["parts"]![0]!["text"]!.GetValue<string>().Should().Contain("custoPorDia");
+    }
 }

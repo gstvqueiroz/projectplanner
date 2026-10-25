@@ -23,7 +23,9 @@ public sealed class ConsultaDeOrcamento
     public PedidoDeOrcamento Pedido { get; private set; }
 
     /// <param name="tabela">A base escolhida; nula sem base (só estimativas, quantidades, revisão e equipes).</param>
-    public static ConsultaDeOrcamento Montar(Cronograma cronograma, TabelaDeReferencia? tabela, string? foco, GruposDeSugestao grupos)
+    /// <param name="lote">Bloco 54: só estas tarefas (um lote do orçamento da obra inteira); nulo, as que mais precisam, até o limite.</param>
+    public static ConsultaDeOrcamento Montar(Cronograma cronograma, TabelaDeReferencia? tabela, string? foco, GruposDeSugestao grupos,
+        IReadOnlyCollection<Guid>? lote = null)
     {
         ArgumentNullException.ThrowIfNull(cronograma);
         var consulta = new ConsultaDeOrcamento(null!);
@@ -39,7 +41,7 @@ public sealed class ConsultaDeOrcamento
         }
 
         // As que mais precisam primeiro (sem preço, sem quantidade), até o limite; depois na ordem da EDT.
-        var folhas = cronograma.Tarefas.Where(t => !t.EhResumo).ToList();
+        var folhas = cronograma.Tarefas.Where(t => !t.EhResumo && (lote is null || lote.Contains(t.Id))).ToList();
         var escolhidas = folhas
             .OrderBy(t => orcamento.ComposicaoDe(t.Id) is null && t.Valor is null ? 0 : t.Quantidade is null ? 1 : 2)
             .Take(LimitesDoConsultor.Tarefas).ToHashSet();
@@ -118,9 +120,23 @@ public sealed class ConsultaDeOrcamento
                 || (tipoDaSugestao == TipoDeSugestao.Disponivel && recurso is null))
                 continue;
             lista.Add(new SugestaoDeOrcamento(tipoDaSugestao, s.Justificativa, tarefa, recurso, s.Codigo, s.Descricao, s.Unidade, s.Valor,
-                s.CustoDeMateriais, s.CustoDeMaoDeObra));
+                s.CustoDeMateriais, s.CustoDeMaoDeObra)
+            {
+                Equipe = [.. (s.Equipe ?? []).Select(p => new MembroDaEquipe(p.Funcao, p.Quantidade, p.CustoPorDia))], // Bloco 54
+            });
         }
         return lista;
+    }
+
+    /// <summary>
+    /// Bloco 54: as tarefas da obra (não resumos) em lotes de <see cref="LimitesDoConsultor.TarefasPorLote"/>, na ordem do
+    /// cronograma, para o orçamento da obra inteira não sair cortado. Até o limite de uma consulta, um lote só.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<Guid>> Lotes(Cronograma cronograma)
+    {
+        ArgumentNullException.ThrowIfNull(cronograma);
+        var folhas = cronograma.Tarefas.Where(t => !t.EhResumo).Select(t => t.Id).ToList();
+        return [.. folhas.Chunk(LimitesDoConsultor.TarefasPorLote).Select(l => (IReadOnlyList<Guid>)l)];
     }
 
     /// <summary>"3 tarefas, 1 recurso" para a tela.</summary>

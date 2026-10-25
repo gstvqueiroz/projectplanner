@@ -47,7 +47,13 @@ public sealed record SugestaoDeOrcamento(
     decimal? CustoDeMaoDeObra = null)
 {
     public bool EhAlerta => Tipo == TipoDeSugestao.Alerta;
+
+    /// <summary>Bloco 54: a equipe de uma estimativa (vira recursos profissionais atribuídos à tarefa ao aplicar).</summary>
+    public IReadOnlyList<MembroDaEquipe> Equipe { get; init; } = [];
 }
+
+/// <summary>Bloco 54: uma função na equipe estimada de uma tarefa: quantas pessoas por dia e o custo de um dia de cada uma.</summary>
+public sealed record MembroDaEquipe(string Funcao, decimal Quantidade, decimal? CustoPorDia = null);
 
 /// <summary>O que aplicar as sugestões aceitas fez.</summary>
 /// <param name="Feitas">As sugestões que entraram no projeto.</param>
@@ -143,6 +149,7 @@ public static class AplicacaoDeSugestoes
                     case TipoDeSugestao.Estimativa:
                         cronograma.Orcamento.Associar(tarefa!, ComposicaoAberta.Estimativa(s.Descricao ?? tarefa!.Nome, s.Unidade ?? tarefa!.Unidade,
                             s.CustoDeMateriais ?? 0, s.CustoDeMaoDeObra ?? 0));
+                        AtribuirEquipe(cronograma, tarefa!, s.Equipe); // Bloco 54
                         break;
                     case TipoDeSugestao.Quantidade:
                         cronograma.Orcamento.EstimarQuantidade(tarefa!, s.Valor!.Value, s.Unidade);
@@ -168,6 +175,40 @@ public static class AplicacaoDeSugestoes
         return new ResultadoDasSugestoes(feitas, recusadas);
     }
 
+    /// <summary>Quem a IA põe numa equipe e ainda não existe no projeto entra como profissional com esta origem.</summary>
+    public const string OrigemDaEquipe = "Estimativa da IA";
+
+    /// <summary>
+    /// Bloco 54: a equipe de uma estimativa vira recursos profissionais da obra (o de mesmo nome, se já existe; senão um novo,
+    /// com o custo do dia que a IA estimou) atribuídos à tarefa, com as pessoas por dia. Um marco não recebe equipe; um recurso
+    /// de mesmo nome que é material fica de fora.
+    /// </summary>
+    private static void AtribuirEquipe(Cronograma cronograma, Tarefa tarefa, IReadOnlyList<MembroDaEquipe> equipe)
+    {
+        if (equipe.Count == 0 || tarefa.Duracao == 0)
+            return;
+        var lista = tarefa.Atribuicoes.ToList();
+        foreach (var membro in equipe)
+        {
+            var nome = membro.Funcao.Trim();
+            if (nome.Length == 0 || membro.Quantidade <= 0)
+                continue;
+            if (nome.Length > Recurso.TamanhoMaximoDoNome)
+                nome = nome[..Recurso.TamanhoMaximoDoNome].TrimEnd();
+            var recurso = cronograma.Recursos.Lista.FirstOrDefault(r => string.Equals(r.Nome, nome, StringComparison.CurrentCultureIgnoreCase));
+            if (recurso is null)
+            {
+                recurso = new Recurso(Guid.NewGuid(), nome, TipoDeRecurso.Profissional, null, membro.CustoPorDia ?? 0, null, OrigemDaEquipe);
+                cronograma.Recursos.Adicionar(recurso);
+            }
+            else if (!recurso.PorDia)
+                continue;
+            lista.RemoveAll(a => a.RecursoId == recurso.Id);
+            lista.Add(new AtribuicaoDeRecurso(recurso.Id, membro.Quantidade));
+        }
+        cronograma.Recursos.Atribuir(tarefa, lista);
+    }
+
     /// <summary>A sugestão em uma linha para a tela: "Composição 87495 — ALVENARIA… (M2) · custo 52,53".</summary>
     public static string Texto(SugestaoDeOrcamento s, TabelaDeReferencia? tabela, Cronograma cronograma)
     {
@@ -181,7 +222,8 @@ public static class AplicacaoDeSugestoes
             TipoDeSugestao.Composicao => $"composição {s.Codigo}",
             TipoDeSugestao.Estimativa =>
                 $"{s.Descricao} ({s.Unidade}) · custo estimado {N((s.CustoDeMateriais ?? 0) + (s.CustoDeMaoDeObra ?? 0))}/{s.Unidade} " +
-                $"(materiais {N(s.CustoDeMateriais ?? 0)}; mão de obra {N(s.CustoDeMaoDeObra ?? 0)})",
+                $"(materiais {N(s.CustoDeMateriais ?? 0)}; mão de obra {N(s.CustoDeMaoDeObra ?? 0)})" +
+                (s.Equipe.Count == 0 ? "" : " · equipe: " + string.Join(", ", s.Equipe.Select(m => $"{N(m.Quantidade)} {m.Funcao}"))),
             TipoDeSugestao.Quantidade => $"quantidade {N(s.Valor ?? 0)} {s.Unidade}".TrimEnd(),
             TipoDeSugestao.Duracao => s.Valor == 1 ? "duração de 1 dia útil" : $"duração de {N(s.Valor ?? 0)} dias úteis",
             TipoDeSugestao.Disponivel => $"{N(s.Valor ?? 0)} por dia",

@@ -3,6 +3,22 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.69.0
+
+**Pronto para clientes: a fila do Telegram no banco, o aviso de versão nova e os erros para o suporte.**
+
+- **O Telegram não perde mais mensagens:** o que chega ao bot fica guardado no banco até ser atendido. Antes, uma publicação
+  nova do servidor (ou uma reinicialização) no meio perdia as mensagens que esperavam a IA; agora o servidor atende o que ficou
+  quando volta. Uma mensagem que o Telegram reenvia não é respondida duas vezes.
+- **Aviso de versão nova:** ao abrir, o programa pergunta ao servidor qual é a última versão e, se a sua for mais velha,
+  mostra "Versão nova: …" na barra de status, com o botão para baixar. Uma versão que o servidor não aceita mais (por exemplo,
+  depois de uma mudança grande na IA) recebe o aviso para atualizar em vez de um erro sem explicação.
+- **Erros para o suporte (opcional):** em Conta > Minha conta, "Mandar os erros do programa ao suporte". Ligado, um erro
+  inesperado vai para o painel do servidor com o tipo, a mensagem e onde aconteceu, sem nada das obras e com a sua pasta
+  trocada por "~". Começa desligado.
+- **O painel do servidor** mostra os erros mandados pelo programa, quantas contas usam cada versão e quantas mensagens do
+  Telegram estão esperando.
+
 ## 0.68.0
 
 **Testes automáticos e avaliação da IA.**

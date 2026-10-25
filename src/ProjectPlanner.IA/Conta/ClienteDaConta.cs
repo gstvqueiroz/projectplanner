@@ -124,6 +124,12 @@ public sealed class ErroDaContaException(string mensagem, int status, Exception?
     public bool SessaoRecusada => Status == 401;
 }
 
+/// <summary>Bloco 69: as versões do programa que o servidor anuncia: a última publicada, a mínima que ele aceita e onde baixar.</summary>
+public sealed record VersaoNoServidor(string? Ultima, string? Minima, string? Download);
+
+/// <summary>Bloco 69: um erro inesperado do programa para o suporte (só com a opção ligada em Minha conta; sem dados das obras).</summary>
+public sealed record ErroParaOSuporte(string Versao, string Sistema, string Origem, string Tipo, string Mensagem, string? Pilha);
+
 /// <summary>
 /// Bloco 45: as rotas de conta do servidor do ProjectPlanner (Bloco 44): cadastro, código por e-mail, login com senha ou
 /// com o Google, renovação, saída, troca de senha e o uso do mês. Só fala com o servidor: guardar a sessão é com quem chama.
@@ -137,6 +143,19 @@ public sealed class ClienteDaConta
     public static readonly TimeSpan TempoLimite = TimeSpan.FromSeconds(100);
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <summary>Bloco 69: o cabeçalho com a versão do programa, em todo pedido ao servidor (abaixo da mínima, ele responde 426).</summary>
+    public const string CabecalhoDaVersao = "X-ProjectPlanner-Versao";
+
+    /// <summary>A versão deste programa, como "0.69.0" (a do Directory.Build.props, a mesma de todos os projetos).</summary>
+    public static string VersaoDoPrograma { get; } = typeof(ClienteDaConta).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
+    /// <summary>Põe (ou troca) o cabeçalho da versão num pedido ao servidor.</summary>
+    public static void MarcarVersao(HttpRequestMessage pedido)
+    {
+        pedido.Headers.Remove(CabecalhoDaVersao);
+        pedido.Headers.TryAddWithoutValidation(CabecalhoDaVersao, VersaoDoPrograma);
+    }
 
     private readonly HttpClient _http;
 
@@ -199,6 +218,14 @@ public sealed class ClienteDaConta
     public Task<UsoDaConta> UsoAsync(string acesso, CancellationToken cancelamento) =>
         PedirAsync<UsoDaConta>(HttpMethod.Get, "v1/eu", null, acesso, cancelamento);
 
+    // ---- Bloco 69: a versão e os erros do programa ----
+
+    /// <summary>As versões que o servidor anuncia (sem conta).</summary>
+    public Task<VersaoNoServidor> VersaoAsync(CancellationToken c) => PedirAsync<VersaoNoServidor>(HttpMethod.Get, "v1/versao", null, null, c);
+
+    public async Task EnviarErroAsync(string acesso, ErroParaOSuporte erro, CancellationToken c) =>
+        await PedirAsync<JsonElement?>(HttpMethod.Post, "v1/erros", erro, acesso, c);
+
     // ---- Bloco 49: o Telegram ----
 
     public Task<SituacaoDoTelegram> TelegramAsync(string acesso, CancellationToken c) =>
@@ -227,6 +254,7 @@ public sealed class ClienteDaConta
     {
         using var pedido = new HttpRequestMessage(HttpMethod.Get, new Uri(Servidor, $"v1/caixa/{item}/foto"));
         pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", acesso);
+        MarcarVersao(pedido);
         using var resposta = await _http.SendAsync(pedido, c);
         if (!resposta.IsSuccessStatusCode)
             throw new ErroDaContaException(LerErro(await resposta.Content.ReadAsStringAsync(c)) ?? "Não deu para baixar a foto do Telegram.", (int)resposta.StatusCode);
@@ -279,6 +307,7 @@ public sealed class ClienteDaConta
             pedido.Content = JsonContent.Create(corpo, options: Json);
         if (acesso is not null)
             pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", acesso);
+        MarcarVersao(pedido);
         using var tempo = CancellationTokenSource.CreateLinkedTokenSource(cancelamento);
         tempo.CancelAfter(TempoLimite);
         HttpResponseMessage resposta;

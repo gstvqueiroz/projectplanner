@@ -30,6 +30,11 @@ public sealed class Usuario
     public long MicrodolaresAvulsos { get; set; }
     public int TentativasFalhas { get; set; }
     public DateTime? BloqueadoAte { get; set; }
+
+    /// <summary>Bloco 69: a versão do programa que a conta usou por último (o cabeçalho X-ProjectPlanner-Versao) e quando.</summary>
+    public string? VersaoDoApp { get; set; }
+
+    public DateTime? VersaoVistaEm { get; set; }
 }
 
 /// <summary>Um token de renovação (guardado só o hash). Os da mesma família vêm um do outro: reusar um velho revoga todos.</summary>
@@ -137,6 +142,42 @@ public sealed class FalhaDoServidor
     public string Mensagem { get; set; } = "";
     public string? Pilha { get; set; }
     public Guid? UsuarioId { get; set; }
+}
+
+/// <summary>
+/// Bloco 69: um erro inesperado do programa que o usuário escolheu mandar ao suporte (Conta > Minha conta): o tipo, a mensagem
+/// e o começo da pilha, com as pastas do usuário trocadas por "~". Nunca vai conteúdo das obras.
+/// </summary>
+public sealed class FalhaDoApp
+{
+    public long Id { get; set; }
+    public DateTime Quando { get; set; }
+    public Guid UsuarioId { get; set; }
+    public string Versao { get; set; } = "";
+    public string Sistema { get; set; } = "";
+    public string Origem { get; set; } = "";
+    public string Tipo { get; set; } = "";
+    public string Mensagem { get; set; } = "";
+    public string? Pilha { get; set; }
+}
+
+/// <summary>
+/// Bloco 69: um aviso do Telegram na fila do atendente. Antes ficava só na memória e um deploy ou uma reinicialização perdia
+/// o que estava na fila; agora fica no banco até ser atendido, e o atendido fica marcado por um dia (o <c>update_id</c> do
+/// Telegram, que reenvia o que não teve resposta a tempo, não é atendido duas vezes).
+/// </summary>
+public sealed class AvisoDoTelegram
+{
+    public long Id { get; set; }
+    public long? UpdateId { get; set; }
+    public string Json { get; set; } = "";
+    public DateTime Recebido { get; set; }
+
+    /// <summary>Quantas vezes o atendimento começou (um que caiu no meio, numa reinicialização, tenta mais uma vez).</summary>
+    public int Tentativas { get; set; }
+
+    /// <summary>Quando saiu da fila (atendido, ou desistido); nulo: esperando.</summary>
+    public DateTime? Atendido { get; set; }
 }
 
 /// <summary>Bloco 48: o alerta de custo já mandado num mês ("2026-10"), para não mandar de novo.</summary>
@@ -309,6 +350,8 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
     public DbSet<FalhaDoServidor> FalhasDoServidor => Set<FalhaDoServidor>(); // 0.55.1
     public DbSet<MembroDoGrupo> MembrosDosGrupos => Set<MembroDoGrupo>();
     public DbSet<OrdemNoTelegram> OrdensNoTelegram => Set<OrdemNoTelegram>(); // Bloco 59
+    public DbSet<FalhaDoApp> FalhasDoApp => Set<FalhaDoApp>(); // Bloco 69
+    public DbSet<AvisoDoTelegram> AvisosDoTelegram => Set<AvisoDoTelegram>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -381,6 +424,22 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
             f.Property(x => x.Mensagem).HasMaxLength(1000);
             f.Property(x => x.Pilha).HasMaxLength(4000);
         });
+        modelo.Entity<FalhaDoApp>(f =>
+        {
+            f.HasIndex(x => x.Quando);
+            f.Property(x => x.Versao).HasMaxLength(20);
+            f.Property(x => x.Sistema).HasMaxLength(60);
+            f.Property(x => x.Origem).HasMaxLength(60);
+            f.Property(x => x.Tipo).HasMaxLength(200);
+            f.Property(x => x.Mensagem).HasMaxLength(1000);
+            f.Property(x => x.Pilha).HasMaxLength(4000);
+        });
+        modelo.Entity<AvisoDoTelegram>(a =>
+        {
+            a.HasIndex(x => x.UpdateId).IsUnique();
+            a.HasIndex(x => x.Atendido);
+        });
+        modelo.Entity<Usuario>().Property(x => x.VersaoDoApp).HasMaxLength(20);
         modelo.Entity<GrupoDoTelegram>(g =>
         {
             g.HasKey(x => x.ChatId);

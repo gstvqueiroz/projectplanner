@@ -77,6 +77,40 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.ToTable("Assinaturas");
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.AvisoDoTelegram", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("Atendido")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Recebido")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("UpdateId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Atendido");
+
+                    b.HasIndex("UpdateId")
+                        .IsUnique();
+
+                    b.ToTable("AvisosDoTelegram");
+                });
+
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.CodigoDeEmail", b =>
                 {
                     b.Property<Guid>("Id")
@@ -134,6 +168,56 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.HasKey("Hash");
 
                     b.ToTable("CodigosDoTelegram");
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Servidor.Dados.FalhaDoApp", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Pilha")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("Quando")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Sistema")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Versao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Quando");
+
+                    b.ToTable("FalhasDoApp");
                 });
 
             modelBuilder.Entity("ProjectPlanner.Servidor.Dados.FalhaDoServidor", b =>
@@ -517,6 +601,13 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
 
                     b.Property<int>("TentativasFalhas")
                         .HasColumnType("integer");
+
+                    b.Property<string>("VersaoDoApp")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("VersaoVistaEm")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

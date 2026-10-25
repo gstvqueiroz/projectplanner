@@ -1018,6 +1018,20 @@ public sealed class ContaFalsa : IContaProjectPlanner
         return uso;
     }
 
+    // Bloco 69: a versão que o servidor anuncia e os erros mandados ao suporte.
+    public VersaoNoServidor? VersaoDoServidor { get; set; }
+
+    public System.Collections.Concurrent.ConcurrentQueue<ErroParaOSuporte> ErrosEnviados { get; } = new();
+
+    public Task<VersaoNoServidor?> VersaoNoServidorAsync(CancellationToken cancelamento) => Task.FromResult(VersaoDoServidor);
+
+    public Task EnviarErroAsync(ErroParaOSuporte erro, CancellationToken cancelamento)
+    {
+        if (Conectada)
+            ErrosEnviados.Enqueue(erro);
+        return Task.CompletedTask;
+    }
+
     public async Task SairAsync(CancellationToken cancelamento)
     {
         await Passo("sair", cancelamento);

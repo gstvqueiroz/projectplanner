@@ -40,8 +40,9 @@ public static class Telegram
         conta.MapPut("/obras/{projeto:guid}/ordens/{id:guid}", PublicarOrdem); // Bloco 59
     }
 
-    /// <summary>O aviso do Telegram: confere o segredo e responde na hora; o atendimento é na fila.</summary>
-    private static async Task<IResult> Webhook(HttpRequest http, FilaDoTelegram fila, IOptions<OpcoesDoServidor> opcoes, CancellationToken c)
+    /// <summary>O aviso do Telegram: confere o segredo, guarda na fila (no banco, Bloco 69) e responde na hora; o atendimento é na fila.</summary>
+    private static async Task<IResult> Webhook(HttpRequest http, FilaDoTelegram fila, BancoDoServidor banco, TimeProvider relogio,
+        IOptions<OpcoesDoServidor> opcoes, CancellationToken c)
     {
         var config = opcoes.Value.Telegram;
         if (!config.Ligado || !Segredos.Iguais(config.SegredoParaOTelegram, http.Headers[CabecalhoDoSegredo].ToString()))
@@ -49,7 +50,7 @@ public static class Telegram
         try
         {
             using var json = await JsonDocument.ParseAsync(http.Body, cancellationToken: c);
-            fila.Colocar(json.RootElement);
+            await fila.GuardarAsync(banco, json.RootElement, relogio.GetUtcNow().UtcDateTime, c);
         }
         catch (JsonException)
         {

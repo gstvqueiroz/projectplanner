@@ -18,7 +18,7 @@ public sealed partial class MainWindowViewModel
     public string TextoDaContaNaBarra => _conta.Perfil is { } perfil ? $"Conta: {perfil.Nome}" : "";
 
     [RelayCommand]
-    private Task Conta() => _dialogos.MostrarContaAsync(new ContaViewModel(_conta));
+    private Task Conta() => _dialogos.MostrarContaAsync(new ContaViewModel(_conta, _preferenciasInterface));
 
     [RelayCommand(CanExecute = nameof(ContaConectada))]
     private async Task SairDaConta()

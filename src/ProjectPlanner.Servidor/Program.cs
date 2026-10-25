@@ -36,6 +36,7 @@ builder.Services.AddHttpClient(Ia.ClienteDoGemini, c => c.Timeout = TimeSpan.Fro
 builder.Services.AddHttpClient(Ia.ClienteDaAnthropic, c => c.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.AddSingleton<CatalogoDeModelos>();
 builder.Services.AddSingleton<SaudeDosProvedores>(); // 0.63.1
+builder.Services.AddSingleton<VersoesDoApp>(); // Bloco 69
 // Bloco 49: o Telegram (webhook → fila → atendente, que usa o assistente do programa com o Gemini medido).
 builder.Services.AddHttpClient(ClienteDoTelegram.Cliente, c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddTransient<MedidorDeTokens>();
@@ -121,6 +122,8 @@ if (configuracao.Limites.AtrasDeProxy)
 app.UseExceptionHandler(erro => erro.Run(Falhas.ResponderAsync)); // 0.55.1: com código, guardado e no painel
 app.UseAuthentication();
 app.UseAuthorization();
+// Bloco 69: a versão mínima do programa e a versão de cada conta (o cabeçalho X-ProjectPlanner-Versao).
+app.Use((contexto, seguir) => contexto.RequestServices.GetRequiredService<VersoesDoApp>().ConferirAsync(contexto, () => seguir(contexto)));
 app.UseRateLimiter();
 
 app.MapGet("/", () => Results.Ok(new { servico = "ProjectPlanner.Servidor", versao = typeof(Program).Assembly.GetName().Version?.ToString(3) }));
@@ -130,6 +133,7 @@ Admin.Mapear(app);
 PainelFinanceiro.Mapear(app);
 Telegram.Mapear(app);
 Pagamentos.Mapear(app);
+Programa.Mapear(app); // Bloco 69
 
 app.Run();
 

@@ -27,10 +27,26 @@ public sealed record AlertaDoPainel(decimal CustoDoMesEmReais, decimal LimiteEmR
 /// <summary>0.55.1: um erro inesperado do servidor, para o painel (o começo da pilha ajuda a achar a causa).</summary>
 public sealed record LinhaDaFalha(string Codigo, DateTime Quando, string Rota, string Tipo, string Mensagem, string? Pilha);
 
+/// <summary>Bloco 69: um erro do programa mandado ao suporte, para o painel.</summary>
+public sealed record LinhaDaFalhaDoApp(DateTime Quando, string Email, string Versao, string Sistema, string Origem, string Tipo, string Mensagem, string? Pilha);
+
+/// <summary>Bloco 69: quantas contas usaram cada versão do programa (a última vista de cada uma).</summary>
+public sealed record LinhaDaVersao(string Versao, int Contas, DateTime UltimaVez);
+
 /// <summary>Bloco 48: tudo o que o painel financeiro mostra num período.</summary>
 public sealed record DadosDoPainel(DateOnly De, DateOnly Ate, ResumoDoPainel Resumo, IReadOnlyList<LinhaDoDia> PorDia, IReadOnlyList<LinhaDoModelo> PorModelo,
     IReadOnlyList<LinhaDaRotina> PorRotina, IReadOnlyList<LinhaDoPlano> PorPlano, IReadOnlyList<LinhaDoUsuario> QuemMaisGasta, AlertaDoPainel Alerta, OpcoesFinanceiras Premissas,
-    IReadOnlyList<LinhaDaFalha> Falhas);
+    IReadOnlyList<LinhaDaFalha> Falhas)
+{
+    /// <summary>Bloco 69: os erros do programa mandados ao suporte no período, os mais recentes primeiro.</summary>
+    public IReadOnlyList<LinhaDaFalhaDoApp> FalhasDoApp { get; init; } = [];
+
+    /// <summary>Bloco 69: as versões do programa em uso (a última de cada conta).</summary>
+    public IReadOnlyList<LinhaDaVersao> Versoes { get; init; } = [];
+
+    /// <summary>Bloco 69: os avisos do Telegram esperando o atendente agora (muitos: o atendente está parado).</summary>
+    public int AvisosNaFilaDoTelegram { get; init; }
+}
 
 /// <summary>
 /// Bloco 48: o painel financeiro. Junta os pedidos de IA de um período (o custo real de cada um, gravado desde o Bloco 46)
@@ -128,7 +144,26 @@ public static class Painel
                 .Take(FalhasNoPainel).ToListAsync(c))
             .Select(f => new LinhaDaFalha(f.Codigo, f.Quando, f.Rota, f.Tipo, f.Mensagem, f.Pilha is { Length: > TamanhoDaPilha } p ? p[..TamanhoDaPilha] + "…" : f.Pilha))
             .ToList();
-        return new DadosDoPainel(de, ate, resumo, porDia, porModelo, porRotina, porPlano, quemMaisGasta, await AlertaAsync(banco, financeiro, agora, c), financeiro, falhas);
+        // Bloco 69: os erros do programa, as versões em uso e a fila do Telegram.
+        var falhasDoApp = (await (from f in banco.FalhasDoApp.AsNoTracking()
+                    join u in banco.Usuarios.AsNoTracking() on f.UsuarioId equals u.Id
+                    where f.Quando >= inicio && f.Quando < fim
+                    orderby f.Id descending
+                    select new { f, u.Email }).Take(FalhasNoPainel).ToListAsync(c))
+            .Select(x => new LinhaDaFalhaDoApp(x.f.Quando, x.Email, x.f.Versao, x.f.Sistema, x.f.Origem, x.f.Tipo, x.f.Mensagem,
+                x.f.Pilha is { Length: > TamanhoDaPilha } p ? p[..TamanhoDaPilha] + "…" : x.f.Pilha))
+            .ToList();
+        var versoes = (await banco.Usuarios.AsNoTracking().Where(u => u.VersaoDoApp != null).Select(u => new { u.VersaoDoApp, u.VersaoVistaEm }).ToListAsync(c))
+            .GroupBy(u => u.VersaoDoApp!)
+            .Select(g => new LinhaDaVersao(g.Key, g.Count(), g.Max(u => u.VersaoVistaEm) ?? DateTime.MinValue))
+            .OrderByDescending(v => VersoesDoApp.Ler(v.Versao))
+            .ToList();
+        return new DadosDoPainel(de, ate, resumo, porDia, porModelo, porRotina, porPlano, quemMaisGasta, await AlertaAsync(banco, financeiro, agora, c), financeiro, falhas)
+        {
+            FalhasDoApp = falhasDoApp,
+            Versoes = versoes,
+            AvisosNaFilaDoTelegram = await banco.AvisosDoTelegram.CountAsync(a => a.Atendido == null, c),
+        };
     }
 
     /// <summary>O custo de IA do mês corrente (UTC), de todas as contas, em milionésimos de dólar.</summary>

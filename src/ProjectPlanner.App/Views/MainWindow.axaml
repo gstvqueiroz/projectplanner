@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ProjectPlanner.App.ViewModels"
         xmlns:v="using:ProjectPlanner.App.Views"
@@ -263,6 +263,7 @@
                     <MenuItem Header="Abrir a pasta de registros de erros" Command="{Binding AbrirRegistrosDeErrosCommand}"
                               ToolTip.Tip="Os erros inesperados ficam registrados ali, um arquivo por mês" />
                     <Separator />
+                    <MenuItem Header="Baixar a versão nova…" Command="{Binding BaixarVersaoNovaCommand}" IsVisible="{Binding TemAvisoDeVersao}" />
                     <MenuItem Header="Sobre o ProjectPlanner…" Command="{Binding SobreCommand}" />
                 </MenuItem>
             </Menu>
@@ -551,6 +552,10 @@
                                IsVisible="{Binding TextoPeriodoNaBarra, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <TextBlock x:Name="StatusConta" Text="{Binding TextoDaContaNaBarra}"
                                IsVisible="{Binding TextoDaContaNaBarra, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <!-- Bloco 69: o aviso de versão nova (o botão baixa, quando o servidor diz onde) -->
+                    <Button x:Name="AvisoDeVersaoNova" Content="{Binding TextoDoAvisoDeVersao}" Command="{Binding BaixarVersaoNovaCommand}"
+                            IsVisible="{Binding TemAvisoDeVersao}" Padding="6,0" FontSize="12" VerticalAlignment="Center"
+                            ToolTip.Tip="Baixar a versão nova do ProjectPlanner" />
                     <TextBlock x:Name="StatusVersao" Text="{Binding TextoVersaoNaBarra}" />
                 </StackPanel>
                 <TextBlock x:Name="StatusMensagem" Text="{Binding MensagemNaBarra}" ToolTip.Tip="{Binding Mensagem}"

@@ -189,6 +189,9 @@ public sealed class Servidor : WebApplicationFactory<Program>
     public const string ChaveDeAdmin = "chave-de-admin-de-teste-0123456789";
 
     private static readonly string? Postgres = Environment.GetEnvironmentVariable("PP_SERVIDOR_POSTGRES");
+
+    // Bloco 69: o SQLite sem pool (cada servidor de teste tem o seu arquivo): o ClearAllPools do Dispose de um teste não derruba as
+    // conexões dos outros, que agora usam o banco o tempo todo (a fila do Telegram).
     private readonly string _banco = Path.Combine(Path.GetTempPath(), $"pp-servidor-{Guid.NewGuid():N}.db");
     private readonly Dictionary<string, string?> _config;
 
@@ -220,7 +223,7 @@ public sealed class Servidor : WebApplicationFactory<Program>
     {
         _config = new()
         {
-            ["ConnectionStrings:Banco"] = string.IsNullOrWhiteSpace(Postgres) ? $"Data Source={_banco}" : $"{Postgres};Database=pp_teste_{Guid.NewGuid():N}",
+            ["ConnectionStrings:Banco"] = string.IsNullOrWhiteSpace(Postgres) ? $"Data Source={_banco};Pooling=False" : $"{Postgres};Database=pp_teste_{Guid.NewGuid():N}",
             ["Jwt:Chave"] = "chave-do-jwt-de-teste-com-mais-de-32-bytes",
             ["Gemini:Chave"] = ChaveDoGemini,
             ["Anthropic:Chave"] = ChaveDaAnthropic,

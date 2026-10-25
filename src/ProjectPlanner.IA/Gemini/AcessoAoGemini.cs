@@ -84,8 +84,11 @@ public sealed class AcessoPelaConta : AcessoAoGemini
 
     internal override string Destino => "o servidor do ProjectPlanner";
 
-    internal override async Task AutenticarAsync(HttpRequestMessage pedido, bool renovar, CancellationToken cancelamento) =>
+    internal override async Task AutenticarAsync(HttpRequestMessage pedido, bool renovar, CancellationToken cancelamento)
+    {
         pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await _sessao.AcessoAsync(renovar, cancelamento));
+        ClienteDaConta.MarcarVersao(pedido); // Bloco 69
+    }
 
     internal override bool RenovarDepoisDe(HttpStatusCode status) => status == HttpStatusCode.Unauthorized;
 

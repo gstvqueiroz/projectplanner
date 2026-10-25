@@ -143,6 +143,14 @@
     tabela("falhas", ["Código", "Quando (UTC)", "Rota", "Erro", "Onde"], d.falhas.map(function (f) {
       return [f.codigo, f.quando.replace("T", " ").slice(0, 19), f.rota, f.tipo + ": " + f.mensagem, f.pilha || ""];
     }), "Nenhum erro no período.");
+    // Bloco 69: os erros do programa, as versões em uso e a fila do Telegram.
+    tabela("falhasDoApp", ["Quando (UTC)", "Conta", "Versão", "Sistema", "Onde", "Erro", "Pilha"], (d.falhasDoApp || []).map(function (f) {
+      return [f.quando.replace("T", " ").slice(0, 19), f.email, f.versao, f.sistema, f.origem, f.tipo + ": " + f.mensagem, f.pilha || ""];
+    }), "Nenhum erro mandado no período (os usuários ligam o envio em Conta > Minha conta).");
+    tabela("versoes", ["Versão", "Contas", "Última vez (UTC)"], (d.versoes || []).map(function (v) {
+      return [v.versao, numero.format(v.contas), v.ultimaVez.replace("T", " ").slice(0, 16)];
+    }), "Nenhuma conta usou o programa desde o Bloco 69.");
+    $("filaDoTelegram").textContent = "Avisos do Telegram esperando o atendente agora: " + numero.format(d.avisosNaFilaDoTelegram || 0) + ".";
     $("premissas").textContent = "Período de " + d.de.split("-").reverse().join("/") + " a " + d.ate.split("-").reverse().join("/") + " (UTC). " +
       "Premissas: US$ 1 = " + reais.format(f.reaisPorDolar) + " + " + umaCasa.format(f.percentualSobreODolar) + "% (IOF e spread); impostos e taxas de " +
       umaCasa.format(f.percentualDeImpostosETaxas) + "% sobre a receita; alerta a partir de " + reais.format(f.alertaMensalEmReais) + " por mês. " +

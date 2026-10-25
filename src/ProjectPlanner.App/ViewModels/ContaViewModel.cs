@@ -28,14 +28,37 @@ public sealed partial class ContaViewModel : ViewModelBase
     private static readonly CultureInfo Brasil = CultureInfo.GetCultureInfo("pt-BR");
 
     private readonly IContaProjectPlanner _conta;
+    private readonly IPreferenciasInterface? _preferencias;
     private CancellationTokenSource? _pedido;
 
-    public ContaViewModel(IContaProjectPlanner conta)
+    /// <param name="preferencias">Bloco 69: com elas, a opção de mandar os erros ao suporte (o menu Conta da janela principal).</param>
+    public ContaViewModel(IContaProjectPlanner conta, IPreferenciasInterface? preferencias = null)
     {
         ArgumentNullException.ThrowIfNull(conta);
         _conta = conta;
+        _preferencias = preferencias;
         Pagina = conta.Conectada ? PaginaDaConta.Perfil : PaginaDaConta.Entrar;
         Email = conta.Perfil?.Email ?? "";
+    }
+
+    // ---- Bloco 69: os erros para o suporte ----
+
+    public const string ExplicacaoDoEnvioDeErros =
+        "Quando o programa der um erro inesperado, mandar ao suporte o tipo do erro, a mensagem e onde aconteceu no código " +
+        "(com a sua pasta trocada por \"~\"). Não vai nada das suas obras.";
+
+    public bool MostraEnvioDeErros => _preferencias is not null;
+
+    public bool EnviarErros
+    {
+        get => _preferencias?.Carregar()?.EnviarErros == true;
+        set
+        {
+            if (_preferencias is null || value == EnviarErros)
+                return;
+            _preferencias.Salvar((_preferencias.Carregar() ?? new PreferenciasInterface(true)) with { EnviarErros = value });
+            OnPropertyChanged();
+        }
     }
 
     /// <summary>Ao abrir já conectado: busca o plano e o uso.</summary>

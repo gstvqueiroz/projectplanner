@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ProjectPlanner.App.ViewModels"
         x:Class="ProjectPlanner.App.Views.ContaWindow"
@@ -60,6 +60,18 @@
                 <TextBlock x:Name="Uso" Text="{Binding TextoDoUso}" TextWrapping="Wrap" FontSize="12" />
             </StackPanel>
         </Border>
+
+        <!-- Bloco 69: os erros inesperados para o suporte (desligado de início) -->
+        <StackPanel x:Name="EnvioDeErros" Spacing="2">
+            <StackPanel.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="EmPerfil" />
+                    <Binding Path="MostraEnvioDeErros" />
+                </MultiBinding>
+            </StackPanel.IsVisible>
+            <CheckBox x:Name="EnviarErros" Content="Mandar os erros do programa ao suporte" IsChecked="{Binding EnviarErros}" />
+            <TextBlock Text="{x:Static vm:ContaViewModel.ExplicacaoDoEnvioDeErros}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" Margin="28,0,0,0" />
+        </StackPanel>
 
         <!-- Bloco 47: plano e pagamento (pelo Mercado Pago, no navegador) -->
         <StackPanel x:Name="Pagamentos" Spacing="8">

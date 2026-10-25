@@ -5,6 +5,9 @@ namespace ProjectPlanner.App;
 
 sealed class Program
 {
+    /// <summary>Bloco 69: o tratamento de erros instalado (o App liga nele o envio ao suporte quando os serviços sobem).</summary>
+    internal static Services.TratamentoDeErros? Tratamento { get; private set; }
+
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
@@ -16,8 +19,9 @@ sealed class Program
         System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = brasil;
         System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.CurrentUICulture = brasil;
         // Bloco 25 (R1): erros que ninguém tratou vão para o registro local, e os da interface viram um aviso.
-        new Services.TratamentoDeErros(new Services.RegistroDeErros(Services.RegistroDeErros.PastaPadrao(), TimeProvider.System),
-            Views.AvisoDeErroWindow.Mostrar).Instalar();
+        Tratamento = new Services.TratamentoDeErros(new Services.RegistroDeErros(Services.RegistroDeErros.PastaPadrao(), TimeProvider.System),
+            Views.AvisoDeErroWindow.Mostrar);
+        Tratamento.Instalar();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

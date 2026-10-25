@@ -41,6 +41,24 @@ public sealed class ContaTests
     }
 
     [Fact]
+    public async Task PelaConta_CadaPedidoDizAVersaoDoPrograma_PelaChaveNao()
+    {
+        // Bloco 69: o servidor recusa as versões abaixo da mínima e anota a versão de cada conta.
+        var sessao = new SessaoFixa();
+        await Assistente(sessao).EnviarAsync(new PedidoIA("Oi", [], []), default);
+        _servidor.Responder = (_, _) => Task.FromResult(ManipuladorFalso.Json(200, """{"ultima":"0.70.0","minima":null,"download":null}"""));
+        var versao = await new Conta.ClienteDaConta(new HttpClient(_servidor), new Uri("https://servidor.teste/")).VersaoAsync(default);
+        _servidor.Responder = (_, _) => Task.FromResult(ManipuladorFalso.Json(200, ManipuladorFalso.Resposta("""{"mensagem":"ok","alteracoes":[]}""")));
+        await new AssistenteGemini(new HttpClient(_servidor), "AIzaChaveDeTesteSoParaOsTestes123456789", "m").EnviarAsync(new PedidoIA("Oi", [], []), default);
+
+        _servidor.Pedidos.Select(p => p.Pedido.Headers.TryGetValues(Conta.ClienteDaConta.CabecalhoDaVersao, out var v) ? v.Single() : null)
+            .Should().Equal(Conta.ClienteDaConta.VersaoDoPrograma, Conta.ClienteDaConta.VersaoDoPrograma, null);
+        Conta.ClienteDaConta.VersaoDoPrograma.Should().MatchRegex(@"^\d+\.\d+\.\d+$");
+        versao.Should().Be(new Conta.VersaoNoServidor("0.70.0", null, null));
+        _servidor.Pedidos[1].Pedido.RequestUri.Should().Be(new Uri("https://servidor.teste/v1/versao"));
+    }
+
+    [Fact]
     public async Task PelaConta_CadaPedidoDizARotina_PelaChaveNao()
     {
         // Bloco 50: o servidor guarda a rotina de cada pedido, para o painel mostrar quanto custa cada uma.

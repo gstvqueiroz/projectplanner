@@ -26,6 +26,21 @@ public sealed class OpcoesDoServidor
 
     /// <summary>Bloco 47: a cobrança pelo Mercado Pago (assinatura do Profissional e pacotes de créditos).</summary>
     public OpcoesDoMercadoPago MercadoPago { get; set; } = new();
+
+    /// <summary>Bloco 69: as versões do programa (o aviso de versão nova e a mínima que o servidor aceita).</summary>
+    public OpcoesDoApp App { get; set; } = new();
+}
+
+/// <summary>
+/// Bloco 69: no Render, <c>App__UltimaVersao</c> (a versão publicada para os clientes: o programa avisa quem tem uma mais velha),
+/// <c>App__VersaoMinima</c> (abaixo dela o servidor recusa os pedidos, com o aviso para atualizar) e <c>App__Download</c> (onde
+/// baixar). Vazias, nada muda.
+/// </summary>
+public sealed class OpcoesDoApp
+{
+    public string? UltimaVersao { get; set; }
+    public string? VersaoMinima { get; set; }
+    public string? Download { get; set; }
 }
 
 public sealed class OpcoesDoJwt

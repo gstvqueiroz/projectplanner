@@ -42,7 +42,8 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
             var arquivo = JsonSerializer.Deserialize<Arquivo>(File.ReadAllText(Caminho), Opcoes);
             return arquivo is { Versao: VersaoDoFormato }
                 ? new PreferenciasInterface(arquivo.MostrarAssistente, TemaDoTexto(arquivo.Tema),
-                    arquivo.OcultosNaBarra is { } ocultos ? [.. ocultos.Where(o => !string.IsNullOrWhiteSpace(o))] : null)
+                    arquivo.OcultosNaBarra is { } ocultos ? [.. ocultos.Where(o => !string.IsNullOrWhiteSpace(o))] : null,
+                    arquivo.EnviarErros == true)
                 : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
@@ -59,7 +60,7 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
             Directory.CreateDirectory(Path.GetDirectoryName(Caminho)!);
             File.WriteAllText(temporario, JsonSerializer.Serialize(
                 new Arquivo(VersaoDoFormato, preferencias.MostrarAssistente, TextoDoTema(preferencias.Tema),
-                    preferencias.OcultosNaBarra is { Count: > 0 } ocultos ? [.. ocultos] : null), Opcoes));
+                    preferencias.OcultosNaBarra is { Count: > 0 } ocultos ? [.. ocultos] : null, preferencias.EnviarErros ? true : null), Opcoes));
             File.Move(temporario, Caminho, overwrite: true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -82,5 +83,6 @@ public sealed class ArquivoPreferenciasInterface(string caminho) : IPreferencias
         _ => TemaDaInterface.Sistema,
     };
 
-    private sealed record Arquivo(int Versao, bool MostrarAssistente, string? Tema = null, List<string>? OcultosNaBarra = null);
+    // Bloco 69: EnviarErros só aparece no arquivo quando ligado (o arquivo de quem não liga fica igual ao de antes).
+    private sealed record Arquivo(int Versao, bool MostrarAssistente, string? Tema = null, List<string>? OcultosNaBarra = null, bool? EnviarErros = null);
 }

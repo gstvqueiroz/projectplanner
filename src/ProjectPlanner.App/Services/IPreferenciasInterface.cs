@@ -12,8 +12,9 @@ public enum TemaDaInterface
 /// <param name="MostrarAssistente">Se o painel do assistente de IA aparece.</param>
 /// <param name="Tema">O tema escolhido em Exibir > Tema (Bloco 25); sem escolha salva, o do sistema.</param>
 /// <param name="OcultosNaBarra">Bloco 39: os botões que o usuário tirou da barra de ícones (pelo id); nulo, todos aparecem.</param>
+/// <param name="EnviarErros">Bloco 69: mandar ao suporte os erros inesperados do programa (Conta > Minha conta); desligado de início.</param>
 public sealed record PreferenciasInterface(bool MostrarAssistente, TemaDaInterface Tema = TemaDaInterface.Sistema,
-    IReadOnlyList<string>? OcultosNaBarra = null);
+    IReadOnlyList<string>? OcultosNaBarra = null, bool EnviarErros = false);
 
 /// <summary>Onde ficam as <see cref="PreferenciasInterface"/> (ver <see cref="ArquivoPreferenciasInterface"/>).</summary>
 public interface IPreferenciasInterface

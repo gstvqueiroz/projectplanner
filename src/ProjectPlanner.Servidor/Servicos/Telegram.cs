@@ -1,7 +1,8 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading.Channels;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using ProjectPlanner.Servidor.Dados;
 
 namespace ProjectPlanner.Servidor.Servicos;
 
@@ -111,31 +112,116 @@ public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<Opco
     }
 }
 
-/// <summary>Bloco 49: os avisos do Telegram esperando o atendente (o webhook responde na hora; a IA pode levar um minuto).</summary>
+/// <summary>
+/// Bloco 49: os avisos do Telegram esperando o atendente (o webhook responde na hora; a IA pode levar um minuto). Bloco 69: a
+/// fila fica no banco (<see cref="AvisoDoTelegram"/>): um deploy, uma reinicialização ou o Render "dormindo" não perde mais o
+/// que estava esperando; ao subir, o processador atende o que ficou.
+/// </summary>
 public sealed class FilaDoTelegram
 {
-    private readonly Channel<JsonElement> _fila = Channel.CreateBounded<JsonElement>(new BoundedChannelOptions(500) { FullMode = BoundedChannelFullMode.DropOldest });
+    /// <summary>Um atendimento que caiu no meio (o servidor reiniciou) tenta mais uma vez; depois sai da fila.</summary>
+    public const int MaximoDeTentativas = 2;
 
-    public bool Colocar(JsonElement aviso) => _fila.Writer.TryWrite(aviso.Clone());
+    /// <summary>Um aviso mais velho que isso não é mais atendido (a conversa já passou) e sai do banco (o atendido também).</summary>
+    public static readonly TimeSpan Validade = TimeSpan.FromHours(24);
 
-    public IAsyncEnumerable<JsonElement> Ler(CancellationToken c) => _fila.Reader.ReadAllAsync(c);
+    private readonly SemaphoreSlim _sinal = new(0);
+
+    /// <summary>Guarda o aviso e acorda o processador. Um que o Telegram mandou de novo (o mesmo update_id) não entra duas vezes.</summary>
+    /// <returns>Se entrou na fila.</returns>
+    public async Task<bool> GuardarAsync(BancoDoServidor banco, JsonElement aviso, DateTime agora, CancellationToken c)
+    {
+        long? numero = aviso.ValueKind == JsonValueKind.Object && aviso.TryGetProperty("update_id", out var u) && u.TryGetInt64(out var n) ? n : null;
+        if (numero is { } id && await banco.AvisosDoTelegram.AnyAsync(a => a.UpdateId == id, c))
+            return false;
+        var novo = new AvisoDoTelegram { UpdateId = numero, Json = aviso.GetRawText(), Recebido = agora };
+        banco.AvisosDoTelegram.Add(novo);
+        try
+        {
+            await banco.SaveChangesAsync(c);
+        }
+        catch (DbUpdateException) when (numero is not null)
+        {
+            banco.Entry(novo).State = EntityState.Detached; // o mesmo aviso chegou duas vezes ao mesmo tempo
+            return false;
+        }
+        _sinal.Release();
+        return true;
+    }
+
+    /// <summary>Espera um aviso novo (ou o limite).</summary>
+    public async Task EsperarAsync(TimeSpan limite, CancellationToken c) => await _sinal.WaitAsync(limite, c);
 }
 
-/// <summary>Atende os avisos da fila, um por vez, cada um com o seu escopo (banco).</summary>
-public sealed class ProcessadorDoTelegram(FilaDoTelegram fila, IServiceScopeFactory escopos, ILogger<ProcessadorDoTelegram> log) : BackgroundService
+/// <summary>Atende os avisos da fila, um por vez e na ordem de chegada, cada um com o seu escopo (banco).</summary>
+public sealed class ProcessadorDoTelegram(FilaDoTelegram fila, IServiceScopeFactory escopos, TimeProvider relogio, ILogger<ProcessadorDoTelegram> log)
+    : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken parar)
     {
-        await foreach (var aviso in fila.Ler(parar))
+        while (!parar.IsCancellationRequested)
         {
             try
             {
+                await AtenderOsGuardadosAsync(parar);
+                // Sem consultar o banco de tempos em tempos (o Neon dormiria menos e gastaria as horas do plano): só quando chega um aviso.
+                await fila.EsperarAsync(Timeout.InfiniteTimeSpan, parar);
+            }
+            catch (OperationCanceledException) when (parar.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Falha ao ler a fila do Telegram");
+                await Task.Delay(TimeSpan.FromSeconds(5), parar);
+            }
+        }
+    }
+
+    /// <summary>Atende tudo o que está na fila (antes, os vencidos saem do banco e os que já caíram duas vezes saem da fila).</summary>
+    public async Task AtenderOsGuardadosAsync(CancellationToken parar)
+    {
+        while (true)
+        {
+            AvisoDoTelegram? aviso;
+            using (var escopo = escopos.CreateScope())
+            {
+                var banco = escopo.ServiceProvider.GetRequiredService<BancoDoServidor>();
+                var agora = relogio.GetUtcNow().UtcDateTime;
+                var limite = agora - FilaDoTelegram.Validade;
+                var vencidos = await banco.AvisosDoTelegram.Where(a => a.Recebido < limite).ToListAsync(parar);
+                var desistidos = await banco.AvisosDoTelegram.Where(a => a.Atendido == null && a.Recebido >= limite && a.Tentativas >= FilaDoTelegram.MaximoDeTentativas)
+                    .ToListAsync(parar);
+                if (vencidos.Count(a => a.Atendido is null) + desistidos.Count is var semAtendimento and > 0)
+                    log.LogWarning("{Quantos} aviso(s) do Telegram saíram da fila sem atendimento (vencidos ou que caíram duas vezes)", semAtendimento);
+                banco.AvisosDoTelegram.RemoveRange(vencidos);
+                foreach (var a in desistidos)
+                    a.Atendido = agora;
+                aviso = await banco.AvisosDoTelegram.Where(a => a.Atendido == null && a.Recebido >= limite).OrderBy(a => a.Id).FirstOrDefaultAsync(parar);
+                if (aviso is not null)
+                    aviso.Tentativas++;
+                await banco.SaveChangesAsync(parar);
+            }
+            if (aviso is null)
+                return;
+            try
+            {
                 using var escopo = escopos.CreateScope();
-                await escopo.ServiceProvider.GetRequiredService<AtendenteDoTelegram>().AtenderAsync(aviso, parar);
+                using var json = JsonDocument.Parse(aviso.Json);
+                await escopo.ServiceProvider.GetRequiredService<AtendenteDoTelegram>().AtenderAsync(json.RootElement, parar);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !parar.IsCancellationRequested)
             {
+                // Uma falha no atendimento não se repete (seria responder duas vezes): o aviso sai da fila.
                 log.LogError(ex, "Falha ao atender um aviso do Telegram");
+            }
+            using (var escopo = escopos.CreateScope())
+            {
+                // Fica marcado por um dia: o Telegram pode mandar de novo o mesmo aviso.
+                var banco = escopo.ServiceProvider.GetRequiredService<BancoDoServidor>();
+                var agora = relogio.GetUtcNow().UtcDateTime;
+                await banco.AvisosDoTelegram.Where(a => a.Id == aviso.Id).ExecuteUpdateAsync(a => a.SetProperty(x => x.Atendido, agora), CancellationToken.None);
             }
         }
     }

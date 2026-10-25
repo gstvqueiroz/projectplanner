@@ -57,6 +57,14 @@ public interface IContaProjectPlanner : ISessaoDaConta
     Task<AvaliacaoDoPedido> AvaliarAsync(PedidoDeAvaliacao pedido, CancellationToken cancelamento) =>
         Task.FromException<AvaliacaoDoPedido>(new ErroDaContaException("A triagem do nível Automático não está disponível.", 0));
 
+    // ---- Bloco 69: a versão do programa e os erros para o suporte (numa implementação sem eles, nada) ----
+
+    /// <summary>As versões que o servidor anuncia; nulo sem resposta (sem internet, servidor antigo).</summary>
+    Task<VersaoNoServidor?> VersaoNoServidorAsync(CancellationToken cancelamento) => Task.FromResult<VersaoNoServidor?>(null);
+
+    /// <summary>Manda um erro do programa ao suporte (com a conta conectada; sem ela, nada).</summary>
+    Task EnviarErroAsync(ErroParaOSuporte erro, CancellationToken cancelamento) => Task.CompletedTask;
+
     // ---- Bloco 47: pagamentos (sem conta, ou numa implementação sem eles, avisam que não estão disponíveis) ----
 
     Task<SituacaoDosPagamentos> PagamentosAsync(CancellationToken cancelamento) => SemPagamentos<SituacaoDosPagamentos>();
@@ -181,6 +189,32 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
 
     public async Task RedefinirSenhaAsync(string email, string codigo, string novaSenha, CancellationToken cancelamento) =>
         Guardar(await _cliente.RedefinirSenhaAsync(email.Trim(), codigo.Trim(), novaSenha, cancelamento));
+
+    public async Task<VersaoNoServidor?> VersaoNoServidorAsync(CancellationToken cancelamento)
+    {
+        try
+        {
+            return await _cliente.VersaoAsync(cancelamento);
+        }
+        catch (ErroDaContaException)
+        {
+            return null; // sem internet, o servidor dormindo demais ou de antes do Bloco 69: sem aviso
+        }
+    }
+
+    public async Task EnviarErroAsync(ErroParaOSuporte erro, CancellationToken cancelamento)
+    {
+        if (!Conectada)
+            return;
+        try
+        {
+            await _cliente.EnviarErroAsync(await AcessoDaContaAsync(false, cancelamento), erro, cancelamento);
+        }
+        catch (ErroDaContaException ex) when (ex.SessaoRecusada)
+        {
+            await _cliente.EnviarErroAsync(await AcessoDaContaAsync(true, cancelamento), erro, cancelamento);
+        }
+    }
 
     public async Task<UsoDaConta> UsoAsync(CancellationToken cancelamento)
     {

@@ -513,6 +513,36 @@ Decisões do usuário:
 No plano grátis do Render, a primeira mensagem depois de um tempo parado pode levar cerca de 1 minuto: o Telegram espera
 o servidor acordar.
 
+## Bloco 68 (0.68.0): publicar só com os testes passando
+
+O `render.yaml` tem `autoDeployTrigger: checksPass`: o Render só publica o commit do `main` depois que os testes do GitHub
+(`.github/workflows/testes.yml`, que compila e roda o `dotnet test` no macOS) passam nele. Se o Blueprint não estiver
+sincronizando sozinho, a mesma opção fica no painel do Render: o serviço > Settings > Build & Deploy > **Auto-Deploy: After CI
+Checks Pass**. Um commit com teste quebrado não vai ao ar; corrija e mande outro.
+
+## Bloco 69 (0.69.0): pronto para clientes
+
+- **A fila do Telegram no banco** (tabela `AvisosDoTelegram`): o webhook guarda o aviso e responde na hora; o atendente
+  atende na ordem. Um deploy, uma reinicialização ou o servidor "dormindo" no meio não perde mais o que estava esperando: ao
+  subir, ele atende o que ficou (um atendimento que caiu no meio tenta mais uma vez). O atendido fica marcado por um dia, para
+  o Telegram não ser respondido duas vezes quando reenvia o mesmo aviso (pelo `update_id`). O processador só consulta o banco
+  quando chega um aviso (e ao subir), para o Neon poder dormir. O painel mostra quantos avisos estão esperando.
+- **As versões do programa:** todo pedido do programa traz a versão no cabeçalho `X-ProjectPlanner-Versao`. Variáveis no
+  Render (todas opcionais; vazias, nada muda):
+
+  | Variável | Para quê |
+  |---|---|
+  | `App__UltimaVersao` | A versão publicada para os clientes (como `0.69.0`): quem tem uma mais velha vê "Versão nova: 0.69.0" na barra de status |
+  | `App__VersaoMinima` | Abaixo dela o servidor recusa os pedidos (426) com "Esta versão do ProjectPlanner (…) não funciona mais com o servidor. Atualize…" |
+  | `App__Download` | O endereço para baixar (o botão "Baixar" do aviso abre ele) |
+
+  `GET /v1/versao` (sem conta) devolve `{ultima, minima, download}`. O painel mostra quantas contas usam cada versão (a
+  última vista de cada uma).
+- **Os erros do programa:** em Conta > Minha conta, a opção "Mandar os erros do programa ao suporte" (desligada de início).
+  Ligada, cada erro inesperado vai a `POST /v1/erros` com o tipo, a mensagem, onde aconteceu no código, a versão e o sistema,
+  com a pasta do usuário trocada por "~" (nada das obras). Ficam os últimos 500 (no máximo 20 por conta por dia), e o painel
+  mostra os do período, com a conta.
+
 ## Depois
 
 - Sincronização e backup dos projetos na nuvem.

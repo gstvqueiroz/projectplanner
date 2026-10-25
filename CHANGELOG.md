@@ -3,6 +3,16 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.70.0
+
+**Regressão completa e os pacotes do Windows em dia.**
+
+- **Pacotes do Windows** (instalador e portátil, x64 e ARM) gerados de novo: estavam na 0.55.1.
+- **As telas maiores do código divididas em partes** (a janela principal, as ordens de serviço e o painel do assistente),
+  sem mudar nada no que o programa faz: fica mais fácil e mais seguro mexer em cada parte.
+- **Regressão da 0.70.0** (docs/REGRESSAO-0.70.0.md): o que foi conferido no programa publicado, nos testes e no servidor, e o
+  roteiro dos testes que dependem das suas contas (Telegram, Mercado Pago, a IA de verdade, o Google).
+
 ## 0.69.0
 
 **Pronto para clientes: a fila do Telegram no banco, o aviso de versão nova e os erros para o suporte.**

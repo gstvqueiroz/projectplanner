@@ -114,6 +114,31 @@ public sealed class IaTests : IDisposable
         (await Gerar(sessao.Acesso, corpo: "{\"x\":\"" + new string('a', 1000 * 1000) + "\"}")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Gerar_CorpoSemTamanhoDeclarado_LidoAteOLimite_EOMesmoChegaAoGemini()
+    {
+        // 0.55.2: com Content-Length, o corpo é lido num vetor do tamanho certo; sem ele (envio em partes), aos poucos, até o limite.
+        _s.Dispose();
+        _s = new Servidor(new() { ["Limites:MegabytesPorPedido"] = "1" });
+        var sessao = await _s.CriarConta();
+        async Task<HttpResponseMessage> EmPartes(string corpo)
+        {
+            var pedido = new HttpRequestMessage(HttpMethod.Post, "/v1/ia/models/gemini-2.5-flash:generateContent")
+            {
+                Content = new StreamContent(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(corpo))),
+            };
+            pedido.Content.Headers.ContentLength = null;
+            pedido.Headers.TransferEncodingChunked = true;
+            pedido.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", sessao.Acesso);
+            return await _s.CreateClient().SendAsync(pedido);
+        }
+
+        var pequeno = """{"contents":[{"role":"user","parts":[{"text":"Olá"}]}]}""";
+        (await EmPartes(pequeno)).StatusCode.Should().Be(HttpStatusCode.OK);
+        _s.Gemini.Pedidos.Single().Corpo.Should().Be(pequeno);
+        (await EmPartes("{\"x\":\"" + new string('a', 1024 * 1024) + "\"}")).StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.Forbidden, """{"error":{"code":403,"message":"Permission denied"}}""", 502)]
     [InlineData(HttpStatusCode.Unauthorized, """{"error":{"code":401}}""", 502)]

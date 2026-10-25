@@ -7,7 +7,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>ProjectPlanner.Servidor</RootNamespace>
+    <!-- 0.55.2: o servidor roda com 512 MB (Render): o coletor de estação de trabalho usa bem menos memória que o de servidor, e
+         ConserveMemory compacta a área dos objetos grandes (os anexos em base64), que antes só crescia. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />

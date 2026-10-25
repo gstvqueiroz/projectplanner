@@ -104,7 +104,7 @@ public static class Ia
             return Falha(402, CotaEsgotada);
 
         var tamanho = config.Limites.MegabytesPorPedido * 1024L * 1024L;
-        var corpo = http.Request.ContentLength > tamanho ? null : await LerAte(http.Request.Body, tamanho, c);
+        var corpo = http.Request.ContentLength > tamanho ? null : await LerAte(http.Request.Body, tamanho, http.Request.ContentLength, c);
         if (corpo is null)
             return Falha(413, $"O pedido passa de {config.Limites.MegabytesPorPedido} MB. Mande menos fotos ou anexos menores.");
 
@@ -262,7 +262,7 @@ public static class Ia
         var chave = anthropic.Chave!;
         using var mensagem = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(anthropic.Endereco), "messages"))
         {
-            Content = new StringContent(pedido.ToJsonString(), Encoding.UTF8, "application/json"),
+            Content = TradutorClaude.Conteudo(pedido),
         };
         mensagem.Headers.Add("x-api-key", chave);
         mensagem.Headers.Add("anthropic-version", anthropic.Versao);
@@ -320,8 +320,17 @@ public static class Ia
     }
 
     // Lê o corpo até o limite (nulo se passar).
-    private static async Task<byte[]?> LerAte(Stream corpo, long limite, CancellationToken c)
+    /// <param name="tamanho">0.55.2: o Content-Length, quando veio: o corpo é lido direto num vetor do tamanho certo (uma cópia só).</param>
+    private static async Task<byte[]?> LerAte(Stream corpo, long limite, long? tamanho, CancellationToken c)
     {
+        if (tamanho is { } n and > 0 and <= int.MaxValue)
+        {
+            if (n > limite)
+                return null;
+            var bytes = new byte[n];
+            await corpo.ReadExactlyAsync(bytes, c);
+            return bytes;
+        }
         using var memoria = new MemoryStream();
         var buffer = new byte[81920];
         int lidos;

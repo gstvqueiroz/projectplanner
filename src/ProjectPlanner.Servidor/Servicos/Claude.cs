@@ -123,6 +123,17 @@ public static class TradutorClaude
             conteudo.Add(new JsonObject { ["type"] = "text", ["text"] = "(Lembrete: " + InstrucaoDaFerramenta + ")" });
     }
 
+    /// <summary>
+    /// 0.55.2: o corpo do pedido em bytes UTF-8, direto do JSON. Antes ia por um texto (UTF-16, o dobro do tamanho) e depois
+    /// para bytes: com PDFs anexados, eram cópias de dezenas de MB, e o servidor (512 MB no Render) ficava sem memória.
+    /// </summary>
+    public static ByteArrayContent Conteudo(JsonObject pedido)
+    {
+        var conteudo = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(pedido, Json));
+        conteudo.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+        return conteudo;
+    }
+
     /// <summary>A resposta do Claude no formato do Gemini, e os tokens para a cobrança.</summary>
     public static (JsonObject Resposta, TokensDoPedido Tokens) Resposta(JsonNode claude)
     {
@@ -275,7 +286,7 @@ public sealed class PonteParaOClaude(IHttpClientFactory clientes, Microsoft.Exte
         }
         using var mensagem = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(anthropic.Endereco), "messages"))
         {
-            Content = new StringContent(corpo.ToJsonString(), System.Text.Encoding.UTF8, "application/json"),
+            Content = TradutorClaude.Conteudo(corpo),
         };
         mensagem.Headers.Add("x-api-key", anthropic.Chave);
         mensagem.Headers.Add("anthropic-version", anthropic.Versao);

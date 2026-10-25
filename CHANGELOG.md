@@ -3,6 +3,15 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.55.2
+
+Correção no servidor: a causa do "Erro no servidor" ao montar o cronograma.
+
+- **O servidor ficava sem memória** (erro 9EUK72: OutOfMemoryException). Com os documentos da obra (PDFs) anexados, o
+  pedido tem dezenas de MB, e o servidor fazia várias cópias dele ao repassar ao Claude, passando dos 512 MB do Render.
+  Agora o pedido é lido e repassado com bem menos cópias, e o servidor usa o modo de memória econômica do .NET. Só o
+  servidor mudou.
+
 ## 0.55.1
 
 Para achar e evitar o "Erro no servidor" ao montar o cronograma.

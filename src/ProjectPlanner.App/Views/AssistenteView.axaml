@@ -97,6 +97,9 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </DockPanel>
+                    <!-- Bloco 51: o modelo que o Automático escolheu para o último pedido -->
+                    <TextBlock x:Name="UltimaEscolha" Text="{Binding UltimaEscolha}" FontSize="11" Opacity="0.7" TextWrapping="Wrap"
+                               IsVisible="{Binding UltimaEscolha, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <TextBlock x:Name="AvisoDoNivel" Text="{Binding AvisoDoNivel}" FontSize="11" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextoDeAviso}"
                                IsVisible="{Binding AvisoDoNivel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -184,6 +187,28 @@
                 <TextBox x:Name="Entrada" Text="{Binding TextoDigitado}" PlaceholderText="Escreva uma mensagem…"
                          AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="120" MinHeight="32" />
             </DockPanel>
+
+            <!-- Bloco 51: o aviso de custo do Automático (o envio espera a escolha) e o "Refazer com um modelo melhor". -->
+            <Border x:Name="ConfirmacaoDeCusto" DockPanel.Dock="Bottom" Margin="8,4,8,0" Padding="10,8" CornerRadius="6"
+                    Background="{DynamicResource FundoDeAviso}" IsVisible="{Binding TemConfirmacao}">
+                <StackPanel Spacing="6" DataContext="{Binding Confirmacao}" x:DataType="vm:ConfirmacaoDeCusto">
+                    <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
+                    <TextBlock x:Name="EstimativaDeCusto" Text="{Binding Estimativa}" FontSize="12" TextWrapping="Wrap" />
+                    <WrapPanel>
+                        <Button x:Name="UsarRecomendado" Content="{Binding TextoDoRecomendado}" Classes="accent" Margin="0,0,6,4"
+                                Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).UsarRecomendadoCommand}" />
+                        <Button x:Name="UsarPadrao" Content="{Binding TextoDoPadrao}" Margin="0,0,6,4" IsVisible="{Binding MostrarPadrao}"
+                                Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).UsarPadraoCommand}" />
+                        <Button x:Name="CancelarConfirmacao" Content="Cancelar" Margin="0,0,0,4"
+                                Command="{Binding $parent[UserControl].((vm:AssistenteViewModel)DataContext).CancelarConfirmacaoCommand}" />
+                    </WrapPanel>
+                    <CheckBox x:Name="NaoPerguntarDeNovo" IsChecked="{Binding NaoPerguntarDeNovo}" FontSize="12"
+                              Content="Não perguntar de novo nesta conversa" />
+                </StackPanel>
+            </Border>
+            <Button x:Name="RefazerMelhor" DockPanel.Dock="Bottom" Classes="plano" Margin="8,4,8,0" HorizontalAlignment="Left" FontSize="12"
+                    Content="{Binding TextoDoRefazer}" Command="{Binding RefazerMelhorCommand}" IsVisible="{Binding PodeRefazerMelhor}"
+                    ToolTip.Tip="Manda a última pergunta de novo, para um modelo mais forte (gasta mais créditos)" />
 
             <!-- Anexos pendentes (vão com a próxima mensagem) e aviso de anexo que falhou. -->
             <StackPanel DockPanel.Dock="Bottom" Margin="8,0" Spacing="2">

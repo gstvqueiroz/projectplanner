@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.52.0
+
+O nível **Automático**: a IA escolhe o modelo certo para cada pedido (Bloco 51).
+
+- **Agora é o padrão.** Perguntas e atualizações vão no modelo mais barato; pedidos médios (alterar várias tarefas), no
+  Intermediário; os grandes (montar um cronograma inteiro, ler documentos longos), no mais forte que o seu plano libera.
+  Quem tinha escolhido o Avançado, o Intermediário ou o Máximo continua no que escolheu.
+- **Antes de um pedido caro, o programa pergunta.** A partir de 20 créditos, um cartão mostra a estimativa ("cerca de
+  120 créditos, 2% do seu saldo") e deixa usar o modelo recomendado, tentar no mais barato ou cancelar. Dá para marcar
+  "Não perguntar de novo nesta conversa".
+- **Refazer com um modelo melhor.** Se a resposta não ficou boa, um botão manda a mesma pergunta ao modelo mais forte.
+- Embaixo do seletor de nível aparece qual modelo respondeu o último pedido.
+- As fotos, o orçamento, a análise da obra e o Telegram continuam no modelo mais barato.
+
 ## 0.51.0
 
 Assinatura e créditos pelo Mercado Pago (Bloco 47).

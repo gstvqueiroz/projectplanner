@@ -164,7 +164,8 @@ public sealed class ClaudeTests : IDisposable
 
         lista.EnumerateArray().Select(m => (m.GetProperty("id").GetString(), m.GetProperty("nome").GetString(), m.GetProperty("liberado").GetBoolean(),
                 m.GetProperty("disponivel").GetBoolean(), m.GetProperty("creditosPorPedido").GetInt32()))
-            .Should().Equal(("gemini-2.5-flash", "Gemini 2.5 Flash", true, true, 14), ("gemini-3.1-pro-preview", "Gemini 3.1 Pro", false, true, 76),
+            .Should().Equal(("automatico", "Automático", true, true, 14), // Bloco 51: o gasto típico do Padrão
+                ("gemini-2.5-flash", "Gemini 2.5 Flash", true, true, 14), ("gemini-3.1-pro-preview", "Gemini 3.1 Pro", false, true, 76),
                 ("claude-opus-5-5", "Claude Opus 5.5", false, true, 140));
         (await _s.Get("/v1/modelos")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -184,7 +185,7 @@ public sealed class ClaudeTests : IDisposable
         var sessao = await s.CriarConta();
         var lista = JsonDocument.Parse(await (await s.Get("/v1/modelos", sessao.Acesso)).Content.ReadAsStringAsync()).RootElement;
         lista.EnumerateArray().Select(m => (m.GetProperty("id").GetString(), m.GetProperty("disponivel").GetBoolean())).Should().Equal(
-            ("gemini-3.5-flash", true), ("claude-opus-5-5", false));
+            ("automatico", true), ("gemini-3.5-flash", true), ("claude-opus-5-5", false));
         (await s.Get("/v1/ia/models/gemini-2.5-flash", sessao.Acesso)).StatusCode.Should().Be(HttpStatusCode.BadRequest, "o 2.5 saiu da lista");
 
         await AdminTests.TrocarPlano(s, "ana@exemplo.com", Planos.Profissional, Servidor.ChaveDeAdmin);
@@ -279,7 +280,7 @@ public sealed class ClaudeTests : IDisposable
         var sessao = await s.CriarConta();
         var lista = System.Text.Json.JsonDocument.Parse(await (await s.Get("/v1/modelos", sessao.Acesso)).Content.ReadAsStringAsync()).RootElement;
         lista.EnumerateArray().Select(m => (m.GetProperty("id").GetString(), m.GetProperty("liberado").GetBoolean(), m.GetProperty("creditosPorPedido").GetInt32()))
-            .Should().Equal(("claude-haiku-5-5", true, 4), ("gemini-3-flash-preview", false, 19), ("gemini-3.1-pro-preview", false, 76),
+            .Should().Equal(("automatico", true, 4), ("claude-haiku-5-5", true, 4), ("gemini-3-flash-preview", false, 19), ("gemini-3.1-pro-preview", false, 76),
                 ("claude-sonnet-5-5", false, 70));
 
         var pedido = new HttpRequestMessage(HttpMethod.Post, "/v1/ia/models/claude-haiku-5-5:generateContent")

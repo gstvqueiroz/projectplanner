@@ -25,6 +25,23 @@ Desde o Bloco 24, o assistente **altera o cronograma pelo chat**: pedir "monte o
 100 m²", "acrescente a etapa de cobertura depois da estrutura" ou "a laje leva 8 dias" faz o cronograma mudar na hora
 (ver "Alterações do cronograma pelo chat", abaixo).
 
+## O nível Automático (Bloco 51)
+
+Com a conta, o nível **Automático** é o padrão. Antes de cada mensagem do chat, o servidor faz a triagem (ver
+docs/SERVIDOR.md, Bloco 51) e o programa manda o pedido no modelo escolhido (`PedidoIA.Modelo`):
+
+- pedido simples → o Padrão; médio → o Intermediário; complexo → o Máximo (se o plano liberar);
+- a partir de 20 créditos estimados, o painel mostra um cartão antes de mandar: "Usar Claude Sonnet 5.5 (~120)",
+  "Tentar no Claude Haiku 5.5 (~9)" ou "Cancelar", com "Não perguntar de novo nesta conversa" (vale até limpar a conversa
+  ou trocar de projeto);
+- embaixo do seletor aparece o modelo do último pedido ("Último pedido: Claude Haiku 5.5 (pedido simples)");
+- uma resposta só de texto (sem mexer no cronograma, na obra ou no orçamento) ganha o botão "Refazer com o Claude
+  Sonnet 5.5 (~70 créditos)", que manda a mesma pergunta ao modelo mais forte que o plano libera;
+- as rotinas (fotos, orçamento, análise da obra) vão sempre no Padrão, e o Telegram também.
+
+Quem estava no Padrão (ou num modelo que saiu da lista) passa ao Automático uma vez só (`automaticoOferecido` no
+`assistente.json`); quem escolheu um nível forte continua nele, e quem voltar ao Padrão depois não é mudado de novo.
+
 ## O que vai a cada envio e o custo (Bloco 46)
 
 Como nada fica guardado do lado da IA, tudo o que vai é cobrado de novo a cada mensagem. Até o Bloco 46, a conversa

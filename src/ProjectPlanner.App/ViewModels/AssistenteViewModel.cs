@@ -206,6 +206,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     // Os níveis da conta: os que ela já tem; se ainda não tem (e o painel está aberto), busca no servidor.
     private void AtualizarNiveis()
     {
+        OferecerAutomatico(); // Bloco 51
         _mostrandoNiveis = true;
         Niveis = Conta.Conectada ? OpcaoDeNivel.De(Conta.Modelos) : [];
         NivelEscolhido = OpcaoDeNivel.Escolhida(Niveis, _configuracao.Modelo);
@@ -283,7 +284,11 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(CancelarCommand))]
     public partial bool Aguardando { get; private set; }
 
-    partial void OnAguardandoChanged(bool value) => AtualizarInteracoes();
+    partial void OnAguardandoChanged(bool value)
+    {
+        AtualizarInteracoes();
+        RefazerMelhorCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>Aviso sobre um anexo que não deu para incluir (arquivo sumiu, sem permissão).</summary>
     [ObservableProperty]
@@ -326,8 +331,10 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         return EnviarAsync(texto, anexos);
     }
 
-    private async Task EnviarAsync(string texto, IReadOnlyList<AnexoIA> anexos, bool planoAgora = false)
+    /// <param name="modelo">Bloco 51: o modelo deste envio ("Refazer com um modelo melhor"); nulo, o Automático escolhe ou vale o configurado.</param>
+    private async Task EnviarAsync(string texto, IReadOnlyList<AnexoIA> anexos, bool planoAgora = false, string? modelo = null)
     {
+        ModeloMelhor = null;
         var historico = Mensagens.Select(m => m.Mensagem).Where(m => !m.EhErro).ToList();
         var doUsuario = new MensagemChat(AutorMensagem.Usuario, texto, _relogio.GetLocalNow(), anexos);
         Acrescentar(doUsuario);
@@ -341,10 +348,13 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         CartaoDeAtualizacoes? cartao = null;
         TelaParaAbrir? tela = null;
         string? importarFotos = null;
+        string? escolha = null;
         try
         {
             var retrato = _cronograma.Retrato();
-            var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico, retrato, Conducao(planoAgora)), cancelamento.Token);
+            escolha = modelo ?? await EscolherModeloAsync(texto, anexos, historico, retrato, cancelamento.Token); // Bloco 51
+            var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico, retrato, Conducao(planoAgora)) { Modelo = escolha },
+                cancelamento.Token);
             if (r.Alteracoes.Count > 0 && geracao == _geracao)
             {
                 var aplicacao = await _cronograma.AplicarAsync(r.Alteracoes, retrato);
@@ -358,7 +368,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
                     try
                     {
                         corrigida = await _assistente.EnviarAsync(
-                            new PedidoIA(PedidoDeCorrecao(aplicacao.Texto), [], tentativa, novoRetrato, Conducao(planoAgora: false)),
+                            new PedidoIA(PedidoDeCorrecao(aplicacao.Texto), [], tentativa, novoRetrato, Conducao(planoAgora: false)) { Modelo = escolha },
                             cancelamento.Token);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -402,7 +412,12 @@ public sealed partial class AssistenteViewModel : ViewModelBase
             Aguardando = false;
         }
         if (geracao == _geracao)
+        {
             Acrescentar(resposta, resposta.EhErro ? null : alteracoes, resposta.EhErro ? null : cartao, resposta.EhErro ? null : tela);
+            // Bloco 51: uma resposta que não mexeu na obra pode ser refeita com um modelo melhor.
+            OferecerRefazer(texto, anexos, escolha, !resposta.EhErro && alteracoes is null && cartao is null && tela is null
+                && pedidoDeOrcamento is null && importarFotos is null && (resposta.Resposta is null || resposta.Resposta.Tipo == TipoDeResposta.Resposta));
+        }
         // Bloco 41: a tela que o usuário pediu para ver.
         if (tela is not null && !resposta.EhErro && geracao == _geracao)
             await _cronograma.AbrirTelaAsync(tela);
@@ -522,6 +537,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     private void LimparConversa()
     {
         _geracao++;
+        RecomecarAutomatico();
         _cancelamento?.Cancel();
         Mensagens.Clear();
         var mudou = _conversa.Modo != ModoDaConversa.NaoEscolhido || _conversa.PlanoAprovado;
@@ -538,6 +554,7 @@ public sealed partial class AssistenteViewModel : ViewModelBase
     public void RecomecarParaOutroProjeto()
     {
         _geracao++;
+        RecomecarAutomatico();
         _cancelamento?.Cancel();
         AnexosPendentes.Clear();
         TextoDigitado = "";

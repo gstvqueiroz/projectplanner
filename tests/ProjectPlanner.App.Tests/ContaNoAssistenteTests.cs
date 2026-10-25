@@ -31,6 +31,36 @@ public sealed class ContaNoAssistenteTests
     }
 
     [Fact]
+    public void Automatico_OferecidoUmaVez_FicaNoArquivo_EAConfiguracaoTroca()
+    {
+        // Bloco 51
+        var pasta = Path.Combine(Path.GetTempPath(), "pp-automatico-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var arquivo = new ArquivoPreferenciasAssistente(Path.Combine(pasta, "assistente.json"));
+            arquivo.Salvar(new PreferenciasAssistente("automatico", PreferenciaDeModo.Direto, AutomaticoOferecido: true));
+            File.ReadAllText(arquivo.Caminho).Should().Contain("\"automaticoOferecido\": true");
+            arquivo.Carregar().Should().Be(new PreferenciasAssistente("automatico", PreferenciaDeModo.Direto, true));
+            arquivo.Salvar(new PreferenciasAssistente("claude-haiku-5-5"));
+            File.ReadAllText(arquivo.Caminho).Should().NotContain("automaticoOferecido", "sem o campo, as versões anteriores leem igual");
+        }
+        finally
+        {
+            if (Directory.Exists(pasta))
+                Directory.Delete(pasta, recursive: true);
+        }
+
+        var preferencias = new PreferenciasAssistenteEmMemoria { Salvas = new PreferenciasAssistente("gemini-2.5-flash", PreferenciaDeModo.Estudo) };
+        var configuracao = new ConfiguracaoDoAssistente(preferencias, new ProvedorFalso(), _ => null);
+        IConfiguracaoAssistente comInterface = configuracao;
+        comInterface.AutomaticoOferecido.Should().BeFalse();
+        comInterface.OferecerAutomatico(trocar: true);
+        (configuracao.Modelo, preferencias.Salvas).Should().Be(("automatico", new PreferenciasAssistente("automatico", PreferenciaDeModo.Estudo, true)));
+        comInterface.OferecerAutomatico(trocar: false);
+        configuracao.Modelo.Should().Be("automatico", "sem trocar, fica o que estava");
+    }
+
+    [Fact]
     public void ProvedorConformeCredencial_AMarcaVaiPelaConta_OResto_PelaChave()
     {
         var chave = new ProvedorFalso();

@@ -138,6 +138,47 @@ public partial class MenuPrincipalTests
     });
 
     [Fact]
+    public Task Painel_Automatico_CartaoDeCusto_EORefazer() => Tela.Executar(() =>
+    {
+        // Bloco 51
+        var a = Abrir(ambiente =>
+        {
+            ambiente.Assistente.EstaConfigurado = true;
+            ambiente.Conta.ModelosDoServidor =
+            [
+                new(NiveisDaConta.Automatico, NiveisDaConta.Automatico, "Automático", true, true, 4),
+                new("claude-haiku-5-5", "padrao", "Claude Haiku 5.5", true, true, 4),
+                new("claude-sonnet-5-5", "maximo", "Claude Sonnet 5.5", true, true, 70),
+            ];
+            ambiente.Conta.Avaliacao = new AvaliacaoDoPedido("complexa", "montar o cronograma inteiro", "maximo", "claude-sonnet-5-5",
+                "Claude Sonnet 5.5", 120, false, true, "claude-haiku-5-5", "Claude Haiku 5.5", 9);
+        });
+        a.Vm.Assistente.Visivel = true;
+        a.Ambiente.Conta.Conectar(plano: "profissional");
+        Dispatcher.UIThread.RunJobs();
+        a.Vm.Assistente.TextoDigitado = "monte o cronograma";
+        var envio = a.Vm.Assistente.EnviarCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+        Pintar(a);
+        bool Visivel(string nome) => Painel(a).FindControl<Control>(nome)!.IsEffectivelyVisible;
+
+        (Visivel("ConfirmacaoDeCusto"), Visivel("UsarRecomendado"), Visivel("UsarPadrao"), Visivel("RefazerMelhor")).Should().Be((true, true, true, false));
+        Painel(a).FindControl<Button>("UsarRecomendado")!.Content.Should().Be("Usar Claude Sonnet 5.5 (~120)");
+
+        a.Vm.Assistente.UsarPadraoCommand.Execute(null);
+        // A continuação do envio volta à thread da interface: processa a fila até ele terminar (sem bloquear a thread).
+        for (var i = 0; i < 200 && !envio.IsCompleted; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+        envio.IsCompleted.Should().BeTrue();
+        Pintar(a);
+        (Visivel("ConfirmacaoDeCusto"), Visivel("RefazerMelhor"), Visivel("UltimaEscolha")).Should().Be((false, true, true));
+        Painel(a).FindControl<Button>("RefazerMelhor")!.Content.Should().Be("Refazer com o Claude Sonnet 5.5 (~70 créditos)");
+    });
+
+    [Fact]
     public Task Painel_Profissional_TrocaParaOMaximo_EOCabecalhoAcompanha() => Tela.Executar(() =>
     {
         var a = Abrir(ambiente =>

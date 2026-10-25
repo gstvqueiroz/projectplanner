@@ -53,6 +53,10 @@ public interface IContaProjectPlanner : ISessaoDaConta
     /// <summary>Sai da conta neste computador (e encerra a sessão no servidor, se der).</summary>
     Task SairAsync(CancellationToken cancelamento);
 
+    /// <summary>Bloco 51: a triagem do nível Automático (sem conta, ou sem a rota, falha e o envio segue no Padrão).</summary>
+    Task<AvaliacaoDoPedido> AvaliarAsync(PedidoDeAvaliacao pedido, CancellationToken cancelamento) =>
+        Task.FromException<AvaliacaoDoPedido>(new ErroDaContaException("A triagem do nível Automático não está disponível.", 0));
+
     // ---- Bloco 47: pagamentos (sem conta, ou numa implementação sem eles, avisam que não estão disponíveis) ----
 
     Task<SituacaoDosPagamentos> PagamentosAsync(CancellationToken cancelamento) => SemPagamentos<SituacaoDosPagamentos>();
@@ -197,6 +201,9 @@ public sealed class ContaProjectPlanner : IContaProjectPlanner
         AtualizarSaldo(uso.CreditosRestantes);
         return uso;
     }
+
+    public Task<AvaliacaoDoPedido> AvaliarAsync(PedidoDeAvaliacao pedido, CancellationToken cancelamento) =>
+        ComAcessoAsync(a => _cliente.AvaliarAsync(a, pedido, cancelamento), cancelamento);
 
     public Task<SituacaoDosPagamentos> PagamentosAsync(CancellationToken cancelamento) => ComAcessoAsync(a => _cliente.PagamentosAsync(a, cancelamento), cancelamento);
 

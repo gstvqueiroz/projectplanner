@@ -24,6 +24,12 @@ public sealed record PedidoIA(
 {
     /// <summary>Bloco 49: por onde a conversa chega (nulo: o painel do programa; <see cref="CanaisDaConversa.Telegram"/>).</summary>
     public string? Canal { get; init; }
+
+    /// <summary>
+    /// Bloco 51: o modelo deste envio, no lugar do configurado (o que o nível Automático escolheu, ou "Refazer com um modelo
+    /// melhor"); nulo, o da configuração.
+    /// </summary>
+    public string? Modelo { get; init; }
 }
 
 /// <summary>Bloco 49: os canais da conversa fora do programa.</summary>

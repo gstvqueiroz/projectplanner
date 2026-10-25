@@ -27,6 +27,17 @@ public interface IConfiguracaoAssistente
     /// </summary>
     bool ChaveDeDesenvolvimento { get; }
 
+    /// <summary>Bloco 51: o Automático já foi posto no lugar do Padrão uma vez (sem implementação: sim, e nada muda).</summary>
+    bool AutomaticoOferecido => true;
+
+    /// <summary>
+    /// Bloco 51: passa ao Automático quem está no Padrão (ou num modelo que saiu da lista), uma vez só; quem escolheu um nível
+    /// forte continua nele.
+    /// </summary>
+    void OferecerAutomatico(bool trocar)
+    {
+    }
+
     /// <summary>Confere a conta (ou a chave de desenvolvimento) com o modelo, sem gastar créditos.</summary>
     /// <exception cref="ArgumentException">Sem conta, ou modelo inválido.</exception>
     /// <exception cref="ErroDoAssistenteException">O modelo não é do plano, não existe ou não há conexão.</exception>
@@ -82,6 +93,16 @@ public sealed class ConfiguracaoDoAssistente : IConfiguracaoAssistente, IConfigu
     }
 
     public PreferenciaDeModo PreferenciaDeModo => _preferencias.Carregar()?.Modo ?? PreferenciaDeModo.Perguntar;
+
+    public bool AutomaticoOferecido => _preferencias.Carregar()?.AutomaticoOferecido ?? false;
+
+    public void OferecerAutomatico(bool trocar)
+    {
+        var atuais = _preferencias.Carregar() ?? new PreferenciasAssistente(Modelo);
+        var modelo = trocar ? NiveisDaConta.Automatico : atuais.Modelo;
+        _preferencias.Salvar(atuais with { Modelo = modelo, AutomaticoOferecido = true });
+        _modelo = modelo;
+    }
 
     public void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia)
     {

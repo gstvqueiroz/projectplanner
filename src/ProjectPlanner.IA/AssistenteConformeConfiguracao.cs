@@ -25,16 +25,19 @@ public sealed class AssistenteConformeConfiguracao : IAssistenteIA
     public Task<RespostaIA> EnviarAsync(PedidoIA pedido, CancellationToken cancelamento)
     {
         ArgumentNullException.ThrowIfNull(pedido);
-        return Assistente().EnviarAsync(pedido, cancelamento);
+        return Assistente(pedido.Modelo).EnviarAsync(pedido, cancelamento);
     }
 
-    /// <summary>O assistente da configuração de agora (o mesmo enquanto a chave e o modelo não mudam).</summary>
-    internal IAssistenteIA Assistente()
+    /// <summary>
+    /// O assistente da configuração de agora (o mesmo enquanto a chave e o modelo não mudam). Bloco 51: com
+    /// <paramref name="modelo"/>, o desse modelo (o que o Automático escolheu para este envio).
+    /// </summary>
+    internal IAssistenteIA Assistente(string? modelo = null)
     {
         var chave = _configuracao.ChaveApi;
         if (string.IsNullOrWhiteSpace(chave))
             return _semChave;
-        var modelo = _configuracao.Modelo;
+        modelo = string.IsNullOrWhiteSpace(modelo) ? _configuracao.Modelo : modelo;
         lock (_trava)
         {
             if (_atual is { } atual && atual.Chave == chave && atual.Modelo == modelo)

@@ -655,6 +655,16 @@ public sealed class ConfiguracaoAssistenteFalsa : IConfiguracaoAssistente
     // Bloco 26
     public PreferenciaDeModo PreferenciaDeModo { get; set; } = PreferenciaDeModo.Perguntar;
     public void SalvarPreferenciaDeModo(PreferenciaDeModo preferencia) => PreferenciaDeModo = preferencia;
+
+    // Bloco 51
+    public bool AutomaticoOferecido { get; set; }
+
+    public void OferecerAutomatico(bool trocar)
+    {
+        if (trocar)
+            Modelo = NiveisDaConta.Automatico;
+        AutomaticoOferecido = true;
+    }
 }
 
 /// <summary>Um cofre em memória (Bloco 23); <see cref="Falha"/> faz toda operação falhar como um cofre bloqueado.</summary>
@@ -983,6 +993,18 @@ public sealed class ContaFalsa : IContaProjectPlanner
 
     public Task<string> AcessoAsync(bool renovar, CancellationToken cancelamento) =>
         Perfil is null ? Task.FromException<string>(new ErroDoAssistenteException("sem conta")) : Task.FromResult("acesso-falso");
+
+    // ---- Bloco 51: a triagem do Automático (sem Avaliacao, falha como um servidor sem a rota) ----
+
+    public AvaliacaoDoPedido? Avaliacao { get; set; }
+    public List<PedidoDeAvaliacao> Avaliados { get; } = [];
+
+    public async Task<AvaliacaoDoPedido> AvaliarAsync(PedidoDeAvaliacao pedido, CancellationToken cancelamento)
+    {
+        Avaliados.Add(pedido);
+        await Passo("avaliar", cancelamento);
+        return Avaliacao ?? throw new ErroDaContaException("O servidor do ProjectPlanner não reconheceu o pedido. Atualize o programa.", 404);
+    }
 
     // ---- Bloco 47: sem Pagamentos, como um servidor que não cobra (a rota não existe, e o pedido nem conta) ----
 

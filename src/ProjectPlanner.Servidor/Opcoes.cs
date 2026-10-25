@@ -155,6 +155,9 @@ public sealed class OpcoesDosPlanos
     public long ProfissionalCreditosPorMes { get; set; } = 6_000;
     public decimal DolaresPorCredito { get; set; } = 0.0005m;
 
+    /// <summary>Bloco 51: a partir de quantos créditos estimados o Automático pede confirmação antes de mandar o pedido.</summary>
+    public decimal CreditosParaConfirmar { get; set; } = 20;
+
     /// <summary>Os níveis do plano Grátis, separados por vírgula (o Profissional usa todos).</summary>
     public string NiveisDoGratis { get; set; } = Niveis.Padrao;
 

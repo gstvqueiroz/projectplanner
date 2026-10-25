@@ -317,6 +317,29 @@ O programa pede o ID ao servidor (`GET /v1/google`); nada do Google fica no cód
 - **Ficou para depois:** um limite de resposta por rotina. O ganho é pequeno (a saída do Haiku é barata) e uma resposta
   cortada estraga o JSON. O roteamento automático entre os níveis é o Bloco 51.
 
+## Bloco 51 (0.52.0, feito): o nível Automático
+
+Decisões do usuário: o Automático vira o padrão para todos (quem escolheu de propósito um nível forte continua nele) e
+o programa pede confirmação a partir de 20 créditos estimados (`Planos__CreditosParaConfirmar`).
+
+- **`POST /v1/ia/avaliar`** (com login): o programa manda só a mensagem (até 2 mil caracteres), quantos anexos e o tamanho
+  deles, o tamanho aproximado do pedido inteiro e quantas tarefas a obra tem. O servidor responde o tamanho do pedido
+  (`simples`, `media`, `complexa`), um motivo, o modelo escolhido, os créditos estimados, se é para confirmar e a
+  alternativa no Padrão.
+- **A triagem em três passos** (`Servicos/Triagem.cs`):
+  1. **regra grátis:** mensagem de até 160 caracteres, sem anexo e sem palavras de montar, analisar, orçamento ou
+     cronograma = simples, sem chamar IA nenhuma;
+  2. **IA barata:** senão, uma pergunta curta ao modelo do Padrão, só com a mensagem e os números (cerca de 0,2 crédito,
+     cobrado na rotina "triagem");
+  3. **falha = simples:** se a triagem falhar, vai no Padrão, e o usuário pode refazer.
+- **Do tamanho ao modelo:** simples → Padrão; media → Intermediário; complexa → Máximo. Se o plano não libera (ou a chave
+  do provedor falta), desce ao nível abaixo, até o Padrão, e avisa que o plano limitou.
+- **Estimativa:** entrada = o pedido ÷ 4 + os anexos ÷ 100 bytes (no mínimo 2 mil tokens); saída = 800, 2.500 ou 8.000
+  tokens, conforme o tamanho. É só uma estimativa: o custo cobrado é sempre o real.
+- **`automatico` nas outras rotas:** `/v1/modelos` lista o Automático primeiro (com o gasto típico do Padrão), e o
+  `generateContent` com `automatico` vai ao Padrão, sem triagem. É assim que as rotinas (fotos, orçamento, análise) e os
+  programas anteriores continuam funcionando. A resposta diz quem respondeu no cabeçalho `X-Modelo-Usado`.
+
 ## Bloco 47 (0.51.0, feito): pagamentos pelo Mercado Pago
 
 Decisão do usuário: Mercado Pago. Enquanto a conta é só pessoal (CPF), tudo roda no **modo de teste** (credenciais

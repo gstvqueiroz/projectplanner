@@ -26,6 +26,8 @@ public static class Ia
 
     /// <summary>Bloco 50: a rotina do programa que fez o pedido (<see cref="RotinasDeIa"/>), para o painel mostrar o custo de cada uma.</summary>
     public const string CabecalhoDaRotina = RotinasDeIa.Cabecalho;
+
+    public const string CabecalhoDoModeloUsado = "X-Modelo-Usado";
     public const string CotaEsgotada = "Os créditos de IA acabaram. Os do plano voltam no dia 1º; para continuar agora, compre um pacote de créditos " +
                                        "ou assine o Profissional em Conta > Minha conta.";
     public const string SemChave = "A IA do servidor ainda não está configurada. Tente mais tarde.";
@@ -35,6 +37,7 @@ public static class Ia
         var ia = app.MapGroup("/v1/ia").RequireAuthorization().RequireRateLimiting(LimitesDeUso.Ia);
         ia.MapPost("/models/{modelo}:generateContent", Gerar);
         ia.MapGet("/models/{modelo}", Testar);
+        ia.MapPost("/avaliar", Avaliar); // Bloco 51
         app.MapGet("/v1/modelos", Modelos).RequireAuthorization();
     }
 
@@ -46,15 +49,21 @@ public static class Ia
         if (await Usuarios.Atual(quem, banco) is not { } usuario)
             return Falha(401, "Sessão vencida: entre de novo.");
         var planos = opcoes.Value.Planos;
-        return Results.Ok(catalogo.Todos.Select(m => new
+        int Tipico(ModeloDeIa m) => Math.Max(1, (int)Math.Round(planos.Creditos(m.Microdolares(CatalogoDeModelos.EntradaTipica, CatalogoDeModelos.SaidaTipica))));
+        var modelos = catalogo.Todos.Select(m => new
         {
             id = m.Id,
             nivel = m.Nivel,
             nome = m.Nome,
             liberado = planos.Libera(usuario.Plano, m.Nivel),
             disponivel = catalogo.Disponivel(m),
-            creditosPorPedido = Math.Max(1, (int)Math.Round(planos.Creditos(m.Microdolares(CatalogoDeModelos.EntradaTipica, CatalogoDeModelos.SaidaTipica)))),
-        }));
+            creditosPorPedido = Tipico(m),
+        }).ToList();
+        // Bloco 51: o Automático vem primeiro (o gasto típico é o do Padrão; os pedidos grandes pedem confirmação).
+        if (catalogo.Todos.FirstOrDefault(m => m.Nivel == Niveis.Padrao) is { } padrao)
+            modelos.Insert(0, new { id = Triagem.Automatico, nivel = Triagem.Automatico, nome = "Automático", liberado = true,
+                disponivel = catalogo.Disponivel(padrao), creditosPorPedido = Tipico(padrao) });
+        return Results.Ok(modelos);
     }
 
     // O que vale para os dois pontos: a conta, o modelo, o plano e a chave do provedor.
@@ -63,7 +72,8 @@ public static class Ia
     {
         if (await Usuarios.Atual(quem, banco) is not { } usuario)
             return (null, null, Falha(401, "Sessão vencida: entre de novo."));
-        if (catalogo.Achar(id) is not { } modelo)
+        // Bloco 51: "automatico" sem a triagem (as rotinas, e programas que mandam direto) é o Padrão.
+        if ((id == Triagem.Automatico ? catalogo.Todos.FirstOrDefault(m => m.Nivel == Niveis.Padrao) : catalogo.Achar(id)) is not { } modelo)
             return (null, null, Falha(400, $"O modelo \"{id}\" não está disponível. Use um destes: {string.Join(", ", catalogo.Todos.Select(m => m.Id))}."));
         if (!planos.Libera(usuario.Plano, modelo.Nivel))
             return (null, null, Falha(403, $"O nível {Niveis.Nome(modelo.Nivel)} ({modelo.Nome}) é do plano Profissional. Assine em Conta > Minha conta, " +
@@ -113,9 +123,70 @@ public static class Ia
         await banco.SaveChangesAsync(c);
         await Painel.ConferirAlertaAsync(banco, config, email, relogio.GetUtcNow().UtcDateTime, log, c); // Bloco 48
         var cultura = System.Globalization.CultureInfo.InvariantCulture;
+        http.Response.Headers[CabecalhoDoModeloUsado] = escolhido.Id; // Bloco 51: quem respondeu (o Automático manda o Padrão)
         http.Response.Headers[CabecalhoDosCreditosUsados] = Math.Round(planos.Creditos(custo), 1, MidpointRounding.AwayFromZero).ToString(cultura);
         http.Response.Headers[CabecalhoDosCreditosRestantes] = Math.Round(planos.Creditos(restante), 1, MidpointRounding.AwayFromZero).ToString(cultura);
         return Results.Bytes(resultado.Resposta!, "application/json");
+    }
+
+    /// <summary>
+    /// Bloco 51: a triagem do nível Automático. Diz qual nível o pedido merece, o modelo (o do nível, ou o abaixo que o plano
+    /// libera), quantos créditos ele deve gastar e se o programa deve pedir confirmação antes. A triagem pela IA (quando a regra
+    /// não basta) custa o real, como qualquer pedido, e fica na rotina "triagem".
+    /// </summary>
+    private static async Task<IResult> Avaliar(PedidoDeTriagem pedido, ClaimsPrincipal quem, BancoDoServidor banco, CatalogoDeModelos catalogo,
+        IOptions<OpcoesDoServidor> opcoes, IHttpClientFactory clientes, TimeProvider relogio, ILoggerFactory logs, CancellationToken c)
+    {
+        if (await Usuarios.Atual(quem, banco) is not { } usuario)
+            return Falha(401, "Sessão vencida: entre de novo.");
+        var config = opcoes.Value;
+        var planos = config.Planos;
+        if (Triagem.Escolher(catalogo, planos, usuario.Plano, Niveis.Padrao) is not { } padrao)
+            return Falha(503, SemChave);
+        var saldo = await Cotas.SaldoAsync(banco, usuario, planos, relogio);
+        if (saldo.Esgotado)
+            return Falha(402, CotaEsgotada);
+
+        var (complexidade, motivo) = Triagem.PelaRegra(pedido) is { } pelaRegra ? (pelaRegra, "pedido curto") : ("", "");
+        if (complexidade.Length == 0)
+        {
+            var log = logs.CreateLogger(typeof(Ia));
+            var corpo = System.Text.Encoding.UTF8.GetBytes(Triagem.Corpo(pedido).ToJsonString());
+            var resultado = padrao.Provedor == Provedores.Anthropic
+                ? await PeloClaude(padrao, corpo, config.Anthropic, clientes, log, c)
+                : await PeloGemini(padrao, corpo, config.Gemini, clientes, log, c);
+            if (resultado.Falha is null && Triagem.Ler(resultado.Resposta!) is { } lida)
+                (complexidade, motivo) = lida;
+            else
+                (complexidade, motivo) = (Triagem.Simples, ""); // sem triagem, o mais barato (o usuário pode refazer com outro nível)
+            if (resultado.Falha is null)
+            {
+                var custo = resultado.Tokens.Microdolares(padrao);
+                banco.UsosDeIa.Add(UsoDeIa.Novo(usuario.Id, relogio.GetUtcNow().UtcDateTime, padrao.Id, resultado.Tokens, custo, RotinasDeIa.Triagem));
+                Cotas.Debitar(usuario, saldo, custo);
+                await banco.SaveChangesAsync(c);
+            }
+        }
+
+        var desejado = Triagem.NivelDa(complexidade);
+        var escolhido = Triagem.Escolher(catalogo, planos, usuario.Plano, desejado) ?? padrao;
+        var (entrada, saida) = (Triagem.EntradaEstimada(pedido), Triagem.SaidaEstimada(complexidade));
+        decimal Creditos(ModeloDeIa m) => Math.Max(1, Math.Ceiling(planos.Creditos(m.Microdolares(entrada, saida))));
+        var creditos = Creditos(escolhido);
+        return Results.Ok(new
+        {
+            complexidade,
+            motivo,
+            nivel = escolhido.Nivel,
+            modelo = escolhido.Id,
+            nome = escolhido.Nome,
+            creditosEstimados = creditos,
+            limitadoPeloPlano = escolhido.Nivel != desejado,
+            pedirConfirmacao = creditos >= planos.CreditosParaConfirmar,
+            modeloPadrao = padrao.Id,
+            nomePadrao = padrao.Nome,
+            creditosNoPadrao = Creditos(padrao),
+        });
     }
 
     private sealed record Resultado(byte[]? Resposta, TokensDoPedido Tokens, IResult? Falha)

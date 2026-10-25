@@ -10,7 +10,10 @@ public sealed record OpcaoDeNivel(ModeloDaConta Modelo)
 {
     public string Id => Modelo.Id;
 
-    public string Titulo => $"{Modelo.NomeDoNivel}: {Modelo.Nome}";
+    /// <summary>Bloco 51: o Automático (a triagem escolhe o modelo de cada pedido).</summary>
+    public bool EhAutomatico => Modelo.Nivel == NiveisDaConta.Automatico;
+
+    public string Titulo => EhAutomatico ? "Automático: escolhe o modelo para cada pedido" : $"{Modelo.NomeDoNivel}: {Modelo.Nome}";
 
     public bool Habilitado => Modelo.Liberado && Modelo.Disponivel;
 
@@ -19,6 +22,7 @@ public sealed record OpcaoDeNivel(ModeloDaConta Modelo)
 
     public string Detalhe => !Modelo.Liberado ? "do plano Profissional"
         : !Modelo.Disponivel ? "indisponível no momento"
+        : EhAutomatico ? $"a partir de {Modelo.CreditosPorPedido} créditos; pergunta antes dos pedidos caros"
         : $"cerca de {Modelo.CreditosPorPedido} créditos por pedido";
 
     /// <summary>"Padrão: Gemini 2.5 Flash (cerca de 14 créditos por pedido)", para listas de uma linha.</summary>

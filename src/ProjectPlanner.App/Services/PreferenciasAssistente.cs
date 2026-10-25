@@ -5,7 +5,10 @@ namespace ProjectPlanner.App.Services;
 
 /// <summary>O que o assistente guarda fora do cofre (Bloco 23): o modelo. A chave de API nunca vem para cá.</summary>
 /// <param name="Modo">Bloco 26: o que fazer num pedido de cronograma (perguntar, montar direto ou estudar antes).</param>
-public sealed record PreferenciasAssistente(string Modelo, PreferenciaDeModo Modo = PreferenciaDeModo.Perguntar);
+/// <param name="AutomaticoOferecido">
+/// Bloco 51: o nível Automático já foi posto no lugar do Padrão uma vez (quem voltar ao Padrão depois não é mudado de novo).
+/// </param>
+public sealed record PreferenciasAssistente(string Modelo, PreferenciaDeModo Modo = PreferenciaDeModo.Perguntar, bool AutomaticoOferecido = false);
 
 public interface IPreferenciasAssistente
 {
@@ -33,6 +36,7 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull, // Bloco 51: sem o campo, como antes
     };
 
     public ArquivoPreferenciasAssistente() : this(CaminhoPadrao())
@@ -52,7 +56,7 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
                 return null;
             var arquivo = JsonSerializer.Deserialize<Arquivo>(File.ReadAllText(Caminho), Opcoes);
             return arquivo is { Versao: VersaoDoFormato, Modelo: { Length: > 0 } modelo }
-                ? new PreferenciasAssistente(modelo, ModoDoTexto(arquivo.Modo))
+                ? new PreferenciasAssistente(modelo, ModoDoTexto(arquivo.Modo), arquivo.AutomaticoOferecido == true)
                 : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
@@ -68,7 +72,7 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Caminho)!);
             File.WriteAllText(temporario, JsonSerializer.Serialize(
-                new Arquivo(VersaoDoFormato, preferencias.Modelo, TextoDoModo(preferencias.Modo)), Opcoes));
+                new Arquivo(VersaoDoFormato, preferencias.Modelo, TextoDoModo(preferencias.Modo), preferencias.AutomaticoOferecido ? true : null), Opcoes));
             File.Move(temporario, Caminho, overwrite: true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -91,5 +95,5 @@ public sealed class ArquivoPreferenciasAssistente(string caminho) : IPreferencia
         _ => PreferenciaDeModo.Perguntar,
     };
 
-    private sealed record Arquivo(int Versao, string? Modelo, string? Modo = null);
+    private sealed record Arquivo(int Versao, string? Modelo, string? Modo = null, bool? AutomaticoOferecido = null);
 }

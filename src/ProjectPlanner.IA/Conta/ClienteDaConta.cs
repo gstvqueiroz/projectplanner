@@ -39,6 +39,7 @@ public sealed record ModeloDaConta(string Id, string Nivel, string Nome, bool Li
 {
     public string NomeDoNivel => Nivel switch
     {
+        NiveisDaConta.Automatico => "Automático", // Bloco 51
         "intermediario" => "Intermediário", // Bloco 50
         "avancado" => "Avançado",
         "maximo" => "Máximo",
@@ -61,6 +62,29 @@ public sealed record SituacaoDosPagamentos(bool Disponivel, bool ModoDeTeste, st
 
 /// <summary>Bloco 47: o link de pagamento (Mercado Pago) que o programa abre no navegador.</summary>
 public sealed record LinkDePagamento(string Url);
+
+/// <summary>Bloco 51: o nível Automático (o servidor faz a triagem de cada pedido do chat e diz o modelo).</summary>
+public static class NiveisDaConta
+{
+    public const string Automatico = "automatico";
+    public const string Padrao = "padrao";
+    public const string Intermediario = "intermediario";
+    public const string Avancado = "avancado";
+    public const string Maximo = "maximo";
+
+    /// <summary>Do mais barato ao mais caro (para "Refazer com um modelo melhor").</summary>
+    public static IReadOnlyList<string> EmOrdem { get; } = [Padrao, Intermediario, Avancado, Maximo];
+}
+
+/// <summary>Bloco 51: o que o programa conta do pedido para a triagem (sem o retrato da obra nem os anexos em si).</summary>
+public sealed record PedidoDeAvaliacao(string Mensagem, int Anexos, long BytesDosAnexos, int Caracteres, int Tarefas);
+
+/// <summary>
+/// Bloco 51: a triagem de um pedido: o tamanho (simples, media, complexa), o modelo escolhido, a estimativa de créditos, se
+/// é para pedir confirmação e a alternativa no Padrão.
+/// </summary>
+public sealed record AvaliacaoDoPedido(string Complexidade, string Motivo, string Nivel, string Modelo, string Nome, decimal CreditosEstimados,
+    bool LimitadoPeloPlano, bool PedirConfirmacao, string ModeloPadrao, string NomePadrao, decimal CreditosNoPadrao);
 
 /// <summary>Bloco 49: uma obra marcada para o Telegram e quantos itens esperam na caixa dela.</summary>
 public sealed record ObraNoTelegram(Guid Projeto, string Nome, DateTime AtualizadoEm, int Pendentes);
@@ -219,6 +243,10 @@ public sealed class ClienteDaConta
     public async Task<DateTime?> CancelarAssinaturaAsync(string acesso, CancellationToken c) =>
         (await PedirAsync<JsonElement>(HttpMethod.Post, "v1/pagamentos/assinatura/cancelar", null, acesso, c)) is { ValueKind: JsonValueKind.Object } r
         && r.TryGetProperty("profissionalAte", out var ate) && ate.ValueKind == JsonValueKind.String ? ate.GetDateTime() : null;
+
+    /// <summary>Bloco 51: a triagem do nível Automático.</summary>
+    public Task<AvaliacaoDoPedido> AvaliarAsync(string acesso, PedidoDeAvaliacao pedido, CancellationToken c) =>
+        PedirAsync<AvaliacaoDoPedido>(HttpMethod.Post, "v1/ia/avaliar", pedido, acesso, c);
 
     /// <summary>Bloco 46: os modelos de cada nível para esta conta.</summary>
     public async Task<IReadOnlyList<ModeloDaConta>> ModelosAsync(string acesso, CancellationToken cancelamento) =>

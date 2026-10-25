@@ -106,14 +106,15 @@ public sealed partial class AssistenteViewModel
     /// ou se a triagem falhar (o servidor manda o "automatico" ao Padrão).
     /// </summary>
     /// <exception cref="OperationCanceledException">O usuário cancelou na confirmação.</exception>
+    /// <param name="montagem">0.55.1: o pedido é o de montar o cronograma (vai como complexo, sem depender da frase).</param>
     private async Task<string?> EscolherModeloAsync(string texto, IReadOnlyList<AnexoIA> anexos, IReadOnlyList<MensagemChat> historico,
-        ContextoDoProjeto? retrato, CancellationToken cancelamento)
+        ContextoDoProjeto? retrato, bool montagem, CancellationToken cancelamento)
     {
         if (!UsaAutomatico)
             return null;
         var caracteres = texto.Length + (retrato?.ComoTexto().Length ?? 0) + historico.TakeLast(LimitesDaConversa.MensagensDoHistorico).Sum(m => m.Texto.Length);
         var pedido = new PedidoDeAvaliacao(texto.Length > 2_000 ? texto[..2_000] : texto, anexos.Count, anexos.Sum(a => a.TamanhoEmBytes), caracteres,
-            retrato?.Tarefas.Count ?? 0);
+            retrato?.Tarefas.Count ?? 0, montagem);
         AvaliacaoDoPedido avaliacao;
         try
         {

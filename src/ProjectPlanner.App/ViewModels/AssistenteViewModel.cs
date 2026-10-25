@@ -355,7 +355,8 @@ public sealed partial class AssistenteViewModel : ViewModelBase
         try
         {
             var retrato = _cronograma.Retrato();
-            escolha = modelo ?? await EscolherModeloAsync(texto, anexos, historico, retrato, cancelamento.Token); // Bloco 51
+            var montagem = planoAgora || texto is TextoMontarAgora or TextoPlanoAprovado or TextoPularParaOPlano; // 0.55.1
+            escolha = modelo ?? await EscolherModeloAsync(texto, anexos, historico, retrato, montagem, cancelamento.Token); // Bloco 51
             var r = await _assistente.EnviarAsync(new PedidoIA(texto, anexos, historico, retrato, Conducao(planoAgora)) { Modelo = escolha },
                 cancelamento.Token);
             if (r.Alteracoes.Count > 0 && geracao == _geracao)

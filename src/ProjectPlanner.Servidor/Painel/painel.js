@@ -68,9 +68,9 @@
     return c;
   }
 
-  function tabela(destino, cabecalho, linhas) {
+  function tabela(destino, cabecalho, linhas, vazio) {
     var alvo = $(destino); alvo.textContent = "";
-    if (!linhas.length) { alvo.appendChild(el("p", "Nenhum pedido no período.", "premissas")); return; }
+    if (!linhas.length) { alvo.appendChild(el("p", vazio || "Nenhum pedido no período.", "premissas")); return; }
     var t = el("table"); var cab = el("tr");
     cabecalho.forEach(function (h) { cab.appendChild(el("th", h)); });
     var thead = el("thead"); thead.appendChild(cab); t.appendChild(thead);
@@ -140,6 +140,9 @@
     tabela("quemMaisGasta", ["Conta", "Plano", "Pedidos", "Custo", "Créditos usados"], d.quemMaisGasta.map(function (u) {
       return [u.email, plano(u.plano), numero.format(u.pedidos), reais.format(u.custoEmReais), umaCasa.format(u.creditosUsados) + " de " + numero.format(u.creditosDoPlano)];
     }));
+    tabela("falhas", ["Código", "Quando (UTC)", "Rota", "Erro", "Onde"], d.falhas.map(function (f) {
+      return [f.codigo, f.quando.replace("T", " ").slice(0, 19), f.rota, f.tipo + ": " + f.mensagem, f.pilha || ""];
+    }), "Nenhum erro no período.");
     $("premissas").textContent = "Período de " + d.de.split("-").reverse().join("/") + " a " + d.ate.split("-").reverse().join("/") + " (UTC). " +
       "Premissas: US$ 1 = " + reais.format(f.reaisPorDolar) + " + " + umaCasa.format(f.percentualSobreODolar) + "% (IOF e spread); impostos e taxas de " +
       umaCasa.format(f.percentualDeImpostosETaxas) + "% sobre a receita; alerta a partir de " + reais.format(f.alertaMensalEmReais) + " por mês. " +

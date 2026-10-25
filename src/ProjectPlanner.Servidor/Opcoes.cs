@@ -203,7 +203,11 @@ public sealed class OpcoesDosLimites
     public int PedidosDeContaPorMinuto { get; set; } = 10;
 
     /// <summary>O tamanho máximo de um pedido de IA (as fotos vão nele).</summary>
-    public int MegabytesPorPedido { get; set; } = 15;
+    /// <summary>
+    /// 0.55.1: de 15 para 25 MB. O programa aceita até 14 MB de anexos por envio, e eles vão em base64 (um terço maior), mais o
+    /// retrato da obra e a conversa: com 15, um envio com PDFs grandes era recusado.
+    /// </summary>
+    public int MegabytesPorPedido { get; set; } = 25;
 
     public int TentativasAteBloquear { get; set; } = 5;
     public int MinutosDeBloqueio { get; set; } = 15;

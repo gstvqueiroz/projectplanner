@@ -77,7 +77,8 @@ public static class NiveisDaConta
 }
 
 /// <summary>Bloco 51: o que o programa conta do pedido para a triagem (sem o retrato da obra nem os anexos em si).</summary>
-public sealed record PedidoDeAvaliacao(string Mensagem, int Anexos, long BytesDosAnexos, int Caracteres, int Tarefas);
+/// <param name="Montagem">0.55.1: é o pedido de montar o cronograma (um botão do modo ou do plano): vai como complexo.</param>
+public sealed record PedidoDeAvaliacao(string Mensagem, int Anexos, long BytesDosAnexos, int Caracteres, int Tarefas, bool Montagem = false);
 
 /// <summary>
 /// Bloco 51: a triagem de um pedido: o tamanho (simples, media, complexa), o modelo escolhido, a estimativa de créditos, se

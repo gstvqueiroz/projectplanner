@@ -147,7 +147,8 @@ public static class Ia
         if (saldo.Esgotado)
             return Falha(402, CotaEsgotada);
 
-        var (complexidade, motivo) = Triagem.PelaRegra(pedido) is { } pelaRegra ? (pelaRegra, "pedido curto") : ("", "");
+        var (complexidade, motivo) = pedido.Montagem ? (Triagem.Complexa, "montar o cronograma completo") // 0.55.1
+            : Triagem.PelaRegra(pedido) is { } pelaRegra ? (pelaRegra, "pedido curto") : ("", "");
         if (complexidade.Length == 0)
         {
             var log = logs.CreateLogger(typeof(Ia));

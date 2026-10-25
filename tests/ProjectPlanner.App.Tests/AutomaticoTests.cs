@@ -151,6 +151,22 @@ public sealed class AutomaticoTests
     }
 
     [Fact]
+    public async Task BotaoMontarAgora_VaiParaATriagemComoMontagem()
+    {
+        // 0.55.1
+        Entrar();
+        _ambiente.Conta.Avaliacao = Simples;
+
+        _ambiente.Assistente.ResponderComAlteracoes = p => p.Mensagem == "monte o cronograma"
+            ? new RespostaIA("Como você prefere?") { Tipo = TipoDeResposta.EscolherModo }
+            : new RespostaIA("Montei.");
+        await Mandar("monte o cronograma");
+        await Painel.EscolherModoCommand.ExecuteAsync("direto"); // "Montar o cronograma agora"
+
+        _ambiente.Conta.Avaliados.Select(p => (p.Mensagem, p.Montagem)).Should().Equal(("monte o cronograma", false), (AssistenteViewModel.TextoMontarAgora, true));
+    }
+
+    [Fact]
     public async Task TriagemQueFalha_MandaSemModelo_EForaDoAutomaticoNaoHaTriagem()
     {
         Entrar();

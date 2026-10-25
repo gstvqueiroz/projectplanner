@@ -10,7 +10,11 @@ namespace ProjectPlanner.Servidor.Servicos;
 /// <param name="BytesDosAnexos">O tamanho somado deles.</param>
 /// <param name="Caracteres">O tamanho aproximado do pedido inteiro (retrato, conversa e mensagem), para estimar os tokens.</param>
 /// <param name="Tarefas">Quantas tarefas a obra tem.</param>
-public sealed record PedidoDeTriagem(string? Mensagem, int Anexos = 0, long BytesDosAnexos = 0, int Caracteres = 0, int Tarefas = 0);
+/// <param name="Montagem">
+/// 0.55.1: o programa sabe que é o pedido de montar o cronograma (os botões "Montar agora", "Plano aprovado"): uma frase
+/// curta como "Pode montar agora, com o que já tem." não diz à triagem o tamanho do trabalho.
+/// </param>
+public sealed record PedidoDeTriagem(string? Mensagem, int Anexos = 0, long BytesDosAnexos = 0, int Caracteres = 0, int Tarefas = 0, bool Montagem = false);
 
 /// <summary>
 /// Bloco 51: o nível Automático. Decide o tamanho de um pedido do chat em três passos, do mais barato ao mais caro: uma regra

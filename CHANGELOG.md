@@ -3,6 +3,18 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.55.1
+
+Para achar e evitar o "Erro no servidor" ao montar o cronograma.
+
+- **"Montar o cronograma agora" vai ao modelo forte.** A triagem do nível Automático via só a frase "Pode montar agora, com
+  o que já tem." e achava que era um pedido simples, mandando a obra inteira ao modelo mais barato. Agora o programa avisa
+  que é a montagem, e ela vai ao Sonnet (com a confirmação de custo).
+- **Anexos grandes não estouram mais o limite.** O servidor aceitava até 15 MB por pedido, mas o programa manda até 14 MB
+  de anexos, que crescem um terço no envio; o limite passou para 25 MB.
+- **Erros inesperados agora têm código.** Em vez de só "Erro no servidor", a mensagem traz um código ("código K7Q2MX"), e
+  o painel /admin mostra os últimos erros com o motivo, para a causa ser achada e corrigida.
+
 ## 0.55.0
 
 **A SINAPI direto da Caixa** (Bloco 40).

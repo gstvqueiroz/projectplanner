@@ -24,9 +24,13 @@ public sealed record ResumoDoPainel(int Pedidos, long TokensDeEntrada, long Toke
 
 public sealed record AlertaDoPainel(decimal CustoDoMesEmReais, decimal LimiteEmReais, bool Passou, DateTime? AlertaEm, string? EmailEnviadoPara);
 
+/// <summary>0.55.1: um erro inesperado do servidor, para o painel (o começo da pilha ajuda a achar a causa).</summary>
+public sealed record LinhaDaFalha(string Codigo, DateTime Quando, string Rota, string Tipo, string Mensagem, string? Pilha);
+
 /// <summary>Bloco 48: tudo o que o painel financeiro mostra num período.</summary>
 public sealed record DadosDoPainel(DateOnly De, DateOnly Ate, ResumoDoPainel Resumo, IReadOnlyList<LinhaDoDia> PorDia, IReadOnlyList<LinhaDoModelo> PorModelo,
-    IReadOnlyList<LinhaDaRotina> PorRotina, IReadOnlyList<LinhaDoPlano> PorPlano, IReadOnlyList<LinhaDoUsuario> QuemMaisGasta, AlertaDoPainel Alerta, OpcoesFinanceiras Premissas);
+    IReadOnlyList<LinhaDaRotina> PorRotina, IReadOnlyList<LinhaDoPlano> PorPlano, IReadOnlyList<LinhaDoUsuario> QuemMaisGasta, AlertaDoPainel Alerta, OpcoesFinanceiras Premissas,
+    IReadOnlyList<LinhaDaFalha> Falhas);
 
 /// <summary>
 /// Bloco 48: o painel financeiro. Junta os pedidos de IA de um período (o custo real de cada um, gravado desde o Bloco 46)
@@ -36,6 +40,8 @@ public static class Painel
 {
     public const int MaximoDeDias = 366;
     public const int UsuariosNoTopo = 10;
+    public const int FalhasNoPainel = 20;
+    public const int TamanhoDaPilha = 1500;
 
     /// <exception cref="ArgumentException">Período invertido ou maior que um ano.</exception>
     public static async Task<DadosDoPainel> MontarAsync(BancoDoServidor banco, CatalogoDeModelos catalogo, OpcoesDoServidor opcoes, DateOnly de, DateOnly ate,
@@ -117,7 +123,12 @@ public static class Painel
             usuarios.Count(u => u.CriadoEm >= inicio && u.CriadoEm < fim && u.EmailConfirmado),
             usos.Count == 0 ? 0 : Math.Round(financeiro.Reais(custoTotal) / usos.Count, 4));
 
-        return new DadosDoPainel(de, ate, resumo, porDia, porModelo, porRotina, porPlano, quemMaisGasta, await AlertaAsync(banco, financeiro, agora, c), financeiro);
+        // 0.55.1: os erros inesperados do período, os mais recentes primeiro.
+        var falhas = (await banco.FalhasDoServidor.AsNoTracking().Where(f => f.Quando >= inicio && f.Quando < fim).OrderByDescending(f => f.Id)
+                .Take(FalhasNoPainel).ToListAsync(c))
+            .Select(f => new LinhaDaFalha(f.Codigo, f.Quando, f.Rota, f.Tipo, f.Mensagem, f.Pilha is { Length: > TamanhoDaPilha } p ? p[..TamanhoDaPilha] + "…" : f.Pilha))
+            .ToList();
+        return new DadosDoPainel(de, ate, resumo, porDia, porModelo, porRotina, porPlano, quemMaisGasta, await AlertaAsync(banco, financeiro, agora, c), financeiro, falhas);
     }
 
     /// <summary>O custo de IA do mês corrente (UTC), de todas as contas, em milionésimos de dólar.</summary>

@@ -112,11 +112,7 @@ using (var escopo = app.Services.CreateScope())
 
 if (configuracao.Limites.AtrasDeProxy)
     app.UseForwardedHeaders();
-app.UseExceptionHandler(erro => erro.Run(async contexto =>
-{
-    contexto.Response.StatusCode = StatusCodes.Status500InternalServerError;
-    await contexto.Response.WriteAsJsonAsync(new Erro("Erro no servidor. Tente de novo."));
-}));
+app.UseExceptionHandler(erro => erro.Run(Falhas.ResponderAsync)); // 0.55.1: com código, guardado e no painel
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

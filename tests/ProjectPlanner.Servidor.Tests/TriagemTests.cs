@@ -120,6 +120,20 @@ public sealed class TriagemTests : IDisposable
     }
 
     [Fact]
+    public async Task Montagem_PeloBotao_EComplexaSemPerguntarAIA()
+    {
+        // 0.55.1: "Pode montar agora, com o que já tem." não diz o tamanho do trabalho; o programa avisa que é a montagem.
+        var ana = await _s.CriarConta();
+        await AdminTests.TrocarPlano(_s, "ana@exemplo.com", Planos.Profissional, Servidor.ChaveDeAdmin);
+
+        var a = await Avaliar(ana.Acesso, new { mensagem = "Pode montar agora, com o que já tem.", caracteres = 20_000, montagem = true });
+
+        (a.GetProperty("complexidade").GetString(), a.GetProperty("motivo").GetString(), a.GetProperty("modelo").GetString(), a.GetProperty("pedirConfirmacao").GetBoolean())
+            .Should().Be(("complexa", "montar o cronograma completo", "claude-opus-5-5", true));
+        _s.Gemini.Pedidos.Should().BeEmpty("sem triagem pela IA");
+    }
+
+    [Fact]
     public async Task Automatico_NoGenerateContent_VaiAoPadrao_EDizQuemRespondeu()
     {
         var ana = await _s.CriarConta();

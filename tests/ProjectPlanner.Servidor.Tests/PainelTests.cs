@@ -135,6 +135,34 @@ public sealed class PainelTests : IDisposable
     }
 
     [Fact]
+    public async Task ErroInesperado_RespondeComCodigo_FicaGuardado_EApareceNoPainel()
+    {
+        // 0.55.1: uma exceção que nenhuma rota trata (aqui, o "Gemini" lança uma que o servidor não espera).
+        var ana = await _s.CriarConta();
+        _s.Gemini.Erro = new InvalidOperationException("algo quebrou lá dentro");
+        var pedido = new HttpRequestMessage(HttpMethod.Post, "/v1/ia/models/gemini-2.5-flash:generateContent")
+        {
+            Content = new StringContent("""{"contents":[{"role":"user","parts":[{"text":"Oi"}]}]}""", Encoding.UTF8, "application/json"),
+        };
+        pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ana.Acesso);
+
+        var r = await _s.CreateClient().SendAsync(pedido);
+
+        r.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var mensagem = await Servidor.Erro(r);
+        mensagem.Should().MatchRegex(@"^Erro no servidor \(código [A-Z2-9]{6}\)\. Tente de novo; se continuar, avise o suporte com o código\.$");
+        var codigo = mensagem![(mensagem.IndexOf("código ", StringComparison.Ordinal) + 7)..][..6];
+        var falha = _s.NoBanco(b => b.FalhasDoServidor.Single());
+        (falha.Codigo, falha.Rota, falha.Tipo, falha.Mensagem, falha.UsuarioId).Should().Be((codigo, "POST /v1/ia/models/gemini-2.5-flash:generateContent",
+            "System.InvalidOperationException", "algo quebrou lá dentro", _s.NoBanco(b => b.Usuarios.Single().Id)));
+        falha.Pilha.Should().Contain("InvalidOperationException");
+
+        var noPainel = (await Dados()).GetProperty("falhas").EnumerateArray().Single();
+        (noPainel.GetProperty("codigo").GetString(), noPainel.GetProperty("tipo").GetString()).Should().Be((codigo, "System.InvalidOperationException"));
+        (await (await _s.CreateClient().GetAsync("/admin/painel.js")).Content.ReadAsStringAsync()).Should().Contain("Nenhum erro no período.");
+    }
+
+    [Fact]
     public async Task Periodo_EscolhidoInvalidoOuLongoDemais()
     {
         var sessao = await _s.CriarConta();

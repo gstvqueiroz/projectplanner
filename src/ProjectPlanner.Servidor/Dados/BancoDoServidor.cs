@@ -123,6 +123,22 @@ public sealed class Pagamento
     public DateTime Quando { get; set; }
 }
 
+/// <summary>
+/// 0.55.1: um erro inesperado do servidor (uma exceção que nenhuma rota tratou), para o painel mostrar o que aconteceu. O
+/// usuário vê o código na mensagem ("Erro no servidor (código K7Q2MX)"); nunca vai conteúdo de pedido nem segredo.
+/// </summary>
+public sealed class FalhaDoServidor
+{
+    public long Id { get; set; }
+    public string Codigo { get; set; } = "";
+    public DateTime Quando { get; set; }
+    public string Rota { get; set; } = "";
+    public string Tipo { get; set; } = "";
+    public string Mensagem { get; set; } = "";
+    public string? Pilha { get; set; }
+    public Guid? UsuarioId { get; set; }
+}
+
 /// <summary>Bloco 48: o alerta de custo já mandado num mês ("2026-10"), para não mandar de novo.</summary>
 public sealed class AlertaDeCusto
 {
@@ -250,6 +266,7 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
     public DbSet<CodigoDoTelegram> CodigosDoTelegram => Set<CodigoDoTelegram>();
     public DbSet<ItemDaCaixa> CaixaDeEntrada => Set<ItemDaCaixa>();
     public DbSet<GrupoDoTelegram> GruposDoTelegram => Set<GrupoDoTelegram>(); // Bloco 53
+    public DbSet<FalhaDoServidor> FalhasDoServidor => Set<FalhaDoServidor>(); // 0.55.1
     public DbSet<MembroDoGrupo> MembrosDosGrupos => Set<MembroDoGrupo>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
@@ -313,6 +330,15 @@ public sealed class BancoDoServidor(DbContextOptions<BancoDoServidor> opcoes) : 
             i.HasIndex(x => new { x.UsuarioId, x.ObraId });
             i.Property(x => x.Tipo).HasMaxLength(20);
             i.Property(x => x.NomeDaFoto).HasMaxLength(200);
+        });
+        modelo.Entity<FalhaDoServidor>(f =>
+        {
+            f.HasIndex(x => x.Quando);
+            f.Property(x => x.Codigo).HasMaxLength(12);
+            f.Property(x => x.Rota).HasMaxLength(200);
+            f.Property(x => x.Tipo).HasMaxLength(200);
+            f.Property(x => x.Mensagem).HasMaxLength(1000);
+            f.Property(x => x.Pilha).HasMaxLength(4000);
         });
         modelo.Entity<GrupoDoTelegram>(g =>
         {

@@ -169,7 +169,15 @@ public sealed class AssistenteGemini : IAssistenteIA
                     ["prazo"] = Tipo("STRING"),
                     ["pagamento"] = Tipo("STRING", ["empreitada", "medicao", "diaria"]),
                     ["retencao"] = Tipo("NUMBER"),
-                    ["acao"] = Tipo("STRING", [.. TiposDeAtualizacao.AcoesDaOs]),
+                    ["acao"] = Tipo("STRING", [.. TiposDeAtualizacao.AcoesDaOs, .. TiposDeAtualizacao.AcoesDaMedicao.Except(TiposDeAtualizacao.AcoesDaOs)]),
+                    // Bloco 67: tarefas, obra, recursos e medições do contrato.
+                    ["unidade"] = Tipo("STRING"),
+                    ["contratante"] = Tipo("STRING"),
+                    ["contrato"] = Tipo("STRING"),
+                    ["endereco"] = Tipo("STRING"),
+                    ["tipoDoRecurso"] = Tipo("STRING", ["profissional", "material", "equipamento"]),
+                    ["fornecedor"] = Tipo("STRING"),
+                    ["recurso"] = Tipo("STRING"),
                 }, "tipo")),
                 ["abrir"] = Objeto(new JsonObject
                 {

@@ -174,8 +174,117 @@ public sealed record MudarSituacaoDaOrdem(int Numero, string Acao, string? Motiv
             "reprovar" => o.Reprovar(agora, Motivo, Autor),
             "cancelar" => o.Cancelar(agora, Motivo, Autor),
             "rascunho" => o.VoltarARascunho(agora, Autor),
+            "pagar" => Pagar(c, o, agora),
+            "liberar" => Liberar(c, o, agora),
+            "duplicar" => Duplicar(c, o, agora),
             _ => throw new DomainValidationException(nameof(Acao), $"Ação desconhecida: {Acao}."),
         });
+    }
+
+    // Bloco 67: paga as medições abertas (cada uma lança os custos dela, como na tela).
+    private OrdemDeServico Pagar(Cronograma c, OrdemDeServico o, DateTime agora)
+    {
+        var abertas = o.Medicoes.Where(m => !m.Paga).ToList();
+        if (abertas.Count == 0)
+            throw new DomainValidationException(nameof(Acao), $"A {o.Codigo} não tem medição a pagar.");
+        var data = DateOnly.FromDateTime(agora);
+        foreach (var m in abertas)
+        {
+            var lancamentos = PagamentoDasOrdens.Lancamentos(o, m, data, Motivo);
+            o = o.RegistrarPagamento(m.Id, new PagamentoDaMedicao(data, string.IsNullOrWhiteSpace(Motivo) ? null : Motivo.Trim(), [.. lancamentos.Select(l => l.Id)]),
+                agora, Autor);
+            foreach (var l in lancamentos)
+                c.Custos.Adicionar(l);
+        }
+        return o;
+    }
+
+    private OrdemDeServico Liberar(Cronograma c, OrdemDeServico o, DateTime agora)
+    {
+        var data = DateOnly.FromDateTime(agora);
+        var lancamentos = PagamentoDasOrdens.LancamentosDaRetencao(o, data, Motivo);
+        var nova = o.LiberarRetencao(data, Motivo, [.. lancamentos.Select(l => l.Id)], agora, Autor);
+        foreach (var l in lancamentos)
+            c.Custos.Adicionar(l);
+        return nova;
+    }
+
+    // A cópia entra como OS nova; a original fica como estava.
+    private static OrdemDeServico Duplicar(Cronograma c, OrdemDeServico o, DateTime agora)
+    {
+        c.OrdensDeServico.Adicionar(o.Duplicar(Guid.NewGuid(), c.OrdensDeServico.ProximoNumero, agora));
+        return o;
+    }
+}
+
+// ---- Bloco 67: a IA no programa todo ----
+
+/// <summary>Bloco 67: o valor, a unidade, a quantidade e o prazo de uma tarefa (só o que veio).</summary>
+public sealed record DadosDaTarefa(Guid TarefaId, decimal? Valor, string? Unidade, decimal? Quantidade, DateOnly? Prazo) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var t = Tarefa(c, TarefaId);
+        if (Unidade is not null)
+            t.DefinirUnidade(Unidade);
+        if (Quantidade is not null)
+            t.DefinirQuantidade(Quantidade);
+        if (Valor is not null)
+            t.DefinirValor(Valor);
+        if (Prazo is { } prazo)
+            t.DefinirPrazo(prazo.ToDateTime(TimeOnly.MinValue));
+    }
+}
+
+/// <summary>Bloco 67: os dados da obra (o que veio por cima do que havia).</summary>
+public sealed record DadosDaObraOp(string? Contratante, string? Contrato, string? Endereco) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora) =>
+        c.DefinirObra(new Core.Relatorios.DadosDaObra(Contratante ?? c.Obra.Contratante, Contrato ?? c.Obra.Contrato, Endereco ?? c.Obra.Endereco));
+}
+
+/// <summary>Bloco 67: cria o recurso, ou muda o de mesmo nome (os campos que vieram).</summary>
+public sealed record RecursoDaIa(string Nome, Core.Recursos.TipoDeRecurso? Tipo, string? Unidade, decimal? Custo, decimal? Disponivel, string? Fornecedor)
+    : OperacaoDaObra
+{
+    public static Core.Recursos.Recurso? PeloNome(Cronograma c, string nome) =>
+        c.Recursos.Lista.FirstOrDefault(r => string.Equals(r.Nome, nome.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        if (PeloNome(c, Nome) is { } existente)
+            c.Recursos.Substituir(new Core.Recursos.Recurso(existente.Id, existente.Nome, Tipo ?? existente.Tipo, Unidade ?? existente.Unidade,
+                Custo ?? existente.CustoUnitario, Disponivel ?? existente.Disponivel, Fornecedor ?? existente.Fornecedor));
+        else
+            c.Recursos.Adicionar(new Core.Recursos.Recurso(Guid.NewGuid(), Nome, Tipo ?? Core.Recursos.TipoDeRecurso.Profissional, Unidade, Custo ?? 0,
+                Disponivel, Fornecedor));
+    }
+}
+
+/// <summary>Bloco 67: põe (ou tira, com zero) um recurso numa tarefa.</summary>
+public sealed record AtribuirRecurso(Guid TarefaId, string Recurso, decimal Quantidade) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var tarefa = Tarefa(c, TarefaId);
+        var recurso = RecursoDaIa.PeloNome(c, Recurso)
+                      ?? throw new DomainValidationException(nameof(Recurso), $"O recurso \"{Recurso}\" não está no projeto: crie antes.");
+        var lista = tarefa.Atribuicoes.Where(a => a.RecursoId != recurso.Id).ToList();
+        if (Quantidade > 0)
+            lista.Add(new Core.Recursos.AtribuicaoDeRecurso(recurso.Id, Quantidade));
+        c.Recursos.Atribuir(tarefa, lista);
+    }
+}
+
+/// <summary>Bloco 67: aprova ou marca como paga uma medição do contrato.</summary>
+public sealed record MedicaoDoContratoOp(int Numero, string Acao, DateOnly? Data) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        if (Acao == "aprovar")
+            c.Contrato.Aprovar(Numero, agora);
+        else
+            c.Contrato.MarcarPaga(Numero, Data ?? DateOnly.FromDateTime(agora));
     }
 }
 
@@ -213,14 +322,17 @@ public static class AtualizacoesDoAssistente
             itens.Add(Item(cronograma, a, tarefa, nome, hoje, porNumero));
         }
 
-        // O problema de cada uma, aplicando-a sozinha numa cópia (o domínio diz o porquê).
+        // O problema de cada uma, aplicando-as em ordem numa cópia (o domínio diz o porquê). Bloco 67: as que valem ficam na
+        // cópia, para a seguinte poder depender delas (criar o recurso e depois atribuí-lo), como na aplicação de verdade.
+        var acumulado = cronograma.Copiar();
         return [.. itens.Select(i =>
         {
             if (!i.Valido)
                 return i;
             try
             {
-                i.Operacao!.Aplicar(cronograma.Copiar(), agora);
+                i.Operacao!.Aplicar(acumulado.Copiar(), agora);
+                i.Operacao.Aplicar(acumulado, agora);
                 return i;
             }
             catch (DomainValidationException ex)
@@ -321,6 +433,9 @@ public static class AtualizacoesDoAssistente
                     "cancelar" => "cancelar",
                     "rascunho" => "voltar a rascunho",
                     "medir" => $"medir até {(a.Percentual is { } pm ? N(pm) : "?")}% executado",
+                    "pagar" => "pagar as medições abertas" + (a.Documento is { } doc ? $" ({doc})" : ""),
+                    "liberar" => "liberar a retenção" + (a.Documento is { } docl ? $" ({docl})" : ""),
+                    "duplicar" => "duplicar (uma OS nova em rascunho)",
                     _ => acao ?? "?",
                 }}" + (string.IsNullOrWhiteSpace(a.Descricao) ? "" : $" ({a.Descricao.Trim()})");
                 if (a.Os is not { } numero || c.OrdensDeServico.Todas.All(o => o.Numero != numero))
@@ -336,7 +451,67 @@ public static class AtualizacoesDoAssistente
                     return new($"{texto} · {Moeda.ComSimbolo(valor)} a medir", new MedirAOrdem(numero, pct),
                         valor == 0 ? $"a {os.Codigo} já está medida até esse %" : null);
                 }
-                return new(texto, new MudarSituacaoDaOrdem(numero, acao, a.Descricao), null);
+                return new(texto, new MudarSituacaoDaOrdem(numero, acao, acao is "pagar" or "liberar" ? a.Documento : a.Descricao), null);
+            }
+            case TiposDeAtualizacao.Tarefa: // Bloco 67
+            {
+                var partes = new[]
+                {
+                    a.Valor is { } v ? $"valor {Moeda.ComSimbolo(v)}" : null,
+                    a.Quantidade is { } q ? $"{N(q)} {a.Unidade ?? tarefa?.Unidade}".TrimEnd() : a.Unidade is { } u ? $"unidade {u}" : null,
+                    Data(a.Prazo ?? a.Data) is { } pz ? $"prazo {pz:dd/MM/yyyy}" : null,
+                }.OfType<string>().ToList();
+                var texto = $"{nome}: {(partes.Count == 0 ? "?" : string.Join(" · ", partes))}";
+                if (tarefa is null)
+                    return SemTarefa(texto);
+                if (partes.Count == 0)
+                    return new(texto, null, "informe o valor, a quantidade, a unidade ou o prazo");
+                return new(texto, new DadosDaTarefa(tarefa.Id, a.Valor, a.Unidade, a.Quantidade, Data(a.Prazo ?? a.Data)),
+                    tarefa.EhResumo ? "um resumo não tem valor nem quantidade (use as tarefas dentro dele)" : null);
+            }
+            case TiposDeAtualizacao.Obra:
+            {
+                var partes = new[] { a.Contratante is { } ct ? $"contratante {ct}" : null, a.Contrato is { } ctr ? $"contrato {ctr}" : null,
+                    a.Endereco is { } end ? $"endereço {end}" : null }.OfType<string>().ToList();
+                var texto = $"Dados da obra: {(partes.Count == 0 ? "?" : string.Join(" · ", partes))}";
+                return partes.Count == 0 ? new(texto, null, "informe o contratante, o contrato ou o endereço")
+                    : new(texto, new DadosDaObraOp(a.Contratante, a.Contrato, a.Endereco), null);
+            }
+            case TiposDeAtualizacao.Recurso:
+            {
+                var tipo = Core.Recursos.TiposDeRecurso.Ler(a.TipoDoRecurso);
+                var existe = a.Nome is { } n && RecursoDaIa.PeloNome(c, n) is not null;
+                var detalhes = new[]
+                {
+                    tipo is { } t ? Core.Recursos.TiposDeRecurso.Texto(t).ToLowerInvariant() : null,
+                    a.Valor is { } custo ? $"{Moeda.ComSimbolo(custo)} por {a.Unidade ?? (tipo is null or Core.Recursos.TipoDeRecurso.Material ? "un" : "dia")}" : null,
+                    a.Quantidade is { } disp ? $"{N(disp)} por dia" : null, a.Fornecedor,
+                }.OfType<string>();
+                var texto = $"{(existe ? "Alterar o recurso" : "Novo recurso")} \"{a.Nome ?? "?"}\" · {string.Join(" · ", detalhes)}".TrimEnd(' ', '·');
+                if (string.IsNullOrWhiteSpace(a.Nome))
+                    return new(texto, null, "falta o nome do recurso");
+                if (a.TipoDoRecurso is not null && tipo is null)
+                    return new(texto, null, "tipo de recurso desconhecido (profissional, material ou equipamento)");
+                return new(texto, new RecursoDaIa(a.Nome, tipo, a.Unidade, a.Valor, a.Quantidade, a.Fornecedor), null);
+            }
+            case TiposDeAtualizacao.Atribuir:
+            {
+                var texto = $"{nome}: {(a.Quantidade is 0 ? "tirar" : $"{N(a.Quantidade ?? 0)} ×")} {a.Recurso ?? "?"}";
+                if (tarefa is null)
+                    return SemTarefa(texto);
+                if (string.IsNullOrWhiteSpace(a.Recurso) || a.Quantidade is not { } quantidade || quantidade < 0)
+                    return new(texto, null, "informe o recurso e a quantidade");
+                return new(texto, new AtribuirRecurso(tarefa.Id, a.Recurso, quantidade), null);
+            }
+            case TiposDeAtualizacao.MedicaoDoContrato:
+            {
+                var acao = a.Acao?.Trim().ToLowerInvariant();
+                var texto = $"Medição {a.Medicao ?? 0:00} do contrato: {(acao == "pagar" ? $"paga em {Data(a.Data) ?? hoje:dd/MM/yyyy}" : "aprovar")}";
+                if (a.Medicao is not { } numero || c.Contrato.Medicoes.All(m => m.Numero != numero))
+                    return new(texto, null, a.Medicao is null ? "falta o número da medição" : $"não há a medição nº {a.Medicao:00}");
+                if (acao is null || !TiposDeAtualizacao.AcoesDaMedicao.Contains(acao))
+                    return new(texto, null, "ação desconhecida (aprovar ou pagar)");
+                return new(texto, new MedicaoDoContratoOp(numero, acao, Data(a.Data)), null);
             }
             case TiposDeAtualizacao.LinhaDeBase:
                 return new(a.Nome is { } n2 ? $"Salvar a linha de base \"{n2}\"" : "Salvar uma linha de base (o cronograma de agora)", new SalvarLinhaDeBase(a.Nome), null);

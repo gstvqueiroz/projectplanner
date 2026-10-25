@@ -15,11 +15,30 @@ public static class TiposDeAtualizacao
     /// <summary>Bloco 63: levar uma OS a outra situação (emitir, aceitar, iniciar, concluir, conferir, cancelar…).</summary>
     public const string SituacaoOs = "situacaoOs";
 
-    public static IReadOnlyList<string> Todos { get; } = [Percentual, Medicao, Custo, Inicio, LinhaDeBase, Os, SituacaoOs];
+    /// <summary>Bloco 67: o valor, a unidade, a quantidade e o prazo de uma tarefa.</summary>
+    public const string Tarefa = "tarefa";
 
-    /// <summary>Bloco 63: as ações de "situacaoOs".</summary>
+    /// <summary>Bloco 67: os dados da obra (contratante, contrato, endereço).</summary>
+    public const string Obra = "obra";
+
+    /// <summary>Bloco 67: criar um recurso do projeto (ou mudar o de mesmo nome).</summary>
+    public const string Recurso = "recurso";
+
+    /// <summary>Bloco 67: pôr um recurso numa tarefa (quantidade zero tira).</summary>
+    public const string Atribuir = "atribuir";
+
+    /// <summary>Bloco 67: aprovar ou marcar como paga uma medição do contrato.</summary>
+    public const string MedicaoDoContrato = "medicaoContrato";
+
+    public static IReadOnlyList<string> Todos { get; } =
+        [Percentual, Medicao, Custo, Inicio, LinhaDeBase, Os, SituacaoOs, Tarefa, Obra, Recurso, Atribuir, MedicaoDoContrato];
+
+    /// <summary>Bloco 63: as ações de "situacaoOs" (Bloco 67: pagar, liberar a retenção e duplicar).</summary>
     public static IReadOnlyList<string> AcoesDaOs { get; } =
-        ["emitir", "aceitar", "recusar", "iniciar", "concluir", "conferir", "reprovar", "cancelar", "rascunho", "medir"];
+        ["emitir", "aceitar", "recusar", "iniciar", "concluir", "conferir", "reprovar", "cancelar", "rascunho", "medir", "pagar", "liberar", "duplicar"];
+
+    /// <summary>Bloco 67: as ações de "medicaoContrato".</summary>
+    public static IReadOnlyList<string> AcoesDaMedicao { get; } = ["aprovar", "pagar"];
 }
 
 /// <summary>
@@ -47,6 +66,13 @@ public static class TiposDeAtualizacao
 /// <param name="Pagamento">os: "empreitada", "medicao" ou "diaria".</param>
 /// <param name="Retencao">os: a retenção de garantia em %.</param>
 /// <param name="Acao">situacaoOs: emitir, aceitar, recusar, iniciar, concluir, conferir, reprovar, cancelar ou rascunho.</param>
+/// <param name="Unidade">Bloco 67: tarefa e recurso: a unidade (m², m³, un, dia…).</param>
+/// <param name="Contratante">Bloco 67: obra.</param>
+/// <param name="Contrato">Bloco 67: obra: o número ou o nome do contrato.</param>
+/// <param name="Endereco">Bloco 67: obra.</param>
+/// <param name="TipoDoRecurso">Bloco 67: recurso: profissional, material ou equipamento.</param>
+/// <param name="Fornecedor">Bloco 67: recurso.</param>
+/// <param name="Recurso">Bloco 67: atribuir: o nome do recurso.</param>
 public sealed record AtualizacaoDaObra(
     string Tipo,
     string? Tarefa = null,
@@ -72,7 +98,14 @@ public sealed record AtualizacaoDaObra(
     string? Prazo = null,
     string? Pagamento = null,
     decimal? Retencao = null,
-    string? Acao = null);
+    string? Acao = null,
+    string? Unidade = null,
+    string? Contratante = null,
+    string? Contrato = null,
+    string? Endereco = null,
+    string? TipoDoRecurso = null,
+    string? Fornecedor = null,
+    string? Recurso = null);
 
 /// <summary>Bloco 42: de onde vêm as fotos que o assistente pede para importar.</summary>
 public static class OrigensDasFotos
@@ -99,10 +132,11 @@ public static class TelasDoPrograma
     public const string LinhasDeBase = "linhasDeBase";
     public const string OrdensDeServico = "ordensDeServico"; // Bloco 64
     public const string RelatorioDasOrdens = "relatorioDasOrdens";
+    public const string ImprimirGantt = "imprimirGantt"; // Bloco 67
 
     public static IReadOnlyList<string> Todas { get; } =
         [Indicadores, Orcamento, Medicoes, Custos, Recursos, UsoDeRecursos, FisicoFinanceiro, RelatorioFotografico, FotosDoProjeto, Resumo, LinhasDeBase,
-         OrdensDeServico, RelatorioDasOrdens];
+         OrdensDeServico, RelatorioDasOrdens, ImprimirGantt];
 
     /// <summary>As abas de cada tela que tem abas.</summary>
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Abas { get; } = new Dictionary<string, IReadOnlyList<string>>
@@ -110,6 +144,8 @@ public static class TelasDoPrograma
         [Indicadores] = ["visaoGeral", "custos", "medicoes", "alertas"],
         [Orcamento] = ["planilha", "composicoes", "bases", "sugestoes"],
         [Medicoes] = ["medicoes", "aditivos", "contrato", "plano"],
+        [RelatorioDasOrdens] = ["todas", "abertas", "encerradas", "vencidas"], // Bloco 67: as situações
+        [ImprimirGantt] = ["A4", "A3", "A2", "A1", "A0", "Carta", "Oficio"], // Bloco 67: a folha
     };
 
     /// <summary>"Indicadores", "Relatório fotográfico"…, para o botão no chat.</summary>
@@ -128,6 +164,7 @@ public static class TelasDoPrograma
         LinhasDeBase => "Linhas de base",
         OrdensDeServico => "Ordens de serviço",
         RelatorioDasOrdens => "Relatório das ordens de serviço",
+        ImprimirGantt => "Imprimir o Gantt",
         _ => tela,
     };
 }

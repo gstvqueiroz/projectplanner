@@ -361,6 +361,27 @@ clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.t
 - **No programa:** Conta > Buscar do Telegram mostra cada mensagem com atualizações como um cartão
   (`AssistenteViewModel.MostrarDoTelegram`), conferido pelas tarefas do retrato daquele momento.
 
+## A IA no programa todo (Blocos 63 a 67)
+
+O assistente conduz o fluxo da obra inteiro pelas respostas. O que muda a obra vem num cartão para conferir e aplicar (e o
+Desfazer volta tudo); o cronograma muda direto, como sempre. Pelo Telegram, os mesmos pedidos vão para a caixa da obra.
+
+| Área | Exemplos de pedido | Caminho |
+|---|---|---|
+| Cronograma | "monta o cronograma da casa", "adia o reboco 3 dias", "liga a pintura depois do reboco" | alterações |
+| Andamento | "a alvenaria está em 60%", "mede 40 m² na medição 2", "gastei R$ 1.200 de cimento" | cartão |
+| Tarefas | "o valor da alvenaria é R$ 3.600, 120 m², prazo dia 9" | cartão (tipo tarefa) |
+| Obra | "o contratante é a Prefeitura de Volta Redonda" | cartão (tipo obra) |
+| Recursos | "cria um pedreiro a R$ 280 por dia, 4 disponíveis, e põe 2 na alvenaria" | cartão (recurso, atribuir) |
+| Medições do contrato | "aprova a medição 2", "a medição 1 foi paga dia 30" | cartão (medicaoContrato) |
+| Ordens de serviço | "abre uma OS do reboco para o João", "a OS 3 está em 60%", "paga a OS 3, NF 77", "libera a retenção da OS 3", "duplica a OS 4" | cartão (os, situacaoOs) |
+| Orçamento | "orça a fundação com a SINAPI" | sugestões na tela do orçamento |
+| Fotos e relatórios | "relatório fotográfico desta semana", "relatório fotográfico da OS 3", "relatório das OS vencidas de setembro", "imprime o Gantt em A1" | abre a tela já configurada |
+| Estimativas | "quanto tempo leva a laje?", "estima a equipe da alvenaria" | a IA estima, diz que é estimativa e propõe |
+
+Os arquivos (PDF, Word, Excel) o usuário salva na tela que a IA abrir. Ficam só na tela, sem a IA: mandar a OS ao grupo do
+Telegram e as preferências (logotipo, colunas, tema).
+
 ## O que ainda não existe (blocos futuros)
 
 - **Inserir em posição**: tarefas criadas pelo assistente entram no fim das subtarefas do pai; não há "antes de".

@@ -210,7 +210,10 @@ public static class FormatoDaResposta
                 // Bloco 63: as ordens de serviço.
                 Inteiro(item, "os"), Curto(item, "titulo"), Curto(item, "executante"), Curto(item, "tipoDeExecutante"), Curto(item, "tarefas"),
                 Curto(item, "novaTarefa"), Inteiro(item, "duracao"), Curto(item, "apos"), Curto(item, "prazo"), Curto(item, "pagamento"),
-                Decimal(item, "retencao"), Curto(item, "acao")));
+                Decimal(item, "retencao"), Curto(item, "acao"),
+                // Bloco 67: tarefas, obra, recursos e medições do contrato.
+                Curto(item, "unidade"), Curto(item, "contratante"), Curto(item, "contrato"), Curto(item, "endereco"), Curto(item, "tipoDoRecurso"),
+                Curto(item, "fornecedor"), Curto(item, "recurso")));
             if (lista.Count == MaximoDeAtualizacoes)
                 break;
         }

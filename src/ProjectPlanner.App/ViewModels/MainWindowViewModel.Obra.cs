@@ -173,7 +173,24 @@ public sealed partial class MainWindowViewModel
                 await AbrirOrdensAsync(tela.Os is { } n ? _cronograma.OrdensDeServico.Todas.FirstOrDefault(o => o.Numero == n)?.Id : null);
                 break;
             case TelasDoPrograma.RelatorioDasOrdens:
-                await RelatorioDasOrdensCommand.ExecuteAsync(null);
+                Recalcular();
+                var relatorioDasOrdens = new RelatorioDasOrdensViewModel(_cronograma, _dialogos, _relogio, CabecalhoDosRelatorios);
+                // Bloco 67: o filtro que a IA pediu: o período e as situações (na aba).
+                if (Data(tela.De) is { } desde)
+                    relatorioDasOrdens.De = desde.ToDateTime(TimeOnly.MinValue);
+                if (Data(tela.Ate) is { } ateQuando)
+                    relatorioDasOrdens.Ate = ateQuando.ToDateTime(TimeOnly.MinValue);
+                if (relatorioDasOrdens.Situacoes.FirstOrDefault(s => string.Equals(s.Valor.ToString(), tela.Aba, StringComparison.OrdinalIgnoreCase)) is { } situacao)
+                    relatorioDasOrdens.SituacaoEscolhida = situacao;
+                await _dialogos.MostrarRelatorioDasOrdensAsync(relatorioDasOrdens);
+                break;
+            case TelasDoPrograma.ImprimirGantt: // Bloco 67: a folha na aba ("A3", "A1")
+                if (NovaImpressaoDoGantt() is { } impressao)
+                {
+                    if (impressao.Folhas.FirstOrDefault(f => string.Equals(f.Valor.ToString(), tela.Aba?.Replace("í", "i").Replace("Í", "I"), StringComparison.OrdinalIgnoreCase)) is { } folha)
+                        impressao.FolhaEscolhida = folha;
+                    await _dialogos.MostrarImpressaoDoGanttAsync(impressao);
+                }
                 break;
         }
     }

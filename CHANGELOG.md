@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.67.0
+
+**A IA no programa todo.** O assistente (no programa e no Telegram) passa a conduzir o fluxo da obra inteiro: além do
+cronograma, do andamento, das medições, dos custos e das OS, agora também:
+
+- **Dados das tarefas:** "o valor da alvenaria é R$ 3.600, 120 m², prazo dia 9".
+- **Dados da obra:** contratante, contrato e endereço (a capa dos relatórios).
+- **Recursos:** criar ou mudar ("pedreiro a R$ 280 por dia, 4 disponíveis") e pôr nas tarefas ("2 pedreiros na
+  alvenaria"; zero tira), na mesma resposta.
+- **Medições do contrato:** aprovar e marcar como paga.
+- **Ordens de serviço:** pagar as medições abertas (com o documento, lançando nos custos), liberar a retenção e duplicar.
+- **Telas já configuradas:** "imprime o Gantt em A1", "relatório das OS vencidas de setembro", "relatório fotográfico da OS 3".
+- **Estimativas:** quando falta um número (duração, quantidade, preço, equipe), a IA estima, avisa que é estimativa e propõe.
+- As instruções da IA ganharam o mapa de tudo o que ela controla, para agir em vez de só explicar onde clicar.
+- O cartão confere os itens em ordem (um item pode depender do anterior, como criar o recurso e depois atribuí-lo).
+- Tudo o que muda a obra continua num cartão para conferir e aplicar, e o Desfazer volta tudo.
+
 ## 0.66.0
 
 **Relatório fotográfico das ordens de serviço.**

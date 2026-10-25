@@ -14,7 +14,35 @@ public static class InstrucoesDoAssistente
         "Ao citar uma tarefa, use a EDT e o nome (por exemplo, \"1.2 Armar\").\n" +
         "Os documentos anexados (plantas, contratos, memoriais, fotos) vêm junto das mensagens; analise-os quando for útil.\n" +
         "Se a informação não estiver no cronograma nem nos anexos, diga isso em vez de inventar.\n" +
-        "\n" + Alteracoes + "\n" + Orcamento + "\n" + Obra;
+        "\n" + Alteracoes + "\n" + Orcamento + "\n" + Obra + "\n" + Controle;
+
+    /// <summary>
+    /// Bloco 67: o mapa do que o assistente controla no programa (todo o fluxo da obra), e por qual caminho, para ele agir em vez
+    /// de mandar o usuário procurar a tela.
+    /// </summary>
+    public const string Controle =
+        "VOCÊ CONTROLA O PROGRAMA. Você pode conduzir todo o fluxo da obra pelas respostas; aja (proponha) em vez de só explicar " +
+        "onde clicar. O caminho de cada coisa:\n" +
+        "- Cronograma (criar, renomear, durações, vínculos, mover, apagar, nome e início do projeto): \"alteracoes\".\n" +
+        "- Andamento e registros (% concluído, medição do contrato, custo, não iniciar antes de, linha de base): \"atualizacoes\".\n" +
+        "- Dados de uma tarefa: tipo tarefa, com tarefa e só o que muda: valor (R$ do item), unidade, quantidade e prazo (a data " +
+        "limite, AAAA-MM-DD).\n" +
+        "- Dados da obra (capa dos relatórios): tipo obra, com contratante, contrato e endereco.\n" +
+        "- Recursos: tipo recurso para criar (ou mudar o de mesmo nome): nome, tipoDoRecurso (profissional, material ou " +
+        "equipamento), unidade (dia para profissional e equipamento), valor (o custo por unidade), quantidade (o disponível por " +
+        "dia) e fornecedor. Tipo atribuir para pôr um recurso numa tarefa: tarefa, recurso (o nome) e quantidade (por dia para " +
+        "profissional e equipamento; o total para material); quantidade 0 tira. Crie o recurso antes de atribuir.\n" +
+        "- Medições do contrato: tipo medicao para medir; tipo medicaoContrato com medicao (o nº) e acao aprovar ou pagar (data " +
+        "do pagamento em data).\n" +
+        "- Ordens de serviço: tipos os e situacaoOs (acima). Também acao pagar (paga as medições abertas da OS, com o documento em " +
+        "documento: lança nos custos realizados), liberar (paga a retenção, depois de conferida e paga) e duplicar.\n" +
+        "- Orçamento (composições, preços, BDI, equipes): \"orcamento\" pede as sugestões, que o usuário aplica na tela.\n" +
+        "- Fotos: \"importarFotos\". Relatórios e telas: \"abrir\" (relatório fotográfico de um período ou de uma OS, com o texto; " +
+        "relatório das OS com de, ate e aba = abertas, encerradas ou vencidas; imprimirGantt com aba = a folha, A4 a A0; " +
+        "medições, orçamento, indicadores…). Os arquivos (PDF, Excel) o usuário salva na tela que você abrir.\n" +
+        "- Estimar: quando faltar um número (duração, quantidade, preço, equipe), estime com base no tipo de obra e nos documentos, " +
+        "diga que é estimativa e proponha; o usuário confere no cartão.\n" +
+        "Tudo o que muda a obra vai num cartão (ou é desfeito com Desfazer): proponha com confiança e diga o que propôs.";
 
     /// <summary>Bloco 41: consultar a obra, abrir telas e propor atualizações da obra (confirmadas pelo usuário num cartão).</summary>
     public const string Obra =
@@ -128,9 +156,10 @@ public static class InstrucoesDoAssistente
         "(até 6 linhas), em texto simples, sem tabelas. Responda perguntas sobre a obra pelo retrato abaixo. Mande sempre " +
         "\"alteracoes\" vazia e não use \"abrir\", \"importarFotos\", perguntas nem plano: daqui não dá para mudar a estrutura do " +
         "cronograma nem abrir telas (se pedirem, diga que isso se faz no programa). Atualizações da obra (% concluído, medição, " +
-        "custo, não iniciar antes de, linha de base) e as ordens de serviço (criar, alterar, mudar a situação; uma tarefa nova " +
-        "para a OS vai junto, em novaTarefa) vão em \"atualizacoes\", como sempre: elas ficam guardadas e o usuário confere e " +
-        "aplica quando abrir a obra no programa. Na mensagem, diga o que foi anotado.";
+        "custo, não iniciar antes de, linha de base), as ordens de serviço (criar, alterar, mudar a situação, medir, pagar; uma " +
+        "tarefa nova para a OS vai junto, em novaTarefa), os dados das tarefas, da obra e os recursos vão em \"atualizacoes\", " +
+        "como sempre: elas ficam guardadas e o usuário confere e aplica quando abrir a obra no programa. Na mensagem, diga o que " +
+        "foi anotado.";
 
     /// <summary>Os campos opcionais da resposta (Bloco 26): tipo, ficha, perguntas e plano.</summary>
     public const string RespostasEstruturadas =

@@ -1,0 +1,127 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.CalendarioWindow"
+        x:DataType="vm:CalendarioViewModel"
+        Title="Calendário de trabalho"
+        Width="900" Height="660" MinWidth="720" MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 71: os dias de trabalho, os feriados e as exceções do projeto, com a prévia dos dias sem trabalho e do término. -->
+    <DockPanel Margin="18">
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Opacity="0.75" Margin="0,0,0,12"
+                   Text="O cronograma conta os dias úteis por este calendário: as durações, as defasagens, os prazos, o físico-financeiro, os recursos e os indicadores. O Gantt sombreia os dias sem trabalho." />
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="CalendarioDoBrasil" Content="Calendário do Brasil" Command="{Binding UsarOCalendarioDoBrasilCommand}"
+                        ToolTip.Tip="Segunda a sexta, com os feriados nacionais, o Carnaval e o Corpus Christi (sem os feriados do projeto e sem as exceções)" />
+                <Button Content="Cancelar" Click="Fechar" IsCancel="True" />
+                <Button x:Name="Aplicar" Content="Aplicar" Classes="accent" Command="{Binding AplicarCommand}" IsDefault="True" />
+            </StackPanel>
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+                <CheckBox x:Name="UsarNosNovos" Content="Usar este calendário nos projetos novos" IsChecked="{Binding UsarNosProjetosNovos}"
+                          IsVisible="{Binding PodeUsarNosNovos}" />
+                <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextoDeErroForte}"
+                           IsVisible="{Binding Mensagem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </DockPanel>
+
+        <Grid ColumnDefinitions="3*,16,2*">
+            <ScrollViewer Grid.Column="0">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Dias de trabalho na semana" FontWeight="SemiBold" />
+                        <ItemsControl x:Name="Dias" ItemsSource="{Binding Dias}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DiaDaSemanaNaTela">
+                                    <CheckBox Content="{Binding Nome}" IsChecked="{Binding Marcado}" Margin="0,0,14,0" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Feriados" FontWeight="SemiBold" />
+                        <CheckBox x:Name="FeriadosNacionais" IsChecked="{Binding FeriadosNacionais}"
+                                  Content="Feriados nacionais (Confraternização, Sexta-feira Santa, Tiradentes, Dia do Trabalho, Independência, Aparecida, Finados, República, Consciência Negra, Natal)" />
+                        <CheckBox x:Name="PontosFacultativos" IsChecked="{Binding PontosFacultativos}" Content="Carnaval (segunda e terça) e Corpus Christi" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Feriados do projeto (estaduais, municipais, da empresa)" FontWeight="SemiBold" />
+                        <ItemsControl x:Name="Feriados" ItemsSource="{Binding Feriados}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FeriadoNaTela">
+                                    <DockPanel Margin="0,0,0,4">
+                                        <Button DockPanel.Dock="Right" Content="Remover" Padding="8,2"
+                                                Command="{Binding $parent[Window].((vm:CalendarioViewModel)DataContext).RemoverFeriadoCommand}" CommandParameter="{Binding}" />
+                                        <TextBlock Text="{Binding Texto}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid ColumnDefinitions="140,8,*,8,Auto,8,Auto">
+                            <CalendarDatePicker Grid.Column="0" x:Name="DataDoFeriado" SelectedDate="{Binding DataDoFeriado}" PlaceholderText="data" HorizontalAlignment="Stretch" />
+                            <TextBox Grid.Column="2" x:Name="NomeDoFeriado" Text="{Binding NomeDoFeriado}" PlaceholderText="Nome (ex.: São Sebastião)" />
+                            <CheckBox Grid.Column="4" Content="Todo ano" IsChecked="{Binding FeriadoTodoAno}" />
+                            <Button Grid.Column="6" x:Name="AcrescentarFeriado" Content="Acrescentar" Command="{Binding AcrescentarFeriadoCommand}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Períodos sem trabalho e dias extras" FontWeight="SemiBold" />
+                        <TextBlock Text="Chuva, paralisação, férias coletivas ou recesso (sem trabalho); um sábado, domingo ou feriado trabalhado (com trabalho)."
+                                   FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+                        <ItemsControl x:Name="Excecoes" ItemsSource="{Binding Excecoes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExcecaoNaTela">
+                                    <DockPanel Margin="0,0,0,4">
+                                        <Button DockPanel.Dock="Right" Content="Remover" Padding="8,2"
+                                                Command="{Binding $parent[Window].((vm:CalendarioViewModel)DataContext).RemoverExcecaoCommand}" CommandParameter="{Binding}" />
+                                        <TextBlock Text="{Binding Texto}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid ColumnDefinitions="130,6,130,8,*" RowDefinitions="Auto,6,Auto">
+                            <CalendarDatePicker Grid.Column="0" x:Name="DeDaExcecao" SelectedDate="{Binding DeDaExcecao}" PlaceholderText="de" HorizontalAlignment="Stretch" />
+                            <CalendarDatePicker Grid.Column="2" x:Name="AteDaExcecao" SelectedDate="{Binding AteDaExcecao}" PlaceholderText="até (opcional)" HorizontalAlignment="Stretch" />
+                            <TextBox Grid.Column="4" x:Name="MotivoDaExcecao" Text="{Binding MotivoDaExcecao}" PlaceholderText="Motivo (ex.: chuva)" />
+                            <StackPanel Grid.Row="2" Grid.ColumnSpan="5" Orientation="Horizontal" Spacing="10">
+                                <CheckBox x:Name="ComTrabalho" Content="Com trabalho" IsChecked="{Binding ExcecaoComTrabalho}" VerticalAlignment="Center" />
+                                <Button x:Name="AcrescentarExcecao" Content="Acrescentar" Command="{Binding AcrescentarExcecaoCommand}" />
+                                <Button x:Name="Recesso" Content="Recesso de fim de ano" Command="{Binding AcrescentarRecessoCommand}"
+                                        ToolTip.Tip="De 24/12 a 01/01, em cada virada de ano do projeto" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <DockPanel Grid.Column="2">
+                <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="12,10" Margin="0,0,0,10">
+                    <StackPanel Spacing="6">
+                        <TextBlock x:Name="Descricao" Text="{Binding Descricao}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock x:Name="Impacto" Text="{Binding Impacto}" TextWrapping="Wrap" FontSize="12"
+                                   IsVisible="{Binding Impacto, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                </Border>
+                <TextBlock DockPanel.Dock="Top" Text="Dias fora da regra no período do projeto" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <ScrollViewer>
+                    <ItemsControl x:Name="DiasForaDaRegra" ItemsSource="{Binding DiasForaDaRegra}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,3" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

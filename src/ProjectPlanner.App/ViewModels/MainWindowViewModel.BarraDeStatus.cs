@@ -36,7 +36,7 @@ public sealed partial class MainWindowViewModel
             if (Tarefas.Count == 0 || TerminoProjeto is not { } termino)
                 return "";
             var inicio = _cronograma.DataInicio;
-            var dias = termino < inicio ? 0 : CalendarioDeTrabalho.ContarDiasUteis(inicio, termino);
+            var dias = termino < inicio ? 0 : _cronograma.Calendario.ContarDiasUteis(inicio, termino);
             return $"{inicio.ToString("dd/MM/yyyy", Cultura)} → {termino.ToString("dd/MM/yyyy", Cultura)} · " +
                    (dias == 1 ? "1 dia útil" : $"{dias} dias úteis");
         }

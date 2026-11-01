@@ -423,7 +423,7 @@ public sealed class GanttParaImprimir
         c.Save();
         c.ClipRect(area);
 
-        // Fins de semana, ao fundo.
+        // Os dias sem trabalho do calendário do projeto (folgas, feriados, paralisações), ao fundo.
         if (_opcoes.FinsDeSemana && _pontosPorDia >= 1.5f)
         {
             using var fimDeSemana = new SKPaint { Color = CorDoFimDeSemana };
@@ -628,7 +628,7 @@ public sealed class GanttParaImprimir
                 c.DrawLine(x0 + 9, m - 5, x0 + 9, m + 5, hoje);
             });
         if (_opcoes.FinsDeSemana && _pontosPorDia >= 1.5f)
-            Item("Sábado e domingo", (x0, m) =>
+            Item("Sem trabalho", (x0, m) => // Bloco 71: as folgas da semana, os feriados e as paralisações
             {
                 using var fim = new SKPaint { Color = CorDoFimDeSemana };
                 using var borda = new SKPaint { Color = Grade, Style = SKPaintStyle.Stroke, StrokeWidth = 0.5f };

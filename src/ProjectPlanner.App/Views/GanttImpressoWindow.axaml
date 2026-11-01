@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ProjectPlanner.App.ViewModels"
         x:Class="ProjectPlanner.App.Views.GanttImpressoWindow"
@@ -63,7 +63,7 @@
                 <CheckBox Content="Vínculos (setas)" IsChecked="{Binding Vinculos}" />
                 <CheckBox Content="Linha de hoje" IsChecked="{Binding Hoje}" />
                 <CheckBox Content="Nomes ao lado das barras" IsChecked="{Binding NomesNasBarras}" />
-                <CheckBox Content="Sábados e domingos sombreados" IsChecked="{Binding FinsDeSemana}" />
+                <CheckBox Content="Dias sem trabalho sombreados (folgas, feriados, paralisações)" IsChecked="{Binding FinsDeSemana}" />
                 <CheckBox x:Name="Legenda" Content="Legenda" IsChecked="{Binding Legenda}" />
             </StackPanel>
         </ScrollViewer>

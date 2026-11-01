@@ -208,6 +208,10 @@
                 <!-- Bloco 25 -->
                 <!-- Bloco 31: linha de base; Bloco 35: o cronograma físico-financeiro e os valores; Bloco 36: as medições; Bloco 37: custos e indicadores. -->
                 <MenuItem Header="Projeto">
+                    <!-- Bloco 71 -->
+                    <MenuItem Header="Calendário de trabalho…" Command="{Binding CalendarioDeTrabalhoCommand}"
+                              ToolTip.Tip="Os dias de trabalho na semana, os feriados (nacionais e do projeto) e os períodos sem trabalho ou com trabalho extra" />
+                    <Separator />
                     <MenuItem Header="Salvar linha de base…" Command="{Binding SalvarLinhaDeBaseCommand}"
                               ToolTip.Tip="Guardar o cronograma de agora (datas, durações e valores) para comparar o previsto com o atual" />
                     <MenuItem Header="Linhas de base…" Command="{Binding GerenciarLinhasDeBaseCommand}"
@@ -366,6 +370,11 @@
                             ToolTip.Tip="Ir para a tarefa: trazer a selecionada para a vista na grid e no Gantt" AutomationProperties.Name="Ir para a tarefa">
                         <!-- Mira -->
                         <Path Data="M8,3 A5,5 0 1 0 8,13 A5,5 0 1 0 8,3 M8,0.5 V4.5 M8,11.5 V15.5 M0.5,8 H4.5 M11.5,8 H15.5" />
+                    </Button>
+                    <Button Tag="calendario" Classes="acessoRapido" Command="{Binding CalendarioDeTrabalhoCommand}"
+                            ToolTip.Tip="Calendário de trabalho: os dias de trabalho, os feriados e os períodos sem trabalho" AutomationProperties.Name="Calendário de trabalho">
+                        <!-- Uma folhinha de calendário com um dia marcado -->
+                        <Path Data="M2,3.5 H14 V14 H2 Z M2,6.5 H14 M5,2 V5 M11,2 V5 M5,9 H7 V11 H5 Z" />
                     </Button>
                     <Button Tag="linhaDeBase" Classes="acessoRapido" Command="{Binding SalvarLinhaDeBaseCommand}"
                             ToolTip.Tip="Salvar linha de base: guardar o cronograma de agora para comparar com o realizado"

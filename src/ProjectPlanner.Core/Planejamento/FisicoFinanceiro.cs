@@ -183,7 +183,7 @@ public static class CalculadoraFisicoFinanceira
             foreach (var item in grupo)
             {
                 var peso = porValor ? (double)item.Valor : item.Dias;
-                foreach (var (i, fracao) in Fracoes(item, periodos))
+                foreach (var (i, fracao) in Fracoes(item, periodos, cronograma.Calendario))
                 {
                     valorPorPeriodo[i] += item.Valor * (decimal)fracao;
                     pesoPorPeriodo[i] += peso * fracao;
@@ -270,10 +270,10 @@ public static class CalculadoraFisicoFinanceira
 
     // A fração de cada item em cada período: os dias úteis dele que caem no período ÷ os dias úteis dele. Um marco (ou
     // uma tarefa de 0 dias) cai inteiro no período do dia dele. Fora dos períodos, não conta.
-    private static IEnumerable<(int Indice, double Fracao)> Fracoes(Item item, IReadOnlyList<PeriodoFinanceiro> periodos)
+    private static IEnumerable<(int Indice, double Fracao)> Fracoes(Item item, IReadOnlyList<PeriodoFinanceiro> periodos, CalendarioDoProjeto calendario)
     {
         var (inicio, termino) = (DateOnly.FromDateTime(item.Inicio), DateOnly.FromDateTime(item.Termino));
-        var dias = item.Dias > 0 ? DiasUteisEntre(inicio, termino) : 0;
+        var dias = item.Dias > 0 ? calendario.ContarDiasUteis(inicio, termino) : 0;
         for (var i = 0; i < periodos.Count; i++)
         {
             var p = periodos[i];
@@ -284,16 +284,11 @@ public static class CalculadoraFisicoFinanceira
                 continue;
             }
             var (de, ate) = (inicio > p.Inicio ? inicio : p.Inicio, termino < p.Fim ? termino : p.Fim);
-            if (de <= ate && DiasUteisEntre(de, ate) is var noPeriodo and > 0)
+            if (de <= ate && calendario.ContarDiasUteis(de, ate) is var noPeriodo and > 0)
                 yield return (i, (double)noPeriodo / dias);
         }
     }
 
-    private static int DiasUteisEntre(DateOnly de, DateOnly ate)
-    {
-        var (a, b) = (DiasUteis.ProximoOuMesmo(de.ToDateTime(TimeOnly.MinValue)), DiasUteis.AnteriorOuMesmo(ate.ToDateTime(TimeOnly.MinValue)));
-        return b < a ? 0 : DiasUteis.ContarInclusivo(a, b);
-    }
 }
 
 /// <summary>Bloco 37: o que uma série da Curva S mostra (define a cor e o traço).</summary>

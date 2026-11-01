@@ -330,6 +330,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 Dados = FormatoDosCustos.Serializar(cronograma),
             });
 
+        if (!cronograma.Calendario.EhOPadrao)
+            contexto.Calendario.Add(new CalendarioRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDoCalendario.Versao,
+                Dados = FormatoDoCalendario.Serializar(cronograma.Calendario),
+            });
+
         if (!cronograma.OrdensDeServico.Vazio)
             contexto.Ordens.Add(new OrdensRegistro
             {
@@ -381,7 +389,16 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 $"O arquivo \"{caminhoArquivo}\" deveria ter um projeto, mas tem {projetos.Count}."),
         };
 
-        var cronograma = new Cronograma(projeto.Id, projeto.Nome, projeto.DataInicio);
+        // Bloco 71: o calendário antes das tarefas (o início, as datas e as restrições vão para os dias úteis dele).
+        CalendarioDoProjeto? calendario = null;
+        if (contexto.Calendario.AsNoTracking().FirstOrDefault() is { } registroDoCalendario)
+        {
+            if (!FormatoDoCalendario.Conhece(registroDoCalendario.Versao))
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o calendário de trabalho num formato desconhecido.");
+            calendario = FormatoDoCalendario.Ler(registroDoCalendario.Dados);
+        }
+
+        var cronograma = new Cronograma(projeto.Id, projeto.Nome, projeto.DataInicio, calendario);
         cronograma.DefinirDatasDoArquivo(
             DateTime.SpecifyKind(projeto.DataCriacao, DateTimeKind.Utc),
             DateTime.SpecifyKind(projeto.DataUltimaModificacao, DateTimeKind.Utc));
@@ -391,7 +408,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             // Um resumo só com marcos tem duração 0 e seria lido como marco, que não pode ter
             // subtarefas; como os valores do resumo são recalculados, ele entra com pelo menos 1 dia.
             var duracao = registro.Tipo == TipoTarefa.Resumo ? Math.Max(registro.Duracao, 1) : registro.Duracao;
-            var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, duracao);
+            var tarefa = new Tarefa(registro.Id, registro.Nome, registro.DataInicio, duracao, calendario);
             tarefa.AtualizarPercentualConcluido(registro.PercentualConcluido);
             tarefa.AlterarNotas(registro.Notas);
             // Blocos 31, 35 e 36: a restrição, o valor, a unidade e a quantidade de um resumo não existem (o arquivo não os

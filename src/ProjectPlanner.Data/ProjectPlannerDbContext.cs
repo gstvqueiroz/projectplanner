@@ -22,6 +22,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<ContratoRegistro> Contrato => Set<ContratoRegistro>();
     public DbSet<CustosRegistro> Custos => Set<CustosRegistro>();
     public DbSet<OrdensRegistro> Ordens => Set<OrdensRegistro>();
+    public DbSet<CalendarioRegistro> Calendario => Set<CalendarioRegistro>(); // Bloco 71
     public DbSet<RecursoRegistro> Recursos => Set<RecursoRegistro>();
     public DbSet<OrcamentoRegistro> Orcamento => Set<OrcamentoRegistro>();
     public DbSet<AtribuicaoRegistro> Atribuicoes => Set<AtribuicaoRegistro>();
@@ -155,6 +156,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             custos.HasKey(c => c.ProjetoId);
             custos.HasOne<ProjetoRegistro>().WithOne()
                 .HasForeignKey<CustosRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // O calendário de trabalho (Bloco 71), em JSON.
+        modelBuilder.Entity<CalendarioRegistro>(calendario =>
+        {
+            calendario.ToTable("CalendarioDoProjeto");
+            calendario.HasKey(c => c.ProjetoId);
+            calendario.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<CalendarioRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // As ordens de serviço (Bloco 58), em JSON.

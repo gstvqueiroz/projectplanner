@@ -10,7 +10,8 @@ namespace ProjectPlanner.Core;
 /// O cálculo usa números de dia útil contados a partir de <see cref="Cronograma.DataInicio"/>
 /// (dia 0) e as datas inclusivas da <see cref="Tarefa"/>: uma tarefa de duração d que começa no dia
 /// s termina no dia s + d − 1. Cada vínculo aplica a regra do seu <see cref="TipoDependencia"/>,
-/// com o lag em dias úteis. As datas informadas das tarefas não entram no cálculo; desde o Bloco 31, entram a
+/// com o lag em dias úteis. Os dias úteis são os do calendário do projeto (<see cref="Cronograma.Calendario"/>, Bloco 71:
+/// os dias da semana, os feriados e as exceções). As datas informadas das tarefas não entram no cálculo; desde o Bloco 31, entram a
 /// restrição "não iniciar antes de" (<see cref="Tarefa.NaoIniciarAntesDe"/>) e o prazo
 /// (<see cref="Tarefa.Prazo"/>, o da tarefa e o dos resumos em que ela está).
 /// </para>
@@ -59,12 +60,13 @@ public static class CalculadoraCronograma
         if (folhas.Count == 0)
             return new ResultadoCronograma(cronograma.DataInicio, [], []);
 
+        var calendario = cronograma.Calendario; // Bloco 71: os dias úteis do projeto
         var ordem = OrdenarTopologicamente(folhas, cronograma.Predecessoras);
         var predecessorasDe = cronograma.Predecessoras.ToLookup(p => p.TarefaDestinoId);
         var sucessorasDe = cronograma.Predecessoras.ToLookup(p => p.TarefaOrigemId);
 
         long DiaDaRestricao(Tarefa tarefa) => tarefa.NaoIniciarAntesDe is { } data
-            ? Math.Max(0, DiasUteis.Indice(cronograma.DataInicio, DiasUteis.ProximoOuMesmo(data.Date)))
+            ? Math.Max(0, calendario.Indice(cronograma.DataInicio, calendario.ProximoOuMesmo(data.Date)))
             : 0;
         var cedo = new Dictionary<Guid, Periodo>();
         foreach (var tarefa in ordem)
@@ -88,7 +90,7 @@ public static class CalculadoraCronograma
             : Instante(cedo[tarefa.Id].Inicio, marcoNoFimDoDia[tarefa.Id]);
         var fimDoProjeto = ordem.Max(InstanteDoTermino);
         var diaDoFim = fimDoProjeto >> 1;
-        if (diaDoFim > int.MaxValue || DiasUteis.Adicionar(cronograma.DataInicio, (int)diaDoFim) is null)
+        if (diaDoFim > int.MaxValue || calendario.Adicionar(cronograma.DataInicio, (int)diaDoFim) is null)
             throw new DomainValidationException(nameof(Tarefa.TerminoMaisCedo),
                 "O término calculado do projeto ultrapassa a maior data suportada (31/12/9999).");
 
@@ -102,7 +104,7 @@ public static class CalculadoraCronograma
             {
                 // O último dia útil até o prazo. Um marco no começo do dia ocupa a fronteira do dia: para a data dele
                 // não passar do prazo, a fronteira fica até o dia do prazo (o "término" do marco é a fronteira − 1).
-                var diaDoPrazo = DiasUteis.Indice(cronograma.DataInicio, DiasUteis.AnteriorOuMesmo(prazo));
+                var diaDoPrazo = calendario.Indice(cronograma.DataInicio, calendario.AnteriorOuMesmo(prazo));
                 termino = Math.Min(termino, tarefa.Duracao == 0 && !marcoNoFimDoDia[tarefa.Id] ? diaDoPrazo - 1 : diaDoPrazo);
             }
             foreach (var vinculo in sucessorasDe[tarefa.Id])
@@ -112,7 +114,7 @@ public static class CalculadoraCronograma
 
         // Todo dia cedo fica entre 0 e o dia do fim do projeto, que já cabe numa data; um dia tarde pode ficar antes do
         // início do projeto (prazo que não cabe), e um prazo absurdo (antes do ano 1) é recusado.
-        DateTime Data(long dia) => DiasUteis.Adicionar(cronograma.DataInicio, (int)Math.Max(dia, int.MinValue))
+        DateTime Data(long dia) => calendario.Adicionar(cronograma.DataInicio, (int)Math.Max(dia, int.MinValue))
             ?? throw new DomainValidationException(nameof(Tarefa.Prazo), "Um prazo está antes da menor data suportada.");
         foreach (var tarefa in ordem)
         {

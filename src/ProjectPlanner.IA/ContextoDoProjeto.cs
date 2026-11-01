@@ -46,6 +46,12 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
     /// <summary>Linhas da situação da obra no retrato, no máximo.</summary>
     public const int LinhasDaObra = 250;
 
+    /// <summary>
+    /// Bloco 71: o calendário de trabalho do projeto (a primeira linha diz qual é; as outras, os feriados, as paralisações e os
+    /// dias extras do período). Nulo num retrato de antes do bloco: vale o texto de segunda a sexta.
+    /// </summary>
+    public IReadOnlyList<string>? Calendario { get; init; }
+
     /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
     public const int LinhasDoOrcamento = 200;
 
@@ -60,8 +66,16 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
         var texto = new StringBuilder();
         texto.AppendLine($"Projeto: {Limpar(Nome)}");
         texto.AppendLine($"Início: {Data(Inicio)} · Término: {Data(Termino)} · Hoje: {Data(Hoje)}");
-        texto.AppendLine("Calendário: dias úteis de segunda a sexta; durações, folgas e defasagens em dias úteis. " +
-                         "Início e Término de cada tarefa são as datas calculadas do cronograma (as das barras do Gantt).");
+        if (Calendario is { Count: > 0 } calendario)
+        {
+            texto.AppendLine($"Calendário de trabalho: {Limpar(calendario[0])}; durações, folgas e defasagens em dias úteis deste calendário. " +
+                             "Início e Término de cada tarefa são as datas calculadas do cronograma (as das barras do Gantt).");
+            foreach (var linha in calendario.Skip(1))
+                texto.AppendLine(Limpar(linha));
+        }
+        else
+            texto.AppendLine("Calendário: dias úteis de segunda a sexta; durações, folgas e defasagens em dias úteis. " +
+                             "Início e Término de cada tarefa são as datas calculadas do cronograma (as das barras do Gantt).");
         texto.AppendLine("Predecessoras usam o Nº da linha: TI = término-início (o padrão, só o número), II = início-início, " +
                          "TT = término-término, IT = início-término; +n/-n = defasagem em dias úteis.");
         texto.AppendLine("Crítica = folga zero (está no caminho crítico). A indentação do nome mostra o nível na EDT.");

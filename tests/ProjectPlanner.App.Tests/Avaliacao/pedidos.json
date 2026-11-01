@@ -251,6 +251,35 @@
       "referencia": { "mensagem": "Abri os indicadores de custo.", "alteracoes": [], "abrir": { "tela": "indicadores", "aba": "custos" } }
     },
     {
+      "id": "calendario-chuva",
+      "pedido": "Choveu muito hoje e a obra ficou parada.",
+      "esperado": { "atualizacoes": [{ "tipo": "calendario", "acao": "parar", "de": "2026-09-28" }] },
+      "referencia": { "mensagem": "Proponho o dia de hoje sem trabalho (chuva): as tarefas andam um dia útil.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "calendario", "acao": "parar", "de": "2026-09-28", "ate": "2026-09-28", "descricao": "Chuva" }] }
+    },
+    {
+      "id": "calendario-feriado-municipal",
+      "pedido": "Dia 15/10 é feriado municipal aqui, aniversário da cidade.",
+      "esperado": { "atualizacoes": [{ "tipo": "calendario", "acao": "~feriado", "data": "2026-10-15" }] },
+      "referencia": { "mensagem": "Proponho o feriado municipal de 15/10, todo ano.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "calendario", "acao": "feriadoAnual", "data": "2026-10-15", "nome": "Aniversário da cidade" }] }
+    },
+    {
+      "id": "calendario-sabados",
+      "pedido": "A partir de agora a obra trabalha de segunda a sábado.",
+      "esperado": { "atualizacoes": [{ "tipo": "calendario", "acao": "dias", "dias": "~sab" }] },
+      "referencia": { "mensagem": "Proponho o calendário de segunda a sábado.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "calendario", "acao": "dias", "dias": "segunda a sábado" }] }
+    },
+    {
+      "id": "telegram-chuva",
+      "canal": "telegram",
+      "pedido": "choveu o dia todo, ninguém trabalhou hoje",
+      "esperado": { "atualizacoes": [{ "tipo": "calendario", "acao": "parar", "de": "2026-09-28" }], "abrir": "nenhum" },
+      "referencia": { "mensagem": "Anotei o dia de hoje sem trabalho (chuva). Aplique quando abrir a obra no programa.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "calendario", "acao": "parar", "de": "2026-09-28", "ate": "2026-09-28", "descricao": "Chuva" }] }
+    },
+    {
       "id": "telegram-percentual",
       "canal": "telegram",
       "pedido": "a alvenaria chegou a 90%",

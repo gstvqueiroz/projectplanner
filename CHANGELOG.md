@@ -3,6 +3,29 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.71.0
+
+**Calendário de trabalho.** Até aqui o cronograma contava sempre de segunda a sexta, sem feriados. Agora cada projeto tem o
+seu calendário (Projeto > Calendário de trabalho…, ou o ícone de calendário na barra), e todo o cálculo conta os dias úteis
+por ele: o caminho crítico, as durações, as defasagens, os prazos, o físico-financeiro e a Curva S, os recursos e o
+nivelamento, os indicadores e o resumo do projeto.
+
+- **Os dias da semana de trabalho:** de segunda a sexta, de segunda a sábado ou qualquer combinação.
+- **Os feriados nacionais**, calculados a cada ano (inclusive os móveis: Sexta-feira Santa, Carnaval e Corpus Christi, e o
+  Dia da Consciência Negra a partir de 2024), com a opção de considerar ou não o Carnaval e o Corpus Christi.
+- **Os feriados do projeto** (estaduais, municipais, da empresa), num dia ou todo ano.
+- **Os períodos sem trabalho** (chuva, paralisação, férias coletivas; o botão do recesso de fim de ano põe de 24/12 a 01/01) e
+  os **dias extras de trabalho** (um sábado, domingo ou feriado trabalhado).
+- **A prévia:** a tela mostra os feriados e as paralisações do período do projeto e o que acontece com o término antes de
+  aplicar. Aplicar recalcula na hora, e o Desfazer volta o calendário anterior.
+- **O Gantt** (na tela e impresso) sombreia todos os dias sem trabalho, não só os fins de semana; o histograma de recursos mostra
+  só os dias de trabalho.
+- **Projetos novos** já começam com segunda a sexta e os feriados nacionais; a opção "Usar este calendário nos projetos novos"
+  guarda outro como padrão. Os projetos de antes abrem com o calendário de antes (segunda a sexta, sem feriados), com as mesmas
+  datas, até você mudar.
+- **A IA conhece o calendário:** o retrato da obra traz o calendário e os feriados do período, e a IA pode mudá-lo pelo cartão,
+  também pelo Telegram: "choveu hoje, a obra parou", "dia 15 é feriado municipal", "vamos trabalhar aos sábados".
+
 ## 0.70.0
 
 **Regressão completa e os pacotes do Windows em dia.**

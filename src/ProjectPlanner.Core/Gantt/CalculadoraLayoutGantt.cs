@@ -7,8 +7,8 @@ namespace ProjectPlanner.Core.Gantt;
 /// </summary>
 /// <remarks>
 /// <para>
-/// O eixo de tempo é de dias corridos, sem destaque para fins de semana (até existir o bloco de
-/// calendários): uma tarefa de 5 dias úteis que atravessa um fim de semana ocupa 7 dias. Cada dia vai
+/// O eixo de tempo é de dias corridos: uma tarefa de 5 dias úteis que atravessa um fim de semana ocupa 7 dias (os dias sem
+/// trabalho do calendário do projeto ficam sombreados, ver abaixo). Cada dia vai
 /// de X = (dia − início do eixo) × escala até o X do dia seguinte. O eixo começa
 /// <see cref="DiasAntesDoInicio"/> dias antes do início do projeto (para caber a volta das setas que
 /// saem do começo das primeiras barras) e termina no domingo que fica pelo menos
@@ -18,9 +18,9 @@ namespace ProjectPlanner.Core.Gantt;
 /// visível a partir de 3 dias antes do início do projeto (que num projeto novo é hoje).
 /// </para>
 /// <para>
-/// Sábados e domingos vêm em <see cref="LayoutGantt.FinsDeSemana"/>, em todo o eixo, inclusive nos dias
-/// sem tarefa, para a tela pintar um fundo discreto. É só uma pista visual: o cálculo continua em dias
-/// úteis de segunda a sexta, como sempre.
+/// Os dias sem trabalho do calendário do projeto (Bloco 71: os de folga da semana, os feriados e as paralisações) vêm em
+/// <see cref="LayoutGantt.FinsDeSemana"/>, em todo o eixo, inclusive nos dias sem tarefa, para a tela pintar um fundo
+/// discreto; o cálculo conta os dias úteis pelo mesmo calendário.
 /// </para>
 /// <para>
 /// As linhas seguem a ordem do cronograma, a mesma da grid, para que a linha N da grid e a barra N
@@ -89,7 +89,7 @@ public static class CalculadoraLayoutGantt
                 vinculosCriticos.Contains((p.TarefaOrigemId, p.TarefaDestinoId)), opcoes))
             .ToList();
 
-        var finsDeSemana = DiasDeFimDeSemana(inicioEixo, fimEixo)
+        var finsDeSemana = DiasSemTrabalho(cronograma.Calendario, inicioEixo, fimEixo)
             .Select(dia => new ColunaDia(dia, eixo.InicioDoDia(dia), opcoes.PixelsPorDia))
             .ToList();
 
@@ -114,11 +114,14 @@ public static class CalculadoraLayoutGantt
     }
 
     /// <summary>Os sábados e domingos de <paramref name="de"/> a <paramref name="ate"/> (inclusive), em ordem.</summary>
-    public static IEnumerable<DateTime> DiasDeFimDeSemana(DateTime de, DateTime ate)
+    public static IEnumerable<DateTime> DiasDeFimDeSemana(DateTime de, DateTime ate) => DiasSemTrabalho(CalendarioDoProjeto.Padrao, de, ate);
+
+    /// <summary>Bloco 71: os dias sem trabalho do calendário de <paramref name="de"/> a <paramref name="ate"/> (inclusive), em ordem.</summary>
+    public static IEnumerable<DateTime> DiasSemTrabalho(CalendarioDoProjeto calendario, DateTime de, DateTime ate)
     {
         for (var dia = de.Date; dia <= ate.Date; dia = dia.AddDays(1))
         {
-            if (dia.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            if (!calendario.EhDiaUtil(dia))
                 yield return dia;
             if (dia == DateTime.MaxValue.Date)
                 yield break;

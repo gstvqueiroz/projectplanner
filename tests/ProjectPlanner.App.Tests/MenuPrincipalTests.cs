@@ -115,7 +115,7 @@ public partial class MenuPrincipalTests
             "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…", "Recursos da tarefa…");
-        Titulos(a.Item("Projeto")).Should().Equal("Salvar linha de base…", "Linhas de base…", Linha,
+        Titulos(a.Item("Projeto")).Should().Equal("Calendário de trabalho…", Linha, "Salvar linha de base…", "Linhas de base…", Linha,
             "Cronograma físico-financeiro…", "Importar valores…", Linha, "Orçamento…", "Recursos…", "Uso de recursos…", Linha, "Medições…", "Ordens de serviço…", "Nova ordem de serviço", "Relatório das ordens de serviço…", "Custos realizados…", "Indicadores…");
         Titulos(a.Item("Conta")).Should().Equal("Entrar ou criar conta…", "Sair da conta", Linha, // Bloco 45
             "Usar esta obra no Telegram", "Buscar do Telegram", "Conectar o Telegram…"); // Bloco 49
@@ -176,6 +176,7 @@ public partial class MenuPrincipalTests
             (a.Vm.GerenciarFotosCommand, "Fotos da tarefa"),
             (a.Vm.RecursosDaTarefaCommand, "Recursos da tarefa"),
             (a.Vm.IrParaTarefaCommand, "Ir para a tarefa"),
+            (a.Vm.CalendarioDeTrabalhoCommand, "Calendário de trabalho"),
             (a.Vm.SalvarLinhaDeBaseCommand, "Salvar linha de base"),
             (a.Vm.GerenciarLinhasDeBaseCommand, "Linhas de base"),
             (a.Vm.ImportarValoresCommand, "Importar valores"),

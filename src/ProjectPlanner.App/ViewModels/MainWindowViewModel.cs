@@ -43,8 +43,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null,
         IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null,
         IConsultorDeOrcamento? consultorDeOrcamento = null, IAnalistaDaObra? analistaDaObra = null, IContaProjectPlanner? conta = null,
-        ITelegramDaConta? telegram = null, IConversorDeHeic? conversorDeHeic = null)
+        ITelegramDaConta? telegram = null, IConversorDeHeic? conversorDeHeic = null, IPreferenciasDoCalendario? preferenciasDoCalendario = null)
     {
+        _preferenciasDoCalendario = preferenciasDoCalendario;
         _conta = conta ?? new SemContaProjectPlanner();
         _telegram = telegram;
         _analistaDaObra = analistaDaObra ?? new AnalistaDaObraIndisponivel();
@@ -116,7 +117,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         var inicio = DateOnly.FromDateTime(_cronograma.DataInicio);
         var termino = TerminoProjeto is { } fim ? DateOnly.FromDateTime(fim) : tarefas.Select(t => t.Termino).DefaultIfEmpty(inicio).Max();
         return new ContextoDoProjeto(_cronograma.Nome, inicio, termino, DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), tarefas,
-            ProjectPlanner.Relatorios.TextosDoOrcamento.ParaOAssistente(_cronograma.Orcamento.Planilha()), SituacaoDaObra());
+            ProjectPlanner.Relatorios.TextosDoOrcamento.ParaOAssistente(_cronograma.Orcamento.Planilha()), SituacaoDaObra())
+        {
+            Calendario = CalendarioParaOAssistente(_cronograma.Calendario, inicio, termino), // Bloco 71
+        };
     }
 
     /// <summary>Todas as linhas, na ordem do cronograma: cada resumo seguido das suas subtarefas.</summary>
@@ -528,7 +532,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         Recalcular();
     }
 
-    private Cronograma NovoCronograma() => new(NomePadrao, _relogio.GetLocalNow().Date);
+    // Bloco 71: com o calendário dos projetos novos (o salvo; sem ele, o do Brasil). Sem as preferências (os testes), o padrão.
+    private Cronograma NovoCronograma() => new(Guid.NewGuid(), NomePadrao, _relogio.GetLocalNow().Date,
+        _preferenciasDoCalendario is null ? null : _preferenciasDoCalendario.Carregar() ?? CalendarioDoProjeto.Brasil);
 
     private TarefaViewModel LinhaDe(Guid tarefaId) => Tarefas.First(t => t.Tarefa.Id == tarefaId);
 

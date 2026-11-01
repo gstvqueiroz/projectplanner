@@ -374,6 +374,7 @@ Desfazer volta tudo); o cronograma muda direto, como sempre. Pelo Telegram, os m
 | Obra | "o contratante é a Prefeitura de Volta Redonda" | cartão (tipo obra) |
 | Recursos | "cria um pedreiro a R$ 280 por dia, 4 disponíveis, e põe 2 na alvenaria" | cartão (recurso, atribuir) |
 | Medições do contrato | "aprova a medição 2", "a medição 1 foi paga dia 30" | cartão (medicaoContrato) |
+| Calendário de trabalho (Bloco 71) | "choveu hoje, a obra parou", "dia 15/10 é feriado municipal", "vamos trabalhar aos sábados", "no domingo teve mutirão" | cartão (calendario: parar, feriado, feriadoAnual, dias, trabalhar) |
 | Ordens de serviço | "abre uma OS do reboco para o João", "a OS 3 está em 60%", "paga a OS 3, NF 77", "libera a retenção da OS 3", "duplica a OS 4" | cartão (os, situacaoOs) |
 | Orçamento | "orça a fundação com a SINAPI" | sugestões na tela do orçamento |
 | Fotos e relatórios | "relatório fotográfico desta semana", "relatório fotográfico da OS 3", "relatório das OS vencidas de setembro", "imprime o Gantt em A1" | abre a tela já configurada |
@@ -389,7 +390,7 @@ esquema que o Gemini segue, a leitura da resposta, a lista "CAMPOS DE CADA ATUAL
 (que o Claude, sem esquema, também lê) e as listas de telas e abas. Testes conferem que o registro `AtualizacaoDaObra`, o
 esquema, a leitura e as instruções batem com o catálogo, e que todo tipo e toda ação têm como ser aplicados no programa.
 
-Para saber se a IA acerta os pedidos de verdade, há a avaliação com 40 pedidos numa obra de exemplo: ver
+Para saber se a IA acerta os pedidos de verdade, há a avaliação com 44 pedidos numa obra de exemplo: ver
 [AVALIACAO-DA-IA.md](AVALIACAO-DA-IA.md).
 
 ## O que ainda não existe (blocos futuros)

@@ -79,7 +79,8 @@ public sealed record OpcoesGantt
 /// <param name="Altura">Altura total das linhas, ou a altura visível, se ela for maior.</param>
 /// <param name="Barras">Uma por tarefa visível, na ordem do cronograma (a mesma da grid).</param>
 /// <param name="Setas">Uma por vínculo, na ordem do cronograma.</param>
-/// <param name="FinsDeSemana">Uma coluna por sábado e domingo do eixo, em ordem, para o fundo diferenciado.</param>
+/// <param name="FinsDeSemana">Uma coluna por dia sem trabalho do eixo (Bloco 71: os de folga da semana, os feriados e as
+/// paralisações do calendário do projeto), em ordem, para o fundo diferenciado.</param>
 /// <param name="AlturaLinha">Altura de cada linha (a linha N vai de N × AlturaLinha a (N + 1) × AlturaLinha).</param>
 /// <param name="PistasVazias">
 /// Pistas sem tarefa abaixo da última, até o fim da altura visível (Bloco 20): só grade, sem barra nem clique.

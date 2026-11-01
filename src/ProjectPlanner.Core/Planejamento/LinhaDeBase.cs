@@ -55,15 +55,15 @@ public static class DesvioDaLinhaDeBase
     /// <summary>Dias úteis do início previsto até o início atual; nulo se a tarefa não está na linha de base ou não foi calculada.</summary>
     public static int? DoInicio(Tarefa tarefa, LinhaDeBase? linhaDeBase) =>
         linhaDeBase?.Tarefas.GetValueOrDefault(tarefa.Id) is { } prevista && tarefa.InicioMaisCedo is { } atual
-            ? Dias(prevista.Inicio, atual)
+            ? Dias(tarefa.Calendario, prevista.Inicio, atual)
             : null;
 
     /// <summary>Dias úteis do término previsto até o término atual.</summary>
     public static int? DoTermino(Tarefa tarefa, LinhaDeBase? linhaDeBase) =>
         linhaDeBase?.Tarefas.GetValueOrDefault(tarefa.Id) is { } prevista && tarefa.TerminoMaisCedo is { } atual
-            ? Dias(prevista.Termino, atual)
+            ? Dias(tarefa.Calendario, prevista.Termino, atual)
             : null;
 
-    private static int Dias(DateTime previsto, DateTime atual) =>
-        (int)DiasUteis.Indice(DiasUteis.ProximoOuMesmo(previsto.Date), DiasUteis.ProximoOuMesmo(atual.Date));
+    private static int Dias(CalendarioDoProjeto calendario, DateTime previsto, DateTime atual) =>
+        (int)calendario.Indice(calendario.ProximoOuMesmo(previsto.Date), calendario.ProximoOuMesmo(atual.Date));
 }

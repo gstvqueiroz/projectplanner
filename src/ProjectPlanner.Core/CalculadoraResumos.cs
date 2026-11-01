@@ -53,7 +53,7 @@ internal static class CalculadoraResumos
 
     private static void Aplicar(Tarefa resumo, Agregado agregado, DateTime inicioDoProjeto)
     {
-        DateTime Data(long instante) => DiasUteis.Adicionar(inicioDoProjeto, (int)(instante >> 1))!.Value;
+        DateTime Data(long instante) => resumo.Calendario.Adicionar(inicioDoProjeto, (int)(instante >> 1))!.Value;
 
         var inicio = Data(agregado.InicioCedo);
         var termino = Data(agregado.TerminoCedo);
@@ -92,7 +92,7 @@ internal static class CalculadoraResumos
                 throw new InvalidOperationException("Calcule as tarefas antes dos resumos.");
 
             // Com prazo vencido, as datas tarde podem ficar antes do início do projeto (dia negativo).
-            long Dia(DateTime data) => DiasUteis.Indice(inicioDoProjeto, data);
+            long Dia(DateTime data) => tarefa.Calendario.Indice(inicioDoProjeto, data);
             var percentual = tarefa.PercentualConcluido;
             if (tarefa.Duracao == 0)
             {

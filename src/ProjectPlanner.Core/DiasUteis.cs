@@ -1,7 +1,8 @@
 namespace ProjectPlanner.Core;
 
 /// <summary>
-/// Aritmética de dias úteis do calendário padrão: segunda a sexta, sem feriados.
+/// Aritmética de dias úteis do calendário padrão: segunda a sexta, sem feriados. Desde o Bloco 71 o cálculo usa o
+/// <see cref="CalendarioDoProjeto"/>; esta conta de antes fica como a referência dos testes do calendário padrão.
 /// Espera datas sem hora (<see cref="DateTime.Date"/>).
 /// </summary>
 internal static class DiasUteis

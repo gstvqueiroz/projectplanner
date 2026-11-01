@@ -63,6 +63,7 @@ public sealed partial class BarraDeIconesViewModel
             B("fotos", "Fotos da tarefa", GrupoDaBarra.Tarefa),
             B("recursosDaTarefa", "Recursos da tarefa", GrupoDaBarra.Tarefa),
             B("irParaTarefa", "Ir para a tarefa", GrupoDaBarra.Planejamento),
+            B("calendario", "Calendário de trabalho", GrupoDaBarra.Planejamento), // Bloco 71
             B("linhaDeBase", "Salvar linha de base", GrupoDaBarra.Planejamento),
             B("linhasDeBase", "Linhas de base", GrupoDaBarra.Planejamento),
             B("importarValores", "Importar valores", GrupoDaBarra.Planejamento),

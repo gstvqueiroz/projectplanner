@@ -74,7 +74,7 @@ public sealed record ResumoDoProjeto(
             cronograma.Nome,
             cronograma.DataInicio,
             termino,
-            termino is { } fim ? CalendarioDeTrabalho.ContarDiasUteis(cronograma.DataInicio, fim) : 0,
+            termino is { } fim ? cronograma.Calendario.ContarDiasUteis(cronograma.DataInicio, fim) : 0,
             Ponderado(t => t.PercentualConcluido),
             Ponderado(t => andamento.TryGetValue(t.Id, out var a) ? a.PercentualPrevisto : 0),
             trabalho.Count,
@@ -95,7 +95,7 @@ public sealed record ResumoDoProjeto(
                     andamento.TryGetValue(t.Id, out var a) ? a.PercentualPrevisto : 0))],
             TerminoDaLinhaDeBase = cronograma.LinhaDeBaseEmUso?.Termino,
             DesvioDoTermino = cronograma.LinhaDeBaseEmUso?.Termino is { } previsto && termino is { } atual
-                ? (int)Core.DiasUteis.Indice(Core.DiasUteis.ProximoOuMesmo(previsto.Date), Core.DiasUteis.ProximoOuMesmo(atual.Date))
+                ? (int)cronograma.Calendario.Indice(cronograma.Calendario.ProximoOuMesmo(previsto.Date), cronograma.Calendario.ProximoOuMesmo(atual.Date))
                 : null,
         };
     }

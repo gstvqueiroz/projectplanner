@@ -288,6 +288,28 @@ public sealed record MedicaoDoContratoOp(int Numero, string Acao, DateOnly? Data
     }
 }
 
+/// <summary>
+/// Bloco 71: muda o calendário de trabalho do projeto: um feriado (num dia ou todo ano), um período sem trabalho (chuva,
+/// paralisação) ou com trabalho (um sábado ou feriado trabalhado), ou os dias da semana. Aplicada sobre o calendário de agora,
+/// para várias no mesmo cartão se somarem.
+/// </summary>
+public sealed record MudarCalendario(string Acao, DateOnly De, DateOnly Ate, string? Nome, IReadOnlyList<DayOfWeek>? Dias) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var calendario = c.Calendario;
+        c.DefinirCalendario(Acao switch
+        {
+            "feriado" => calendario.ComFeriado(new FeriadoDoCalendario(De, Nome ?? "Feriado")),
+            "feriadoAnual" => calendario.ComFeriado(new FeriadoDoCalendario(De, Nome ?? "Feriado", TodoAno: true)),
+            "parar" => calendario.ComExcecao(new ExcecaoDoCalendario(De, Ate, Nome ?? "Sem trabalho", Trabalha: false)),
+            "trabalhar" => calendario.ComExcecao(new ExcecaoDoCalendario(De, Ate, Nome ?? "Dia trabalhado", Trabalha: true)),
+            "dias" => calendario.ComDias(Dias ?? throw new DomainValidationException(nameof(Dias), "Faltam os dias da semana.")),
+            _ => throw new DomainValidationException(nameof(Acao), $"Ação desconhecida: {Acao}."),
+        });
+    }
+}
+
 /// <summary>Um item do cartão: o texto para o usuário e a operação, ou o motivo de não dar para aplicar.</summary>
 public sealed record ItemDoCartao(string Texto, OperacaoDaObra? Operacao, string? Problema)
 {
@@ -513,11 +535,46 @@ public static class AtualizacoesDoAssistente
                     return new(texto, null, "ação desconhecida (aprovar ou pagar)");
                 return new(texto, new MedicaoDoContratoOp(numero, acao, Data(a.Data)), null);
             }
+            case TiposDeAtualizacao.Calendario: // Bloco 71
+                return Calendario(a, hoje);
             case TiposDeAtualizacao.LinhaDeBase:
                 return new(a.Nome is { } n2 ? $"Salvar a linha de base \"{n2}\"" : "Salvar uma linha de base (o cronograma de agora)", new SalvarLinhaDeBase(a.Nome), null);
             default:
                 return new(a.Tipo, null, "tipo de atualização desconhecido");
         }
+    }
+
+    // Bloco 71: o calendário de trabalho (o dia: data ou de; o fim: ate; o nome: nome ou descricao).
+    private static ItemDoCartao Calendario(AtualizacaoDaObra a, DateOnly hoje)
+    {
+        var acao = a.Acao?.Trim();
+        acao = TiposDeAtualizacao.AcoesDoCalendario.FirstOrDefault(x => string.Equals(x, acao, StringComparison.OrdinalIgnoreCase)) ?? acao;
+        var de = Data(a.De) ?? Data(a.Data);
+        var ate = Data(a.Ate) ?? de;
+        var nome = string.IsNullOrWhiteSpace(a.Nome) ? string.IsNullOrWhiteSpace(a.Descricao) ? null : a.Descricao.Trim() : a.Nome.Trim();
+        string Periodo(DateOnly d, DateOnly f) => d == f ? $"em {d:dd/MM/yyyy} ({CalendarioDoProjeto.NomeDoDia(d.DayOfWeek)})" : $"de {d:dd/MM/yyyy} a {f:dd/MM/yyyy}";
+        var motivo = nome is null ? "" : $" ({nome})";
+        if (acao == "dias")
+        {
+            var dias = CalendarioDoProjeto.LerDias(a.Dias ?? a.Descricao);
+            var textoDosDias = dias is null ? a.Dias ?? "?" : CalendarioDoProjeto.Padrao.ComDias(dias).TextoDosDias;
+            return dias is null
+                ? new($"Calendário: trabalhar {textoDosDias}", null, "não entendi os dias da semana (por exemplo, \"segunda a sábado\")")
+                : new($"Calendário: trabalhar {textoDosDias}", new MudarCalendario(acao, hoje, hoje, null, dias), null);
+        }
+        var texto = acao switch
+        {
+            "feriado" => $"Calendário: feriado {(de is { } d1 ? Periodo(d1, d1) : "em ?")}{motivo}",
+            "feriadoAnual" => $"Calendário: feriado todo ano em {(de is { } d2 ? d2.ToString("dd/MM") : "?")}{motivo}",
+            "parar" => $"Calendário: sem trabalho {(de is { } d3 ? Periodo(d3, ate!.Value) : "?")}{motivo}",
+            "trabalhar" => $"Calendário: com trabalho {(de is { } d4 ? Periodo(d4, ate!.Value) : "?")}{motivo}",
+            _ => $"Calendário: {acao ?? "?"}",
+        };
+        if (acao is null || !TiposDeAtualizacao.AcoesDoCalendario.Contains(acao))
+            return new(texto, null, "ação desconhecida (feriado, feriadoAnual, parar, trabalhar ou dias)");
+        if (de is not { } inicio)
+            return new(texto, null, "informe a data");
+        return new(texto, new MudarCalendario(acao, inicio, ate!.Value, nome, null), null);
     }
 
     // Bloco 63: criar ou alterar uma OS.

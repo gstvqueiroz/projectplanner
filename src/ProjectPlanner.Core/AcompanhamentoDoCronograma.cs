@@ -64,7 +64,7 @@ public static class AcompanhamentoDoCronograma
         var (inicio, termino) = (tarefa.InicioMaisCedo!.Value.Date, tarefa.TerminoMaisCedo!.Value.Date);
         var previsto = data <= inicio ? 0
             : data > termino ? 100
-            : (int)Math.Floor(100.0 * CalendarioDeTrabalho.ContarDiasUteis(inicio, data.AddDays(-1)) / tarefa.Duracao);
+            : (int)Math.Floor(100.0 * tarefa.Calendario.ContarDiasUteis(inicio, data.AddDays(-1)) / tarefa.Duracao);
         var informado = tarefa.PercentualConcluido;
         var situacao = informado == 100 ? SituacaoDaTarefa.Concluida
             : informado < previsto ? SituacaoDaTarefa.Atrasada

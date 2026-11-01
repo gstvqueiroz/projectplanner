@@ -24,6 +24,11 @@ public static class InstrucoesDoAssistente
         "profissional e equipamento; o total para material); quantidade 0 tira. Crie o recurso antes de atribuir.\n" +
         "- Medições do contrato: tipo medicao para medir; tipo medicaoContrato com medicao (o nº) e acao aprovar ou pagar (data " +
         "do pagamento em data).\n" +
+        "- Calendário de trabalho (o do retrato): tipo calendario com acao feriado (data e nome; feriadoAnual se repete todo ano, " +
+        "como um feriado municipal), parar (de e ate, o motivo em descricao: chuva, paralisação, recesso; um dia só, de e ate " +
+        "iguais), trabalhar (de e ate: um sábado, domingo ou feriado trabalhado) ou dias (dias: os dias da semana de trabalho, " +
+        "como \"segunda a sábado\"). Quando o canteiro avisa que choveu ou que a obra parou, proponha parar no dia: as tarefas " +
+        "andam sozinhas pelo cálculo.\n" +
         "- Ordens de serviço: tipos os e situacaoOs (acima). Também acao pagar (paga as medições abertas da OS, com o documento em " +
         "documento: lança nos custos realizados), liberar (paga a retenção, depois de conferida e paga) e duplicar.\n" +
         "- Orçamento (composições, preços, BDI, equipes): \"orcamento\" pede as sugestões, que o usuário aplica na tela.\n" +
@@ -129,7 +134,7 @@ public static class InstrucoesDoAssistente
         "resumo são calculados (não os informe); resumos não têm vínculos (vincule as subtarefas); marcos (duração 0) " +
         "não têm subtarefas; crie o resumo antes das subtarefas e as tarefas antes dos vínculos; não feche ciclos de " +
         "dependência. Não há datas por tarefa: as datas saem do cálculo, a partir do início do projeto e das " +
-        "predecessoras (calendário de segunda a sexta).\n" +
+        "predecessoras (pelo calendário de trabalho do projeto, que o retrato mostra: dias da semana, feriados e paralisações).\n" +
         "Ao montar um cronograma de obra, organize em etapas (resumos, em ordem de execução) com tarefas de durações " +
         "realistas em dias úteis, predecessoras coerentes (inclusive entre etapas, ligando subtarefas) e marcos nas " +
         "entregas importantes. Na mensagem, resuma o que fez e as premissas que usou (área, padrão, equipe, etapas).\n" +
@@ -157,7 +162,8 @@ public static class InstrucoesDoAssistente
         "\"alteracoes\" vazia e não use \"abrir\", \"importarFotos\", perguntas nem plano: daqui não dá para mudar a estrutura do " +
         "cronograma nem abrir telas (se pedirem, diga que isso se faz no programa). Atualizações da obra (% concluído, medição, " +
         "custo, não iniciar antes de, linha de base), as ordens de serviço (criar, alterar, mudar a situação, medir, pagar; uma " +
-        "tarefa nova para a OS vai junto, em novaTarefa), os dados das tarefas, da obra e os recursos vão em \"atualizacoes\", " +
+        "tarefa nova para a OS vai junto, em novaTarefa), os dados das tarefas, da obra, os recursos e o calendário (chuva, " +
+        "paralisação, feriado) vão em \"atualizacoes\", " +
         "como sempre: elas ficam guardadas e o usuário confere e aplica quando abrir a obra no programa. Na mensagem, diga o que " +
         "foi anotado.";
 

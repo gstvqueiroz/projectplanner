@@ -8,6 +8,9 @@ public sealed record UsoNoDia(DateOnly Dia, decimal Quantidade, IReadOnlyList<Gu
 /// <summary>Bloco 34: o uso de um recurso dia a dia, nos dias úteis em que alguma tarefa o usa.</summary>
 public sealed record UsoDoRecurso(Recurso Recurso, IReadOnlyList<UsoNoDia> Dias)
 {
+    /// <summary>Bloco 71: o calendário do projeto (o histograma mostra os dias úteis dele).</summary>
+    public CalendarioDoProjeto Calendario { get; init; } = CalendarioDoProjeto.Padrao;
+
     public decimal Pico => Dias.Count == 0 ? 0 : Dias.Max(d => d.Quantidade);
 
     /// <summary>Os dias acima do disponível (nenhum sem limite).</summary>
@@ -66,7 +69,8 @@ public static class UsoDeRecursos
                 }
             }
         }
-        return [.. cronograma.Recursos.Lista.Select(r => new UsoDoRecurso(r, [.. porRecurso[r.Id].Select(p => new UsoNoDia(p.Key, p.Value.Quantidade, p.Value.Tarefas))]))];
+        return [.. cronograma.Recursos.Lista.Select(r => new UsoDoRecurso(r, [.. porRecurso[r.Id].Select(p => new UsoNoDia(p.Key, p.Value.Quantidade, p.Value.Tarefas))])
+            { Calendario = cronograma.Calendario })];
     }
 
     // Os dias úteis da tarefa pelas datas calculadas (nenhum num marco).
@@ -76,7 +80,7 @@ public static class UsoDeRecursos
         if (tarefa.Duracao == 0)
             return dias;
         for (var dia = tarefa.InicioMaisCedo!.Value.Date; dia <= tarefa.TerminoMaisCedo!.Value.Date; dia = dia.AddDays(1))
-            if (dia.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+            if (tarefa.Calendario.EhDiaUtil(dia)) // Bloco 71: os dias de trabalho do calendário do projeto
                 dias.Add(DateOnly.FromDateTime(dia));
         return dias;
     }
@@ -94,7 +98,7 @@ public static class UsoDeRecursos
             for (var i = 0; i < acima.Count;)
             {
                 var j = i;
-                while (j + 1 < acima.Count && ProximoDiaUtil(acima[j].Dia) == acima[j + 1].Dia)
+                while (j + 1 < acima.Count && ProximoDiaUtil(cronograma.Calendario, acima[j].Dia) == acima[j + 1].Dia)
                     j++;
                 var trecho = acima.Skip(i).Take(j - i + 1).ToList();
                 lista.Add(new Superalocacao(uso.Recurso, trecho[0].Dia, trecho[^1].Dia, trecho.Count, trecho.Max(d => d.Quantidade), uso.Recurso.Disponivel!.Value,
@@ -105,8 +109,8 @@ public static class UsoDeRecursos
         return [.. lista.OrderBy(s => s.De).ThenBy(s => s.Recurso.Nome)];
     }
 
-    private static DateOnly ProximoDiaUtil(DateOnly dia) =>
-        DateOnly.FromDateTime(DiasUteis.ProximoOuMesmo(dia.AddDays(1).ToDateTime(TimeOnly.MinValue)));
+    private static DateOnly ProximoDiaUtil(CalendarioDoProjeto calendario, DateOnly dia) =>
+        DateOnly.FromDateTime(calendario.ProximoOuMesmo(dia.AddDays(1).ToDateTime(TimeOnly.MinValue)));
 
     /// <summary>O que cada recurso pede em cada período (só os que pedem algo), com o custo.</summary>
     /// <exception cref="DomainValidationException">Cronograma não calculado.</exception>
@@ -167,7 +171,7 @@ public static class UsoDeRecursos
                 continue;
             }
             var adiada = candidatas[0];
-            var proximo = DiasUteis.Adicionar(adiada.InicioMaisCedo!.Value, 1)!.Value;
+            var proximo = copia.Calendario.Adicionar(adiada.InicioMaisCedo!.Value, 1)!.Value;
             adiada.DefinirRestricaoDeInicio(proximo);
             adiadas.Add(adiada.Id);
             CalculadoraCronograma.Calcular(copia);
@@ -179,7 +183,7 @@ public static class UsoDeRecursos
             .Where(t => !t.EhResumo && depois[t.Id].InicioMaisCedo != t.InicioMaisCedo)
             .Select(t => new MudancaDoNivelamento(t.Id, edt[t.Id], t.Nome, DateOnly.FromDateTime(t.InicioMaisCedo!.Value),
                 DateOnly.FromDateTime(depois[t.Id].InicioMaisCedo!.Value),
-                (int)DiasUteis.Indice(t.InicioMaisCedo.Value, depois[t.Id].InicioMaisCedo!.Value), adiadas.Contains(t.Id)))
+                (int)cronograma.Calendario.Indice(t.InicioMaisCedo.Value, depois[t.Id].InicioMaisCedo!.Value), adiadas.Contains(t.Id)))
             .ToList();
         DateOnly? Termino(Cronograma c) => c.Tarefas.Select(t => t.TerminoMaisCedo).OfType<DateTime>().Select(DateOnly.FromDateTime).DefaultIfEmpty().Max() is var d && d != default ? d : null;
         return new NivelamentoSugerido(mudancas, Termino(cronograma), Termino(copia), naoResolvidos);

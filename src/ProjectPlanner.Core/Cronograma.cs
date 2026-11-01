@@ -35,12 +35,18 @@ public class Cronograma
     }
 
     /// <summary>Reconstrói um projeto já existente, mantendo o Id (por exemplo, ao abrir um arquivo).</summary>
-    public Cronograma(Guid id, string nome, DateTime dataInicio)
+    public Cronograma(Guid id, string nome, DateTime dataInicio) : this(id, nome, dataInicio, null)
+    {
+    }
+
+    /// <summary>Bloco 71: com o calendário de trabalho (o início do projeto vai para um dia útil dele).</summary>
+    public Cronograma(Guid id, string nome, DateTime dataInicio, CalendarioDoProjeto? calendario)
     {
         if (id == Guid.Empty)
             throw new DomainValidationException(nameof(Id), "O id do projeto é obrigatório.");
 
         Id = id;
+        Calendario = calendario ?? CalendarioDoProjeto.Padrao;
         Nome = ValidarNome(nome);
         DataInicio = NormalizarInicio(dataInicio);
         Contrato = new Medicoes.ContratoDoProjeto(this);
@@ -60,7 +66,7 @@ public class Cronograma
 
     /// <summary>
     /// Início do projeto: no cálculo do cronograma, nenhuma tarefa começa antes dele. Como nas
-    /// tarefas, o horário é descartado e um fim de semana vai para a segunda-feira seguinte.
+    /// tarefas, o horário é descartado e um dia sem trabalho (pelo <see cref="Calendario"/>) vai para o próximo dia útil.
     /// </summary>
     public DateTime DataInicio { get; private set; }
 
@@ -77,6 +83,23 @@ public class Cronograma
 
     /// <summary>Muda o início do projeto. As datas planejadas das tarefas não mudam; recalcule o cronograma.</summary>
     public void AlterarDataInicio(DateTime dataInicio) => DataInicio = NormalizarInicio(dataInicio);
+
+    /// <summary>
+    /// Bloco 71: o calendário de trabalho do projeto (os dias da semana, os feriados e as exceções), pelo qual todo o cálculo
+    /// conta os dias úteis. Um arquivo de antes dele abre com o <see cref="CalendarioDoProjeto.Padrao"/> (segunda a sexta,
+    /// sem feriados), com as mesmas datas de sempre.
+    /// </summary>
+    public CalendarioDoProjeto Calendario { get; private set; }
+
+    /// <summary>Bloco 71: troca o calendário; o início do projeto e as datas informadas das tarefas vão para os dias úteis dele.</summary>
+    public void DefinirCalendario(CalendarioDoProjeto calendario)
+    {
+        ArgumentNullException.ThrowIfNull(calendario);
+        Calendario = calendario;
+        DataInicio = NormalizarInicio(DataInicio);
+        foreach (var tarefa in _tarefas)
+            tarefa.UsarCalendario(calendario);
+    }
 
     /// <summary>Adiciona a tarefa no fim da lista, no primeiro nível.</summary>
     public void AdicionarTarefa(Tarefa tarefa) => AdicionarTarefa(tarefa, paiId: null);
@@ -98,6 +121,7 @@ public class Cronograma
         if (pai is not null)
             ValidarPodeTerSubtarefas(pai);
 
+        tarefa.UsarCalendario(Calendario);
         _tarefas.Insert(pai is null ? _tarefas.Count : FimDaSubarvore(pai), tarefa);
         tarefa.DefinirPai(pai?.Id);
         tarefa.DefinirSeEhResumo(false);
@@ -519,7 +543,7 @@ public class Cronograma
     /// </summary>
     public Cronograma Copiar()
     {
-        var copia = new Cronograma(Id, Nome, DataInicio)
+        var copia = new Cronograma(Id, Nome, DataInicio, Calendario)
         {
             DataCriacao = DataCriacao,
             DataUltimaModificacao = DataUltimaModificacao,
@@ -568,7 +592,7 @@ public class Cronograma
             ? throw new DomainValidationException(nameof(Nome), "O nome do projeto é obrigatório.")
             : nome.Trim();
 
-    private static DateTime NormalizarInicio(DateTime dataInicio) => DiasUteis.ProximoOuMesmo(dataInicio.Date);
+    private DateTime NormalizarInicio(DateTime dataInicio) => Calendario.ProximoOuMesmo(dataInicio.Date);
 
     private static DomainValidationException SubtarefaDeSiMesma() =>
         new(nameof(Tarefa.TarefaPaiId), "Uma tarefa não pode ser subtarefa de si mesma.");

@@ -30,6 +30,9 @@ public static class TiposDeAtualizacao
     /// <summary>Bloco 67: aprovar ou marcar como paga uma medição do contrato.</summary>
     public const string MedicaoDoContrato = "medicaoContrato";
 
+    /// <summary>Bloco 71: o calendário de trabalho (um feriado, um período sem trabalho ou com trabalho, os dias da semana).</summary>
+    public const string Calendario = "calendario";
+
     /// <summary>Bloco 68: os do <see cref="CatalogoDaIa"/>, na ordem dele.</summary>
     public static IReadOnlyList<string> Todos => _todos ??= [.. CatalogoDaIa.Tipos.Select(t => t.Nome)];
 
@@ -41,6 +44,9 @@ public static class TiposDeAtualizacao
 
     /// <summary>Bloco 67: as ações de "medicaoContrato".</summary>
     public static IReadOnlyList<string> AcoesDaMedicao { get; } = ["aprovar", "pagar"];
+
+    /// <summary>Bloco 71: as ações de "calendario".</summary>
+    public static IReadOnlyList<string> AcoesDoCalendario { get; } = ["feriado", "feriadoAnual", "parar", "trabalhar", "dias"];
 }
 
 /// <summary>
@@ -75,6 +81,7 @@ public static class TiposDeAtualizacao
 /// <param name="TipoDoRecurso">Bloco 67: recurso: profissional, material ou equipamento.</param>
 /// <param name="Fornecedor">Bloco 67: recurso.</param>
 /// <param name="Recurso">Bloco 67: atribuir: o nome do recurso.</param>
+/// <param name="Dias">Bloco 71: calendario (acao dias): os dias da semana de trabalho ("segunda a sábado").</param>
 public sealed record AtualizacaoDaObra(
     string Tipo,
     string? Tarefa = null,
@@ -107,7 +114,8 @@ public sealed record AtualizacaoDaObra(
     string? Endereco = null,
     string? TipoDoRecurso = null,
     string? Fornecedor = null,
-    string? Recurso = null);
+    string? Recurso = null,
+    string? Dias = null);
 
 /// <summary>Bloco 42: de onde vêm as fotos que o assistente pede para importar.</summary>
 public static class OrigensDasFotos

@@ -35,7 +35,7 @@ dotnet run --project src/ProjectPlanner.App
 
 Para gerar os pacotes de Windows e Mac, ver [PUBLISHING.md](PUBLISHING.md). Os testes também rodam no GitHub a cada push
 (`.github/workflows/testes.yml`), e o servidor só é publicado no Render depois que eles passam. Para saber se a IA acerta os
-pedidos de verdade, há a avaliação com 40 pedidos: [docs/AVALIACAO-DA-IA.md](docs/AVALIACAO-DA-IA.md). A última regressão
+pedidos de verdade, há a avaliação com 44 pedidos: [docs/AVALIACAO-DA-IA.md](docs/AVALIACAO-DA-IA.md). A última regressão
 completa está em [docs/REGRESSAO-0.70.0.md](docs/REGRESSAO-0.70.0.md).
 
 | Projeto | O quê |

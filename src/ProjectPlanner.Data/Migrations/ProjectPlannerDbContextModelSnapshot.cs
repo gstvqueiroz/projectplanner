@@ -65,6 +65,23 @@ namespace ProjectPlanner.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.CalendarioRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("CalendarioDoProjeto", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.ContratoRegistro", b =>
                 {
                     b.Property<Guid>("ProjetoId")
@@ -468,6 +485,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.TarefaRegistro", null)
                         .WithMany()
                         .HasForeignKey("TarefaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.CalendarioRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.CalendarioRegistro", "ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

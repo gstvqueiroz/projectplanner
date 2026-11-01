@@ -41,6 +41,7 @@ public static class Servicos
         .AddSingleton<IDialogosService, DialogosAvalonia>()
         .AddSingleton<IPreferenciasColunas, ArquivoPreferenciasColunas>()
         .AddSingleton<IPreferenciasInterface, ArquivoPreferenciasInterface>()
+        .AddSingleton<IPreferenciasDoCalendario, ArquivoPreferenciasDoCalendario>() // Bloco 71
         // Fotos (Bloco 22): SkiaSharp + MetadataExtractor, no projeto ProjectPlanner.Imagens.
         .AddSingleton<IProcessadorDeImagens, ProcessadorSkia>()
         // Assistente de IA (Blocos 19, 23, 45 e 46): pela conta ProjectPlanner (o servidor chama o Gemini ou o Claude), com a

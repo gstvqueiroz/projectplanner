@@ -180,6 +180,16 @@ internal sealed class CustosRegistro
     public required string Dados { get; set; }
 }
 
+/// <summary>Bloco 71: o calendário de trabalho, em JSON (ver <see cref="FormatoDoCalendario"/>); nenhuma linha com o padrão.</summary>
+internal sealed class CalendarioRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
 /// <summary>Bloco 58: as ordens de serviço, em JSON (ver <see cref="FormatoDasOrdens"/>); nenhuma linha sem OS.</summary>
 internal sealed class OrdensRegistro
 {

@@ -120,7 +120,7 @@ public sealed record PainelDeIndicadores(
         decimal orcamento = 0, vp = 0, va = 0;
         foreach (var item in itens)
         {
-            var planejado = item.Valor * (decimal)FracaoPlanejada(item, data);
+            var planejado = item.Valor * (decimal)FracaoPlanejada(cronograma.Calendario, item, data);
             var agregado = item.Valor * (porId.GetValueOrDefault(item.TarefaId)?.PercentualConcluido ?? 0) / 100m;
             (orcamento, vp, va) = (orcamento + item.Valor, vp + planejado, va + agregado);
             var (o, p, a, m, c) = etapas.GetValueOrDefault(item.Etapa);
@@ -150,7 +150,7 @@ public sealed record PainelDeIndicadores(
         var custoReal = cronograma.Custos.Ate(data);
         var (terminoPrevisto, terminoAtual) = Terminos(cronograma, itens);
         var indicadores = new IndicadoresDeValorAgregado(data, nomeDaBase, Math.Round(orcamento, 2), Math.Round(vp, 2), Math.Round(va, 2), custoReal,
-            terminoPrevisto, terminoAtual, Tendencia(itens, vp, va, terminoPrevisto ?? terminoAtual));
+            terminoPrevisto, terminoAtual, Tendencia(cronograma.Calendario, itens, vp, va, terminoPrevisto ?? terminoAtual));
 
         var (inicio, fim) = CalculadoraFisicoFinanceira.Intervalo(cronograma);
         foreach (var medicao in cronograma.Contrato.Medicoes)
@@ -208,7 +208,7 @@ public sealed record PainelDeIndicadores(
     }
 
     // A parte de um item planejada até o fim do dia: os dias úteis dele até a data ÷ os dias úteis dele (um marco: tudo no dia).
-    private static double FracaoPlanejada(Item item, DateOnly data)
+    private static double FracaoPlanejada(CalendarioDoProjeto calendario, Item item, DateOnly data)
     {
         var dia = data.ToDateTime(TimeOnly.MinValue);
         var (inicio, termino) = (item.Inicio.Date, item.Termino.Date);
@@ -218,8 +218,8 @@ public sealed record PainelDeIndicadores(
             return 0;
         if (dia >= termino)
             return 1;
-        var ate = DiasUteis.AnteriorOuMesmo(dia);
-        return ate < inicio ? 0 : (double)DiasUteis.ContarInclusivo(inicio, ate) / DiasUteis.ContarInclusivo(inicio, termino);
+        var ate = calendario.AnteriorOuMesmo(dia);
+        return ate < inicio ? 0 : (double)calendario.ContarDiasUteis(inicio, ate) / Math.Max(1, calendario.ContarDiasUteis(inicio, termino));
     }
 
     private static (DateOnly? Previsto, DateOnly? Atual) Terminos(Cronograma cronograma, IReadOnlyList<Item> itens)
@@ -230,13 +230,13 @@ public sealed record PainelDeIndicadores(
     }
 
     // Se o ritmo continuar: a duração prevista (do primeiro dia da base ao término) ÷ IDP, em dias úteis.
-    private static DateOnly? Tendencia(IReadOnlyList<Item> itens, decimal vp, decimal va, DateOnly? termino)
+    private static DateOnly? Tendencia(CalendarioDoProjeto calendario, IReadOnlyList<Item> itens, decimal vp, decimal va, DateOnly? termino)
     {
         if (vp <= 0 || va <= 0 || termino is not { } fim || itens.Count == 0)
             return null;
         var inicio = itens.Min(i => i.Inicio).Date;
-        var duracao = DiasUteis.ContarInclusivo(inicio, DiasUteis.AnteriorOuMesmo(fim.ToDateTime(TimeOnly.MinValue)));
+        var duracao = Math.Max(1, calendario.ContarDiasUteis(inicio, fim.ToDateTime(TimeOnly.MinValue)));
         var projetada = (int)Math.Ceiling(duracao / (double)(va / vp));
-        return DiasUteis.Adicionar(inicio, Math.Max(projetada, 1) - 1) is { } data ? DateOnly.FromDateTime(data) : null;
+        return calendario.Adicionar(calendario.ProximoOuMesmo(inicio), Math.Max(projetada, 1) - 1) is { } data ? DateOnly.FromDateTime(data) : null;
     }
 }

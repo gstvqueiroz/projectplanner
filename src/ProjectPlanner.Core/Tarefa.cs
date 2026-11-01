@@ -4,11 +4,12 @@ namespace ProjectPlanner.Core;
 /// Tarefa do cronograma.
 /// </summary>
 /// <remarks>
-/// Regras de datas (calendário padrão de segunda a sexta; feriados ficam para um bloco futuro):
+/// Regras de datas (pelo calendário do projeto, <see cref="Calendario"/>, desde o Bloco 71; fora de um cronograma, o padrão de
+/// segunda a sexta):
 /// <list type="bullet">
 /// <item>As datas não têm hora: qualquer horário informado é descartado.</item>
-/// <item>Um início que cai no fim de semana vai para a segunda-feira seguinte; um término
-/// que cai no fim de semana volta para a sexta-feira anterior.</item>
+/// <item>Um início que cai num dia sem trabalho (fim de semana, feriado, paralisação) vai para o próximo dia útil; um
+/// término num dia sem trabalho volta para o dia útil anterior.</item>
 /// <item><see cref="Duracao"/> é um número inteiro de dias úteis, zero ou mais. Duração 0 faz da
 /// tarefa um marco (<see cref="TipoTarefa.Marco"/>): início e término no mesmo dia.</item>
 /// <item><see cref="DataTermino"/> é inclusiva, ou seja, é o último dia útil de trabalho:
@@ -42,12 +43,18 @@ public class Tarefa
     }
 
     /// <summary>Reconstrói uma tarefa já existente, mantendo o Id (por exemplo, ao abrir um arquivo).</summary>
-    public Tarefa(Guid id, string nome, DateTime dataInicio, int duracao)
+    public Tarefa(Guid id, string nome, DateTime dataInicio, int duracao) : this(id, nome, dataInicio, duracao, null)
+    {
+    }
+
+    /// <summary>Bloco 71: com o calendário do projeto (ao abrir um arquivo, antes da restrição de início).</summary>
+    public Tarefa(Guid id, string nome, DateTime dataInicio, int duracao, CalendarioDoProjeto? calendario)
     {
         if (id == Guid.Empty)
             throw new DomainValidationException(nameof(Id), "O id da tarefa é obrigatório.");
 
         Id = id;
+        Calendario = calendario ?? CalendarioDoProjeto.Padrao;
         Nome = ValidarNome(nome);
         ValidarDuracao(duracao);
         DataInicio = NormalizarInicio(dataInicio);
@@ -58,6 +65,12 @@ public class Tarefa
     public Guid Id { get; }
 
     public string Nome { get; private set; }
+
+    /// <summary>
+    /// Bloco 71: o calendário pelo qual a tarefa conta os dias úteis: o do cronograma em que ela está (mantido pelo
+    /// <see cref="Cronograma"/>); fora de um, o padrão.
+    /// </summary>
+    public CalendarioDoProjeto Calendario { get; private set; }
 
     /// <summary>Duração em dias úteis (0 num marco).</summary>
     public int Duracao { get; private set; }
@@ -259,7 +272,7 @@ public class Tarefa
     public void AlterarDataTermino(DateTime dataTermino)
     {
         RecusarSeResumo(nameof(DataTermino), "O término de um resumo é calculado");
-        var termino = DiasUteis.AnteriorOuMesmo(dataTermino.Date);
+        var termino = Calendario.AnteriorOuMesmo(dataTermino.Date);
         if (EhMarco)
         {
             DataInicio = termino;
@@ -270,7 +283,7 @@ public class Tarefa
             throw new DomainValidationException(nameof(DataTermino),
                 $"A data de término ({dataTermino:d}) não pode ser anterior à data de início ({DataInicio:d}).");
 
-        Duracao = DiasUteis.ContarInclusivo(DataInicio, termino);
+        Duracao = Calendario.ContarInclusivo(DataInicio, termino);
         DataTermino = termino;
     }
 
@@ -307,15 +320,15 @@ public class Tarefa
         RecusarSeResumo(nameof(DataTermino), "O término de um resumo é calculado");
         if (EhMarco)
         {
-            DefinirRestricaoDeInicio(DiasUteis.AnteriorOuMesmo(termino.Date));
+            DefinirRestricaoDeInicio(Calendario.AnteriorOuMesmo(termino.Date));
             return;
         }
         var inicio = InicioMaisCedo ?? DataInicio;
-        var fim = DiasUteis.AnteriorOuMesmo(termino.Date);
+        var fim = Calendario.AnteriorOuMesmo(termino.Date);
         if (fim < inicio)
             throw new DomainValidationException(nameof(DataTermino),
                 $"A data de término ({termino:d}) não pode ser anterior à data de início ({inicio:d}).");
-        Duracao = DiasUteis.ContarInclusivo(inicio, fim);
+        Duracao = Calendario.ContarInclusivo(inicio, fim);
         DataTermino = CalcularTermino(DataInicio, Duracao);
     }
 
@@ -408,10 +421,26 @@ public class Tarefa
 
     internal void DefinirPai(Guid? tarefaPaiId) => TarefaPaiId = tarefaPaiId;
 
+    /// <summary>
+    /// Bloco 71: passa a contar pelo calendário do cronograma; as datas informadas vão para os dias úteis dele (num resumo, elas
+    /// vêm das subtarefas). As calculadas mudam no próximo cálculo.
+    /// </summary>
+    internal void UsarCalendario(CalendarioDoProjeto calendario)
+    {
+        ArgumentNullException.ThrowIfNull(calendario);
+        if (ReferenceEquals(calendario, Calendario))
+            return;
+        Calendario = calendario;
+        if (EhResumo)
+            return;
+        DataInicio = NormalizarInicio(DataInicio);
+        DataTermino = Calendario.Adicionar(DataInicio, Math.Max(Duracao - 1, 0)) ?? DataTermino;
+    }
+
     /// <summary>Uma tarefa igual a esta, com o mesmo Id e as mesmas fotos (para <see cref="Cronograma.Copiar"/>).</summary>
     internal Tarefa Copiar()
     {
-        var copia = new Tarefa(Id, Nome, DataInicio, Duracao)
+        var copia = new Tarefa(Id, Nome, DataInicio, Duracao, Calendario)
         {
             EhResumo = EhResumo,
             TarefaPaiId = TarefaPaiId,
@@ -471,12 +500,12 @@ public class Tarefa
                 $"A duração não pode ser negativa (informado: {duracao}).");
     }
 
-    private static DateTime NormalizarInicio(DateTime dataInicio) =>
-        DiasUteis.ProximoOuMesmo(dataInicio.Date);
+    private DateTime NormalizarInicio(DateTime dataInicio) =>
+        Calendario.ProximoOuMesmo(dataInicio.Date);
 
     // Um marco (duração 0) termina no próprio dia em que começa.
-    private static DateTime CalcularTermino(DateTime inicio, int duracao) =>
-        DiasUteis.Adicionar(inicio, Math.Max(duracao - 1, 0))
+    private DateTime CalcularTermino(DateTime inicio, int duracao) =>
+        Calendario.Adicionar(inicio, Math.Max(duracao - 1, 0))
         ?? throw new DomainValidationException(nameof(DataTermino),
             "A data de término calculada ultrapassa a maior data suportada (31/12/9999).");
 }

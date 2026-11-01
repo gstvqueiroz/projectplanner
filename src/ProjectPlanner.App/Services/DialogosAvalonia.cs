@@ -205,6 +205,10 @@ public sealed class DialogosAvalonia : IDialogosService
     public Task MostrarImpressaoDoGanttAsync(ViewModels.GanttImpressoViewModel impressao) =>
         new GanttImpressoWindow(impressao).ShowDialog(JanelaPrincipal);
 
+    // ---- Bloco 71 ----
+
+    public Task MostrarCalendarioAsync(ViewModels.CalendarioViewModel calendario) => new CalendarioWindow(calendario).ShowDialog(JanelaPrincipal);
+
     public Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes) => new MedicoesWindow(medicoes).ShowDialog(JanelaPrincipal);
 
     public Task MostrarOrcamentoAsync(ViewModels.OrcamentoViewModel orcamento) => new OrcamentoWindow(orcamento).ShowDialog(JanelaPrincipal);

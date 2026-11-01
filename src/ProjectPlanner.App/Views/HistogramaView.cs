@@ -45,7 +45,7 @@ public sealed class HistogramaView : Control
         var porDia = uso.Dias.ToDictionary(d => d.Dia, d => d.Quantidade);
         var dias = new List<DateOnly>();
         for (var dia = uso.Dias[0].Dia; dia <= uso.Dias[^1].Dia; dia = dia.AddDays(1))
-            if (dia.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+            if (uso.Calendario.EhDiaUtil(dia)) // Bloco 71: os dias úteis do calendário do projeto
                 dias.Add(dia);
         var area = new Rect(48, 12, Bounds.Width - 60, Bounds.Height - 48);
         var limite = uso.Recurso.Disponivel;

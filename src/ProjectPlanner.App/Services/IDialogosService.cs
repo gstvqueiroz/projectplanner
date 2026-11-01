@@ -88,6 +88,9 @@ public interface IDialogosService
     /// <summary>Bloco 57: mostra Arquivo > Imprimir o Gantt… e espera ser fechada.</summary>
     Task MostrarImpressaoDoGanttAsync(ViewModels.GanttImpressoViewModel impressao);
 
+    /// <summary>Bloco 71: Projeto > Calendário de trabalho… (o calendário aplicado fica em <see cref="ViewModels.CalendarioViewModel.Resultado"/>).</summary>
+    Task MostrarCalendarioAsync(ViewModels.CalendarioViewModel calendario);
+
     /// <summary>Bloco 36: mostra Projeto > Medições… e espera ser fechada.</summary>
     Task MostrarMedicoesAsync(ViewModels.MedicoesViewModel medicoes);
 

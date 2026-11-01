@@ -339,6 +339,20 @@ public sealed class DialogosFalsos : IDialogosService
         return AoMostrarImpressaoDoGantt?.Invoke(impressao) ?? Task.CompletedTask;
     }
 
+    // ---- Bloco 71 ----
+
+    public List<CalendarioViewModel> Calendarios { get; } = [];
+
+    /// <summary>O que o "usuário" faz na tela do calendário (marcar, acrescentar, aplicar).</summary>
+    public Action<CalendarioViewModel>? AoMostrarCalendario { get; set; }
+
+    public Task MostrarCalendarioAsync(CalendarioViewModel calendario)
+    {
+        Calendarios.Add(calendario);
+        AoMostrarCalendario?.Invoke(calendario);
+        return Task.CompletedTask;
+    }
+
     public Task MostrarFisicoFinanceiroAsync(FisicoFinanceiroViewModel fisicoFinanceiro)
     {
         FisicosFinanceiros.Add(fisicoFinanceiro);
@@ -539,10 +553,14 @@ public sealed class Ambiente
     /// <summary>Bloco 49: o Telegram pela conta.</summary>
     public TelegramFalso Telegram { get; } = new();
 
+    /// <summary>Bloco 71: o calendário dos projetos novos; nulo (o padrão dos testes), os projetos novos ficam no de segunda a sexta sem feriados.</summary>
+    public PreferenciasDoCalendarioEmMemoria? PreferenciasDoCalendario { get; set; }
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
             analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
-            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta, telegram: Telegram);
+            consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta, telegram: Telegram,
+            preferenciasDoCalendario: PreferenciasDoCalendario);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")

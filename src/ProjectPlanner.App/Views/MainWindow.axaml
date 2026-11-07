@@ -184,7 +184,8 @@
                     <MenuItem Header="Adicionar resumo" Command="{Binding AdicionarResumoCommand}"
                               ToolTip.Tip="Adicionar no fim da lista um resumo com uma subtarefa dentro" />
                     <Separator />
-                    <MenuItem Header="Remover tarefa" Command="{Binding RemoverTarefaCommand}" />
+                    <MenuItem Header="Excluir tarefa" Command="{Binding RemoverTarefaCommand}" InputGesture="Delete"
+                              ToolTip.Tip="Excluir as tarefas selecionadas (Delete); um resumo pergunta se sai o grupo inteiro ou só ele" />
                     <Separator />
                     <MenuItem Header="Promover" Command="{Binding PromoverCommand}" InputGesture="Alt+Shift+Left"
                               ToolTip.Tip="Tira a tarefa do resumo, um nível acima" />
@@ -333,7 +334,7 @@
                         <Path Data="M1,6.5 H8.5 V9.5 H1 Z M12.5,4 V12 M8.5,8 H16" />
                     </Button>
                     <Button Tag="remover" Classes="acessoRapido" Command="{Binding RemoverTarefaCommand}"
-                            ToolTip.Tip="Remover tarefa (a selecionada)" AutomationProperties.Name="Remover tarefa">
+                            ToolTip.Tip="Excluir tarefa (Delete): as selecionadas" AutomationProperties.Name="Excluir tarefa">
                         <!-- Barra de tarefa com um − -->
                         <Path Data="M1,6.5 H8.5 V9.5 H1 Z M10,8 H15.5" />
                     </Button>
@@ -584,8 +585,7 @@
                   RowHeight="{x:Static vm:GanttViewModel.AlturaLinhaDaGrade}"
                   ColumnHeaderHeight="{x:Static vm:GanttViewModel.AlturaCabecalho}"
                   ItemsSource="{Binding LinhasVisiveis}"
-                  SelectedItem="{Binding TarefaSelecionada}"
-                  SelectionMode="Single"
+                  SelectionMode="Extended"
                   CellEditEnded="GradeCellEditEnded"
                   BeginningEdit="GradeBeginningEdit"
                   AutoGenerateColumns="False"
@@ -817,6 +817,18 @@
              só ganham largura quando ele está visível (ver AplicarPainelDoAssistente). -->
         <GridSplitter x:Name="DivisorDoAssistente" Grid.Column="3" ResizeDirection="Columns" Background="Transparent" />
         <v:AssistenteView x:Name="PainelAssistente" Grid.Column="4" DataContext="{Binding Assistente}" />
+
+        <!-- Bloco 72: o aviso com o Desfazer ("Tarefa excluída · Desfazer"), embaixo, no meio da grade e do Gantt. -->
+        <Border x:Name="AvisoComDesfazer" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,28" Padding="14,8" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundBaseHighBrush}"
+                IsVisible="{Binding AvisoComDesfazer, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding AvisoComDesfazer}" Foreground="{DynamicResource SystemControlForegroundAltHighBrush}" VerticalAlignment="Center"
+                           TextWrapping="Wrap" MaxWidth="560" />
+                <Button x:Name="DesfazerDoAviso" Content="Desfazer" Command="{Binding DesfazerAlteracaoCommand}" />
+                <Button x:Name="BotaoFecharAviso" Content="✕" Click="FecharOAviso" Padding="6,2" AutomationProperties.Name="Fechar o aviso" />
+            </StackPanel>
+        </Border>
         </Grid>
     </DockPanel>
 </Window>

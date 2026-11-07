@@ -94,6 +94,9 @@ public sealed class DialogosAvalonia : IDialogosService
     public Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao) =>
         new ConfirmacaoWindow(titulo, mensagem, textoDoBotao).ShowDialog<bool>(JanelaAtiva);
 
+    public Task<int?> EscolherAsync(string titulo, string mensagem, IReadOnlyList<string> opcoes) =>
+        new EscolhaWindow(titulo, mensagem, opcoes).ShowDialog<int?>(JanelaAtiva);
+
     public Task MostrarFotosAsync(ViewModels.GaleriaFotosViewModel galeria) =>
         new GaleriaFotosWindow(galeria).ShowDialog(JanelaPrincipal);
 

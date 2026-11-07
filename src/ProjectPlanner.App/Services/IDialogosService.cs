@@ -15,6 +15,10 @@ public interface IDialogosService
     /// <returns>Se o usuário confirmou (fechar o diálogo vale como não).</returns>
     Task<bool> ConfirmarAsync(string titulo, string mensagem, string textoDoBotao);
 
+    /// <summary>Bloco 72: uma pergunta com várias respostas (a primeira é a principal).</summary>
+    /// <returns>O índice da resposta escolhida; nulo em Cancelar (ou fechando a janela).</returns>
+    Task<int?> EscolherAsync(string titulo, string mensagem, IReadOnlyList<string> opcoes);
+
     /// <summary>Escolhe documentos para anexar no painel do assistente (Bloco 19).</summary>
     /// <returns>Os caminhos escolhidos (vazio se o usuário cancelar).</returns>
     Task<IReadOnlyList<string>> EscolherDocumentosAsync();

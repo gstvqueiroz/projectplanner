@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ProjectPlanner.App.Views.EscolhaWindow"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 72: uma pergunta com duas ou mais respostas (a primeira é a principal) e Cancelar (Esc). -->
+    <StackPanel Margin="20" Spacing="16" MaxWidth="480">
+        <TextBlock x:Name="Mensagem" TextWrapping="Wrap" />
+        <StackPanel x:Name="Opcoes" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Cancelar" Click="Cancelar" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

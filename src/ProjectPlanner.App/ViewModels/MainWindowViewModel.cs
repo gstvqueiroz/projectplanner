@@ -70,7 +70,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         Barra = new BarraDeIconesViewModel(preferenciasInterface);
         Tema = preferenciasInterface.Carregar()?.Tema ?? TemaDaInterface.Sistema;
         _cronograma = NovoCronograma();
-        Gantt.BarraClicada += tarefaId => TarefaSelecionada = LinhasVisiveis.FirstOrDefault(t => t.Tarefa.Id == tarefaId);
+        Gantt.BarraClicada += ClicarNaTarefa; // Bloco 72: com Ctrl e Shift, a seleção múltipla
+        Gantt.VazioClicado += () => TarefaSelecionada = null;
         Gantt.Ligacoes = this;
         Gantt.DicaDaTarefa = DicaDaTarefaNoGantt;
         Gantt.FotosPedidas += tarefaId => _ = MostrarFotosAsync(tarefaId);
@@ -178,12 +179,25 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [ObservableProperty]
     public partial bool MostrarSelecao { get; set; } = true;
 
-    partial void OnTarefaSelecionadaChanged(TarefaViewModel? value) => AtualizarDestaqueNoGantt();
+    partial void OnTarefaSelecionadaChanged(TarefaViewModel? value)
+    {
+        // Bloco 72: escolher uma tarefa sozinha (no código, num clique simples) desfaz a seleção múltipla.
+        if (!_definindoSelecao)
+        {
+            _selecionadas = value is null ? [] : [value];
+            SelecaoAtualizada(avisarAGrade: true);
+        }
+        else
+            AtualizarDestaqueNoGantt();
+    }
 
     partial void OnMostrarSelecaoChanged(bool value) => AtualizarDestaqueNoGantt();
 
-    private void AtualizarDestaqueNoGantt() =>
+    private void AtualizarDestaqueNoGantt()
+    {
         Gantt.TarefaDestacada = MostrarSelecao ? TarefaSelecionada?.Tarefa.Id : null;
+        Gantt.Destacadas = MostrarSelecao && Selecionadas.Count > 1 ? Selecionadas.Select(l => l.Tarefa.Id).ToHashSet() : new HashSet<Guid>();
+    }
 
     /// <summary>Arquivo do projeto; nulo enquanto ele nunca foi salvo.</summary>
     [ObservableProperty]
@@ -474,6 +488,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     // Uma alteração do cronograma (ou das fotos): entra no histórico do Desfazer, marca o projeto e recalcula.
     private PassoDoHistorico MarcarAlteracao(string descricao)
     {
+        AvisoComDesfazer = null; // Bloco 72: o Desfazer do aviso valia para a alteração anterior
         var passo = RegistrarNoHistorico(descricao);
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));

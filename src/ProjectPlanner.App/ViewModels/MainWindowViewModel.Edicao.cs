@@ -45,6 +45,7 @@ public sealed partial class MainWindowViewModel
     private string VoltarUmPasso(bool desfazer)
     {
         var (cronograma, descricao) = desfazer ? _historico.Desfazer(_cronograma) : _historico.Refazer(_cronograma);
+        AvisoComDesfazer = null;
         TrocarCronograma(cronograma, registrarComo: null);
         PossuiAlteracoesNaoSalvas = !_historico.NoEstadoSalvo || _alteracoesForaDoHistorico;
         OnPropertyChanged(nameof(Titulo));

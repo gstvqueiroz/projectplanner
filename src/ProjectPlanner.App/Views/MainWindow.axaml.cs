@@ -42,6 +42,7 @@ public partial class MainWindow : Window
         Grade.LayoutUpdated += (_, _) => AtualizarLinhasVazias();
         Grade.AddHandler(ContextRequestedEvent, PedirMenuDaGrade, RoutingStrategies.Tunnel);
         LigarArrasteDaGrade();
+        LigarSelecao(); // Bloco 72
         Paineis.SizeChanged += (_, _) => LimitarLarguraDaTabela();
         _larguraParou.Tick += (_, _) =>
         {
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
             _viewModel.PropertyChanged -= ViewModelMudou;
             _viewModel.Assistente.PropertyChanged -= AssistenteMudou;
             _viewModel.Barra.Mudou -= AjustarBarra;
+            LigarSelecaoAoViewModel(_viewModel, ligar: false);
         }
         base.OnDataContextChanged(e);
         _viewModel = DataContext as MainWindowViewModel;
@@ -71,6 +73,8 @@ public partial class MainWindow : Window
         _viewModel.LinhaParaMostrar += RolarAteALinha;
         _viewModel.PropertyChanged += ViewModelMudou;
         _viewModel.Assistente.PropertyChanged += AssistenteMudou;
+        LigarSelecaoAoViewModel(_viewModel, ligar: true);
+        AplicarSelecaoNaGrade();
         AplicarModoVisualizacao();
         AplicarPainelDoAssistente();
         AplicarTema();
@@ -156,6 +160,8 @@ public partial class MainWindow : Window
             AplicarModoVisualizacao();
         else if (e.PropertyName == nameof(MainWindowViewModel.Tema))
             AplicarTema();
+        else if (e.PropertyName == nameof(MainWindowViewModel.AvisoComDesfazer))
+            AvisoMudou();
     }
 
     // Clique direito numa linha da grid: seleciona a linha e deixa o menu de contexto abrir para ela. Fora
@@ -165,7 +171,7 @@ public partial class MainWindow : Window
         var linha = (e.Source as Visual)?.GetSelfAndVisualAncestors().OfType<DataGridRow>().FirstOrDefault();
         if (linha?.DataContext is TarefaViewModel tarefa && _viewModel is not null)
         {
-            _viewModel.TarefaSelecionada = tarefa;
+            _viewModel.ClicarComBotaoDireito(tarefa.Tarefa.Id); // Bloco 72: numa selecionada, a seleção múltipla fica
             return;
         }
         e.Handled = true;

@@ -123,11 +123,21 @@ public sealed partial class GanttViewModel : ViewModelBase
     [ObservableProperty]
     public partial Guid? TarefaDestacada { get; set; }
 
+    /// <summary>Bloco 72: todas as tarefas selecionadas (com Ctrl+clique e Shift+clique), com o contorno na barra.</summary>
+    [ObservableProperty]
+    public partial IReadOnlySet<Guid> Destacadas { get; set; } = new HashSet<Guid>();
+
     /// <summary>A dica rica de uma barra (Bloco 25, V4), dada pela janela principal; sem ela, a dica é só o nome.</summary>
     public Func<Guid, string>? DicaDaTarefa { get; set; }
 
-    /// <summary>O usuário clicou na barra de uma tarefa; a janela principal a seleciona.</summary>
-    public event Action<Guid>? BarraClicada;
+    /// <summary>
+    /// O usuário clicou na barra de uma tarefa; a janela principal a seleciona. Bloco 72: com Ctrl (⌘ no Mac) acrescenta ou
+    /// tira da seleção; com Shift seleciona o intervalo desde a selecionada.
+    /// </summary>
+    public event Action<Guid, bool, bool>? BarraClicada;
+
+    /// <summary>Bloco 72: clique numa área vazia do Gantt: limpa a seleção.</summary>
+    public event Action? VazioClicado;
 
     /// <summary>Pedido de rolagem horizontal até o X dado (Bloco 25: ir para a tarefa, ir para hoje, ajustar).</summary>
     public event Action<double>? RolagemPedida;
@@ -210,9 +220,15 @@ public sealed partial class GanttViewModel : ViewModelBase
     /// <summary>Se a seta vai na cor de crítica: parte de um caminho crítico e com o destaque ligado.</summary>
     public bool PintarComoCritica(SetaGantt seta) => MostrarCaminhoCritico && seta.EhCritica;
 
-    public bool EstaDestacada(BarraGantt barra) => TarefaDestacada == barra.TarefaId;
+    public bool EstaDestacada(BarraGantt barra) => EstaDestacada(barra.TarefaId);
 
-    public void ClicarNaBarra(Guid tarefaId) => BarraClicada?.Invoke(tarefaId);
+    public bool EstaDestacada(Guid tarefaId) => TarefaDestacada == tarefaId || Destacadas.Contains(tarefaId);
+
+    public void ClicarNaBarra(Guid tarefaId) => ClicarNaBarra(tarefaId, adicionar: false, intervalo: false);
+
+    public void ClicarNaBarra(Guid tarefaId, bool adicionar, bool intervalo) => BarraClicada?.Invoke(tarefaId, adicionar, intervalo);
+
+    public void ClicarNoVazio() => VazioClicado?.Invoke();
 
     /// <summary>
     /// A prévia do arraste de vínculo, enquanto o mouse passa sobre as barras: o que aconteceria ao

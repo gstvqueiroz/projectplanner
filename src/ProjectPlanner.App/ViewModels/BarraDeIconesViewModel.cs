@@ -56,7 +56,7 @@ public sealed partial class BarraDeIconesViewModel
             B("desfazer", "Desfazer", GrupoDaBarra.Edicao),
             B("refazer", "Refazer", GrupoDaBarra.Edicao),
             B("adicionar", "Adicionar tarefa", GrupoDaBarra.Tarefa),
-            B("remover", "Remover tarefa", GrupoDaBarra.Tarefa),
+            B("remover", "Excluir tarefa", GrupoDaBarra.Tarefa),
             B("promover", "Promover", GrupoDaBarra.Tarefa),
             B("rebaixar", "Rebaixar", GrupoDaBarra.Tarefa),
             B("recalcular", "Recalcular cronograma", GrupoDaBarra.Tarefa),

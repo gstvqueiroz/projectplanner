@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Edicao;
 
 namespace ProjectPlanner.App.ViewModels;
 
@@ -106,33 +107,50 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>Remove a selecionada; um resumo sai com todas as subtarefas, depois de confirmar.</summary>
+    /// <summary>
+    /// Bloco 72 (o plano "Excluir com Delete"): exclui as selecionadas pelas regras de <see cref="RegrasDeExclusao"/>. Tarefa
+    /// comum ou marco sai na hora; com resumo na seleção, a janela pergunta se sai o grupo inteiro ou só o resumo; com
+    /// progresso registrado, fotos ou mais de 10 tarefas, pergunta antes. Tudo num passo só do Desfazer, com o aviso
+    /// "Desfazer" por alguns segundos; a seleção passa para a tarefa que ocupou o lugar (ou a de cima, se era a última).
+    /// </summary>
     [RelayCommand(CanExecute = nameof(HaTarefaSelecionada))]
     private async Task RemoverTarefa()
     {
-        var linha = TarefaSelecionada!;
-        var descendentes = _cronograma.DescendentesDe(linha.Tarefa.Id);
-        var fotos = linha.Tarefa.Fotos.Count + descendentes.Sum(t => t.Fotos.Count);
-        // Bloco 22: as fotos vão junto com a tarefa (e com as subtarefas de um resumo); avisa quantas.
-        var aviso = fotos switch
+        var selecionadas = Selecionadas;
+        var plano = RegrasDeExclusao.Planejar(_cronograma, selecionadas.Select(l => l.Tarefa.Id));
+        if (plano.Vazio)
+            return;
+        var modo = ModoDosResumos.GrupoInteiro;
+        if (plano.TemResumo)
         {
-            0 => "",
-            1 => linha.EhResumo ? " A foto delas também será excluída." : " A foto dela também será excluída.",
-            _ => linha.EhResumo ? $" As {fotos} fotos delas também serão excluídas." : $" As {fotos} fotos dela também serão excluídas.",
-        };
-        if (linha.EhResumo)
-        {
-            var quais = descendentes.Count == 1 ? "a subtarefa dele" : $"as {descendentes.Count} subtarefas dele";
-            if (!await _dialogos.ConfirmarAsync("Remover resumo", $"Remover o resumo \"{linha.Nome}\" e {quais}?{aviso}", "Remover"))
+            var escolha = await _dialogos.EscolherAsync(plano.Resumos.Count == 1 ? "Excluir resumo" : "Excluir resumos", plano.PerguntaDoResumo,
+                ["Excluir grupo inteiro", plano.Resumos.Count == 1 ? "Excluir só o resumo" : "Excluir só os resumos"]);
+            if (escolha is null)
                 return;
+            modo = escolha == 1 ? ModoDosResumos.SoOResumo : ModoDosResumos.GrupoInteiro;
         }
-        else if (fotos > 0 && !await _dialogos.ConfirmarAsync("Remover tarefa", $"Remover a tarefa \"{linha.Nome}\"?{aviso}", "Remover"))
+        else if (plano.PedeConfirmacao && !await _dialogos.ConfirmarAsync("Excluir tarefas", plano.PerguntaSemResumo, "Excluir"))
             return;
 
-        var posicao = LinhasVisiveis.IndexOf(linha);
-        _cronograma.RemoverTarefa(linha.Tarefa.Id);
+        var ids = selecionadas.Select(l => l.Tarefa.Id).ToHashSet();
+        var lugar = LinhasVisiveis.Select((l, i) => (l, i)).Where(x => ids.Contains(x.l.Tarefa.Id)).Select(x => x.i).DefaultIfEmpty(0).Min();
+        try
+        {
+            RegrasDeExclusao.Aplicar(_cronograma.Copiar(), plano, modo); // primeiro numa cópia: se o domínio recusar, nada muda
+        }
+        catch (DomainValidationException ex)
+        {
+            Mensagem = ex.Message;
+            return;
+        }
+        var resultado = RegrasDeExclusao.Aplicar(_cronograma, plano, modo);
         SincronizarLinhas();
-        TarefaSelecionada = LinhasVisiveis.Count == 0 ? null : LinhasVisiveis[Math.Clamp(posicao, 0, LinhasVisiveis.Count - 1)];
-        MarcarAlteracao($"Remover \"{linha.Nome}\"");
+        foreach (var linha in Tarefas)
+            linha.AtualizarTela(); // a EDT e as predecessoras (pelo Nº das linhas, que mudou)
+        TarefaSelecionada = LinhasVisiveis.Count == 0 ? null : LinhasVisiveis[Math.Clamp(lugar, 0, LinhasVisiveis.Count - 1)];
+        MarcarAlteracao(plano.Selecionadas.Count == 1 ? $"Excluir \"{plano.Selecionadas[0].Nome}\"" : $"Excluir {plano.Selecionadas.Count} tarefas");
+        Mensagem = resultado.Texto;
+        AvisoComDesfazer = resultado.Texto;
     }
 
     private bool HaTarefaSelecionada() => TarefaSelecionada is not null;

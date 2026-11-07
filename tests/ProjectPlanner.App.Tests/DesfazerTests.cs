@@ -67,7 +67,7 @@ public class DesfazerTests : TesteDeFotos
 
         Vm.RemoverTarefaCommand.Execute(null);
         Linhas.Should().Equal("1 Estrutura");
-        Vm.TextoDesfazer.Should().Be("Desfazer Remover \"Fundação\"");
+        Vm.TextoDesfazer.Should().Be("Desfazer Excluir \"Fundação\"");
 
         Desfazer();
         Linhas.Should().Equal("1 Fundação", "1.1 Escavação", "1.2 Sapatas", "2 Estrutura");

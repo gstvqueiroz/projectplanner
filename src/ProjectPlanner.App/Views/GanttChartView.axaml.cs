@@ -6,6 +6,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.Core;
 using ProjectPlanner.Core.Gantt;
@@ -74,6 +75,7 @@ public partial class GanttChartView : UserControl
     private readonly Dictionary<Guid, (Shape Forma, BarraGantt Barra)> _barrasDesenhadas = [];
     private Rectangle? _contornoDaSelecao;
     private Guid? _destacadaNoDesenho;
+    private IReadOnlySet<Guid> _destacadasNoDesenho = new HashSet<Guid>(); // Bloco 72: a seleção múltipla
     // Ícone de fotos: cinza-azulado de baixo contraste, para não competir com as barras.
     private static readonly IBrush IconeDeFotos = new SolidColorBrush(Color.Parse("#90A4AE"));
     private static readonly IBrush Grade = new SolidColorBrush(Color.FromArgb(0x28, 0x80, 0x80, 0x80));
@@ -109,6 +111,7 @@ public partial class GanttChartView : UserControl
     public GanttChartView()
     {
         InitializeComponent();
+        Focusable = true; // Bloco 72: recebe o Delete depois de um clique numa barra
         Linhas.RowDefinitions[0].Height = new GridLength(GanttViewModel.AlturaCabecalho);
         RolagemCorpo.ScrollChanged += CorpoRolou;
         RolagemCorpo.SizeChanged += (_, e) => _viewModel?.AtualizarAreaVisivel(e.NewSize.Width, e.NewSize.Height);
@@ -201,7 +204,7 @@ public partial class GanttChartView : UserControl
             or nameof(GanttViewModel.MostrarFotos) or nameof(GanttViewModel.MostrarFolga) or nameof(GanttViewModel.MostrarLinhaDeBase)
             or nameof(GanttViewModel.Ordens))
             Desenhar();
-        else if (e.PropertyName == nameof(GanttViewModel.TarefaDestacada))
+        else if (e.PropertyName is nameof(GanttViewModel.TarefaDestacada) or nameof(GanttViewModel.Destacadas))
             AtualizarDestaque();
     }
 
@@ -211,19 +214,21 @@ public partial class GanttChartView : UserControl
         if (_viewModel?.Layout is null || _contornoDaSelecao is null)
             return;
         var (anterior, atual) = (_destacadaNoDesenho, _viewModel.TarefaDestacada);
-        if (anterior == atual)
+        var (antes, agora) = (_destacadasNoDesenho, _viewModel.Destacadas);
+        if (anterior == atual && ReferenceEquals(antes, agora))
             return;
         _destacadaNoDesenho = atual;
-        foreach (var id in new[] { anterior, atual })
-            if (id is { } tarefaId && _barrasDesenhadas.TryGetValue(tarefaId, out var desenhada))
-                PintarContorno(desenhada.Forma, tarefaId);
+        _destacadasNoDesenho = agora;
+        foreach (var id in new[] { anterior, atual }.OfType<Guid>().Concat(antes).Concat(agora).Distinct())
+            if (_barrasDesenhadas.TryGetValue(id, out var desenhada))
+                PintarContorno(desenhada.Forma, id);
         PosicionarContornoDaSelecao();
     }
 
     // Selecionada: contorno escuro (claro no tema escuro); atrasada (Bloco 25, C2): contorno laranja.
     private void PintarContorno(Shape forma, Guid tarefaId)
     {
-        var destacada = _viewModel!.TarefaDestacada == tarefaId;
+        var destacada = _viewModel!.EstaDestacada(tarefaId);
         var atrasada = _viewModel.TarefasAtrasadas.Contains(tarefaId);
         forma.Stroke = destacada ? _contornoDaBarra : atrasada ? ContornoDeAtrasada : null;
         forma.StrokeThickness = atrasada && !destacada ? 2 : 1.5;
@@ -289,6 +294,7 @@ public partial class GanttChartView : UserControl
         DesenharGradeDeFundo(layout);
         // O contorno da linha selecionada vem logo depois da grade e antes das barras, como sempre.
         _destacadaNoDesenho = _viewModel.TarefaDestacada;
+        _destacadasNoDesenho = _viewModel.Destacadas;
         _contornoDaSelecao = new Rectangle
         {
             Name = "ContornoDaSelecao",
@@ -616,7 +622,8 @@ public partial class GanttChartView : UserControl
             var menu = Superficie.ContextMenu!;
             menu.Placement = PlacementMode.Pointer;
             menu.Open(Superficie);
-            _viewModel.ClicarNaBarra(barra.TarefaId);
+            if (!_viewModel.EstaDestacada(barra.TarefaId)) // Bloco 72: numa tarefa já selecionada, a seleção múltipla fica
+                _viewModel.ClicarNaBarra(barra.TarefaId);
         }
         e.Handled = true;
     }
@@ -625,6 +632,7 @@ public partial class GanttChartView : UserControl
     {
         if (_viewModel?.Layout is not { } layout || !e.GetCurrentPoint(Superficie).Properties.IsLeftButtonPressed)
             return;
+        Focus(); // Bloco 72: com o foco no Gantt, o Delete exclui as selecionadas
 
         var ponto = e.GetPosition(Corpo);
         if (IconeDeFotosEm(layout, ponto) is { } comFotos)
@@ -637,9 +645,19 @@ public partial class GanttChartView : UserControl
         var alca = LocalizadorGantt.AlcaEm(layout, ponto.X, ponto.Y);
         var barra = alca?.Barra ?? LocalizadorGantt.BarraEm(layout, ponto.X, ponto.Y);
         if (barra is null)
+        {
+            _viewModel.ClicarNoVazio(); // Bloco 72 (G1): clique em área vazia limpa a seleção
             return;
+        }
 
-        _viewModel.ClicarNaBarra(barra.TarefaId); // seleciona, como no Bloco 9
+        // Seleciona, como no Bloco 9; Bloco 72: Ctrl (⌘ no Mac) acrescenta ou tira, Shift seleciona o intervalo.
+        var teclas = e.KeyModifiers;
+        // A tecla de acrescentar à seleção é a da plataforma (⌘ no Mac, Ctrl no Windows), a mesma da grade.
+        var comando = this.GetPlatformSettings()?.HotkeyConfiguration.CommandModifiers
+                      ?? (Services.AtalhosDeTeclado.EhMac ? KeyModifiers.Meta : KeyModifiers.Control);
+        _viewModel.ClicarNaBarra(barra.TarefaId,
+            adicionar: alca is null && (teclas & comando) != 0,
+            intervalo: alca is null && teclas.HasFlag(KeyModifiers.Shift));
         if (alca is not null)
         {
             // O ponteiro fica com a superfície (que nunca é redesenhada): o gesto continua mesmo que o mouse

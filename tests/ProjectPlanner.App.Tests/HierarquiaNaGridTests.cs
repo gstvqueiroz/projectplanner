@@ -288,15 +288,17 @@ public class HierarquiaNaGridTests
     // --- Remover ---
 
     [Fact]
-    public void RemoverResumo_PedeConfirmacao_ECancelarNaoRemove()
+    public void RemoverResumo_PerguntaGrupoInteiroOuSoOResumo_ECancelarNaoRemove()
     {
         var r = MontarReferencia();
         r.Vm.TarefaSelecionada = r.Fase1;
-        _ambiente.Dialogos.Confirmar = false;
+        _ambiente.Dialogos.Escolha = null;
 
         r.Vm.RemoverTarefaCommand.Execute(null);
 
-        _ambiente.Dialogos.Confirmacoes.Should().Equal("Remover o resumo \"Fase 1\" e as 3 subtarefas dele?");
+        var (pergunta, opcoes) = _ambiente.Dialogos.Escolhas.Single();
+        pergunta.Should().StartWith("Excluir \"Fase 1\" e suas 3 subtarefas?\n1 tarefa tem progresso registrado.");
+        opcoes.Should().Equal("Excluir grupo inteiro", "Excluir só o resumo");
         r.Vm.Tarefas.Should().HaveCount(7);
     }
 
@@ -314,15 +316,22 @@ public class HierarquiaNaGridTests
     }
 
     [Fact]
-    public void RemoverTarefaComum_NaoPedeConfirmacao()
+    public void RemoverTarefaComum_NaoPedeConfirmacao_ComProgressoPede()
     {
         var r = MontarReferencia();
-        r.Vm.TarefaSelecionada = r.A;
+        r.Vm.TarefaSelecionada = r.B;
 
         r.Vm.RemoverTarefaCommand.Execute(null);
 
-        _ambiente.Dialogos.Confirmacoes.Should().BeEmpty();
+        _ambiente.Dialogos.Confirmacoes.Should().BeEmpty("tarefa comum sem progresso sai na hora (Bloco 72, E2)");
         r.Vm.Tarefas.Should().HaveCount(6);
+        r.Vm.AvisoComDesfazer.Should().Be("Tarefa \"B\" excluída. Vínculo refeito: A → Fase 1 concluída.");
+
+        r.Vm.TarefaSelecionada = r.A;
+        _ambiente.Dialogos.Confirmar = false;
+        r.Vm.RemoverTarefaCommand.Execute(null);
+        _ambiente.Dialogos.Confirmacoes.Should().Equal("Excluir \"A\"?\n1 tarefa tem progresso registrado.");
+        r.Vm.Tarefas.Should().HaveCount(6, "cancelou");
     }
 
     // --- Edição na grid ---

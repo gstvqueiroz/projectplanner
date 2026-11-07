@@ -3,6 +3,24 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.72.0
+
+**Excluir com Delete e a seleção de várias tarefas** (o plano "Delete, arrastar e Kanban", regras E1 a E8).
+
+- **Seleção de várias tarefas:** Ctrl+clique (⌘ no Mac) e Shift+clique, na grade e nas barras do Gantt; a seleção é a mesma nos
+  dois. Clicar numa área vazia do Gantt limpa a seleção; o botão direito numa selecionada mantém a seleção.
+- **A tecla Delete** (⌫ no Mac) exclui as selecionadas, com o foco na grade ou no Gantt; editando uma célula ou um texto, a
+  tecla continua sendo do texto. O menu e a barra agora dizem "Excluir tarefa".
+- **Tarefa comum ou marco sai na hora**, com o aviso "Tarefa excluída · Desfazer" por 8 segundos. Só pergunta antes quando a
+  exclusão leva outras tarefas junto (um resumo), apaga progresso registrado ou fotos, ou passa de 10 tarefas de uma vez.
+- **Resumo:** a janela pergunta "Excluir 'Fundação' e suas 7 subtarefas?", com **Excluir grupo inteiro** (como no MS Project)
+  ou **Excluir só o resumo** (as subtarefas ficam no mesmo lugar, um nível acima).
+- **Vínculos:** numa sequência simples (A → B → C, Término-Início), excluir B religa A → C com a defasagem que havia entre B e C;
+  nos demais casos o aviso lista as tarefas que perderam a predecessora e podem mudar de data.
+- **Resumo que fica vazio** vira tarefa comum e mantém o início e o término que tinha.
+- **Depois de excluir**, a seleção passa para a tarefa que ocupou o lugar (ou a de cima, se era a última), para dar para
+  apertar Delete em sequência. Ctrl+Z volta tudo de uma vez.
+
 ## 0.71.0
 
 **Calendário de trabalho.** Até aqui o cronograma contava sempre de segunda a sexta, sem feriados. Agora cada projeto tem o

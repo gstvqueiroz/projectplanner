@@ -141,6 +141,25 @@ public class Cronograma
     }
 
     /// <summary>
+    /// Bloco 72: exclui só o resumo: as subtarefas ficam no mesmo lugar e sobem um nível (passam a ser do resumo de cima, se
+    /// houver). Os vínculos do resumo (que não deveria ter) saem junto.
+    /// </summary>
+    /// <returns>Quantas subtarefas diretas subiram.</returns>
+    /// <exception cref="DomainValidationException">A tarefa não é um resumo.</exception>
+    public int RemoverSoOResumo(Guid resumoId)
+    {
+        var resumo = ObterTarefa(resumoId, nameof(Tarefas));
+        if (!resumo.EhResumo)
+            throw new DomainValidationException(nameof(Tarefas), $"\"{resumo.Nome}\" não é um resumo.");
+        var filhas = _tarefas.Where(t => t.TarefaPaiId == resumoId).ToList();
+        foreach (var filha in filhas)
+            filha.DefinirPai(resumo.TarefaPaiId);
+        _tarefas.Remove(resumo);
+        _predecessoras.RemoveAll(p => p.TarefaOrigemId == resumoId || p.TarefaDestinoId == resumoId);
+        return filhas.Count;
+    }
+
+    /// <summary>
     /// Recua a tarefa um nível: ela passa a ser a última subtarefa da tarefa de cima que está no mesmo
     /// nível (que vira resumo), levando junto as próprias subtarefas. A ordem das linhas não muda.
     /// </summary>

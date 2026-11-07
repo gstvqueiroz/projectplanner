@@ -112,7 +112,7 @@ public partial class MenuPrincipalTests
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
             "Adicionar marco", "Adicionar resumo", Linha,
-            "Remover tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
+            "Excluir tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…", "Recursos da tarefa…");
         Titulos(a.Item("Projeto")).Should().Equal("Calendário de trabalho…", Linha, "Salvar linha de base…", "Linhas de base…", Linha,
@@ -169,7 +169,7 @@ public partial class MenuPrincipalTests
             (a.Vm.DesfazerAlteracaoCommand, "Desfazer"),
             (a.Vm.RefazerAlteracaoCommand, "Refazer"),
             (a.Vm.AdicionarTarefaCommand, "Adicionar tarefa"),
-            (a.Vm.RemoverTarefaCommand, "Remover tarefa"),
+            (a.Vm.RemoverTarefaCommand, "Excluir tarefa"),
             (a.Vm.PromoverCommand, "Promover"),
             (a.Vm.RebaixarCommand, "Rebaixar"),
             (a.Vm.RecalcularCronogramaCommand, "Recalcular cronograma"),
@@ -317,7 +317,7 @@ public partial class MenuPrincipalTests
         filha.Tarefa.TarefaPaiId.Should().Be(mae.Tarefa.Id);
         a.ClicarComOMouse(Botao(a, "Promover"));
         filha.Tarefa.TarefaPaiId.Should().BeNull();
-        a.ClicarComOMouse(Botao(a, "Remover tarefa"));
+        a.ClicarComOMouse(Botao(a, "Excluir tarefa"));
         a.Vm.Tarefas.Should().Equal(mae);
         a.ClicarComOMouse(Botao(a, "Recalcular cronograma"));
         a.ClicarComOMouse(Botao(a, "Salvar"));
@@ -331,13 +331,13 @@ public partial class MenuPrincipalTests
     {
         var a = Abrir();
 
-        new[] { "Remover tarefa", "Promover", "Rebaixar" }.Select(n => Botao(a, n).IsEffectivelyEnabled)
+        new[] { "Excluir tarefa", "Promover", "Rebaixar" }.Select(n => Botao(a, n).IsEffectivelyEnabled)
             .Should().AllBeEquivalentTo(false);
         new[] { "Salvar", "Adicionar tarefa", "Recalcular cronograma" }.Select(n => Botao(a, n).IsEffectivelyEnabled)
             .Should().AllBeEquivalentTo(true);
 
         // Clicar num botão desabilitado não faz nada.
-        a.ClicarComOMouse(Botao(a, "Remover tarefa"));
+        a.ClicarComOMouse(Botao(a, "Excluir tarefa"));
         a.Vm.Tarefas.Should().BeEmpty();
     });
 
@@ -349,7 +349,7 @@ public partial class MenuPrincipalTests
         var filha = Ambiente.AdicionarTarefa(a.Vm, "Sapatas", 2);
         Dispatcher.UIThread.RunJobs();
 
-        (Botao(a, "Promover").IsEffectivelyEnabled, Botao(a, "Rebaixar").IsEffectivelyEnabled, Botao(a, "Remover tarefa").IsEffectivelyEnabled)
+        (Botao(a, "Promover").IsEffectivelyEnabled, Botao(a, "Rebaixar").IsEffectivelyEnabled, Botao(a, "Excluir tarefa").IsEffectivelyEnabled)
             .Should().Be((false, true, true));
 
         a.ClicarComOMouse(Botao(a, "Rebaixar"));
@@ -394,7 +394,7 @@ public partial class MenuPrincipalTests
         a.Ambiente.Calculadora.Chamadas.Should().BeGreaterThan(calculos);
 
         a.Vm.TarefaSelecionada = filha;
-        a.Clicar("Tarefa", "Remover tarefa"); // tarefa comum: sai sem perguntar (só resumo pede confirmação)
+        a.Clicar("Tarefa", "Excluir tarefa"); // tarefa comum: sai sem perguntar (só resumo pede confirmação)
         a.Vm.Tarefas.Should().Equal(mae);
     });
 
@@ -450,7 +450,7 @@ public partial class MenuPrincipalTests
 
         bool Habilitado(params string[] caminho) => a.Item(caminho).IsEffectivelyEnabled;
 
-        new[] { Habilitado("Tarefa", "Adicionar subtarefa"), Habilitado("Tarefa", "Remover tarefa"),
+        new[] { Habilitado("Tarefa", "Adicionar subtarefa"), Habilitado("Tarefa", "Excluir tarefa"),
                 Habilitado("Tarefa", "Promover"), Habilitado("Tarefa", "Rebaixar") }
             .Should().AllBeEquivalentTo(false);
         new[] { Habilitado("Arquivo", "Novo"), Habilitado("Arquivo", "Salvar"), Habilitado("Tarefa", "Adicionar tarefa"),
@@ -459,7 +459,7 @@ public partial class MenuPrincipalTests
 
         Ambiente.AdicionarTarefa(a.Vm, "Fundação", 3);
 
-        new[] { Habilitado("Tarefa", "Adicionar subtarefa"), Habilitado("Tarefa", "Remover tarefa") }
+        new[] { Habilitado("Tarefa", "Adicionar subtarefa"), Habilitado("Tarefa", "Excluir tarefa") }
             .Should().AllBeEquivalentTo(true, "com uma tarefa selecionada");
     });
 

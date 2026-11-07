@@ -111,7 +111,7 @@ public partial class MenuPrincipalTests
         a.Janela.LinhasVazias.Quantidade.Should().BeLessThan(semTarefas - 2, "a janela ficou mais baixa");
 
         a.Vm.TarefaSelecionada = a.Vm.Tarefas[0];
-        a.Clicar("Tarefa", "Remover tarefa");
+        a.Clicar("Tarefa", "Excluir tarefa");
         Pintar(a);
         var comUma = a.Janela.LinhasVazias.Quantidade;
         comUma.Should().BeGreaterThan(0);

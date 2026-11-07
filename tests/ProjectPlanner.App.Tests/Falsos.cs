@@ -156,6 +156,20 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.FromResult(Confirmar);
     }
 
+    // ---- Bloco 72: as perguntas com várias respostas ----
+
+    /// <summary>As perguntas feitas (a mensagem e as respostas oferecidas), em ordem.</summary>
+    public List<(string Mensagem, IReadOnlyList<string> Opcoes)> Escolhas { get; } = [];
+
+    /// <summary>A resposta que o "usuário" escolhe (o índice); nulo cancela. A primeira, de início.</summary>
+    public int? Escolha { get; set; } = 0;
+
+    public Task<int?> EscolherAsync(string titulo, string mensagem, IReadOnlyList<string> opcoes)
+    {
+        Escolhas.Add((mensagem, opcoes));
+        return Task.FromResult(Escolha);
+    }
+
     /// <summary>O que o diálogo de anexar documentos "escolhe" (Bloco 19).</summary>
     public List<string> DocumentosParaAnexar { get; } = [];
 

@@ -697,7 +697,7 @@ public class GaleriaFotosTests : TesteDeFotos
 
         await Vm.RemoverTarefaCommand.ExecuteAsync(null);
 
-        Ambiente.Dialogos.Confirmacoes.Last().Should().Be("Remover a tarefa \"Fundação\"? As 2 fotos dela também serão excluídas.");
+        Ambiente.Dialogos.Confirmacoes.Last().Should().Be("Excluir \"Fundação\"?\nAs 2 fotos saem junto (o Desfazer as traz de volta).");
         Vm.Tarefas.Should().ContainSingle("cancelou");
 
         Ambiente.Dialogos.Confirmar = true;
@@ -714,7 +714,7 @@ public class GaleriaFotosTests : TesteDeFotos
         Ambiente.Dialogos.Confirmar = false;
 
         await Vm.RemoverTarefaCommand.ExecuteAsync(null);
-        Ambiente.Dialogos.Confirmacoes.Last().Should().Be("Remover a tarefa \"Fundação\"? A foto dela também será excluída.");
+        Ambiente.Dialogos.Confirmacoes.Last().Should().Be("Excluir \"Fundação\"?\nA foto sai junto (o Desfazer a traz de volta).");
 
         var perguntas = Ambiente.Dialogos.Confirmacoes.Count;
         Vm.TarefaSelecionada = outra;
@@ -734,11 +734,11 @@ public class GaleriaFotosTests : TesteDeFotos
         await ComFotos(a, "a.jpg");
         await ComFotos(b, "b.jpg", "c.jpg");
         Vm.TarefaSelecionada = _linha;
-        Ambiente.Dialogos.Confirmar = false;
+        Ambiente.Dialogos.Escolha = null;
 
         await Vm.RemoverTarefaCommand.ExecuteAsync(null);
 
-        Ambiente.Dialogos.Confirmacoes.Last().Should().Be("Remover o resumo \"Fundação\" e as 2 subtarefas dele? As 3 fotos delas também serão excluídas.");
+        Ambiente.Dialogos.Escolhas.Last().Mensagem.Should().StartWith("Excluir \"Fundação\" e suas 2 subtarefas?\nAs 3 fotos saem junto (o Desfazer as traz de volta).");
         Vm.Tarefas.Should().HaveCount(3);
     }
 }

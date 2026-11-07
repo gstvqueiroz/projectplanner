@@ -155,65 +155,102 @@ public sealed partial class MainWindowViewModel
 
     private bool HaTarefaSelecionada() => TarefaSelecionada is not null;
 
-    /// <summary>A mensagem quando uma tarefa é solta fora das irmãs dela (Bloco 18).</summary>
-    public const string MensagemReordenacaoInvalida = "Só dá para mover entre tarefas do mesmo nível (mesmo resumo).";
-
     /// <summary>
-    /// Onde a tarefa arrastada cairia ao ser solta sobre a linha visível <paramref name="linhaVisivel"/> (nula
-    /// fora das linhas: cabeçalho, linhas vazias): antes dela na metade de cima, depois dela e das subtarefas na
-    /// metade de baixo. Nulo quando não vale: a linha não é irmã da arrastada (outro nível ou resumo) ou é a
-    /// própria. O arraste só reordena irmãs; mudar de pai continua sendo com Promover e Rebaixar.
+    /// Bloco 73: onde as tarefas arrastadas cairiam na lacuna <paramref name="lacuna"/> entre as linhas visíveis (0 é antes da
+    /// primeira), com o puxão para o lado (1: subtarefa da linha de cima; −1: sobe um nível), pelas regras de
+    /// <see cref="RegrasDeMovimento"/> (as mesmas no Gantt). Não muda nada.
     /// </summary>
-    public DestinoDeReordenacao? DestinoAoSoltar(TarefaViewModel arrastada, int? linhaVisivel, bool metadeDeBaixo)
+    public PlanoDeMovimento PreverMovimento(IReadOnlyList<TarefaViewModel> arrastadas, int lacuna, int puxao = 0)
     {
-        ArgumentNullException.ThrowIfNull(arrastada);
-        if (linhaVisivel is not { } indice || indice < 0 || indice >= LinhasVisiveis.Count)
-            return null;
-        var alvo = LinhasVisiveis[indice];
-        var pai = arrastada.Tarefa.TarefaPaiId;
-        if (alvo == arrastada || alvo.Tarefa.TarefaPaiId != pai)
-            return null;
-
-        var outrasIrmas = _cronograma.Tarefas.Where(t => t.TarefaPaiId == pai && t != arrastada.Tarefa).ToList();
-        var posicao = outrasIrmas.IndexOf(alvo.Tarefa) + (metadeDeBaixo ? 1 : 0);
-        var guia = indice;
-        if (metadeDeBaixo)
-        {
-            var subtarefas = _cronograma.DescendentesDe(alvo.Tarefa.Id).Select(t => t.Id).ToHashSet();
-            guia++;
-            while (guia < LinhasVisiveis.Count && subtarefas.Contains(LinhasVisiveis[guia].Tarefa.Id))
-                guia++;
-        }
-        return new DestinoDeReordenacao(posicao, guia);
+        ArgumentNullException.ThrowIfNull(arrastadas);
+        return RegrasDeMovimento.Planejar(_cronograma, [.. LinhasVisiveis.Select(l => l.Tarefa.Id)], arrastadas.Select(l => l.Tarefa.Id), lacuna, puxao);
     }
 
     /// <summary>
-    /// Solta a tarefa arrastada na grid (ver <see cref="DestinoAoSoltar"/>). Num destino válido, move a tarefa
-    /// (com as subtarefas) entre as irmãs, renumera a grid e a EDT e redesenha o Gantt na nova ordem, sem
-    /// recalcular o cronograma: a ordem não muda datas nem caminho crítico. Num destino inválido, não muda
-    /// nada e avisa na barra de status.
+    /// Bloco 73 (o plano "Arrastar para mover", M1 a M7): solta as tarefas arrastadas. Muda só a ordem e a hierarquia, nunca
+    /// datas nem vínculos; só reordenar não recalcula (redesenha o Gantt na ordem nova), e mudar de resumo recalcula os resumos.
+    /// Um passo só do Desfazer. Num destino bloqueado, avisa o motivo; fora das linhas, não faz nada.
     /// </summary>
-    /// <returns>Se a ordem mudou.</returns>
-    public bool SoltarTarefa(TarefaViewModel arrastada, int? linhaVisivel, bool metadeDeBaixo)
+    /// <returns>Se mudou algo.</returns>
+    public bool MoverArrastando(IReadOnlyList<TarefaViewModel> arrastadas, int lacuna, int puxao = 0)
     {
-        if (DestinoAoSoltar(arrastada, linhaVisivel, metadeDeBaixo) is not { } destino)
+        var plano = PreverMovimento(arrastadas, lacuna, puxao);
+        if (!plano.Valido)
         {
-            Mensagem = MensagemReordenacaoInvalida;
+            if (plano.Motivo is { } motivo)
+                Mensagem = motivo;
             return false;
         }
-        if (!_cronograma.MoverEntreIrmas(arrastada.Tarefa.Id, destino.PosicaoEntreIrmas))
+        if (!plano.MudaAlgo)
             return false;
-
+        try
+        {
+            RegrasDeMovimento.Aplicar(_cronograma.Copiar(), plano); // primeiro numa cópia: se o domínio recusar, nada muda
+        }
+        catch (DomainValidationException ex)
+        {
+            Mensagem = ex.Message;
+            return false;
+        }
+        var soAOrdem = plano.Tarefas.All(id => _cronograma.Tarefas.First(t => t.Id == id).TarefaPaiId == plano.Pai) && plano.ViraResumo is null;
+        var resultado = RegrasDeMovimento.Aplicar(_cronograma, plano);
+        var movidas = plano.Tarefas.Select(id => Tarefas.First(l => l.Tarefa.Id == id)).ToList();
+        var descricao = movidas.Count == 1 ? $"Mover \"{movidas[0].Nome}\"" : $"Mover {movidas.Count} tarefas";
         SincronizarLinhas();
         foreach (var linha in Tarefas)
             linha.AtualizarTela(); // EDT e predecessoras/sucessoras (que usam o Nº das linhas)
-        TarefaSelecionada = arrastada;
+        DefinirSelecao(movidas.Where(LinhasVisiveis.Contains), movidas[0]);
+        if (soAOrdem)
+        {
+            // A ordem não muda datas nem caminho crítico: redesenha o Gantt sem recalcular (Bloco 18).
+            Gantt.RedesenharNaNovaOrdem();
+            RegistrarNoHistorico(descricao);
+            PossuiAlteracoesNaoSalvas = true;
+            OnPropertyChanged(nameof(Titulo));
+        }
+        else
+            MarcarAlteracao(descricao);
+        Mensagem = resultado.Texto;
+        return true;
+    }
+
+    /// <summary>Bloco 73 (M7): Alt+Shift+↑ sobe a tarefa uma posição entre as irmãs (pulando grupos inteiros, sem sair do grupo).</summary>
+    [RelayCommand(CanExecute = nameof(PodeMoverParaCima))]
+    private void MoverParaCima() => MoverEntreIrmas(-1);
+
+    /// <summary>Bloco 73 (M7): Alt+Shift+↓ desce a tarefa uma posição entre as irmãs.</summary>
+    [RelayCommand(CanExecute = nameof(PodeMoverParaBaixo))]
+    private void MoverParaBaixo() => MoverEntreIrmas(1);
+
+    private bool PodeMoverParaCima() => PosicaoEntreIrmas() is { Posicao: > 0 };
+
+    private bool PodeMoverParaBaixo() => PosicaoEntreIrmas() is { } p && p.Posicao < p.Irmas - 1;
+
+    private (int Posicao, int Irmas)? PosicaoEntreIrmas()
+    {
+        if (TarefaSelecionada is not { } linha)
+            return null;
+        var irmas = _cronograma.Tarefas.Where(t => t.TarefaPaiId == linha.Tarefa.TarefaPaiId).ToList();
+        return (irmas.IndexOf(linha.Tarefa), irmas.Count);
+    }
+
+    private void MoverEntreIrmas(int passo)
+    {
+        if (TarefaSelecionada is not { } linha || PosicaoEntreIrmas() is not { } atual)
+            return;
+        if (!_cronograma.MoverEntreIrmas(linha.Tarefa.Id, Math.Clamp(atual.Posicao + passo, 0, atual.Irmas - 1)))
+            return;
+        SincronizarLinhas();
+        foreach (var l in Tarefas)
+            l.AtualizarTela();
+        TarefaSelecionada = linha;
         Gantt.RedesenharNaNovaOrdem();
-        RegistrarNoHistorico($"Mover \"{arrastada.Nome}\"");
+        RegistrarNoHistorico($"Mover \"{linha.Nome}\"");
         PossuiAlteracoesNaoSalvas = true;
         OnPropertyChanged(nameof(Titulo));
-        Mensagem = $"\"{arrastada.Nome}\" agora é a {arrastada.Edt}.";
-        return true;
+        Mensagem = $"\"{linha.Nome}\" agora é a {linha.Edt}.";
+        MoverParaCimaCommand.NotifyCanExecuteChanged();
+        MoverParaBaixoCommand.NotifyCanExecuteChanged();
     }
 
     private bool PodePromover() => TarefaSelecionada?.Tarefa.TarefaPaiId is not null;

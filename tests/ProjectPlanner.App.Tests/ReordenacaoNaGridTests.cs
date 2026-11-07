@@ -1,8 +1,11 @@
 using ProjectPlanner.App.ViewModels;
+using ProjectPlanner.Core.Edicao;
 
 namespace ProjectPlanner.App.Tests;
 
-// Bloco 18: soltar uma tarefa arrastada na grid, sem mouse (a janela só traduz o mouse em linha e metade).
+// Bloco 18 (Bloco 73: as regras do plano "Arrastar para mover"): soltar tarefas arrastadas na grid, sem mouse (a janela só
+// traduz o mouse na lacuna entre as linhas e no puxão para o lado). Linhas: 0 Fundação · 1 Escavar · 2 Armar · 3 Estrutura ·
+// 4 Cobertura; a lacuna g é o espaço antes da linha g.
 public class ReordenacaoNaGridTests
 {
     private readonly Ambiente _ambiente = new();
@@ -31,23 +34,12 @@ public class ReordenacaoNaGridTests
         return linha;
     }
 
-    private int Linha(TarefaViewModel linha) => _vm.LinhasVisiveis.IndexOf(linha);
-
     private List<string> Grid() => _vm.LinhasVisiveis.Select(l => $"{l.Numero} {l.Edt} {l.Nome}").ToList();
-
-    [Fact]
-    public void Destino_MetadeDeCima_Antes_MetadeDeBaixo_DepoisDasSubtarefas()
-    {
-        _vm.DestinoAoSoltar(_cobertura, Linha(_fundacao), metadeDeBaixo: false)
-            .Should().Be(new DestinoDeReordenacao(0, 0));
-        _vm.DestinoAoSoltar(_cobertura, Linha(_fundacao), metadeDeBaixo: true)
-            .Should().Be(new DestinoDeReordenacao(1, 3), "depois da Fundação e das subtarefas dela (guia em cima da Estrutura)");
-    }
 
     [Fact]
     public void Soltar_NoPrimeiroNivel_ReordenaAGridEAEdt()
     {
-        _vm.SoltarTarefa(_cobertura, Linha(_fundacao), metadeDeBaixo: false).Should().BeTrue();
+        _vm.MoverArrastando([_cobertura], 0).Should().BeTrue();
 
         Grid().Should().Equal("1 1 Cobertura", "2 2 Fundação", "3 2.1 Escavar", "4 2.2 Armar", "5 3 Estrutura");
         _vm.TarefaSelecionada.Should().Be(_cobertura);
@@ -57,7 +49,7 @@ public class ReordenacaoNaGridTests
     [Fact]
     public void Soltar_DentroDoResumo_SoAsIrmasMudam()
     {
-        _vm.SoltarTarefa(_armar, Linha(_escavar), metadeDeBaixo: false).Should().BeTrue();
+        _vm.MoverArrastando([_armar], 1).Should().BeTrue();
 
         Grid().Should().Equal("1 1 Fundação", "2 1.1 Armar", "3 1.2 Escavar", "4 2 Estrutura", "5 3 Cobertura");
     }
@@ -67,19 +59,19 @@ public class ReordenacaoNaGridTests
     {
         _cobertura.Predecessoras.Should().Be("4");
 
-        _vm.SoltarTarefa(_estrutura, Linha(_fundacao), metadeDeBaixo: false);
+        _vm.MoverArrastando([_estrutura], 0);
 
         (_estrutura.Numero, _cobertura.Predecessoras).Should().Be((1, "1"), "o vínculo é o mesmo; o número da linha mudou");
     }
 
     [Fact]
-    public void Soltar_NaoRecalculaOCronograma_MasOGanttSegueANovaOrdem_EOProjetoFicaAlterado()
+    public void SoReordenar_NaoRecalculaOCronograma_MasOGanttSegueANovaOrdem_EOProjetoFicaAlterado()
     {
         var calculos = _ambiente.Calculadora.Chamadas;
         var datas = _vm.Tarefas.ToDictionary(l => l.Nome, l => (l.DataInicio, l.DataTermino, l.Folga, l.EhCritica));
         _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
 
-        _vm.SoltarTarefa(_cobertura, Linha(_fundacao), metadeDeBaixo: false);
+        _vm.MoverArrastando([_cobertura], 0);
 
         _ambiente.Calculadora.Chamadas.Should().Be(calculos, "a ordem não muda datas nem caminho crítico");
         _vm.Tarefas.ToDictionary(l => l.Nome, l => (l.DataInicio, l.DataTermino, l.Folga, l.EhCritica)).Should().Equal(datas);
@@ -89,56 +81,91 @@ public class ReordenacaoNaGridTests
         _vm.Titulo.Should().StartWith("*");
     }
 
-    [Theory]
-    [InlineData("Escavar", false)] // uma subtarefa sobre outro nível
-    [InlineData("Estrutura", true)]
-    public void Soltar_ForaDoGrupoDeIrmas_Recusado_SemMudarNada(string sobre, bool metadeDeBaixo)
+    [Fact]
+    public void Soltar_EmOutroGrupo_EntraNele_MantendoONivelQueCabe_ERecalcula()
+    {
+        var calculos = _ambiente.Calculadora.Chamadas;
+
+        _vm.MoverArrastando([_estrutura], 2).Should().BeTrue("entre Escavar e Armar o primeiro nível não cabe");
+
+        Grid().Should().Equal("1 1 Fundação", "2 1.1 Escavar", "3 1.2 Estrutura", "4 1.3 Armar", "5 2 Cobertura");
+        _ambiente.Calculadora.Chamadas.Should().BeGreaterThan(calculos, "o resumo ganhou uma tarefa: as datas dele mudam");
+        _vm.TextoDesfazer.Should().Be("Desfazer Mover \"Estrutura\"");
+    }
+
+    [Fact]
+    public void PuxarParaADireita_ViraSubtarefaDaLinhaDeCima_EOBloqueioAvisaOMotivo()
+    {
+        _vm.PreverMovimento([_estrutura], 3, puxao: 1).Dica.Should().Be("Tornar subtarefa de \"Armar\"");
+        _vm.MoverArrastando([_estrutura], 3, puxao: 1).Should().BeTrue();
+        Grid().Should().Equal("1 1 Fundação", "2 1.1 Escavar", "3 1.2 Armar", "4 1.2.1 Estrutura", "5 2 Cobertura");
+        _vm.Mensagem.Should().Be("\"Estrutura\" agora é a 1.2.1. \"Armar\" virou resumo.");
+
+        _vm.MoverArrastando([_cobertura], 4, puxao: 1).Should().BeFalse("Estrutura tem vínculo com Cobertura");
+        _vm.Mensagem.Should().StartWith("\"Estrutura\" tem vínculos");
+    }
+
+    [Fact]
+    public void Bloqueado_ResumoDentroDeleMesmo_SemMudarNada()
     {
         var antes = Grid();
-        var arrastada = sobre == "Escavar" ? _estrutura : _armar; // Estrutura (1º nível) sobre Escavar; Armar (em Fundação) sobre Estrutura
-        var alvo = _vm.LinhasVisiveis.Single(l => l.Nome == sobre);
 
-        _vm.DestinoAoSoltar(arrastada, Linha(alvo), metadeDeBaixo).Should().BeNull();
-        _vm.SoltarTarefa(arrastada, Linha(alvo), metadeDeBaixo).Should().BeFalse();
+        _vm.MoverArrastando([_fundacao], 2).Should().BeFalse();
 
         Grid().Should().Equal(antes);
-        _vm.Mensagem.Should().Be(MainWindowViewModel.MensagemReordenacaoInvalida);
+        _vm.Mensagem.Should().Be(RegrasDeMovimento.DentroDeSiMesmo);
         _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
     }
 
     [Theory]
-    [InlineData(null)]  // linhas vazias do preenchimento, cabeçalho: fora das linhas
-    [InlineData(5)]     // depois da última linha real
     [InlineData(-1)]
-    public void Soltar_ForaDasLinhasDeTarefa_Recusado(int? linha)
+    [InlineData(6)]
+    public void ForaDasLinhas_NaoFazNada(int lacuna)
     {
-        var antes = Grid();
+        var (antes, mensagem) = (Grid(), _vm.Mensagem);
 
-        _vm.SoltarTarefa(_cobertura, linha, metadeDeBaixo: false).Should().BeFalse();
+        _vm.MoverArrastando([_cobertura], lacuna).Should().BeFalse();
 
         Grid().Should().Equal(antes);
+        _vm.Mensagem.Should().Be(mensagem, "fora das linhas, soltar cancela sem aviso");
         _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
     }
 
-    [Fact]
-    public void Soltar_SobreSiMesma_Recusado_EAoLadoDeSiMesma_NaoMudaNada()
+    [Theory]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void AoLadoDeSiMesma_NaoMudaNada(int lacuna)
     {
-        _vm.DestinoAoSoltar(_estrutura, Linha(_estrutura), metadeDeBaixo: false).Should().BeNull();
+        _vm.MoverArrastando([_estrutura], lacuna).Should().BeFalse();
 
-        _vm.SoltarTarefa(_estrutura, Linha(_cobertura), metadeDeBaixo: false).Should().BeFalse("já está antes da Cobertura");
         _vm.PossuiAlteracoesNaoSalvas.Should().BeFalse();
-        _vm.Mensagem.Should().NotBe(MainWindowViewModel.MensagemReordenacaoInvalida);
     }
 
     [Fact]
-    public void Soltar_ResumoRecolhido_LevaAsSubtarefasOcultas()
+    public void ResumoRecolhido_LevaAsSubtarefasOcultas()
     {
         _fundacao.Expandido = false;
         _vm.LinhasVisiveis.Select(l => l.Nome).Should().Equal("Fundação", "Estrutura", "Cobertura");
 
-        _vm.SoltarTarefa(_fundacao, Linha(_cobertura), metadeDeBaixo: true).Should().BeTrue();
+        _vm.MoverArrastando([_fundacao], 3).Should().BeTrue();
 
         _vm.Tarefas.Select(l => $"{l.Edt} {l.Nome}").Should().Equal("1 Estrutura", "2 Cobertura", "3 Fundação", "3.1 Escavar", "3.2 Armar");
         _vm.LinhasVisiveis.Select(l => l.Nome).Should().Equal("Estrutura", "Cobertura", "Fundação");
+    }
+
+    [Fact]
+    public void Varias_VaoJuntas_EOTecladoMoveEntreAsIrmas()
+    {
+        _vm.MoverArrastando([_cobertura, _estrutura], 0).Should().BeTrue();
+        Grid().Should().Equal("1 1 Estrutura", "2 2 Cobertura", "3 3 Fundação", "4 3.1 Escavar", "5 3.2 Armar");
+        _vm.Selecionadas.Should().Equal(_estrutura, _cobertura);
+
+        _vm.TarefaSelecionada = _armar;
+        _vm.MoverParaCimaCommand.Execute(null);
+        _vm.MoverParaCimaCommand.CanExecute(null).Should().BeFalse("é a primeira do grupo: não sai dele");
+        _vm.TarefaSelecionada = _fundacao;
+        _vm.MoverParaCimaCommand.Execute(null);
+        Grid().Should().Equal("1 1 Estrutura", "2 2 Fundação", "3 2.1 Armar", "4 2.2 Escavar", "5 3 Cobertura");
+        _vm.TextoDesfazer.Should().Be("Desfazer Mover \"Fundação\"");
     }
 }

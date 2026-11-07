@@ -81,7 +81,7 @@ public class DesfazerTests : TesteDeFotos
     {
         var a = Ambiente.AdicionarTarefa(Vm, "A", 1);
         var b = Ambiente.AdicionarTarefa(Vm, "B", 1);
-        Vm.SoltarTarefa(b, linhaVisivel: 0, metadeDeBaixo: false).Should().BeTrue();
+        Vm.MoverArrastando([b], lacuna: 0).Should().BeTrue();
         Linhas.Should().Equal("1 B", "2 A");
         ((ILigacoesNoGantt)Vm).Ligar(b.Tarefa.Id, a.Tarefa.Id, TipoDependencia.FS).Should().BeTrue();
         Vm.NomeProjeto = "Residência";

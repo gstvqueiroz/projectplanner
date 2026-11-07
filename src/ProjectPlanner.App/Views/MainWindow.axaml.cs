@@ -602,14 +602,21 @@ public partial class MainWindow : Window
     }
 
     // Alt+Shift+→ e Alt+Shift+← (Option no Mac) rebaixam e promovem a tarefa selecionada, como no MS
-    // Project. Durante a edição de um texto, a combinação continua sendo do texto (seleção por palavra).
+    // Project; Bloco 73 (M7): Alt+Shift+↑ e Alt+Shift+↓ a movem uma posição entre as irmãs. Durante a edição de um texto, a
+    // combinação continua sendo do texto (seleção por palavra).
     private void AtalhosDaEstrutura(object? sender, KeyEventArgs e)
     {
-        if (e.KeyModifiers != (KeyModifiers.Alt | KeyModifiers.Shift) || e.Key is not (Key.Left or Key.Right)
+        if (e.KeyModifiers != (KeyModifiers.Alt | KeyModifiers.Shift) || e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)
             || e.Source is TextBox || DataContext is not MainWindowViewModel vm)
             return;
 
-        var comando = e.Key == Key.Right ? vm.RebaixarCommand : vm.PromoverCommand;
+        System.Windows.Input.ICommand comando = e.Key switch
+        {
+            Key.Right => vm.RebaixarCommand,
+            Key.Left => vm.PromoverCommand,
+            Key.Up => vm.MoverParaCimaCommand,
+            _ => vm.MoverParaBaixoCommand,
+        };
         if (comando.CanExecute(null))
             comando.Execute(null);
         e.Handled = true;

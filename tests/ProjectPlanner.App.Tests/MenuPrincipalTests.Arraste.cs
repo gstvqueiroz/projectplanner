@@ -72,17 +72,34 @@ public partial class MenuPrincipalTests
     });
 
     [Fact]
-    public Task Arrastar_SobreAsLinhasVazias_NaoMostraGuia_ESoltarNaoMudaNada() => Tela.Executar(() =>
+    public Task Arrastar_SobreAsLinhasVazias_LevaParaOFim() => Tela.Executar(() =>
     {
         var a = ComQuatroTarefas();
 
         Arrastar(a, Celula(a, "Nº", 1), Celula(a, "Nº", 7), soltar: false); // linha 7: preenchimento
-        a.Janela.GuiaDeArraste.Linha.Should().BeNull();
+        a.Janela.GuiaDeArraste.Etiqueta.Should().Be("Mover \"B\"");
         a.Janela.MouseUp(Celula(a, "Nº", 7), MouseButton.Left);
         Pintar(a);
 
-        a.Vm.LinhasVisiveis.Select(l => l.Nome).Should().Equal("A", "B", "C", "D");
-        a.Vm.Mensagem.Should().Be(MainWindowViewModel.MensagemReordenacaoInvalida);
+        a.Vm.LinhasVisiveis.Select(l => l.Nome).Should().Equal("A", "C", "D", "B");
+    });
+
+    [Fact]
+    public Task Arrastar_PuxandoParaADireita_ViraSubtarefa_EAGuiaSaiRecuada() => Tela.Executar(() =>
+    {
+        var a = ComQuatroTarefas();
+        var de = Celula(a, "Nº", 2);
+
+        Arrastar(a, de, new Point(de.X + 40, Celula(a, "Nº", 1, 0.75).Y), soltar: false);
+        a.Janela.GuiaDeArraste.Etiqueta.Should().Be("Tornar subtarefa de \"B\"");
+        var recuoComNivel1 = a.Janela.GuiaDeArraste.Linha!.Value.Esquerda;
+        a.Janela.MouseUp(new Point(de.X + 40, Celula(a, "Nº", 1, 0.75).Y), MouseButton.Left);
+        Pintar(a);
+
+        a.Vm.Tarefas.Select(l => $"{l.Edt} {l.Nome}").Should().Equal("1 A", "2 B", "2.1 C", "3 D");
+        Arrastar(a, Celula(a, "Nº", 3), Celula(a, "Nº", 0, 0.25), soltar: false);
+        a.Janela.GuiaDeArraste.Linha!.Value.Esquerda.Should().BeLessThan(recuoComNivel1, "no primeiro nível a guia não tem recuo");
+        a.Janela.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
     });
 
     [Fact]

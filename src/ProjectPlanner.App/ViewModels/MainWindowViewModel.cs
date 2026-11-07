@@ -152,6 +152,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAcimaCommand))]
     [NotifyCanExecuteChangedFor(nameof(InserirTarefaAbaixoCommand))]
     [NotifyCanExecuteChangedFor(nameof(RolarAteTarefaCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoverParaCimaCommand), nameof(MoverParaBaixoCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopiarTarefaCommand), nameof(DuplicarTarefaCommand))]
     [NotifyPropertyChangedFor(nameof(DicaGerenciarFotos))]
     [NotifyPropertyChangedFor(nameof(FotosDaSelecionada))]

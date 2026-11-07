@@ -3,6 +3,27 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.73.0
+
+**Arrastar para mover na grade** (o plano "Delete, arrastar e Kanban", regras M1 a M7). Arrastar muda só a organização (a ordem
+e a hierarquia), nunca datas nem vínculos.
+
+- **Como pegar:** pela coluna Nº, onde a alça ⋮⋮ aparece ao passar o mouse. O arrasto começa depois de 5 px (um clique continua
+  sendo clique); no tablet, segurando 0,4 s.
+- **Entre grupos:** a tarefa agora pode ir para outro resumo, não só entre as irmãs. Ela **mantém o nível que tinha, se couber**
+  no novo lugar; se não couber, fica no nível válido mais perto. Nunca transforma sozinha a tarefa de cima em resumo.
+- **Puxar para o lado durante o arrasto:** para a direita, a tarefa vira subtarefa da linha de cima ("Tornar subtarefa de
+  'Escavação'"); para a esquerda, sobe um nível.
+- **Na tela:** a linha azul mostra o destino já recuada no nível que a tarefa vai ter, com uma etiqueta junto do cursor (com a
+  contagem, quando são várias). Perto das bordas a grade rola sozinha; Esc ou soltar fora da grade cancela.
+- **Bloqueados, com o motivo na etiqueta:** soltar um resumo dentro dele mesmo; pôr subtarefas num marco ou numa tarefa com
+  vínculos (resumos não têm vínculos).
+- **Várias selecionadas** vão juntas, na ordem em que estavam; as subtarefas vão com o resumo.
+- **Efeitos:** só reordenar não recalcula nada; mudar de resumo recalcula as datas dos resumos. Tarefa que recebe subtarefa vira
+  resumo (com aviso); resumo que perde todas as subtarefas vira tarefa comum mantendo as datas.
+- **Teclado:** Alt+Shift+↑/↓ move a tarefa uma posição entre as irmãs (pulando grupos inteiros, sem sair do grupo), também no
+  menu Tarefa; Alt+Shift+→/← continua mudando o nível. Cada arrasto ou atalho é um passo só do Desfazer.
+
 ## 0.72.0
 
 **Excluir com Delete e a seleção de várias tarefas** (o plano "Delete, arrastar e Kanban", regras E1 a E8).

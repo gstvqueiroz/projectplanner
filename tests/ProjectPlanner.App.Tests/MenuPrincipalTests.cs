@@ -112,7 +112,7 @@ public partial class MenuPrincipalTests
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
             "Adicionar marco", "Adicionar resumo", Linha,
-            "Excluir tarefa", Linha, "Promover", "Rebaixar", Linha, "Recalcular cronograma",
+            "Excluir tarefa", Linha, "Promover", "Rebaixar", "Mover para cima", "Mover para baixo", Linha, "Recalcular cronograma",
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…", "Recursos da tarefa…");
         Titulos(a.Item("Projeto")).Should().Equal("Calendário de trabalho…", Linha, "Salvar linha de base…", "Linhas de base…", Linha,

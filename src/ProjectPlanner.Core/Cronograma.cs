@@ -617,6 +617,20 @@ public class Cronograma
         new(nameof(Tarefa.TarefaPaiId), "Uma tarefa não pode ser subtarefa de si mesma.");
 
     // Uma tarefa só vira resumo se não for marco nem tiver vínculos (resumos não têm vínculos).
+    /// <summary>Bloco 73: por que a tarefa não pode receber subtarefas (um marco, ou com vínculos); nulo se pode.</summary>
+    public string? MotivoParaNaoTerSubtarefas(Guid tarefaId)
+    {
+        try
+        {
+            ValidarPodeTerSubtarefas(ObterTarefa(tarefaId, nameof(Tarefas)));
+            return null;
+        }
+        catch (DomainValidationException ex)
+        {
+            return ex.Message;
+        }
+    }
+
     private void ValidarPodeTerSubtarefas(Tarefa pai)
     {
         if (pai.EhResumo)

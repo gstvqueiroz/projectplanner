@@ -139,6 +139,18 @@ public sealed partial class GanttViewModel : ViewModelBase
     /// <summary>Bloco 72: clique numa área vazia do Gantt: limpa a seleção.</summary>
     public event Action? VazioClicado;
 
+    /// <summary>
+    /// Bloco 74 (G3): o arrasto vertical de uma barra reordena as tarefas selecionadas pelas regras da grade; a janela principal
+    /// dá as duas funções (prever, na lacuna entre as linhas; e mover).
+    /// </summary>
+    public Func<int, Core.Edicao.PlanoDeMovimento>? PreverMovimento { get; set; }
+
+    public Func<int, bool>? Mover { get; set; }
+
+    /// <summary>Bloco 74 (G4): o arrasto vertical em curso (a janela mostra a mesma guia na grade, na mesma altura); nulo sem arrasto.</summary>
+    [ObservableProperty]
+    public partial MovimentoNoGantt? MovimentoEmCurso { get; set; }
+
     /// <summary>Pedido de rolagem horizontal até o X dado (Bloco 25: ir para a tarefa, ir para hoje, ajustar).</summary>
     public event Action<double>? RolagemPedida;
 
@@ -340,3 +352,6 @@ public sealed partial class GanttViewModel : ViewModelBase
                 Hoje = MostrarHoje ? Hoje : null,
             });
 }
+
+/// <summary>Bloco 74: o arrasto vertical de barras no Gantt: a lacuna entre as linhas e o que acontece ao soltar.</summary>
+public sealed record MovimentoNoGantt(int Lacuna, Core.Edicao.PlanoDeMovimento Plano);

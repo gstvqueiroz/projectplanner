@@ -72,6 +72,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += ClicarNaTarefa; // Bloco 72: com Ctrl e Shift, a seleção múltipla
         Gantt.VazioClicado += () => TarefaSelecionada = null;
+        Gantt.PreverMovimento = lacuna => PreverMovimento(Selecionadas, lacuna); // Bloco 74: as regras da grade
+        Gantt.Mover = lacuna => MoverArrastando(Selecionadas, lacuna);
         Gantt.Ligacoes = this;
         Gantt.DicaDaTarefa = DicaDaTarefaNoGantt;
         Gantt.FotosPedidas += tarefaId => _ = MostrarFotosAsync(tarefaId);

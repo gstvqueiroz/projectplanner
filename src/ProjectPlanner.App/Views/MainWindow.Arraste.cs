@@ -179,6 +179,23 @@ public partial class MainWindow
         Grade.Cursor = null;
     }
 
+    // Bloco 74 (G4): arrastando uma barra na vertical no Gantt, a mesma guia azul aparece na grade, na mesma altura.
+    private void GuiaDoGanttMudou(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(GanttViewModel.MovimentoEmCurso) || _arrastadas is not null)
+            return;
+        if (_viewModel?.Gantt.MovimentoEmCurso is { Plano.Valido: true } movimento && AreaDasLinhas() is { } naJanela
+            && this.TranslatePoint(naJanela.TopLeft, GuiaDeArraste) is { } origem)
+        {
+            var area = new Rect(origem, naJanela.Size);
+            var y = area.Top + movimento.Lacuna * GanttViewModel.AlturaLinha - DeslocamentoVertical();
+            var esquerda = Math.Min(area.Right - 40, InicioDoNome(area.Left) + movimento.Plano.Nivel * ColunaNomeDaTarefa.RecuoPorNivel);
+            GuiaDeArraste.Mostrar(Math.Clamp(y, area.Top, area.Bottom), esquerda, area.Right);
+        }
+        else
+            GuiaDeArraste.Esconder();
+    }
+
     // Perto da borda de cima ou de baixo das linhas, a grid rola uma linha por vez (D8).
     private void RolarDuranteOArraste()
     {

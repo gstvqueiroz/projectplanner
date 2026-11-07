@@ -108,6 +108,15 @@ public partial class GanttChartView : UserControl
     private (Guid TarefaId, BordaDaBarra Borda)? _destinoPrevisto;
     private PrevisaoDeLigacao? _previsao;
 
+    // Bloco 74 (G3, G4): o arrasto do corpo de uma barra. Nos primeiros 8 px o eixo dominante é escolhido e fica até soltar: na
+    // vertical, reordena (as regras da grade); na horizontal, as datas mudam na grade (o Gantt não muda datas arrastando).
+    private const double TravaDoEixo = 8;
+    private enum EixoDoArraste { Nenhum, Indefinido, Vertical, Horizontal }
+    private EixoDoArraste _eixo;
+    private BarraGantt? _barraApertada;
+    private bool _selecionarAoSoltar;
+    private int? _lacunaDoArraste;
+
     public GanttChartView()
     {
         InitializeComponent();
@@ -655,9 +664,21 @@ public partial class GanttChartView : UserControl
         // A tecla de acrescentar à seleção é a da plataforma (⌘ no Mac, Ctrl no Windows), a mesma da grade.
         var comando = this.GetPlatformSettings()?.HotkeyConfiguration.CommandModifiers
                       ?? (Services.AtalhosDeTeclado.EhMac ? KeyModifiers.Meta : KeyModifiers.Control);
-        _viewModel.ClicarNaBarra(barra.TarefaId,
-            adicionar: alca is null && (teclas & comando) != 0,
-            intervalo: alca is null && teclas.HasFlag(KeyModifiers.Shift));
+        var semTeclas = (teclas & (comando | KeyModifiers.Shift)) == 0;
+        // Bloco 74: apertar numa barra já selecionada (de várias) deixa a seleção para o arrasto; sem arrastar, fica só ela.
+        _selecionarAoSoltar = alca is null && semTeclas && _viewModel.EstaDestacada(barra.TarefaId) && _viewModel.Destacadas.Count > 1;
+        if (!_selecionarAoSoltar)
+            _viewModel.ClicarNaBarra(barra.TarefaId,
+                adicionar: alca is null && (teclas & comando) != 0,
+                intervalo: alca is null && teclas.HasFlag(KeyModifiers.Shift));
+        if (alca is null && semTeclas)
+        {
+            _eixo = EixoDoArraste.Indefinido;
+            _barraApertada = barra;
+            _pontoDoClique = ponto;
+            _ponteiro = e.Pointer;
+            e.Pointer.Capture(Superficie);
+        }
         if (alca is not null)
         {
             // O ponteiro fica com a superfície (que nunca é redesenhada): o gesto continua mesmo que o mouse
@@ -677,6 +698,11 @@ public partial class GanttChartView : UserControl
             return;
 
         var ponto = e.GetPosition(Corpo);
+        if (_eixo != EixoDoArraste.Nenhum)
+        {
+            ArrastarABarra(layout, ponto);
+            return;
+        }
         switch (_arraste)
         {
             case EstadoDoArraste.Parado:
@@ -695,6 +721,16 @@ public partial class GanttChartView : UserControl
 
     private void SuperficieSolta(object? sender, PointerReleasedEventArgs e)
     {
+        if (_eixo != EixoDoArraste.Nenhum)
+        {
+            var (eixo, lacuna, barra, selecionar) = (_eixo, _lacunaDoArraste, _barraApertada, _selecionarAoSoltar);
+            EncerrarArraste();
+            if (eixo == EixoDoArraste.Vertical && lacuna is { } g)
+                _viewModel?.Mover?.Invoke(g);
+            else if (eixo == EixoDoArraste.Indefinido && selecionar && barra is not null)
+                _viewModel?.ClicarNaBarra(barra.TarefaId); // foi um clique numa das selecionadas: fica só ela
+            return;
+        }
         var (estado, origem) = (_arraste, _origem);
         EncerrarArraste();
         if (estado != EstadoDoArraste.Arrastando || origem is null || _viewModel?.Layout is not { } layout)
@@ -708,7 +744,7 @@ public partial class GanttChartView : UserControl
 
     private void TeclaApertada(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Escape || _arraste == EstadoDoArraste.Parado)
+        if (e.Key != Key.Escape || (_arraste == EstadoDoArraste.Parado && _eixo == EixoDoArraste.Nenhum))
             return;
         EncerrarArraste();
         e.Handled = true;
@@ -719,6 +755,9 @@ public partial class GanttChartView : UserControl
     {
         var ponteiro = _ponteiro;
         _arraste = EstadoDoArraste.Parado;
+        (_eixo, _barraApertada, _lacunaDoArraste, _selecionarAoSoltar) = (EixoDoArraste.Nenhum, null, null, false);
+        if (_viewModel is not null)
+            _viewModel.MovimentoEmCurso = null;
         _origem = null;
         _ponteiro = null;
         _destinoPrevisto = null;
@@ -789,6 +828,64 @@ public partial class GanttChartView : UserControl
         if (_previsao is not null)
             DesenharRotulo(_previsao, ponto);
         Superficie.Cursor = estado == EstadoDaLigacao.Invalida ? CursorProibido : CursorDeLigar;
+    }
+
+    // Bloco 74: o arrasto do corpo da barra, com a trava de eixo (G4). Na vertical, a guia azul na lacuna (a janela mostra a
+    // mesma na grade) e a etiqueta do que acontece; na horizontal, só a dica de onde as datas mudam.
+    private void ArrastarABarra(LayoutGantt layout, Point ponto)
+    {
+        if (_eixo == EixoDoArraste.Indefinido)
+        {
+            var (dx, dy) = (ponto.X - _pontoDoClique.X, ponto.Y - _pontoDoClique.Y);
+            if (Math.Max(Math.Abs(dx), Math.Abs(dy)) < TravaDoEixo)
+                return;
+            _eixo = Math.Abs(dy) >= Math.Abs(dx) ? EixoDoArraste.Vertical : EixoDoArraste.Horizontal;
+            ToolTip.SetServiceEnabled(Superficie, false);
+        }
+        Interacao.Children.Clear();
+        if (_eixo == EixoDoArraste.Horizontal)
+        {
+            DesenharEtiqueta("As datas mudam na grade (Início, Duração e Predecessoras)", ponto, Neutro);
+            Superficie.Cursor = CursorProibido;
+            return;
+        }
+        var linha = (int)Math.Floor(ponto.Y / GanttViewModel.AlturaLinha);
+        var lacuna = Math.Clamp(linha + (ponto.Y - linha * GanttViewModel.AlturaLinha >= GanttViewModel.AlturaLinha / 2 ? 1 : 0), 0, layout.Barras.Count);
+        _lacunaDoArraste = lacuna;
+        var plano = _viewModel?.PreverMovimento?.Invoke(lacuna);
+        _viewModel!.MovimentoEmCurso = plano is null ? null : new MovimentoNoGantt(lacuna, plano);
+        if (plano is { Valido: true })
+        {
+            var y = lacuna * GanttViewModel.AlturaLinha;
+            Interacao.Children.Add(new Line
+            {
+                StartPoint = new Point(0, y),
+                EndPoint = new Point(Corpo.Width, y),
+                Stroke = GuiaDeReordenacao.Cor,
+                StrokeThickness = 2,
+            });
+            DesenharEtiqueta(_viewModel.Destacadas.Count > 1 ? $"{_viewModel.Destacadas.Count} · {plano.Dica}" : plano.Dica, ponto, GuiaDeReordenacao.Cor);
+            Superficie.Cursor = new Cursor(StandardCursorType.SizeNorthSouth);
+        }
+        else
+        {
+            DesenharEtiqueta(plano?.Motivo ?? "Solte entre as linhas das tarefas", ponto, Critica);
+            Superficie.Cursor = CursorProibido;
+        }
+    }
+
+    private void DesenharEtiqueta(string texto, Point ponto, IBrush fundo)
+    {
+        var rotulo = new Border
+        {
+            Background = fundo,
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(8, 4),
+            Child = new TextBlock { Text = texto, Foreground = Brushes.White, FontSize = 11, TextWrapping = TextWrapping.Wrap, MaxWidth = 360 },
+        };
+        rotulo.Measure(Size.Infinity);
+        var x = Math.Max(0, Math.Min(ponto.X + 14, Corpo.Width - rotulo.DesiredSize.Width - 4));
+        Posicionar(Interacao, rotulo, x, ponto.Y + 18);
     }
 
     // Contorno em volta da barra de destino e, se ela aceita vínculos, as duas alças, com a que vale preenchida.

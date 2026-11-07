@@ -60,6 +60,7 @@ public partial class MainWindow : Window
             _viewModel.Assistente.PropertyChanged -= AssistenteMudou;
             _viewModel.Barra.Mudou -= AjustarBarra;
             LigarSelecaoAoViewModel(_viewModel, ligar: false);
+            _viewModel.Gantt.PropertyChanged -= GuiaDoGanttMudou;
         }
         base.OnDataContextChanged(e);
         _viewModel = DataContext as MainWindowViewModel;
@@ -74,6 +75,7 @@ public partial class MainWindow : Window
         _viewModel.PropertyChanged += ViewModelMudou;
         _viewModel.Assistente.PropertyChanged += AssistenteMudou;
         LigarSelecaoAoViewModel(_viewModel, ligar: true);
+        _viewModel.Gantt.PropertyChanged += GuiaDoGanttMudou; // Bloco 74
         AplicarSelecaoNaGrade();
         AplicarModoVisualizacao();
         AplicarPainelDoAssistente();

@@ -3,6 +3,20 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.74.0
+
+**Regras no gráfico de Gantt** (o plano "Delete, arrastar e Kanban", G1 a G5): no Gantt vale o mesmo que na grade.
+
+- **Seleção sincronizada:** a barra selecionada é a mesma tarefa da grade; Ctrl+clique (⌘ no Mac) e Shift+clique selecionam
+  várias; clicar numa área vazia limpa a seleção. O Delete exclui com o foco no Gantt, pelas mesmas regras da grade.
+- **Arrastar o corpo da barra na vertical reordena**, com as regras da grade (mantém o nível se couber; um resumo leva o grupo
+  inteiro; várias selecionadas vão juntas). A linha azul de destino atravessa a grade e o Gantt na mesma altura, com a
+  etiqueta do que acontece (ou do motivo do bloqueio).
+- **Trava de eixo:** nos primeiros 8 px o programa vê a direção dominante e trava esse eixo até soltar; um gesto meio diagonal
+  nunca muda posição e data ao mesmo tempo. Na horizontal o Gantt não muda datas (elas mudam na grade), e a dica diz isso.
+- No Gantt não há ajuste lateral de nível (o eixo horizontal é o tempo): para mudar o nível, use a grade ou Alt+Shift+→/←.
+- Arrastar pela ponta da barra continua criando vínculos; Esc cancela; Ctrl+Z desfaz.
+
 ## 0.73.0
 
 **Arrastar para mover na grade** (o plano "Delete, arrastar e Kanban", regras M1 a M7). Arrastar muda só a organização (a ordem

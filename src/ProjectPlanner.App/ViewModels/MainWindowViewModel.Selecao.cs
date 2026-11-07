@@ -60,7 +60,7 @@ public sealed partial class MainWindowViewModel
             DefinirSelecao(LinhasVisiveis.Skip(Math.Min(de, ate)).Take(Math.Abs(ate - de) + 1), linha);
         }
         else
-            TarefaSelecionada = linha;
+            DefinirSelecao([linha], linha); // também quando ela já era a principal de várias
     }
 
     /// <summary>Clique com o botão direito: numa tarefa fora da seleção, ela passa a ser a seleção; dentro, a seleção fica.</summary>

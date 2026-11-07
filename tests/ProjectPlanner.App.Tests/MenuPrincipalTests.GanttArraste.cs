@@ -48,7 +48,8 @@ public partial class MenuPrincipalTests
         Pintar(a);
 
         a.Vm.LinhasVisiveis.Select(l => l.Nome).Should().Equal("C", "A", "B", "D");
-        (a.Janela.GuiaDeArraste.Linha, a.Vm.Gantt.MovimentoEmCurso).Should().Be((((double, double, double)?)null, (ViewModels.MovimentoNoGantt?)null));
+        a.Janela.GuiaDeArraste.Linha.Should().BeNull();
+        a.Vm.Gantt.MovimentoEmCurso.Should().BeNull();
     });
 
     [Fact]

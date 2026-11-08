@@ -112,7 +112,8 @@ public sealed partial class GruposDoTelegramTests : IDisposable
         DoGrupo().Last().Should().StartWith("Só o dono da conta ProjectPlanner liga o grupo");
 
         await NoGrupo(Dono, "Ana", "/obra");
-        DoGrupo().Last().Should().Contain("1. Casa da Ana").And.Contain("/obra 1");
+        TodasDoGrupo().Last().Should().Contain("1. Casa da Ana").And.Contain("/obra 1");
+        _s.Telegram.ComBotoes.Last(m => m.Chat == Grupo).Botoes.Single().Dados.Should().Be("ob:1", "Bloco 85: a obra também num botão");
         await NoGrupo(Dono, "Ana", $"/obra@{Bot} 1");
 
         DoGrupo().Last().Should().StartWith("Pronto: este grupo é da obra Casa da Ana.");

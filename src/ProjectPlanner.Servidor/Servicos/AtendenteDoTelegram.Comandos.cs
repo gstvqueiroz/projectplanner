@@ -17,6 +17,14 @@ public sealed partial class AtendenteDoTelegram
     /// <summary>Os dados do botão Desfazer ("cx:" e o id do item da caixa).</summary>
     public const string PrefixoDaCaixa = "cx:";
 
+    /// <summary>Bloco 85: os botões do /obra ("ob:2" é a obra 2 da lista).</summary>
+    public const string PrefixoDaObra = "ob:";
+
+    /// <summary>As obras da lista do /obra, uma por linha (até 10; depois disso, pelo número).</summary>
+    private static List<BotaoDoTelegram> BotoesDasObras(IReadOnlyList<ObraNoServidor> obras, Guid? atual) =>
+        [.. obras.Take(10).Select((o, i) => new BotaoDoTelegram((o.Id == atual ? "✓ " : "🏗 ") + (o.Nome.Length > 40 ? o.Nome[..39] + "…" : o.Nome),
+            PrefixoDaObra + (i + 1).ToString(CultureInfo.InvariantCulture), i))];
+
     public const string NadaParaDesfazer =
         "Não há nada seu esperando na caixa. O que o programa já trouxe se desfaz lá (Editar > Desfazer).";
 
@@ -128,15 +136,16 @@ public sealed partial class AtendenteDoTelegram
             var comando = dados[AjudaDoTelegram.PrefixoDoComando.Length..];
             await telegram.ResponderAoBotaoAsync(consulta, AjudaDoTelegram.Atalhos.Contains(comando) ? "" : "Comando desconhecido.", c);
             if (AjudaDoTelegram.Atalhos.Contains(comando))
-            {
-                // O mesmo caminho de quem digita o comando (o limite por minuto, a obra do chat, o papel no grupo).
-                var aviso = new JsonObject
-                {
-                    ["message"] = new JsonObject { ["chat"] = JsonNode.Parse(chat.GetRawText()), ["from"] = JsonNode.Parse(de.GetRawText()), ["text"] = "/" + comando },
-                };
-                using var json = JsonDocument.Parse(aviso.ToJsonString());
-                await AtenderAsync(json.RootElement, c);
-            }
+                await ComoSeDigitasseAsync(chat, de, "/" + comando, c);
+            return true;
+        }
+        if (dados.StartsWith(PrefixoDaObra, StringComparison.Ordinal)) // Bloco 85: a obra tocada na lista do /obra
+        {
+            var numero = dados[PrefixoDaObra.Length..];
+            await telegram.ResponderAoBotaoAsync(consulta, int.TryParse(numero, out _) ? "" : "Botão desconhecido.", c);
+            // A lista fica com os botões (no grupo, quem não pode ligar a obra também toca; tocar de novo só escolhe de novo).
+            if (int.TryParse(numero, out _))
+                await ComoSeDigitasseAsync(chat, de, "/obra " + numero, c);
             return true;
         }
         if (dados.StartsWith(PrefixoDaCaixa, StringComparison.Ordinal))
@@ -145,6 +154,17 @@ public sealed partial class AtendenteDoTelegram
             return true;
         }
         return false;
+    }
+
+    // O mesmo caminho de quem digita o comando (o limite por minuto, a obra do chat, o papel no grupo, quem pode ligar o grupo).
+    private async Task ComoSeDigitasseAsync(JsonElement chat, JsonElement de, string texto, CancellationToken c)
+    {
+        var aviso = new JsonObject
+        {
+            ["message"] = new JsonObject { ["chat"] = JsonNode.Parse(chat.GetRawText()), ["from"] = JsonNode.Parse(de.GetRawText()), ["text"] = texto },
+        };
+        using var json = JsonDocument.Parse(aviso.ToJsonString());
+        await AtenderAsync(json.RootElement, c);
     }
 
     private async Task DesfazerPeloBotaoAsync(string consulta, string idDoItem, JsonElement mensagem, long chatId, long? idDaMensagem, long pessoaId,

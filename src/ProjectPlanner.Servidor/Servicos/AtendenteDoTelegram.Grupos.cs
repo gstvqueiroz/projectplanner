@@ -58,6 +58,8 @@ public sealed partial class AtendenteDoTelegram
                             && string.Equals(Texto(autorDaRespondida, "username"), NomeDoBot, StringComparison.OrdinalIgnoreCase) && NomeDoBot.Length > 0;
         var marcada = MarcaDeAtualizacao().IsMatch(texto);
         var temFoto = mensagem.TryGetProperty("photo", out var fotos) && fotos.ValueKind == JsonValueKind.Array && fotos.GetArrayLength() > 0;
+        // Bloco 85: um áudio só é para o bot quando responde a ele ou tem a marca ou a menção na legenda (os da equipe, não).
+        var audio = AudioDa(mensagem);
         if (comando is null && !mencao && !respostaAoBot && !marcada && !temFoto)
             return; // a conversa da equipe: não lê, não gasta
         if (!conversas.Permitir(chatId, agora, Config.MensagensPorMinuto))
@@ -130,7 +132,20 @@ public sealed partial class AtendenteDoTelegram
             if (!membro.Envia)
                 await telegram.EnviarAsync(chatId, SoQuemEnvia, c);
             else
+            {
                 await FotoAsync(chatId, pessoaId, dono, obra, fotos, Limpar(texto), agora, c, autor: nome);
+                // Bloco 85: a legenda com #atualizacao também anota o que ela conta.
+                if (marcada && Limpar(texto) is { Length: > 0 } legenda)
+                    await PerguntaAsync(chatId, pessoaId, dono, obra, legenda, agora, c, autor: nome);
+            }
+            return;
+        }
+        if (audio is not null)
+        {
+            if (marcada && !membro.Envia)
+                await telegram.EnviarAsync(chatId, SoQuemEnvia, c);
+            else
+                await AudioAsync(chatId, pessoaId, dono, obra, audio, agora, c, autor: nome, aceitaAtualizacoes: membro.Envia);
             return;
         }
         var limpo = Limpar(texto);
@@ -170,9 +185,9 @@ public sealed partial class AtendenteDoTelegram
         }
         if (!int.TryParse(argumento, out var numero) || numero < 1 || numero > obras.Count)
         {
-            await telegram.EnviarAsync(chatId, "Suas obras no Telegram:\n" +
+            await telegram.EnviarComBotoesAsync(chatId, "Suas obras no Telegram:\n" +
                 string.Join("\n", obras.Select((o, i) => $"{i + 1}. {o.Nome}{(o.Id == grupo?.ObraId ? " ← este grupo" : "")}")) +
-                "\n\nPara ligar este grupo, mande /obra e o número (por exemplo, /obra 1).", c);
+                "\n\nPara ligar este grupo, toque na obra (ou mande /obra e o número, por exemplo, /obra 1).", BotoesDasObras(obras, grupo?.ObraId), c);
             return;
         }
         var obra = obras[numero - 1];

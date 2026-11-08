@@ -362,6 +362,8 @@ clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.t
   (`AssistenteViewModel.MostrarDoTelegram`), conferido pelas tarefas do retrato daquele momento.
 - **Bloco 83:** a resposta lista o que ficou anotado (`ResumoDasAtualizacoes`, pelo pedido, não pelo texto da IA), com o
   botão Desfazer; a ajuda, o /resumo, o /hoje e o /atrasadas respondem sem a IA (ver SERVIDOR.md).
+- **Bloco 85:** o áudio é transcrito pelo Gemini (mesmo com o Padrão no Claude) e segue como texto; a foto com #atualizacao na
+  legenda também vai à IA.
 
 ## A IA no programa todo (Blocos 63 a 67)
 

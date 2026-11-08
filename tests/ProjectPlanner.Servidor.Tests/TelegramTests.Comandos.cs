@@ -69,7 +69,7 @@ public sealed partial class TelegramTests
 
         var menu = _s.Telegram.UltimaComBotoes;
         menu.Texto.Should().Be("👷 Assistente da obra no Telegram\nObra: Casa da Ana (/obra troca)\n\n" +
-                               "Escreva como falaria com o engenheiro: eu respondo e anoto. O que muda a obra fica na caixa de entrada, e você confere e " +
+                               "Escreva (ou mande um áudio) como falaria com o engenheiro: eu respondo e anoto. O que muda a obra fica na caixa de entrada, e você confere e " +
                                "aplica no programa (Conta > Buscar do Telegram).\n\nToque num assunto para ver exemplos:");
         menu.Botoes.GroupBy(b => b.Linha).Select(g => g.Count()).Should().Equal(2, 2, 2, 2, 3);
         menu.Botoes.Select(b => b.Dados).Should().Equal("aj:andamento", "aj:diario", "aj:fotos", "aj:custos", "aj:os", "aj:kanban", "aj:grupo",

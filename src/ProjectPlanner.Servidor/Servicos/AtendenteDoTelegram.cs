@@ -70,7 +70,7 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
 
     /// <summary>Bloco 83: a ajuda curta (a completa, com os assuntos, é o /ajuda).</summary>
     public const string Ajuda =
-        "Fale da obra como falaria com o engenheiro: \"a alvenaria está em 60%\", \"choveu à tarde e paramos\", " +
+        "Fale da obra (por escrito ou num áudio) como falaria com o engenheiro: \"a alvenaria está em 60%\", \"choveu à tarde e paramos\", " +
         "\"gastei R$ 1.200 de cimento na fundação\", \"o que está atrasado?\". Mande fotos com uma legenda, se quiser.\n\n" +
         "/ajuda mostra exemplos de cada assunto · /resumo, /hoje e /atrasadas respondem na hora, sem gastar créditos.";
 
@@ -176,7 +176,15 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
 
         if (mensagem.TryGetProperty("photo", out var fotos) && fotos.ValueKind == JsonValueKind.Array && fotos.GetArrayLength() > 0)
         {
-            await FotoAsync(chatId, chatId, usuario, obra, fotos, texto, agora, c);
+            await FotoAsync(chatId, chatId, usuario, obra, fotos, Limpar(texto), agora, c);
+            // Bloco 85: a legenda com #atualizacao também anota o que ela conta ("#atualizacao laje do 2º piso concretada").
+            if (MarcaDeAtualizacao().IsMatch(texto) && Limpar(texto) is { Length: > 0 } legenda)
+                await PerguntaAsync(chatId, chatId, usuario, obra, legenda, agora, c);
+            return;
+        }
+        if (AudioDa(mensagem) is { } audio) // Bloco 85: falar em vez de digitar
+        {
+            await AudioAsync(chatId, chatId, usuario, obra, audio, agora, c);
             return;
         }
         if (texto.Length == 0)
@@ -229,9 +237,9 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             return;
         }
         var atual = obras.FirstOrDefault(o => o.Id == vinculo.ObraAtiva) ?? obras[0];
-        await telegram.EnviarAsync(chatId, "Suas obras no Telegram:\n" +
+        await telegram.EnviarComBotoesAsync(chatId, "Suas obras no Telegram:\n" +
             string.Join("\n", obras.Select((o, i) => $"{i + 1}. {o.Nome}{(o.Id == atual.Id ? " ← agora" : "")}")) +
-            "\n\nPara trocar, mande /obra e o número (por exemplo, /obra 2).", c);
+            "\n\nPara trocar, toque na obra (ou mande /obra e o número, por exemplo, /obra 2).", BotoesDasObras(obras, atual.Id), c);
     }
 
     /// <param name="pessoaId">Bloco 83: quem mandou (o id no Telegram), para o /desfazer.</param>
@@ -282,8 +290,9 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
     /// <param name="pessoaId">Bloco 83: quem perguntou (o id no Telegram), para o /desfazer.</param>
     /// <param name="autor">Bloco 53: quem perguntou, num grupo (a IA e a caixa sabem quem foi).</param>
     /// <param name="aceitaAtualizacoes">Bloco 53: falso para quem só acompanha: as atualizações propostas não vão para a caixa.</param>
+    /// <param name="prefixo">Bloco 85: vai antes da resposta (a transcrição de um áudio).</param>
     private async Task PerguntaAsync(long chatId, long pessoaId, Usuario usuario, ObraNoServidor obra, string texto, DateTime agora, CancellationToken c,
-        string? autor = null, bool aceitaAtualizacoes = true)
+        string? autor = null, bool aceitaAtualizacoes = true, string? prefixo = null)
     {
         var planos = opcoes.Value.Planos;
         var saldo = await Rotas.Cotas.SaldoAsync(banco, usuario, planos, relogio);
@@ -369,10 +378,11 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         await Painel.ConferirAlertaAsync(banco, opcoes.Value, email, agora, log, c);
         conversas.Guardar(chatId, new MensagemChat(AutorMensagem.Usuario, ComAutor(autor, texto), relogio.GetLocalNow(), []),
             new MensagemChat(AutorMensagem.Assistente, resposta.Texto, relogio.GetLocalNow(), []));
+        mensagem = (prefixo ?? "") + (mensagem.Trim().Length == 0 ? "Anotado." : mensagem.TrimStart());
         if (item is null)
-            await telegram.EnviarAsync(chatId, mensagem.Length == 0 ? "Anotado." : mensagem, c);
+            await telegram.EnviarAsync(chatId, mensagem, c);
         else
-            await ConfirmarAsync(chatId, item, mensagem.TrimStart(), c);
+            await ConfirmarAsync(chatId, item, mensagem, c);
     }
 
     /// <summary>Bloco 82: o dia de um instante (UTC) no horário de Brasília (UTC−3, sem horário de verão desde 2019).</summary>

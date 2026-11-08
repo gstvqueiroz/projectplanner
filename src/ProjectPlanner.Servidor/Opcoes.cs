@@ -321,6 +321,9 @@ public sealed class OpcoesDoTelegram
     public string Endereco { get; set; } = "https://api.telegram.org/";
 
     public int MegabytesPorFoto { get; set; } = 10;
+
+    /// <summary>Bloco 85: a duração máxima de um áudio mandado ao bot (o tamanho segue o das fotos).</summary>
+    public int SegundosPorAudio { get; set; } = 180;
     public int FotosPendentesPorConta { get; set; } = 50;
     public int MensagensPorMinuto { get; set; } = 20;
 

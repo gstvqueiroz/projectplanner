@@ -239,7 +239,9 @@ public sealed partial class TelegramTests : IDisposable
         await Pedir(HttpMethod.Put, $"/v1/obras/{outra}", acesso, new { nome = "Galpão", retrato = Retrato() with { Nome = "Galpão" } });
 
         await Mandar("/obra");
-        _s.Telegram.Ultima.Should().Be("Suas obras no Telegram:\n1. Casa da Ana ← agora\n2. Galpão\n\nPara trocar, mande /obra e o número (por exemplo, /obra 2).");
+        _s.Telegram.UltimaComBotoes.Texto.Should().Be("Suas obras no Telegram:\n1. Casa da Ana ← agora\n2. Galpão\n\n" +
+                                                      "Para trocar, toque na obra (ou mande /obra e o número, por exemplo, /obra 2).");
+        _s.Telegram.UltimaComBotoes.Botoes.Should().Equal(new BotaoDoTelegram("✓ Casa da Ana", "ob:1", 0), new BotaoDoTelegram("🏗 Galpão", "ob:2", 1));
         await Mandar("/obra 2");
         _s.Telegram.Ultima.Should().Be("Obra: Galpão.");
         _s.Telegram.Arquivos["f"] = [1, 2, 3];

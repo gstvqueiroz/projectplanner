@@ -130,6 +130,7 @@ Tudo por variáveis de ambiente (a seção e a chave separadas por `__`). Nenhum
 | `Telegram__Segredo` | O segredo do webhook (o Render gera sozinho). O Telegram recebe o SHA-256 dele em hexadecimal, porque só aceita A-Z, a-z, 0-9, `_` e `-` (0.47.1) |
 | `Telegram__UrlPublica` | O endereço público do servidor; ao subir, o servidor registra o webhook do Telegram nele |
 | `Telegram__MegabytesPorFoto`, `Telegram__FotosPendentesPorConta`, `Telegram__MensagensPorMinuto` | Os limites (padrão 10, 50 e 20) |
+| `Telegram__SegundosPorAudio` | Bloco 85: a duração máxima de um áudio mandado ao bot (padrão 180; o tamanho segue o das fotos) |
 | `Planos__GratisCreditosPorMes`, `Planos__ProfissionalCreditosPorMes` | Os créditos por mês (padrão 300 e 6.000) |
 | `Planos__DolaresPorCredito` | Quanto de custo vale 1 crédito (padrão 0,0005, meio milésimo de dólar) |
 | `Planos__NiveisDoGratis` | Os níveis do plano Grátis, separados por vírgula (padrão `padrao`) |
@@ -565,6 +566,20 @@ Checks Pass**. Um commit com teste quebrado não vai ao ar; corrija e mande outr
   some com o botão da confirmação, por `editMessageReplyMarkup`). Os passos das OS não se desfazem por aqui. O `/caixa` lista
   o que espera: no privado, tudo da obra; no grupo, só o que veio dele.
 - Um comando que o bot não conhece, no privado, não vai mais à IA.
+
+## Bloco 85 (0.85.0): Telegram — áudio, foto com #atualizacao e /obra com botões
+
+- **Áudio** (`AtendenteDoTelegram.Audio`): a voz gravada (`voice`) ou um arquivo de áudio (`audio`) é baixado e transcrito pelo
+  Gemini mais barato com a chave configurada (o Claude não ouve áudio), num `generateContent` com o áudio em `inlineData`
+  (`audio/ogg` na voz; `audio/mpeg` vira `audio/mp3`) e o pedido de transcrição (`PromptDaTranscricao`). O texto segue como se
+  tivesse sido escrito, e a resposta começa pela transcrição ("🎤 …"), para a pessoa conferir. A transcrição passa pelo medidor
+  de tokens e gasta os créditos do dono (rotina "telegram"; o custo é contado pelo preço de entrada do modelo, e o Google pode
+  cobrar o áudio um pouco mais caro que o texto: cerca de 32 tokens por segundo de fala). No grupo, o áudio só é para o bot quando responde a ele (ou tem a
+  marca ou a menção na legenda); o da conversa da equipe nem é baixado. Sem a chave do Gemini, o bot pede para escrever.
+- **Foto com #atualizacao na legenda**, no privado e no grupo: a foto vai para a caixa, como sempre, e a legenda (sem a marca)
+  vai à IA, como uma mensagem com #atualizacao. Sem a marca, a legenda só acompanha a foto (não gasta).
+- **/obra com botões**: a lista das obras vem com um botão por obra (até 10; `ob:<n>`); o toque passa pelo mesmo caminho de
+  quem digita `/obra n` (no grupo, só o dono liga).
 
 ## Depois
 

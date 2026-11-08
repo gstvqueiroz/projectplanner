@@ -67,11 +67,12 @@ public static class AjudaDoTelegram
         var daObra = obra is null ? "" : $"\nObra: {obra}" + (grupo ? "" : " (/obra troca)");
         return grupo
             ? $"👷 Assistente da obra neste grupo{daObra}\n\n" +
-              $"O bot só lê o que é para ele: fotos, mensagens com #atualizacao, mensagens que o marcam ({Arroba(bot)}) e respostas a ele. " +
+              $"O bot só lê o que é para ele: fotos, mensagens com #atualizacao, mensagens que o marcam ({Arroba(bot)}) e respostas a ele " +
+              "(também em áudio). " +
               "A conversa da equipe ele não lê. O que muda a obra vai para a caixa, e o dono confere e aplica no programa.\n\n" +
               "Toque num assunto para ver exemplos:"
             : $"👷 Assistente da obra no Telegram{daObra}\n\n" +
-              "Escreva como falaria com o engenheiro: eu respondo e anoto. O que muda a obra fica na caixa de entrada, e você confere e " +
+              "Escreva (ou mande um áudio) como falaria com o engenheiro: eu respondo e anoto. O que muda a obra fica na caixa de entrada, e você confere e " +
               "aplica no programa (Conta > Buscar do Telegram).\n\n" +
               "Toque num assunto para ver exemplos:";
     }
@@ -118,7 +119,8 @@ public static class AjudaDoTelegram
                 "Mande as fotos da obra aqui, como foto (não como arquivo), com uma legenda se quiser: \"laje do 2º piso concretada\".\n\n" +
                 "Elas ficam na caixa da obra. No programa, ao buscar do Telegram, a IA sugere a tarefa, a legenda e o local de cada foto, e " +
                 "você confere antes de importar.\n\n" +
-                "#os14 na legenda liga a foto à OS 14.",
+                "#os14 na legenda liga a foto à OS 14. Com #atualizacao na legenda, eu também anoto o que ela conta (\"#atualizacao laje do " +
+                "2º piso concretada\").",
             "custos" =>
                 "💰 Custos e medições\n\n" +
                 "• \"gastei R$ 1.200 de cimento na fundação\"\n" +

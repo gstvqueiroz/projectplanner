@@ -31,7 +31,8 @@ public sealed partial class GruposDoTelegramTests
         await Ligar();
         var depoisDeLigar = UltimaComBotoesDoGrupo();
         depoisDeLigar.Texto.Should().StartWith("👷 Assistente da obra neste grupo\nObra: Casa da Ana\n\n" +
-                                                $"O bot só lê o que é para ele: fotos, mensagens com #atualizacao, mensagens que o marcam (@{Bot}) e respostas a ele.");
+                                                $"O bot só lê o que é para ele: fotos, mensagens com #atualizacao, mensagens que o marcam (@{Bot}) e respostas a ele " +
+                                                "(também em áudio).");
 
         await NoGrupo(Joao, "João", $"/ajuda@{Bot}");
         var menu = UltimaComBotoesDoGrupo();
@@ -48,6 +49,47 @@ public sealed partial class GruposDoTelegramTests
         await TocarNoGrupo(Joao, "João", "cmd:hoje", menu.Id);
         DoGrupo().Last().Should().StartWith("📅 Hoje, domingo 18/10 — Casa da Ana\nHoje não é dia de trabalho no calendário da obra.");
         _s.Gemini.Pedidos.Should().BeEmpty("nada disso usa a IA");
+    }
+
+    // Bloco 85: o áudio no grupo só é para o bot quando responde a ele (o da equipe é ignorado); a foto com #atualizacao também anota.
+    [Fact]
+    public async Task Audio_NoGrupo_SoQuandoEParaOBot_EAFotoComAMarcaAnota()
+    {
+        await Ligar();
+        _s.Telegram.Arquivos["voz"] = [1, 2, 3];
+        _s.Telegram.Arquivos["foto-1"] = [4, 5, 6];
+        var voz = new JsonObject { ["voice"] = new JsonObject { ["file_id"] = "voz", ["duration"] = 5 } };
+        var antes = TodasDoGrupo().Count;
+
+        await NoGrupo(Joao, "João", null, extra: voz);
+        (TodasDoGrupo().Count, _s.Gemini.Pedidos.Count).Should().Be((antes, 0), "o áudio da equipe, sem ser para o bot, nem é baixado");
+
+        _s.Gemini.Proximas.Enqueue(Resposta("quanto falta da alvenaria?"));
+        _s.Gemini.Proximas.Enqueue(Resposta("""{"mensagem":"Faltam 60%.","alteracoes":[]}"""));
+        await NoGrupo(Joao, "João", null, respondendo: Pessoa(1, Bot, Bot, bot: true), extra: voz);
+        TodasDoGrupo().Last().Should().Be("🎤 \"quanto falta da alvenaria?\"\n\nFaltam 60%.");
+        JsonNode.Parse(_s.Gemini.Pedidos.Last().Corpo)!["contents"]!.AsArray()[^1]!["parts"]![0]!["text"]!.GetValue<string>()
+            .Should().Be("João: quanto falta da alvenaria?");
+
+        _s.Gemini.Resposta = Resposta("""{"mensagem":"Anotei.","alteracoes":[],"atualizacoes":[{"tipo":"percentual","tarefa":"1","percentual":70}]}""");
+        await NoGrupo(Joao, "João", "#atualizacao alvenaria em 70%", foto: "foto-1");
+        _s.NoBanco(b => b.CaixaDeEntrada.OrderBy(i => i.Tipo).Select(i => i.Tipo + "|" + i.Texto).ToList())
+            .Should().Equal("atualizacoes|João: alvenaria em 70%", "foto|João: alvenaria em 70%");
+    }
+
+    [Fact]
+    public async Task ObraDoGrupo_PeloBotao_SoODonoLiga()
+    {
+        await Preparar();
+        await NoGrupo(Dono, "Ana", "/obra");
+        var lista = UltimaComBotoesDoGrupo();
+
+        await TocarNoGrupo(Joao, "João", "ob:1", lista.Id, lista.Texto);
+        DoGrupo().Last().Should().StartWith("Só o dono da conta ProjectPlanner liga o grupo");
+        await TocarNoGrupo(Dono, "Ana", "ob:1", lista.Id, lista.Texto);
+
+        DoGrupo().Last().Should().StartWith("Pronto: este grupo é da obra Casa da Ana.");
+        _s.NoBanco(b => b.GruposDoTelegram.Single().ChatId).Should().Be(Grupo);
     }
 
     [Fact]

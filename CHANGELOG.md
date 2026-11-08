@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.85.0
+
+**Telegram: áudio, foto com #atualizacao e a obra num toque.** Vale depois da atualização do servidor no Render.
+
+- **Mande um áudio em vez de digitar.** O bot ouve (o Gemini transcreve), responde e anota como se você tivesse escrito, e a
+  resposta começa pelo que ele entendeu ("🎤 \"fizemos 20 m² de reboco hoje\""), para você conferir. Áudios de até 3
+  minutos; a transcrição gasta poucos créditos (menos de um centavo de dólar por minuto de fala). No grupo da obra, o áudio só
+  é lido quando responde a uma mensagem do bot; os áudios da conversa da equipe são ignorados e não gastam nada.
+- **Foto com #atualizacao na legenda:** além de guardar a foto, o bot anota o que a legenda conta ("#atualizacao laje do 2º
+  piso concretada"), no chat privado e no grupo. Sem a marca, a legenda só acompanha a foto, como antes.
+- **/obra com botões:** a lista das obras vem com um botão para cada uma; no grupo, só o dono liga o grupo à obra.
+- A ajuda (/ajuda) fala do áudio e da marca na legenda das fotos.
+
 ## 0.84.0
 
 **O andamento pela quantidade executada.** Conte quanto foi feito ("fizemos 20 m² de reboco hoje"), no programa ou no

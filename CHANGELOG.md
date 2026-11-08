@@ -3,6 +3,11 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.80.1
+
+- **Servidor do Telegram:** a fila de mensagens agora é atendida uma de cada vez. Duas rotinas atendendo ao mesmo tempo podiam
+  pegar a mesma mensagem e responder duas vezes (apareceu num teste automático que falhava de vez em quando).
+
 ## 0.80.0
 
 **O Kanban pela IA, no programa e no Telegram.** O assistente agora mexe no quadro com o tipo de atualização "quadro", que

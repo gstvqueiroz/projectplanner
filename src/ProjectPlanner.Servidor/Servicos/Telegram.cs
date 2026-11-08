@@ -179,8 +179,25 @@ public sealed class ProcessadorDoTelegram(FilaDoTelegram fila, IServiceScopeFact
         }
     }
 
+    // Um atendimento de cada vez: duas chamadas ao mesmo tempo (a rotina do servidor e outra) pegariam o mesmo aviso e
+    // responderiam duas vezes.
+    private readonly SemaphoreSlim _umDeCadaVez = new(1, 1);
+
     /// <summary>Atende tudo o que está na fila (antes, os vencidos saem do banco e os que já caíram duas vezes saem da fila).</summary>
     public async Task AtenderOsGuardadosAsync(CancellationToken parar)
+    {
+        await _umDeCadaVez.WaitAsync(parar);
+        try
+        {
+            await AtenderAsync(parar);
+        }
+        finally
+        {
+            _umDeCadaVez.Release();
+        }
+    }
+
+    private async Task AtenderAsync(CancellationToken parar)
     {
         while (true)
         {

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -239,6 +240,33 @@ public sealed partial class TelegramTests
                                                       "Confira e aplique no programa (Conta > Buscar do Telegram).");
         var instrucoes = JsonNode.Parse(_s.Gemini.Pedidos.Last().Corpo)!["systemInstruction"]!["parts"]![0]!["text"]!.GetValue<string>();
         instrucoes.Should().Contain("ANDAMENTO POR QUANTIDADE").And.Contain("- 2 (2 Alvenaria): 120 m²; executado 48");
+    }
+
+    // Bloco 86: o programa conta o que fez com o cartão, e o aviso responde à confirmação do bot no chat de onde ele veio.
+    [Fact]
+    public async Task AvisoDoPrograma_RespondeAConfirmacao_NoChatDeOrigem()
+    {
+        var acesso = await Preparar();
+        _s.Gemini.Resposta = RespostaComAtualizacao;
+        await Mandar("a alvenaria está em 60%");
+        var confirmacao = _s.Telegram.UltimaComBotoes;
+        var item = JsonDocument.Parse(await Pedir(HttpMethod.Get, $"/v1/obras/{Projeto}/caixa", acesso)).RootElement[0];
+        (item.GetProperty("chat").GetInt64(), item.GetProperty("mensagem").GetInt64()).Should().Be((Chat, confirmacao.Id), "a origem vai ao programa");
+        var rota = $"/v1/obras/{Projeto}/telegram/aviso";
+
+        await Pedir(HttpMethod.Post, rota, acesso, new { chat = Chat, mensagem = confirmacao.Id, situacao = "aplicado", texto = "• 2 Alvenaria: 40% → 60% concluído" },
+            HttpStatusCode.NoContent);
+        _s.Telegram.Respostas.Last().Should().Be((Chat, confirmacao.Id, "✅ Aplicado no programa:\n• 2 Alvenaria: 40% → 60% concluído"));
+        _s.Telegram.SemBotoes.Should().Contain((Chat, confirmacao.Id), "o Desfazer não vale mais: já está no programa");
+
+        await Pedir(HttpMethod.Post, rota, acesso, new { chat = Chat, mensagem = confirmacao.Id, situacao = "descartado", texto = "" }, HttpStatusCode.NoContent);
+        _s.Telegram.Respostas.Last().Texto.Should().Be("↩️ Descartado no programa: nada disso mudou a obra.");
+        await Pedir(HttpMethod.Post, rota, acesso, new { chat = Chat, situacao = "recusado", texto = "A tarefa não existe mais." }, HttpStatusCode.NoContent);
+        _s.Telegram.Ultima.Should().Be("⚠️ O programa não conseguiu aplicar: A tarefa não existe mais.", "sem a mensagem, manda sem responder");
+
+        await Pedir(HttpMethod.Post, rota, acesso, new { chat = 123_456, mensagem = 1, situacao = "aplicado", texto = "x" }, HttpStatusCode.NotFound);
+        await Pedir(HttpMethod.Post, rota, acesso, new { chat = Chat, situacao = "talvez" }, HttpStatusCode.BadRequest);
+        await Pedir(HttpMethod.Post, $"/v1/obras/{Guid.NewGuid()}/telegram/aviso", acesso, new { chat = Chat, situacao = "aplicado" }, HttpStatusCode.NotFound);
     }
 
     [Fact]

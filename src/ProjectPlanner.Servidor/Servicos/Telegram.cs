@@ -26,6 +26,9 @@ public interface IClienteDoTelegram
     /// <summary>Bloco 83: tira os botões de uma mensagem já mandada (o texto fica).</summary>
     Task TirarBotoesAsync(long chat, long mensagem, CancellationToken c);
 
+    /// <summary>Bloco 86: manda respondendo a uma mensagem (se ela não existe mais, manda assim mesmo).</summary>
+    Task EnviarRespondendoAsync(long chat, long mensagem, string texto, CancellationToken c);
+
     /// <summary>Bloco 59: responde ao toque num botão (o aviso rápido no alto da tela de quem tocou).</summary>
     Task ResponderAoBotaoAsync(string consulta, string texto, CancellationToken c);
 
@@ -89,6 +92,14 @@ public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<Opco
             new { chat_id = chat, message_id = mensagem, text = Cortar(texto), reply_markup = Teclado(botoes) }, c);
         if (!r.IsSuccessStatusCode) // inclusive "message is not modified", quando nada mudou
             log.LogInformation("O Telegram não editou a mensagem ({Status})", (int)r.StatusCode);
+    }
+
+    public async Task EnviarRespondendoAsync(long chat, long mensagem, string texto, CancellationToken c)
+    {
+        using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("sendMessage"),
+            new { chat_id = chat, text = Cortar(texto), reply_parameters = new { message_id = mensagem, allow_sending_without_reply = true } }, c);
+        if (!r.IsSuccessStatusCode)
+            log.LogWarning("O Telegram recusou a resposta ({Status})", (int)r.StatusCode);
     }
 
     public async Task TirarBotoesAsync(long chat, long mensagem, CancellationToken c)

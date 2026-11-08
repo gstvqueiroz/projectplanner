@@ -112,6 +112,17 @@ public sealed class TelegramDeTeste : IClienteDoTelegram
         return Task.FromResult<long?>(id);
     }
 
+    /// <summary>Bloco 86: as respostas a uma mensagem (o chat, a mensagem respondida e o texto); também vão em Mensagens e Todas.</summary>
+    public ConcurrentQueue<(long Chat, long Mensagem, string Texto)> Respostas { get; } = new();
+
+    public Task EnviarRespondendoAsync(long chat, long mensagem, string texto, CancellationToken c)
+    {
+        Respostas.Enqueue((chat, mensagem, texto));
+        Mensagens.Enqueue((chat, texto));
+        Todas.Enqueue((chat, texto));
+        return Task.CompletedTask;
+    }
+
     /// <summary>Bloco 83: as mensagens que perderam os botões (o chat e o id).</summary>
     public ConcurrentQueue<(long Chat, long Mensagem)> SemBotoes { get; } = new();
 

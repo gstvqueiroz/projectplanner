@@ -98,8 +98,11 @@ public sealed record TarefaDoTelegram(int Numero, Guid Id);
 public sealed record EventoDeOrdemDoTelegram(Guid Ordem, string Acao, string Autor, DateTime Quando, string? Motivo);
 
 /// <summary>Bloco 49: o que chegou pelo Telegram: atualizações (para o cartão), uma foto ou (Bloco 59) um passo de uma OS.</summary>
+/// <param name="Chat">Bloco 86: o chat de onde veio (nulo num servidor de antes), para o aviso de volta.</param>
+/// <param name="Mensagem">Bloco 86: a confirmação do bot no chat, que o aviso responde.</param>
 public sealed record ItemDoTelegram(Guid Id, string Tipo, DateTime CriadoEm, string Texto, string? NomeDaFoto,
-    IReadOnlyList<AtualizacaoDaObra>? Atualizacoes, IReadOnlyList<TarefaDoTelegram>? Tarefas, EventoDeOrdemDoTelegram? Ordem = null)
+    IReadOnlyList<AtualizacaoDaObra>? Atualizacoes, IReadOnlyList<TarefaDoTelegram>? Tarefas, EventoDeOrdemDoTelegram? Ordem = null,
+    long? Chat = null, long? Mensagem = null)
 {
     public const string DeAtualizacoes = "atualizacoes";
     public const string DeFoto = "foto";
@@ -265,6 +268,13 @@ public sealed class ClienteDaConta
     public Task<OrdemPublicada> PublicarOrdemAsync(string acesso, Guid projeto, Guid ordem, int numero, string titulo, string texto, string situacao,
         CancellationToken c) =>
         PedirAsync<OrdemPublicada>(HttpMethod.Put, $"v1/obras/{projeto}/ordens/{ordem}", new { numero, titulo, texto, situacao }, acesso, c);
+
+    /// <summary>
+    /// Bloco 86: o que o programa fez com o que veio de um chat (aplicado, descartado ou recusado, com o texto): o servidor
+    /// responde à confirmação do bot naquele chat.
+    /// </summary>
+    public async Task AvisarNoTelegramAsync(string acesso, Guid projeto, long chat, long? mensagem, string situacao, string texto, CancellationToken c) =>
+        await PedirAsync<JsonElement?>(HttpMethod.Post, $"v1/obras/{projeto}/telegram/aviso", new { chat, mensagem, situacao, texto }, acesso, c);
 
     /// <summary>O programa levou o item: ele some do servidor.</summary>
     public async Task LevarDaCaixaAsync(string acesso, Guid item, CancellationToken c) =>

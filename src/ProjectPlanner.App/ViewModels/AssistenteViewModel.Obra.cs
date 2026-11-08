@@ -32,6 +32,9 @@ public sealed partial class CartaoDeAtualizacoes : ObservableObject
     public CartaoDeAtualizacoes(IReadOnlyList<ItemDoCartao> itens) =>
         Itens = [.. itens.Select(i => new ItemDoCartaoNaTela(i))];
 
+    /// <summary>Bloco 86: o chat do Telegram de onde o cartão veio (nulo no chat do programa): ele fica sabendo o que foi feito.</summary>
+    public OrigemNoTelegram? Origem { get; init; }
+
     public IReadOnlyList<ItemDoCartaoNaTela> Itens { get; }
 
     public IReadOnlyList<OperacaoDaObra> Operacoes => [.. Itens.Where(i => i.Item.Valido).Select(i => i.Item.Operacao!)];
@@ -91,11 +94,12 @@ public sealed partial class AssistenteViewModel
     /// Bloco 49: uma mensagem que chegou pelo Telegram, com as atualizações que o assistente propôs lá, como um cartão para
     /// conferir e aplicar (igual ao do chat).
     /// </summary>
-    public void MostrarDoTelegram(string texto, DateTime chegouEm, IReadOnlyList<ItemDoCartao> itens)
+    /// <param name="origem">Bloco 86: o chat de onde veio, para o aviso de volta ao aplicar ou descartar.</param>
+    public void MostrarDoTelegram(string texto, DateTime chegouEm, IReadOnlyList<ItemDoCartao> itens, OrigemNoTelegram? origem = null)
     {
         var quando = new DateTimeOffset(DateTime.SpecifyKind(chegouEm, DateTimeKind.Utc)).ToLocalTime();
         Acrescentar(new MensagemChat(AutorMensagem.Assistente, $"Do Telegram, em {quando:dd/MM HH:mm}: \"{texto}\"", quando, []),
-            cartao: new CartaoDeAtualizacoes(itens));
+            cartao: new CartaoDeAtualizacoes(itens) { Origem = origem });
     }
 
     /// <summary>Aplica as atualizações válidas do cartão (todas juntas, num passo do Desfazer).</summary>
@@ -118,15 +122,22 @@ public sealed partial class AssistenteViewModel
         else
             (cartao.Motivo, cartao.Estado) = (resultado.Texto, EstadoDoCartao.Recusado);
         GuardarCartao(cartao);
+        if (cartao.Origem is { } origem) // Bloco 86: o chat de onde veio fica sabendo
+            await _cronograma.AvisarNoTelegramAsync(origem, cartao.Estado == EstadoDoCartao.Aplicado ? "aplicado" : "recusado",
+                cartao.Estado == EstadoDoCartao.Aplicado
+                    ? string.Join("\n", cartao.Itens.Where(i => i.Item.Valido).Select(i => "• " + i.Texto))
+                    : resultado.Texto);
     }
 
     [RelayCommand]
-    private void DescartarCartao(CartaoDeAtualizacoes? cartao)
+    private async Task DescartarCartao(CartaoDeAtualizacoes? cartao)
     {
         if (cartao is not { Pendente: true })
             return;
         cartao.Estado = EstadoDoCartao.Descartado;
         GuardarCartao(cartao);
+        if (cartao.Origem is { } origem) // Bloco 86
+            await _cronograma.AvisarNoTelegramAsync(origem, "descartado", "");
     }
 
     /// <summary>Abre de novo a tela que o assistente abriu (o botão na mensagem).</summary>

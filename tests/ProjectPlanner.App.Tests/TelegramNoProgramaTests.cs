@@ -113,6 +113,41 @@ public sealed partial class TelegramNoProgramaTests : IDisposable
         _vm.Cronograma.Tarefas.Single(t => t.Nome == "Alvenaria").PercentualConcluido.Should().Be(60);
     }
 
+    // Bloco 86: o cartão que veio de um chat avisa o chat ao ser aplicado ou descartado; sem a origem (um servidor de antes), ou sem
+    // internet na hora, fica só no programa.
+    [Fact]
+    public async Task CartaoDoTelegram_AplicadoOuDescartado_AvisaOChatDeOrigem()
+    {
+        _ambiente.Conta.Conectar(plano: "profissional");
+        await _vm.UsarObraNoTelegramCommand.ExecuteAsync(null);
+        ItemDoTelegram Item(string texto, string tarefa, decimal percentual, long? chat, long? mensagem) =>
+            new(Guid.NewGuid(), ItemDoTelegram.DeAtualizacoes, DateTime.UtcNow, texto, null,
+                [new AtualizacaoDaObra(TiposDeAtualizacao.Percentual, tarefa, Percentual: percentual)],
+                [new TarefaDoTelegram(int.Parse(tarefa, System.Globalization.CultureInfo.InvariantCulture), IdDe(tarefa == "1" ? "Fundação" : "Alvenaria"))],
+                Chat: chat, Mensagem: mensagem);
+        _ambiente.Telegram.Caixas[Projeto] =
+        [
+            Item("a alvenaria está em 60%", "2", 60, 777, 1001),
+            Item("a fundação acabou", "1", 100, -500, 1002),
+            Item("de um servidor de antes", "1", 50, null, null),
+            Item("sem internet na hora", "2", 70, 777, 1003),
+        ];
+        await _vm.BuscarDoTelegramCommand.ExecuteAsync(null);
+        var cartoes = _vm.Assistente.Mensagens.Where(m => m.Cartao is not null).Select(m => m.Cartao!).ToList();
+
+        await _vm.Assistente.AplicarCartaoCommand.ExecuteAsync(cartoes[0]);
+        await _vm.Assistente.DescartarCartaoCommand.ExecuteAsync(cartoes[1]);
+        await _vm.Assistente.AplicarCartaoCommand.ExecuteAsync(cartoes[2]);
+        _ambiente.Telegram.Erro = new ErroDaContaException("Sem conexão com o servidor.", 0);
+        await _vm.Assistente.AplicarCartaoCommand.ExecuteAsync(cartoes[3]);
+
+        _ambiente.Telegram.Avisos.Should().Equal(
+            (Projeto, 777L, (long?)1001, "aplicado", "• 2 Alvenaria: 0% → 60% concluído"),
+            (Projeto, -500L, (long?)1002, "descartado", ""));
+        cartoes.Select(c => c.Estado).Should().Equal(EstadoDoCartao.Aplicado, EstadoDoCartao.Descartado, EstadoDoCartao.Aplicado, EstadoDoCartao.Aplicado);
+        _vm.Cronograma.Tarefas.Single(t => t.Nome == "Alvenaria").PercentualConcluido.Should().Be(70, "sem internet, o aviso não vai, mas o cartão vale");
+    }
+
     [Fact]
     public async Task Buscar_NadaNovo_FotoQueSumiu_ESemInternet()
     {

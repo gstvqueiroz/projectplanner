@@ -84,6 +84,7 @@ Erros sempre como `{"erro": "mensagem para o usuário"}`.
 | `GET /v1/telegram`, `POST /v1/telegram/codigo`, `DELETE /v1/telegram` | Bloco 49: se a conta está ligada a um chat; o código (8 letras, 15 min) e o link `t.me/…?start=`; desligar |
 | `GET /v1/obras`, `PUT /v1/obras/{projeto}`, `DELETE /v1/obras/{projeto}` | Bloco 49: as obras marcadas para o Telegram (com o retrato que o programa manda) e quantos itens esperam |
 | `GET /v1/obras/{projeto}/caixa`, `GET /v1/caixa/{id}/foto`, `DELETE /v1/caixa/{id}` | Bloco 49: a caixa de entrada (atualizações e fotos), a foto e "o programa levou" |
+| `POST /v1/obras/{projeto}/telegram/aviso` | Bloco 86: `{chat, mensagem, situacao, texto}`: o programa aplicou, descartou ou não conseguiu aplicar o cartão que veio desse chat; o bot responde à confirmação (204) |
 | `GET /admin` | Bloco 48: a página do painel financeiro (sem dados; pede a chave de admin) |
 | `GET /v1/admin/painel?de=AAAA-MM-DD&ate=AAAA-MM-DD` | Bloco 48: com `X-Chave-Admin`, os números do período (padrão: o mês até hoje; até 366 dias) |
 
@@ -580,6 +581,17 @@ Checks Pass**. Um commit com teste quebrado não vai ao ar; corrija e mande outr
   vai à IA, como uma mensagem com #atualizacao. Sem a marca, a legenda só acompanha a foto (não gasta).
 - **/obra com botões**: a lista das obras vem com um botão por obra (até 10; `ob:<n>`); o toque passa pelo mesmo caminho de
   quem digita `/obra n` (no grupo, só o dono liga).
+
+## Bloco 86 (0.86.0): o aviso de volta ao Telegram
+
+- A caixa (`GET /v1/obras/{projeto}/caixa`) passou a dizer de que chat veio cada item e qual é a confirmação do bot nele (`chat`
+  e `mensagem`).
+- Quando o usuário aplica, descarta ou não consegue aplicar no programa um cartão que veio do Telegram, o programa chama
+  `POST /v1/obras/{projeto}/telegram/aviso` com a situação (`aplicado`, `descartado` ou `recusado`) e o texto (os itens
+  aplicados ou o motivo). O bot responde à confirmação naquele chat ("✅ Aplicado no programa: …"; no grupo, "✅ Ana aplicou no
+  programa: …") e tira o botão Desfazer dela. Só vale para um chat da conta: o privado ligado a ela ou um grupo daquela obra.
+- Sem internet na hora, o aviso não vai, e o que foi feito no programa continua valendo. Um servidor de antes não manda o chat,
+  e o programa não avisa.
 
 ## Depois
 

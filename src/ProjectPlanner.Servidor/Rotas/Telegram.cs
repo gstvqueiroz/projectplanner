@@ -14,6 +14,20 @@ public sealed record PedidoDeObra(string? Nome, JsonElement Retrato);
 public sealed record PedidoDeOrdem(int Numero, string? Titulo, string? Texto, string? Situacao);
 
 /// <summary>
+/// Bloco 86: o que o programa fez com um cartão que veio de um chat: <see cref="AvisoDoPrograma.Aplicado"/>,
+/// <see cref="AvisoDoPrograma.Descartado"/> ou <see cref="AvisoDoPrograma.Recusado"/> (o programa não conseguiu aplicar), com o
+/// texto (o que foi aplicado, ou o motivo). O aviso responde à mensagem de confirmação do bot.
+/// </summary>
+public sealed record PedidoDeAviso(long Chat, long? Mensagem, string? Situacao, string? Texto);
+
+public static class AvisoDoPrograma
+{
+    public const string Aplicado = "aplicado";
+    public const string Descartado = "descartado";
+    public const string Recusado = "recusado";
+}
+
+/// <summary>
 /// Bloco 49: o Telegram. O webhook recebe as mensagens (conferindo o segredo) e as põe na fila do atendente; o programa marca
 /// as obras (com o retrato), liga o Telegram com um código e leva o que chegou na caixa de entrada.
 /// </summary>
@@ -38,6 +52,7 @@ public static class Telegram
         conta.MapGet("/caixa/{id:guid}/foto", Foto);
         conta.MapDelete("/caixa/{id:guid}", Levar);
         conta.MapPut("/obras/{projeto:guid}/ordens/{id:guid}", PublicarOrdem); // Bloco 59
+        conta.MapPost("/obras/{projeto:guid}/telegram/aviso", Avisar); // Bloco 86
     }
 
     /// <summary>O aviso do Telegram: confere o segredo, guarda na fila (no banco, Bloco 69) e responde na hora; o atendimento é na fila.</summary>
@@ -181,10 +196,11 @@ public static class Telegram
         if (await banco.Obras.FirstOrDefaultAsync(o => o.UsuarioId == usuario!.Id && o.Projeto == projeto) is not { } obra)
             return Results.Ok(Array.Empty<object>());
         var itens = await banco.CaixaDeEntrada.Where(i => i.ObraId == obra.Id).OrderBy(i => i.CriadoEm)
-            .Select(i => new { i.Id, i.Tipo, i.CriadoEm, i.Texto, i.Conteudo, i.Tarefas, i.NomeDaFoto }).ToListAsync();
+            .Select(i => new { i.Id, i.Tipo, i.CriadoEm, i.Texto, i.Conteudo, i.Tarefas, i.NomeDaFoto, i.ChatId, i.MensagemId }).ToListAsync();
         return Results.Ok(itens.Select(i => new
         {
             id = i.Id, tipo = i.Tipo, criadoEm = i.CriadoEm, texto = i.Texto, nomeDaFoto = i.NomeDaFoto,
+            chat = i.ChatId, mensagem = i.MensagemId, // Bloco 86: para o aviso de volta
             atualizacoes = i.Conteudo is null || i.Tipo == ItemDaCaixa.DeOrdem ? (JsonElement?)null : JsonDocument.Parse(i.Conteudo).RootElement.Clone(),
             ordem = i.Conteudo is null || i.Tipo != ItemDaCaixa.DeOrdem ? (JsonElement?)null : JsonDocument.Parse(i.Conteudo).RootElement.Clone(),
             tarefas = i.Tarefas is null ? (JsonElement?)null : JsonDocument.Parse(i.Tarefas).RootElement.Clone(),
@@ -225,6 +241,30 @@ public static class Telegram
         var grupos = await atendente.PublicarAsync(ordem, c);
         await banco.SaveChangesAsync(c);
         return Results.Ok(new { grupos });
+    }
+
+    /// <summary>
+    /// Bloco 86: o programa aplicou (ou descartou, ou não conseguiu aplicar) o que veio de um chat: o aviso volta para lá,
+    /// respondendo à confirmação do bot (que perde o botão Desfazer). Só para um chat da conta: o privado ligado a ela ou um
+    /// grupo desta obra.
+    /// </summary>
+    private static async Task<IResult> Avisar(Guid projeto, PedidoDeAviso? pedido, ClaimsPrincipal quem, BancoDoServidor banco,
+        AtendenteDoTelegram atendente, IOptions<OpcoesDoServidor> opcoes, CancellationToken c)
+    {
+        var (usuario, falha) = await Conta(quem, banco, soProfissional: true);
+        if (falha is not null)
+            return falha;
+        if (!opcoes.Value.Telegram.Ligado)
+            return Contas.Falha(503, "O Telegram ainda não está configurado no servidor.");
+        if (pedido?.Situacao is not (AvisoDoPrograma.Aplicado or AvisoDoPrograma.Descartado or AvisoDoPrograma.Recusado))
+            return Contas.Falha(400, "Pedido incompleto: falta a situação (aplicado, descartado ou recusado).");
+        if (await banco.Obras.FirstOrDefaultAsync(o => o.UsuarioId == usuario!.Id && o.Projeto == projeto, c) is not { } obra)
+            return Contas.Falha(404, "A obra não está no Telegram: marque Conta > Usar esta obra no Telegram.");
+        var grupo = await banco.GruposDoTelegram.AnyAsync(g => g.ChatId == pedido.Chat && g.UsuarioId == usuario!.Id && g.ObraId == obra.Id, c);
+        if (!grupo && !await banco.VinculosDoTelegram.AnyAsync(v => v.UsuarioId == usuario!.Id && v.ChatId == pedido.Chat, c))
+            return Contas.Falha(404, "Esse chat não está mais ligado a esta obra.");
+        await atendente.AvisarDoProgramaAsync(pedido.Chat, pedido.Mensagem, pedido.Situacao, grupo ? usuario!.Nome : null, (pedido.Texto ?? "").Trim(), c);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> Foto(Guid id, ClaimsPrincipal quem, BancoDoServidor banco)

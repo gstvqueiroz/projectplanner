@@ -15,6 +15,9 @@ public enum SituacaoDaAplicacao
     Cancelada,
 }
 
+/// <summary>Bloco 86: de onde veio um cartão do Telegram: o chat e a confirmação do bot nele (que o aviso de volta responde).</summary>
+public sealed record OrigemNoTelegram(long Chat, long? Mensagem);
+
 /// <param name="Texto">Aplicada: o resumo ("12 tarefas criadas · …"); recusada: o motivo; cancelada: o aviso.</param>
 /// <param name="Marca">Identifica a aplicação para o Desfazer (só numa aplicada).</param>
 public sealed record ResultadoDaAplicacao(SituacaoDaAplicacao Situacao, string Texto, object? Marca = null);
@@ -38,6 +41,13 @@ public interface ICronogramaDoAssistente
 
     /// <summary>Bloco 41: abre a tela pedida e espera ela fechar.</summary>
     Task AbrirTelaAsync(TelaParaAbrir tela);
+
+    /// <summary>
+    /// Bloco 86: o cartão que veio do Telegram foi aplicado, descartado ou recusado: o aviso volta ao chat de onde ele veio.
+    /// Sem o Telegram (ou sem internet), não faz nada.
+    /// </summary>
+    /// <param name="situacao">aplicado, descartado ou recusado.</param>
+    Task AvisarNoTelegramAsync(OrigemNoTelegram origem, string situacao, string texto) => Task.CompletedTask;
 
     /// <summary>Bloco 42: abre a importação em lote com estas fotos (ou as novas da pasta da obra), já classificadas pela IA.</summary>
     Task ImportarFotosAsync(string origem, IReadOnlyList<string> caminhos);

@@ -156,6 +156,32 @@ public sealed partial class AtendenteDoTelegram
         return false;
     }
 
+    /// <summary>
+    /// Bloco 86: o que o programa fez com o que veio do chat, respondendo à confirmação do bot (que perde o botão Desfazer: o item
+    /// já saiu da caixa). No grupo, com o nome de quem aplicou.
+    /// </summary>
+    /// <param name="quem">No grupo, o dono que aplicou; no chat privado, nulo.</param>
+    public async Task AvisarDoProgramaAsync(long chat, long? mensagem, string situacao, string? quem, string texto, CancellationToken c)
+    {
+        // Uma lista ("• 2.1 Alvenaria: …") vai embaixo; um motivo, na mesma linha.
+        var detalhe = texto.Length == 0 ? "" : texto.Contains('\n') || texto.StartsWith("• ", StringComparison.Ordinal) ? ":\n" + texto : ": " + texto;
+        var aviso = situacao switch
+        {
+            Rotas.AvisoDoPrograma.Aplicado => (quem is null ? "✅ Aplicado no programa" : $"✅ {quem} aplicou no programa") + (detalhe.Length == 0 ? "." : detalhe),
+            Rotas.AvisoDoPrograma.Descartado => (quem is null ? "↩️ Descartado no programa" : $"↩️ {quem} descartou no programa") +
+                                                ": nada disso mudou a obra.",
+            _ => "⚠️ O programa não conseguiu aplicar" + (detalhe.Length == 0 ? "." : detalhe),
+        };
+        aviso = aviso.Length > ClienteDoTelegram.TamanhoMaximo ? aviso[..(ClienteDoTelegram.TamanhoMaximo - 1)] + "…" : aviso;
+        if (mensagem is { } confirmacao)
+        {
+            await telegram.TirarBotoesAsync(chat, confirmacao, c);
+            await telegram.EnviarRespondendoAsync(chat, confirmacao, aviso, c);
+        }
+        else
+            await telegram.EnviarAsync(chat, aviso, c);
+    }
+
     // O mesmo caminho de quem digita o comando (o limite por minuto, a obra do chat, o papel no grupo, quem pode ligar o grupo).
     private async Task ComoSeDigitasseAsync(JsonElement chat, JsonElement de, string texto, CancellationToken c)
     {

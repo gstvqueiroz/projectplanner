@@ -21,6 +21,9 @@ public interface ITelegramDaConta
 
     /// <summary>Bloco 59: põe a OS nos grupos da obra; devolve em quantos ela está.</summary>
     Task<int> PublicarOrdemAsync(Guid projeto, Guid ordem, int numero, string titulo, string texto, string situacao, CancellationToken c);
+
+    /// <summary>Bloco 86: avisa o chat de onde veio o cartão o que o programa fez com ele (aplicado, descartado ou recusado).</summary>
+    Task AvisarAsync(Guid projeto, long chat, long? mensagem, string situacao, string texto, CancellationToken c);
 }
 
 /// <summary>As rotas do Telegram com o token da conta (renovado uma vez se o servidor recusar).</summary>
@@ -41,6 +44,9 @@ public sealed class TelegramDaConta(ClienteDaConta cliente, IContaProjectPlanner
 
     public Task<int> PublicarOrdemAsync(Guid projeto, Guid ordem, int numero, string titulo, string texto, string situacao, CancellationToken c) =>
         ComAcesso(async a => (await cliente.PublicarOrdemAsync(a, projeto, ordem, numero, titulo, texto, situacao, c)).Grupos, c);
+
+    public Task AvisarAsync(Guid projeto, long chat, long? mensagem, string situacao, string texto, CancellationToken c) =>
+        ComAcesso(async a => { await cliente.AvisarNoTelegramAsync(a, projeto, chat, mensagem, situacao, texto, c); return true; }, c);
 
     // O token da conta; sem conta, ou com a sessão acabada, a mensagem para o usuário.
     private async Task<T> ComAcesso<T>(Func<string, Task<T>> chamada, CancellationToken c)

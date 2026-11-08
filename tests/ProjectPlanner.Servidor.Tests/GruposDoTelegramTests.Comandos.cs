@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +77,25 @@ public sealed partial class GruposDoTelegramTests
         await NoGrupo(Joao, "João", "#atualizacao alvenaria em 70%", foto: "foto-1");
         _s.NoBanco(b => b.CaixaDeEntrada.OrderBy(i => i.Tipo).Select(i => i.Tipo + "|" + i.Texto).ToList())
             .Should().Equal("atualizacoes|João: alvenaria em 70%", "foto|João: alvenaria em 70%");
+    }
+
+    // Bloco 86: no grupo, o aviso de volta diz quem aplicou no programa.
+    [Fact]
+    public async Task AvisoDoPrograma_NoGrupo_ComONomeDeQuemAplicou()
+    {
+        await Ligar();
+        _s.Gemini.Resposta = Resposta("""{"mensagem":"Anotei.","alteracoes":[],"atualizacoes":[{"tipo":"percentual","tarefa":"1","percentual":70}]}""");
+        await NoGrupo(Joao, "João", "#atualizacao alvenaria em 70%");
+        var confirmacao = UltimaComBotoesDoGrupo();
+        var pedido = new HttpRequestMessage(HttpMethod.Post, $"/v1/obras/{Projeto}/telegram/aviso")
+        {
+            Content = JsonContent.Create(new { chat = Grupo, mensagem = confirmacao.Id, situacao = "aplicado", texto = "• 1 Alvenaria: 40% → 70% concluído" }),
+        };
+        pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _acesso);
+
+        (await _s.CreateClient().SendAsync(pedido)).StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+
+        _s.Telegram.Respostas.Last().Should().Be((Grupo, confirmacao.Id, "✅ Ana aplicou no programa:\n• 1 Alvenaria: 40% → 70% concluído"));
     }
 
     [Fact]

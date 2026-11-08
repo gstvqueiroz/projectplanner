@@ -3,6 +3,19 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.86.0
+
+**O Telegram fica sabendo o que foi feito no programa.** Quando você aplica (ou descarta) no programa um cartão que veio do
+Telegram, o bot responde à mensagem de lá:
+
+- **"✅ Aplicado no programa:"** com a lista do que foi aplicado; no grupo da obra, com o seu nome ("✅ Ana aplicou no
+  programa"), para a equipe saber que a engenharia viu e aceitou;
+- **"↩️ Descartado no programa"** quando você descarta o cartão, e **"⚠️ O programa não conseguiu aplicar"** com o motivo
+  quando o programa recusa;
+- o botão Desfazer some da mensagem (o que foi para o programa se desfaz lá).
+- Sem internet na hora, o aviso não vai, e o que você fez no programa continua valendo. Vale depois da atualização do servidor no
+  Render (com um servidor de antes, o programa não avisa).
+
 ## 0.85.0
 
 **Telegram: áudio, foto com #atualizacao e a obra num toque.** Vale depois da atualização do servidor no Render.

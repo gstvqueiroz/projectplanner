@@ -84,7 +84,8 @@ public sealed partial class MainWindowViewModel
         foreach (var item in itens.Where(i => i.Tipo == ItemDoTelegram.DeAtualizacoes && i.Atualizacoes is { Count: > 0 }))
         {
             Assistente.MostrarDoTelegram(item.Texto, item.CriadoEm,
-                ConferirAtualizacoes(NoDiaDaMensagem(item.Atualizacoes!, item.CriadoEm), RetratoDoTelegram(item.Tarefas)));
+                ConferirAtualizacoes(NoDiaDaMensagem(item.Atualizacoes!, item.CriadoEm), RetratoDoTelegram(item.Tarefas)),
+                item.Chat is { } chat ? new OrigemNoTelegram(chat, item.Mensagem) : null); // Bloco 86
             cartoes++;
             falhas += await Levar(item) ? 0 : 1;
         }
@@ -128,6 +129,24 @@ public sealed partial class MainWindowViewModel
     }
 
     private bool PodeBuscarDoTelegram() => TelegramDisponivel && ObraNoTelegram;
+
+    /// <summary>
+    /// Bloco 86: o cartão que veio de um chat foi aplicado, descartado ou recusado: o aviso volta para lá (sem internet, ou fora do
+    /// Telegram, fica só no programa).
+    /// </summary>
+    async Task ICronogramaDoAssistente.AvisarNoTelegramAsync(OrigemNoTelegram origem, string situacao, string texto)
+    {
+        if (!TelegramDisponivel)
+            return;
+        try
+        {
+            await _telegram!.AvisarAsync(_cronograma.Id, origem.Chat, origem.Mensagem, situacao, texto, CancellationToken.None);
+        }
+        catch (ErroDaContaException)
+        {
+            // o aviso é um extra: sem ele, o que foi feito no programa continua valendo
+        }
+    }
 
     /// <summary>
     /// Bloco 62: a legenda da foto do Telegram ("João: reboco pronto #os14") vira a legenda; a OS citada nela dá as tarefas.

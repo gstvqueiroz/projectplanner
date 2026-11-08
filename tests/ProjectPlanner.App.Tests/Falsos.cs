@@ -1231,4 +1231,15 @@ public sealed class TelegramFalso : ITelegramDaConta
         Publicadas.Add((ordem, numero, titulo, texto, situacao));
         return Grupos;
     }
+
+    // ---- Bloco 86 ----
+
+    /// <summary>Os avisos de volta ao Telegram: o projeto, o chat, a mensagem, a situação e o texto.</summary>
+    public List<(Guid Projeto, long Chat, long? Mensagem, string Situacao, string Texto)> Avisos { get; } = [];
+
+    public async Task AvisarAsync(Guid projeto, long chat, long? mensagem, string situacao, string texto, CancellationToken c)
+    {
+        await Passo($"avisar {situacao}");
+        Avisos.Add((projeto, chat, mensagem, situacao, texto));
+    }
 }

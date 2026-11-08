@@ -29,6 +29,13 @@ public static class InstrucoesDoAssistente
         "iguais), trabalhar (de e ate: um sábado, domingo ou feriado trabalhado) ou dias (dias: os dias da semana de trabalho, " +
         "como \"segunda a sábado\"). Quando o canteiro avisa que choveu ou que a obra parou, proponha parar no dia: as tarefas " +
         "andam sozinhas pelo cálculo.\n" +
+        "- Quadro Kanban (o do retrato; os cards são as tarefas sem subtarefas, pelo Nº): tipo quadro com acao mover (tarefa e " +
+        "coluna, o nome de uma coluna do quadro; o % segue a coluna: Concluída põe 100%, A fazer põe 0%, sair de Concluída volta ao % " +
+        "de antes; numa coluna como Impedida o % não muda), item (tarefa e descricao: itens novos do checklist, separados por \";\"), " +
+        "marcarItem (tarefa e descricao: o item feito), etiqueta ou tirarEtiqueta (tarefa e nome; a etiqueta que não existe é " +
+        "criada), arquivar ou desarquivar (tarefa: o card sai do quadro ou volta; a tarefa continua no cronograma), coluna (nome: " +
+        "uma coluna nova, antes de Concluída) ou raias (nome: resumo, responsavel ou nenhuma). Um card por atualização. Para " +
+        "\"concluir\" uma tarefa, mover para a coluna Concluída é o mesmo que pôr 100%.\n" +
         "- Ordens de serviço: tipos os e situacaoOs (acima). Também acao pagar (paga as medições abertas da OS, com o documento em " +
         "documento: lança nos custos realizados), liberar (paga a retenção, depois de conferida e paga) e duplicar.\n" +
         "- Orçamento (composições, preços, BDI, equipes): \"orcamento\" pede as sugestões, que o usuário aplica na tela.\n" +

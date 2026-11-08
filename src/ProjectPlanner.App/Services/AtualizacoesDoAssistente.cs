@@ -1,5 +1,6 @@
 using System.Globalization;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Kanban;
 using ProjectPlanner.Core.Indicadores;
 using ProjectPlanner.Core.OrdensDeServico;
 using ProjectPlanner.Core.Planejamento;
@@ -310,6 +311,96 @@ public sealed record MudarCalendario(string Acao, DateOnly De, DateOnly Ate, str
     }
 }
 
+/// <summary>
+/// Bloco 80: uma mudança no quadro Kanban pedida pela IA (no programa ou pelo Telegram), pelas mesmas regras do quadro: mover o
+/// card de coluna (o % segue a coluna), itens do checklist, etiquetas, arquivar, uma coluna nova e as raias.
+/// </summary>
+public sealed record MudarOQuadro(string Acao, Guid? TarefaId, string? Texto) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var quadro = c.Quadro;
+        quadro.Sincronizar();
+        switch (Acao)
+        {
+            case "coluna":
+                RegrasDasColunas.Adicionar(c, Texto ?? "");
+                return;
+            case "raias":
+                RegrasDasRaias.DefinirModo(c, ModoDasRaias(Texto));
+                return;
+        }
+        var id = TarefaId ?? throw new DomainValidationException(nameof(TarefaId), "Falta a tarefa do card.");
+        var card = quadro.CardDe(id) is { } k && !Tarefa(c, id).EhResumo ? k
+            : throw new DomainValidationException(nameof(TarefaId), $"\"{Tarefa(c, id).Nome}\" é um resumo: os cards são das tarefas sem subtarefas.");
+        switch (Acao)
+        {
+            case "mover":
+                var coluna = ColunaPeloNome(c, Texto);
+                if (card.Arquivado)
+                    RegrasDosCards.Desarquivar(c, [id]);
+                var plano = RegrasDoQuadro.Planejar(c, [id], coluna.Id, int.MaxValue);
+                if (plano is { Valido: true, MudaAlgo: true })
+                    RegrasDoQuadro.Aplicar(c, plano);
+                return;
+            case "item":
+                var novos = Itens(Texto).Where(t => !card.Checklist.Any(i => Iguais(i.Texto, t))).Select(t => new ItemDoChecklist(t, false));
+                RegrasDosCards.DefinirChecklist(c, id, [.. card.Checklist, .. novos]);
+                return;
+            case "marcarItem":
+                var alvo = (Texto ?? "").Trim();
+                var item = card.Checklist.FirstOrDefault(i => Iguais(i.Texto, alvo)) ?? card.Checklist.FirstOrDefault(i => Contem(i.Texto, alvo))
+                           ?? throw new DomainValidationException(nameof(Texto), $"O checklist de \"{Tarefa(c, id).Nome}\" não tem o item \"{alvo}\".");
+                RegrasDosCards.DefinirChecklist(c, id, [.. card.Checklist.Select(i => i == item ? i with { Feito = true } : i)]);
+                return;
+            case "etiqueta":
+                var etiqueta = quadro.Etiquetas.FirstOrDefault(e => Iguais(e.Nome, Texto)) ?? RegrasDosCards.CriarEtiqueta(c, Texto ?? "");
+                RegrasDosCards.MarcarEtiqueta(c, id, etiqueta.Id, true);
+                return;
+            case "tirarEtiqueta":
+                var existente = quadro.Etiquetas.FirstOrDefault(e => Iguais(e.Nome, Texto))
+                                ?? throw new DomainValidationException(nameof(Texto), $"Não há a etiqueta \"{Texto}\" no projeto.");
+                RegrasDosCards.MarcarEtiqueta(c, id, existente.Id, false);
+                return;
+            case "arquivar":
+                RegrasDosCards.Arquivar(c, [id]);
+                return;
+            case "desarquivar":
+                RegrasDosCards.Desarquivar(c, [id]);
+                return;
+            default:
+                throw new DomainValidationException(nameof(Acao), $"Ação desconhecida no quadro: {Acao}.");
+        }
+    }
+
+    /// <summary>Os itens de um texto: separados por ";" (ou por linhas).</summary>
+    public static IReadOnlyList<string> Itens(string? texto) =>
+        [.. (texto ?? "").Split([';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.CurrentCultureIgnoreCase)];
+
+    /// <summary>A coluna do quadro com o nome (sem diferença de maiúsculas e acentos).</summary>
+    public static ColunaDoQuadro ColunaPeloNome(Cronograma c, string? nome) =>
+        c.Quadro.Colunas.FirstOrDefault(k => Iguais(k.Nome, nome)) ?? c.Quadro.Colunas.FirstOrDefault(k => Contem(k.Nome, nome))
+        ?? throw new DomainValidationException(nameof(Texto),
+            $"O quadro não tem a coluna \"{nome}\" (tem {string.Join(", ", c.Quadro.Colunas.Select(k => k.Nome))}).");
+
+    public static ModoDasRaias ModoDasRaias(string? texto) => Normal(texto) switch
+    {
+        "resumo" or "por resumo" => Core.Kanban.ModoDasRaias.PorResumo,
+        "responsavel" or "por responsavel" => Core.Kanban.ModoDasRaias.PorResponsavel,
+        "nenhuma" or "sem raias" or "sem" => Core.Kanban.ModoDasRaias.Nenhuma,
+        _ => throw new DomainValidationException(nameof(Texto), "Raias: resumo, responsavel ou nenhuma."),
+    };
+
+    private static bool Iguais(string? a, string? b) => string.Equals(Normal(a), Normal(b), StringComparison.Ordinal);
+
+    private static bool Contem(string? a, string? b) => Normal(b) is { Length: > 0 } parte && Normal(a).Contains(parte, StringComparison.Ordinal);
+
+    // Sem maiúsculas, acentos e espaços nas pontas.
+    private static string Normal(string? texto) =>
+        new string((texto ?? "").Trim().ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD)
+            .Where(ch => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray());
+}
+
 /// <summary>Um item do cartão: o texto para o usuário e a operação, ou o motivo de não dar para aplicar.</summary>
 public sealed record ItemDoCartao(string Texto, OperacaoDaObra? Operacao, string? Problema)
 {
@@ -537,10 +628,61 @@ public static class AtualizacoesDoAssistente
             }
             case TiposDeAtualizacao.Calendario: // Bloco 71
                 return Calendario(a, hoje);
+            case TiposDeAtualizacao.Quadro: // Bloco 80
+                return Quadro(c, a, tarefa, nome);
             case TiposDeAtualizacao.LinhaDeBase:
                 return new(a.Nome is { } n2 ? $"Salvar a linha de base \"{n2}\"" : "Salvar uma linha de base (o cronograma de agora)", new SalvarLinhaDeBase(a.Nome), null);
             default:
                 return new(a.Tipo, null, "tipo de atualização desconhecido");
+        }
+    }
+
+    // Bloco 80: o quadro Kanban. O card pelo Nº da tarefa; a coluna pelo nome; os itens em descricao; a etiqueta em nome.
+    private static ItemDoCartao Quadro(Cronograma c, AtualizacaoDaObra a, Tarefa? tarefa, string nome)
+    {
+        var acao = TiposDeAtualizacao.AcoesDoQuadro.FirstOrDefault(x => string.Equals(x, a.Acao?.Trim(), StringComparison.OrdinalIgnoreCase));
+        var etiqueta = (a.Nome ?? a.Descricao)?.Trim();
+        var texto = acao switch
+        {
+            "mover" => $"{nome}: card para \"{a.Coluna ?? "?"}\"" + (a.Coluna is { } k && QuadroSemErro(() => MudarOQuadro.ColunaPeloNome(c, k)) is { } coluna
+                ? coluna.Tipo switch { TipoDeColuna.Concluida => " (100%)", TipoDeColuna.AFazer => " (o % volta a 0)", _ => "" } : ""),
+            "item" => $"{nome}: checklist + {string.Join("; ", MudarOQuadro.Itens(a.Descricao))}",
+            "marcarItem" => $"{nome}: marcar \"{a.Descricao?.Trim()}\" no checklist",
+            "etiqueta" => $"{nome}: etiqueta \"{etiqueta}\"",
+            "tirarEtiqueta" => $"{nome}: tirar a etiqueta \"{etiqueta}\"",
+            "arquivar" => $"{nome}: arquivar o card (a tarefa continua no cronograma)",
+            "desarquivar" => $"{nome}: card de volta ao quadro",
+            "coluna" => $"Quadro: coluna nova \"{a.Nome?.Trim()}\" (antes de Concluída)",
+            "raias" => $"Quadro: raias {a.Nome?.Trim() ?? "?"}",
+            _ => $"Quadro: {a.Acao ?? "?"}",
+        };
+        if (acao is null)
+            return new(texto, null, "ação desconhecida (" + string.Join(", ", TiposDeAtualizacao.AcoesDoQuadro) + ")");
+        if (acao is "coluna" or "raias")
+            return string.IsNullOrWhiteSpace(a.Nome) ? new(texto, null, "informe o nome") : new(texto, new MudarOQuadro(acao, null, a.Nome.Trim()), null);
+        if (tarefa is null)
+            return new(texto, null, a.Tarefa is null ? "falta a tarefa" : $"não há a tarefa nº {a.Tarefa} no cronograma");
+        var valor = acao switch
+        {
+            "mover" => a.Coluna,
+            "item" or "marcarItem" => a.Descricao,
+            "etiqueta" or "tirarEtiqueta" => etiqueta,
+            _ => null,
+        };
+        if (acao is not ("arquivar" or "desarquivar") && string.IsNullOrWhiteSpace(valor))
+            return new(texto, null, acao switch { "mover" => "informe a coluna", "etiqueta" or "tirarEtiqueta" => "informe a etiqueta", _ => "informe o item" });
+        return new(texto, new MudarOQuadro(acao, tarefa.Id, valor?.Trim()), null);
+    }
+
+    private static T? QuadroSemErro<T>(Func<T> f) where T : class
+    {
+        try
+        {
+            return f();
+        }
+        catch (DomainValidationException)
+        {
+            return null;
         }
     }
 

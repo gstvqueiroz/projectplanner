@@ -3,6 +3,23 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.80.0
+
+**O Kanban pela IA, no programa e no Telegram.** O assistente agora mexe no quadro com o tipo de atualização "quadro", que
+aparece no cartão para você aplicar (um passo do Desfazer), como as outras atualizações:
+
+- **Mover o card de coluna** ("põe o reboco em Impedida", "a fundação está concluída"), com a regra do %: Concluída põe 100%,
+  A fazer põe 0%, sair de Concluída volta ao % de antes, Impedida não muda. Um card arquivado volta ao quadro na coluna pedida.
+- **Checklist:** itens novos ("lixar; selador; duas demãos") e marcar um item como feito.
+- **Etiquetas:** pôr (a que não existe é criada) e tirar.
+- **Arquivar e desarquivar** o card (a tarefa continua no cronograma).
+- **Coluna nova** (antes de Concluída) e **raias** por resumo, por responsável ou sem raias.
+- A IA reconhece as colunas e as etiquetas pelo nome, sem diferença de maiúsculas e acentos; um nome que não existe vem
+  explicado no cartão. O quadro (com as colunas, os cards, os checklists e as etiquetas) vai no retrato que a IA recebe.
+- **No Telegram**, a mesma coisa ("arquiva o card da fundação"): fica anotado e aparece no programa para você aplicar. O
+  servidor só passa a conhecer o tipo novo depois da atualização dele no Render.
+- A avaliação da IA ganhou 3 pedidos do quadro (47 no total), um deles pelo Telegram.
+
 ## 0.79.0
 
 **Abas de atalho no rodapé**, à esquerda, como as planilhas do Excel.

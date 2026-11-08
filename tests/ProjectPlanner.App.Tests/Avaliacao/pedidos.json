@@ -301,6 +301,28 @@
       "pedido": "abre o relatório das OS",
       "esperado": { "abrir": "nenhum", "semMudancas": true },
       "referencia": { "mensagem": "Daqui não dá para abrir telas: o relatório das OS fica no programa, em Obra > Relatório das OS.", "alteracoes": [] }
+    },
+    {
+      "id": "quadro-impedida",
+      "pedido": "Põe o reboco em Impedida no Kanban, falta material.",
+      "esperado": { "atualizacoes": [{ "tipo": "quadro", "acao": "mover", "tarefa": "3", "coluna": "~imped" }] },
+      "referencia": { "mensagem": "Proponho levar o card do Reboco para Impedida (o % não muda).", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "quadro", "acao": "mover", "tarefa": "3", "coluna": "Impedida" }] }
+    },
+    {
+      "id": "quadro-checklist",
+      "pedido": "No card da pintura, coloque no checklist: lixar as paredes; aplicar o selador; duas demãos de tinta.",
+      "esperado": { "atualizacoes": [{ "tipo": "quadro", "acao": "item", "tarefa": "4", "descricao": "~selador" }] },
+      "referencia": { "mensagem": "Proponho os três itens no checklist da Pintura.", "alteracoes": [],
+        "atualizacoes": [{ "tipo": "quadro", "acao": "item", "tarefa": "4", "descricao": "Lixar as paredes; Aplicar o selador; Duas demãos de tinta" }] }
+    },
+    {
+      "id": "telegram-quadro-arquivar",
+      "canal": "telegram",
+      "pedido": "arquiva o card da fundação no kanban, já acabou",
+      "esperado": { "atualizacoes": [{ "tipo": "quadro", "acao": "arquivar", "tarefa": "1" }], "abrir": "nenhum" },
+      "referencia": { "mensagem": "Anotei: arquivar o card da Fundação (a tarefa continua no cronograma). Aplique quando abrir a obra no programa.",
+        "alteracoes": [], "atualizacoes": [{ "tipo": "quadro", "acao": "arquivar", "tarefa": "1" }] }
     }
   ]
 }

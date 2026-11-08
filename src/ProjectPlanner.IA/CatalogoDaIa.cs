@@ -47,7 +47,8 @@ public static class CatalogoDaIa
         new("prazo", FormatoDoCampo.Texto),
         new("pagamento", FormatoDoCampo.Texto, ["empreitada", "medicao", "diaria"]),
         new("retencao", FormatoDoCampo.Numero),
-        new("acao", FormatoDoCampo.Texto, [.. TiposDeAtualizacao.AcoesDaOs.Concat(TiposDeAtualizacao.AcoesDaMedicao).Concat(TiposDeAtualizacao.AcoesDoCalendario).Distinct()]),
+        new("acao", FormatoDoCampo.Texto, [.. TiposDeAtualizacao.AcoesDaOs.Concat(TiposDeAtualizacao.AcoesDaMedicao).Concat(TiposDeAtualizacao.AcoesDoCalendario)
+            .Concat(TiposDeAtualizacao.AcoesDoQuadro).Distinct()]),
         new("unidade", FormatoDoCampo.Texto),
         new("contratante", FormatoDoCampo.Texto),
         new("contrato", FormatoDoCampo.Texto),
@@ -56,6 +57,7 @@ public static class CatalogoDaIa
         new("fornecedor", FormatoDoCampo.Texto),
         new("recurso", FormatoDoCampo.Texto),
         new("dias", FormatoDoCampo.Texto), // Bloco 71
+        new("coluna", FormatoDoCampo.Texto), // Bloco 80
     ];
 
     public static IReadOnlyList<TipoNoCatalogo> Tipos { get; } =
@@ -74,6 +76,7 @@ public static class CatalogoDaIa
         new(TiposDeAtualizacao.Atribuir, ["tarefa", "recurso", "quantidade"]),
         new(TiposDeAtualizacao.MedicaoDoContrato, ["medicao", "acao", "data"], TiposDeAtualizacao.AcoesDaMedicao),
         new(TiposDeAtualizacao.Calendario, ["acao", "data", "de", "ate", "nome", "descricao", "dias"], TiposDeAtualizacao.AcoesDoCalendario), // Bloco 71
+        new(TiposDeAtualizacao.Quadro, ["acao", "tarefa", "coluna", "descricao", "nome"], TiposDeAtualizacao.AcoesDoQuadro), // Bloco 80
     ];
 
     public static CampoDaAtualizacao Campo(string nome) => Campos.First(c => c.Nome == nome);
@@ -91,7 +94,7 @@ public static class CatalogoDaIa
         return new AtualizacaoDaObra(tipo, T("tarefa"), N("percentual"), N("quantidade"), I("medicao"), T("de"), T("ate"), T("data"),
             T("categoria"), T("descricao"), N("valor"), T("documento"), T("nome"), I("os"), T("titulo"), T("executante"), T("tipoDeExecutante"),
             T("tarefas"), T("novaTarefa"), I("duracao"), T("apos"), T("prazo"), T("pagamento"), N("retencao"), T("acao"), T("unidade"),
-            T("contratante"), T("contrato"), T("endereco"), T("tipoDoRecurso"), T("fornecedor"), T("recurso"), T("dias"));
+            T("contratante"), T("contrato"), T("endereco"), T("tipoDoRecurso"), T("fornecedor"), T("recurso"), T("dias"), T("coluna"));
     }
 
     /// <summary>

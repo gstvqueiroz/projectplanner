@@ -221,6 +221,8 @@ public sealed partial class MainWindowViewModel : IAcoesDosCards
         var etiquetas = quadro.Etiquetas.ToDictionary(e => e.Id, e => e.Nome);
         if (cards.Where(c => c.Etiquetas.Count > 0).OrderBy(c => numero[c.TarefaId]).ToList() is { Count: > 0 } comEtiquetas)
             linhas.Add("Etiquetas: " + string.Join("; ", comEtiquetas.Select(c => $"Nº {numero[c.TarefaId]} {string.Join(", ", c.Etiquetas.Select(e => etiquetas.GetValueOrDefault(e, "")))}")));
+        if (quadro.Etiquetas.Count > 0) // Bloco 80: para a IA usar os nomes que já existem
+            linhas.Add("Etiquetas do projeto: " + string.Join(", ", quadro.Etiquetas.Select(e => e.Nome)));
         if (quadro.Raias != ModoDasRaias.Nenhuma)
             linhas.Add(quadro.Raias == ModoDasRaias.PorResumo ? "Raias: por resumo." : "Raias: por responsável (o primeiro profissional da tarefa).");
         return linhas;

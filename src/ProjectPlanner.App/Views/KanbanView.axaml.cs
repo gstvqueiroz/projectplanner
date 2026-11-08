@@ -84,8 +84,8 @@ public partial class KanbanView : UserControl
         if (Vm is not { } vm)
             return;
         var origem = e.Source as Visual;
-        // Só a área dos cards: a barra dos filtros e o painel do card cuidam de si (o foco fica neles).
-        if (origem is null || !origem.GetSelfAndVisualAncestors().Contains(Rolagem))
+        // Só a área dos cards (as colunas ou as raias): a barra dos filtros e o painel do card cuidam de si (o foco fica neles).
+        if (origem is null || !NaAreaDosCards(origem))
             return;
         if (origem.GetSelfAndVisualAncestors().Any(v => v is ScrollBar or Button))
             return; // nas barras de rolagem é só rolar; os botões (⋯, + Adicionar coluna, + Adicionar card) cuidam de si
@@ -172,7 +172,9 @@ public partial class KanbanView : UserControl
             _ultimoPonto = e.GetPosition(this);
             var destino = DestinoEm(_ultimoPonto);
             Encerrar();
-            if (destino is not null)
+            if (destino?.Celula is { } celula)
+                vm?.SoltarNaCelula(arrastadas, celula, destino.Lacuna); // Bloco 78: numa célula das raias
+            else if (destino is not null)
                 vm?.Soltar(arrastadas, destino.Coluna.Id, destino.Lacuna);
         }
         else
@@ -206,7 +208,8 @@ public partial class KanbanView : UserControl
     }
 
     /// <summary>Bloco 77: com o foco no quadro (num card), o Delete exclui; no painel do card e nos filtros, não (E1).</summary>
-    internal bool NaAreaDosCards(Visual origem) => ReferenceEquals(origem, this) || origem.GetSelfAndVisualAncestors().Contains(Rolagem);
+    internal bool NaAreaDosCards(Visual origem) =>
+        ReferenceEquals(origem, this) || origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Rolagem) || ReferenceEquals(v, RolagemDasRaias));
 
     /// <summary>
     /// Bloco 77: o menu do card (botão direito): Abrir card, Mover para (as colunas), Arquivar e Excluir tarefa, para os
@@ -395,7 +398,9 @@ public partial class KanbanView : UserControl
             Cursor = CursorProibido;
             return;
         }
-        var plano = vm.PreverSoltar(arrastadas, destino.Coluna.Id, destino.Lacuna);
+        var plano = destino.Celula is { } celula
+            ? vm.PreverNaCelula(arrastadas, celula, destino.Lacuna)
+            : vm.PreverSoltar(arrastadas, destino.Coluna.Id, destino.Lacuna);
         vm.MovimentoEmCurso = plano is null ? null : new MovimentoNoKanban(destino.Coluna.Id, destino.Lacuna, plano);
         Cursor = CursorArrastando;
         if (plano is { Valido: true, MudaAlgo: true })
@@ -466,6 +471,22 @@ public partial class KanbanView : UserControl
             return;
         var p = _ultimoPonto;
         var rolou = false;
+        if (Vm is { ComRaias: true })
+        {
+            // Bloco 78: com raias, uma rolagem só, nas duas direções, pelas bordas da área das raias.
+            var raias = Area(RolagemDasRaias);
+            var ladoX = p.X < raias.Left + BordaDaRolagem ? -Passo(p.X - raias.Left) : p.X > raias.Right - BordaDaRolagem ? Passo(raias.Right - p.X) : 0;
+            var ladoY = p.Y < raias.Top + BordaDaRolagem ? -Passo(p.Y - raias.Top) : p.Y > raias.Bottom - BordaDaRolagem ? Passo(raias.Bottom - p.Y) : 0;
+            var novo = new Vector(
+                Math.Clamp(RolagemDasRaias.Offset.X + ladoX, 0, Math.Max(0, RolagemDasRaias.Extent.Width - RolagemDasRaias.Viewport.Width)),
+                Math.Clamp(RolagemDasRaias.Offset.Y + ladoY, 0, Math.Max(0, RolagemDasRaias.Extent.Height - RolagemDasRaias.Viewport.Height)));
+            if (Math.Abs(novo.X - RolagemDasRaias.Offset.X) > 0.1 || Math.Abs(novo.Y - RolagemDasRaias.Offset.Y) > 0.1)
+            {
+                RolagemDasRaias.Offset = novo;
+                AtualizarArraste();
+            }
+            return;
+        }
         var quadro = Area(Rolagem);
         var dx = p.X < quadro.Left + BordaDaRolagem ? -Passo(p.X - quadro.Left)
             : p.X > quadro.Right - BordaDaRolagem ? Passo(quadro.Right - p.X) : 0;
@@ -523,11 +544,16 @@ public partial class KanbanView : UserControl
             ponteiro.Capture(null);
     }
 
-    /// <summary>Bloco 75: onde os cards cairiam: a coluna (a sob o cursor, ou a mais perto), a lacuna entre os cards dela e a guia.</summary>
-    private sealed record Destino(ColunaNoKanban Coluna, int Lacuna, double X, double Y, double Largura);
+    /// <summary>
+    /// Bloco 75: onde os cards cairiam: a coluna (a sob o cursor, ou a mais perto), a lacuna entre os cards dela e a guia. Bloco 78:
+    /// com raias, a célula (a lacuna é entre os cards dela).
+    /// </summary>
+    private sealed record Destino(ColunaNoKanban Coluna, int Lacuna, double X, double Y, double Largura, CelulaNoKanban? Celula = null);
 
     private Destino? DestinoEm(Point ponto)
     {
+        if (Vm is { ComRaias: true })
+            return DestinoNasRaias(ponto);
         if (Vm is null || !Area(Rolagem).Contains(ponto))
             return null; // fora da área dos cards (na barra dos filtros, no painel, fora do quadro): soltar cancela
         (ColunaNoKanban Coluna, Control Raiz, Rect Area)? alvo = null;
@@ -551,6 +577,37 @@ public partial class KanbanView : UserControl
             : (cards[lacuna - 1].Bottom + cards[lacuna].Top) / 2;
         y = Math.Clamp(y, visivel.Top + 2, Math.Max(visivel.Top + 2, visivel.Bottom - 2));
         return new Destino(a.Coluna, lacuna, a.Area.Left + 8, y, a.Area.Width - 16);
+    }
+
+    // Bloco 78: a célula sob o cursor (ou a mais perto) e a lacuna entre os cards dela.
+    private Destino? DestinoNasRaias(Point ponto)
+    {
+        var visivel = Area(RolagemDasRaias);
+        if (!visivel.Contains(ponto))
+            return null;
+        (CelulaNoKanban Celula, Control Raiz, Rect Area)? alvo = null;
+        var menor = double.MaxValue;
+        foreach (var raiz in RolagemDasRaias.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("celula")))
+        {
+            if (raiz.DataContext is not CelulaNoKanban celula)
+                continue;
+            var area = Area(raiz);
+            var dx = ponto.X < area.Left ? area.Left - ponto.X : ponto.X > area.Right ? ponto.X - area.Right : 0;
+            var dy = ponto.Y < area.Top ? area.Top - ponto.Y : ponto.Y > area.Bottom ? ponto.Y - area.Bottom : 0;
+            if (dx + dy < menor)
+                (menor, alvo) = (dx + dy, (celula, raiz, area));
+        }
+        if (alvo is not { } a)
+            return null;
+        var cartoes = a.Raiz.GetVisualDescendants().OfType<ItemsControl>().FirstOrDefault(c => c.Classes.Contains("cartoes"));
+        var cards = Enumerable.Range(0, a.Celula.Cards.Count).Select(i => cartoes?.ContainerFromIndex(i)).OfType<Control>().Select(Area).ToList();
+        var lacuna = cards.Count(c => c.Center.Y < ponto.Y);
+        var y = cards.Count == 0 ? a.Area.Top + 6
+            : lacuna == 0 ? cards[0].Top - 3
+            : lacuna == cards.Count ? cards[^1].Bottom + 3
+            : (cards[lacuna - 1].Bottom + cards[lacuna].Top) / 2;
+        y = Math.Clamp(y, visivel.Top + 2, Math.Max(visivel.Top + 2, visivel.Bottom - 2));
+        return new Destino(a.Celula.Coluna, lacuna, a.Area.Left + 8, y, a.Area.Width - 16, a.Celula);
     }
 
     private IEnumerable<(ColunaNoKanban Coluna, Control Raiz)> ColunasNaTela()

@@ -43,8 +43,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IConfiguracaoAssistente configuracaoAssistente, IPreferenciasRelatorio? preferenciasRelatorio = null,
         IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null,
         IConsultorDeOrcamento? consultorDeOrcamento = null, IAnalistaDaObra? analistaDaObra = null, IContaProjectPlanner? conta = null,
-        ITelegramDaConta? telegram = null, IConversorDeHeic? conversorDeHeic = null, IPreferenciasDoCalendario? preferenciasDoCalendario = null)
+        ITelegramDaConta? telegram = null, IConversorDeHeic? conversorDeHeic = null, IPreferenciasDoCalendario? preferenciasDoCalendario = null,
+        ISugestorDeChecklist? sugestorDeChecklist = null)
     {
+        _sugestorDeChecklist = sugestorDeChecklist ?? new SugestorDeChecklistIndisponivel(); // Bloco 78
         _preferenciasDoCalendario = preferenciasDoCalendario;
         _conta = conta ?? new SemContaProjectPlanner();
         _telegram = telegram;
@@ -124,6 +126,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             ProjectPlanner.Relatorios.TextosDoOrcamento.ParaOAssistente(_cronograma.Orcamento.Planilha()), SituacaoDaObra())
         {
             Calendario = CalendarioParaOAssistente(_cronograma.Calendario, inicio, termino), // Bloco 71
+            Quadro = QuadroParaOAssistente(), // Bloco 78
         };
     }
 

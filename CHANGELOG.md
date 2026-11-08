@@ -3,6 +3,27 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.78.0
+
+**Raias no Kanban e a IA no quadro** (o plano "Delete, arrastar e Kanban", K6 e os ganchos de IA do K7).
+
+- **Raias:** o seletor no alto do quadro agrupa os cards por resumo ou por responsável. As colunas ficam em cima e cada raia é
+  uma faixa com uma célula por coluna. O modo fica salvo no projeto.
+  - **Por resumo:** uma raia para cada resumo que tem tarefas (o resumo direto, o mesmo da etiqueta do card) e "Sem resumo"
+    para as do primeiro nível. Arrastar um card para outra raia muda o resumo da tarefa: ela vai para o fim daquele grupo no
+    cronograma, e um resumo que fica vazio vira tarefa comum, com as datas que tinha.
+  - **Por responsável:** uma raia para cada profissional do projeto (vale o primeiro profissional da tarefa) e "Sem
+    responsável". Arrastar para outra raia põe o profissional dela no lugar do primeiro, com a mesma quantidade; em "Sem
+    responsável", os profissionais saem da tarefa (os materiais e equipamentos ficam).
+  - Arrastar para outra coluna da mesma raia é como sem raias (com a regra do %); para a célula de outra raia e de outra
+    coluna, muda as duas coisas num passo só. A dica mostra a raia e a coluna; o aviso traz o Desfazer.
+- **Sugerir itens (IA)**, no checklist do painel do card: a IA escreve de 3 a 8 itens de execução e conferência a partir da
+  tarefa (o nome, o resumo, a descrição e a duração), sem repetir os que já estão. Eles entram desmarcados, num passo do
+  Desfazer, para você revisar.
+- **Resumo da semana (IA)**, no alto do quadro: o assistente escreve o resumo do quadro (o que está concluído, atrasado,
+  impedido e o que vence nesta semana). O quadro agora vai no retrato que o assistente recebe a cada mensagem: as colunas com
+  as tarefas, os arquivados, os checklists, as etiquetas e as raias.
+
 ## 0.77.0
 
 **Os cards do Kanban** (o plano "Delete, arrastar e Kanban", K4 e K5).

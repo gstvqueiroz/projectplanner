@@ -158,6 +158,34 @@ public sealed partial class ColunaNoKanban(Guid id, Func<IAcoesDasColunas?>? aco
 /// <summary>Bloco 75: o arraste em curso no quadro: a coluna e a lacuna entre os cards dela onde os cards cairiam, e o plano.</summary>
 public sealed record MovimentoNoKanban(Guid ColunaId, int Lacuna, PlanoDoQuadro Plano);
 
+/// <summary>Bloco 78: uma raia na tela: o nome, quantos cards e uma célula por coluna.</summary>
+public sealed partial class RaiaNoKanban(string chave) : ObservableObject
+{
+    public string Chave { get; } = chave;
+
+    [ObservableProperty]
+    public partial string Nome { get; set; } = "";
+
+    /// <summary>"3 cards".</summary>
+    [ObservableProperty]
+    public partial string Contagem { get; set; } = "";
+
+    public ObservableCollection<CelulaNoKanban> Celulas { get; } = [];
+}
+
+/// <summary>Bloco 78: uma célula do quadro com raias: os cards da coluna que são da raia.</summary>
+public sealed class CelulaNoKanban(ColunaNoKanban coluna, RaiaNoKanban raia)
+{
+    public ColunaNoKanban Coluna { get; } = coluna;
+
+    public RaiaNoKanban Raia { get; } = raia;
+
+    public ObservableCollection<CardNoKanban> Cards { get; } = [];
+}
+
+/// <summary>Bloco 78: uma opção do seletor de raias.</summary>
+public sealed record OpcaoDeRaias(string Nome, ModoDasRaias Modo);
+
 /// <summary>Bloco 77: uma opção de um filtro do quadro (Chave nula: todos).</summary>
 public sealed record OpcaoDeFiltro(string Nome, string? Chave);
 
@@ -179,6 +207,9 @@ public sealed partial class KanbanViewModel : ObservableObject
 
     private readonly Dictionary<Guid, CardNoKanban> _cards = [];
     private readonly Dictionary<Guid, ColunaNoKanban> _colunas = [];
+    private readonly Dictionary<string, RaiaNoKanban> _raias = [];
+    private readonly Dictionary<(string Raia, Guid Coluna), CelulaNoKanban> _celulas = [];
+    private Dictionary<Guid, string> _raiaDoCard = [];
     private Cronograma? _cronograma;
     private DateTime _hoje;
     private IReadOnlySet<Guid> _selecionadas = new HashSet<Guid>();
@@ -203,6 +234,10 @@ public sealed partial class KanbanViewModel : ObservableObject
 
     /// <summary>Bloco 77: a linha da tarefa na grade (o painel edita os campos dela).</summary>
     public Func<Guid, TarefaViewModel?>? LinhaDa { get; set; }
+
+    /// <summary>Bloco 78: "Resumo da semana (IA)": o assistente escreve o resumo do quadro.</summary>
+    [RelayCommand]
+    private Task ResumoDaSemana() => AcoesDosCards?.ResumoDaSemanaAsync() ?? Task.CompletedTask;
 
     /// <summary>Bloco 76: "+ Adicionar coluna", no fim do quadro.</summary>
     [RelayCommand]
@@ -262,6 +297,120 @@ public sealed partial class KanbanViewModel : ObservableObject
     /// <summary>Solta na lacuna entre os cards que aparecem (a tela usa esta).</summary>
     public bool Soltar(IReadOnlyList<Guid> tarefas, Guid colunaId, int lacunaVisivel) =>
         Mover?.Invoke(tarefas, colunaId, LacunaEntreTodos(colunaId, lacunaVisivel)) ?? false;
+
+    // ---- Bloco 78 (K6): as raias ----
+
+    public IReadOnlyList<OpcaoDeRaias> OpcoesDeRaias { get; } =
+    [
+        new("Sem raias", ModoDasRaias.Nenhuma), new("Raias por resumo", ModoDasRaias.PorResumo), new("Raias por responsável", ModoDasRaias.PorResponsavel),
+    ];
+
+    /// <summary>Como o quadro agrupa os cards (o seletor no alto do quadro); vem do projeto e vai para ele.</summary>
+    [ObservableProperty]
+    public partial OpcaoDeRaias? Raias { get; set; }
+
+    /// <summary>O quadro está em raias (a tela troca as colunas pela grade de raias × colunas).</summary>
+    public bool ComRaias => Raias?.Modo is ModoDasRaias.PorResumo or ModoDasRaias.PorResponsavel;
+
+    /// <summary>As raias, de cima para baixo (vazio sem raias).</summary>
+    public ObservableCollection<RaiaNoKanban> RaiasNaTela { get; } = [];
+
+    /// <summary>Muda o modo das raias do projeto (um passo do Desfazer).</summary>
+    public Action<ModoDasRaias>? DefinirModoDasRaias { get; set; }
+
+    /// <summary>Leva os cards para outra raia (muda o resumo ou o responsável) e para a coluna, na lacuna entre todos os cards dela.</summary>
+    public Func<IReadOnlyList<Guid>, string, Guid, int, bool>? MoverParaRaia { get; set; }
+
+    partial void OnRaiasChanged(OpcaoDeRaias? value)
+    {
+        OnPropertyChanged(nameof(ComRaias));
+        if (!_refazendo && value is { } opcao && _cronograma is { } cronograma && opcao.Modo != cronograma.Quadro.Raias)
+            DefinirModoDasRaias?.Invoke(opcao.Modo);
+    }
+
+    /// <summary>A raia em que o card está (a chave); nula sem raias.</summary>
+    public string? RaiaDoCard(Guid tarefaId) => _raiaDoCard.GetValueOrDefault(tarefaId);
+
+    // A lacuna entre os cards da coluna que aparecem, correspondente à lacuna entre os cards da célula.
+    private static int LacunaNaColuna(CelulaNoKanban celula, int lacunaNaCelula)
+    {
+        var visiveis = celula.Coluna.Cards;
+        if (celula.Cards.Count == 0)
+            return visiveis.Count;
+        return lacunaNaCelula < celula.Cards.Count
+            ? Math.Max(0, visiveis.IndexOf(celula.Cards[Math.Max(0, lacunaNaCelula)]))
+            : visiveis.IndexOf(celula.Cards[^1]) + 1;
+    }
+
+    /// <summary>O plano de soltar na célula: na mesma raia, o da coluna; noutra, também muda o resumo ou o responsável.</summary>
+    public PlanoDoQuadro? PreverNaCelula(IReadOnlyList<Guid> tarefas, CelulaNoKanban celula, int lacunaNaCelula)
+    {
+        ArgumentNullException.ThrowIfNull(tarefas);
+        ArgumentNullException.ThrowIfNull(celula);
+        var plano = PreverSoltar(tarefas, celula.Coluna.Id, LacunaNaColuna(celula, lacunaNaCelula));
+        if (plano is not { Valido: true } || tarefas.All(id => RaiaDoCard(id) == celula.Raia.Chave))
+            return plano;
+        var raia = $"Mover para a raia \"{celula.Raia.Nome}\"";
+        return plano with
+        {
+            MudaAlgo = true,
+            Dica = plano.Tarefas.Any(id => ColunaDe(id) != celula.Coluna) ? $"{raia} · {plano.Dica}" : raia,
+        };
+    }
+
+    /// <summary>Solta na célula: na mesma raia, como numa coluna; noutra, muda também o resumo ou o responsável.</summary>
+    public bool SoltarNaCelula(IReadOnlyList<Guid> tarefas, CelulaNoKanban celula, int lacunaNaCelula)
+    {
+        ArgumentNullException.ThrowIfNull(tarefas);
+        ArgumentNullException.ThrowIfNull(celula);
+        var lacuna = LacunaNaColuna(celula, lacunaNaCelula);
+        if (tarefas.All(id => RaiaDoCard(id) == celula.Raia.Chave))
+            return Soltar(tarefas, celula.Coluna.Id, lacuna);
+        return MoverParaRaia?.Invoke(tarefas, celula.Raia.Chave, celula.Coluna.Id, LacunaEntreTodos(celula.Coluna.Id, lacuna)) ?? false;
+    }
+
+    // As raias × colunas: cada célula com os cards da coluna (os que aparecem) que são da raia.
+    private void MontarAsRaias(Cronograma cronograma, IReadOnlyDictionary<Guid, Tarefa> porId, IReadOnlyList<ColunaNoKanban> colunas)
+    {
+        var modo = cronograma.Quadro.Raias;
+        Raias = OpcoesDeRaias.First(o => o.Modo == modo);
+        if (modo == ModoDasRaias.Nenhuma)
+        {
+            _raiaDoCard = [];
+            RaiasNaTela.Clear();
+            _raias.Clear();
+            _celulas.Clear();
+            return;
+        }
+        _raiaDoCard = colunas.SelectMany(c => c.TodasAsTarefas).ToDictionary(id => id, id => RegrasDasRaias.RaiaDe(cronograma, modo, porId[id]));
+        var raias = new List<RaiaNoKanban>();
+        foreach (var raia in RegrasDasRaias.Raias(cronograma, modo))
+        {
+            if (!_raias.TryGetValue(raia.Chave, out var naTela))
+                _raias[raia.Chave] = naTela = new RaiaNoKanban(raia.Chave);
+            naTela.Nome = raia.Nome;
+            var celulas = new List<CelulaNoKanban>();
+            var cards = 0;
+            foreach (var coluna in colunas)
+            {
+                if (!_celulas.TryGetValue((raia.Chave, coluna.Id), out var celula))
+                    _celulas[(raia.Chave, coluna.Id)] = celula = new CelulaNoKanban(coluna, naTela);
+                var daRaia = coluna.Cards.Where(k => _raiaDoCard.GetValueOrDefault(k.TarefaId) == raia.Chave).ToList();
+                Reordenar(celula.Cards, daRaia);
+                cards += daRaia.Count;
+                celulas.Add(celula);
+            }
+            Reordenar(naTela.Celulas, celulas);
+            naTela.Contagem = cards == 1 ? "1 card" : $"{cards} cards";
+            raias.Add(naTela);
+        }
+        Reordenar(RaiasNaTela, raias);
+        var chaves = raias.Select(r => r.Chave).ToHashSet();
+        foreach (var chave in _raias.Keys.Where(c => !chaves.Contains(c)).ToList())
+            _raias.Remove(chave);
+        foreach (var chave in _celulas.Keys.Where(c => !chaves.Contains(c.Raia) || !_colunas.ContainsKey(c.Coluna)).ToList())
+            _celulas.Remove(chave);
+    }
 
     // ---- Bloco 77: o painel do card ----
 
@@ -432,6 +581,7 @@ public sealed partial class KanbanViewModel : ObservableObject
             colunas.Add(naTela);
         }
         Reordenar(Colunas, colunas);
+        MontarAsRaias(cronograma, porId, colunas); // Bloco 78
         foreach (var id in _cards.Keys.Where(id => !vistos.Contains(id)).ToList())
             _cards.Remove(id);
         foreach (var id in _colunas.Keys.Where(id => quadro.Coluna(id) is null).ToList())

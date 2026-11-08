@@ -36,6 +36,8 @@ public sealed class ProvedorDaConta : IProvedorIA
 
     public IAnalistaDaObra CriarAnalistaDaObra(string chave, string modelo) => new AnalistaDaObraGemini(_http, _acesso, NormalizarModelo(modelo));
 
+    public ISugestorDeChecklist CriarSugestorDeChecklist(string chave, string modelo) => new SugestorDeChecklistGemini(_http, _acesso, NormalizarModelo(modelo));
+
     /// <summary>Confere a conta e o modelo no servidor (sem ir ao Gemini nem gastar a cota).</summary>
     public async Task TestarAsync(string chave, string modelo, CancellationToken cancelamento)
     {
@@ -65,6 +67,8 @@ public sealed class ProvedorConformeCredencial(IProvedorIA chavePropria, IProved
     public IConsultorDeOrcamento CriarConsultor(string chave, string modelo) => Para(chave).CriarConsultor(chave, modelo);
 
     public IAnalistaDaObra CriarAnalistaDaObra(string chave, string modelo) => Para(chave).CriarAnalistaDaObra(chave, modelo);
+
+    public ISugestorDeChecklist CriarSugestorDeChecklist(string chave, string modelo) => Para(chave).CriarSugestorDeChecklist(chave, modelo);
 
     public Task TestarAsync(string chave, string modelo, CancellationToken cancelamento) => Para(chave).TestarAsync(chave, modelo, cancelamento);
 }

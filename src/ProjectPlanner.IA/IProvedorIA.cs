@@ -29,6 +29,9 @@ public interface IProvedorIA
     /// <summary>Bloco 43: a IA que analisa os indicadores da obra, com a mesma chave e modelo.</summary>
     IAnalistaDaObra CriarAnalistaDaObra(string chave, string modelo);
 
+    /// <summary>Bloco 78: a IA que sugere o checklist de um card; sem implementação, avisa que não está disponível.</summary>
+    ISugestorDeChecklist CriarSugestorDeChecklist(string chave, string modelo) => new SugestorDeChecklistIndisponivel();
+
     /// <summary>Confere se a chave funciona com o modelo, sem gastar a cota de mensagens.</summary>
     /// <exception cref="ArgumentException">Chave vazia ou com espaços, ou nome de modelo inválido.</exception>
     /// <exception cref="ErroDoAssistenteException">A chave não vale, o modelo não existe ou não há conexão.</exception>

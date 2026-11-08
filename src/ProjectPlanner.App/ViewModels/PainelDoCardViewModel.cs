@@ -34,6 +34,12 @@ public interface IAcoesDosCards
     Task ExcluirTarefasAsync(IReadOnlyList<Guid> tarefas);
 
     Task RecursosDaTarefaAsync(Guid tarefaId);
+
+    /// <summary>Bloco 78: a IA sugere itens para o checklist do card (a partir da tarefa).</summary>
+    Task SugerirChecklistAsync(Guid tarefaId);
+
+    /// <summary>Bloco 78: pede ao assistente o resumo da semana do quadro (concluídas, atrasadas, impedidas).</summary>
+    Task ResumoDaSemanaAsync();
 }
 
 /// <summary>Bloco 77: um item do checklist no painel (marcar ou mudar o texto vira um passo do Desfazer).</summary>
@@ -146,6 +152,10 @@ public sealed partial class PainelDoCard(Guid tarefaId, IAcoesDosCards? acoes, A
 
     [RelayCommand]
     private Task Recursos() => acoes?.RecursosDaTarefaAsync(TarefaId) ?? Task.CompletedTask;
+
+    /// <summary>Bloco 78: "Sugerir itens (IA)".</summary>
+    [RelayCommand]
+    private Task SugerirItens() => acoes?.SugerirChecklistAsync(TarefaId) ?? Task.CompletedTask;
 
     internal void ChecklistMudou(ItemNoPainel item, bool textoMudou)
     {

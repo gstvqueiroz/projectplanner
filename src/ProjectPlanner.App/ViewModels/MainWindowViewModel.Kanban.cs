@@ -20,6 +20,76 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
         Kanban.Acoes = this;
         Kanban.AcoesDosCards = this; // Bloco 77
         Kanban.LinhaDa = tarefaId => Tarefas.FirstOrDefault(l => l.Tarefa.Id == tarefaId);
+        Kanban.DefinirModoDasRaias = DefinirModoDasRaias; // Bloco 78
+        Kanban.MoverParaRaia = MoverParaRaia;
+    }
+
+    // ---- Bloco 78 (K6): as raias ----
+
+    /// <summary>Sem raias, por resumo ou por responsável: fica no projeto e é um passo do Desfazer.</summary>
+    public void DefinirModoDasRaias(ModoDasRaias modo)
+    {
+        if (_cronograma.Quadro.Raias == modo)
+            return;
+        var nome = modo switch { ModoDasRaias.PorResumo => "por resumo", ModoDasRaias.PorResponsavel => "por responsável", _ => "desligadas" };
+        MudarOQuadro($"Raias {nome}", () =>
+        {
+            RegrasDasRaias.DefinirModo(_cronograma, modo);
+            return (modo switch
+            {
+                ModoDasRaias.PorResumo => "Raias por resumo: arrastar um card para outra raia muda o resumo da tarefa (ela vai para o fim do grupo).",
+                ModoDasRaias.PorResponsavel => "Raias por responsável: arrastar um card para outra raia troca o profissional da tarefa.",
+                _ => "Quadro sem raias.",
+            }, false);
+        });
+    }
+
+    /// <summary>
+    /// K6: leva os cards para outra raia (muda o resumo da tarefa, que vai para o fim do grupo, ou o responsável) e para a coluna,
+    /// na lacuna entre todos os cards dela, com a regra do % de lá. Um passo só do Desfazer, com o aviso.
+    /// </summary>
+    /// <returns>Se mudou algo.</returns>
+    public bool MoverParaRaia(IReadOnlyList<Guid> tarefas, string raia, Guid colunaId, int lacuna)
+    {
+        ArgumentNullException.ThrowIfNull(tarefas);
+        var modo = _cronograma.Quadro.Raias;
+        if (modo == ModoDasRaias.Nenhuma || tarefas.Count == 0)
+            return false;
+        try
+        {
+            var copia = _cronograma.Copiar(); // primeiro numa cópia: se o domínio recusar, nada muda
+            RegrasDasRaias.MoverParaRaia(copia, modo, tarefas, raia);
+            if (RegrasDoQuadro.Planejar(copia, tarefas, colunaId, lacuna) is { Valido: true, MudaAlgo: true } teste)
+                RegrasDoQuadro.Aplicar(copia, teste);
+        }
+        catch (DomainValidationException ex)
+        {
+            Mensagem = ex.Message;
+            return false;
+        }
+        var nomeDaRaia = RegrasDasRaias.Raias(_cronograma, modo).First(r => r.Chave == raia).Nome;
+        var colunasAntes = tarefas.ToDictionary(id => id, id => _cronograma.Quadro.CardDe(id)?.ColunaId);
+        var resultado = RegrasDasRaias.MoverParaRaia(_cronograma, modo, tarefas, raia);
+        var plano = RegrasDoQuadro.Planejar(_cronograma, tarefas, colunaId, lacuna);
+        string? daColuna = null;
+        if (plano is { Valido: true, MudaAlgo: true })
+        {
+            var texto = RegrasDoQuadro.Aplicar(_cronograma, plano).Texto;
+            if (plano.Tarefas.Any(id => colunasAntes[id] != colunaId))
+                daColuna = texto;
+        }
+        if (resultado.MudouAEstrutura)
+        {
+            SincronizarLinhas();
+            foreach (var linha in Tarefas)
+                linha.AtualizarTela(); // a EDT e as predecessoras (pelo Nº das linhas, que mudou)
+        }
+        var movidas = tarefas.Select(id => Tarefas.FirstOrDefault(l => l.Tarefa.Id == id)).OfType<TarefaViewModel>().ToList();
+        DefinirSelecao(movidas, movidas.FirstOrDefault());
+        MarcarAlteracao(movidas.Count == 1 ? $"Mover \"{movidas[0].Nome}\" para a raia {nomeDaRaia}" : $"Mover {movidas.Count} cards para a raia {nomeDaRaia}");
+        Mensagem = string.Join(" ", new[] { resultado.Texto, daColuna }.Where(t => !string.IsNullOrEmpty(t)));
+        AvisoComDesfazer = Mensagem;
+        return true;
     }
 
     /// <summary>O que aconteceria ao soltar os cards das tarefas na coluna, na lacuna dada (0 é antes do primeiro card). Não muda nada.</summary>

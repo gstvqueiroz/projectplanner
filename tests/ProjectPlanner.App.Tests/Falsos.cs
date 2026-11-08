@@ -561,6 +561,9 @@ public sealed class Ambiente
     /// <summary>Bloco 43: a IA que analisa os indicadores.</summary>
     public AnalistaDaObraFalso AnalistaDaObra { get; } = new();
 
+    /// <summary>Bloco 78: a IA que sugere o checklist de um card.</summary>
+    public SugestorDeChecklistFalso Sugestor { get; } = new();
+
     /// <summary>Bloco 45: a conta ProjectPlanner.</summary>
     public ContaFalsa Conta { get; } = new();
 
@@ -574,7 +577,7 @@ public sealed class Ambiente
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
             analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
             consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta, telegram: Telegram,
-            preferenciasDoCalendario: PreferenciasDoCalendario);
+            preferenciasDoCalendario: PreferenciasDoCalendario, sugestorDeChecklist: Sugestor);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")
@@ -809,6 +812,24 @@ public sealed class ProvedorFalso : IProvedorIA
 }
 
 /// <summary>Bloco 43: a IA que analisa os indicadores, nos testes: guarda os pedidos e responde o que o teste mandar.</summary>
+/// <summary>Bloco 78: o checklist sugerido pela IA, sem rede.</summary>
+public sealed class SugestorDeChecklistFalso : ISugestorDeChecklist
+{
+    public bool EstaConfigurado { get; set; } = true;
+
+    public List<PedidoDeChecklist> Pedidos { get; } = [];
+
+    public Exception? Erro { get; set; }
+
+    public IReadOnlyList<string> Itens { get; set; } = ["Conferir o material", "Marcar os eixos", "Conferir o prumo"];
+
+    public Task<IReadOnlyList<string>> SugerirAsync(PedidoDeChecklist pedido, CancellationToken cancelamento)
+    {
+        Pedidos.Add(pedido);
+        return Erro is not null ? Task.FromException<IReadOnlyList<string>>(Erro) : Task.FromResult(Itens);
+    }
+}
+
 public sealed class AnalistaDaObraFalso : IAnalistaDaObra
 {
     public bool EstaConfigurado { get; set; } = true;

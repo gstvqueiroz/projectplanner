@@ -280,4 +280,42 @@ public partial class MenuPrincipalTests
         Pintar(a);
         CardsDa(a, "A fazer").Should().Equal("A", "B", "C", "D");
     });
+
+    // Bloco 78 (K6): as raias na janela: o seletor troca as colunas pela grade de raias × colunas, e arrastar um card para a
+    // célula de outra raia muda o resumo da tarefa.
+    [Fact]
+    public Task Kanban_RaiasPorResumo_ArrastarParaOutraRaiaMudaOResumo() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        foreach (var nome in new[] { "Fundação", "Estrutura" })
+        {
+            var resumo = Ambiente.AdicionarTarefa(a.Vm, nome, 1);
+            a.Vm.TarefaSelecionada = resumo;
+            a.Vm.AdicionarSubtarefaCommand.Execute(null);
+            a.Vm.TarefaSelecionada!.Nome = nome == "Fundação" ? "Sapatas" : "Pilares";
+        }
+        a.Clicar("Exibir", "Kanban");
+        var quadro = a.Janela.QuadroKanban;
+        var seletor = quadro.FindControl<ComboBox>("SeletorDeRaias")!;
+
+        seletor.SelectedItem = a.Vm.Kanban.OpcoesDeRaias.Single(o => o.Nome == "Raias por resumo");
+        Pintar(a);
+
+        (quadro.FindControl<ScrollViewer>("RolagemDasRaias")!.IsVisible, quadro.FindControl<ScrollViewer>("Rolagem")!.IsVisible).Should().Be((true, false));
+        var celulas = quadro.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("celula")).ToList();
+        celulas.Select(c => ((CelulaNoKanban)c.DataContext!).Raia.Nome).Distinct().Should().Equal("1 Fundação", "2 Estrutura", "Sem resumo");
+        var raias = quadro.FindControl<ScrollViewer>("RolagemDasRaias")!; // as colunas (escondidas) também têm o card
+        var sapatas = raias.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("card") && (b.DataContext as CardNoKanban)?.Nome == "Sapatas");
+        var destino = celulas.Single(c => c.DataContext is CelulaNoKanban { Raia.Nome: "2 Estrutura", Coluna.Nome: "A fazer" });
+
+        Arrastar(a, Meio(a, sapatas), destino.TranslatePoint(new Point(destino.Bounds.Width / 2, destino.Bounds.Height - 4), a.Janela)!.Value, soltar: false);
+        quadro.FindControl<Canvas>("Sobreposicao")!.Children.OfType<Border>().Select(b => (b.Child as TextBlock)?.Text)
+            .Should().Contain("Mover para a raia \"2 Estrutura\"");
+        a.Janela.MouseUp(destino.TranslatePoint(new Point(destino.Bounds.Width / 2, destino.Bounds.Height - 4), a.Janela)!.Value, MouseButton.Left);
+        Pintar(a);
+
+        a.Vm.Tarefas.Select(l => $"{l.Edt} {l.Nome}").Should().Equal("1 Fundação", "2 Estrutura", "2.1 Pilares", "2.2 Sapatas");
+        a.Janela.FindControl<Border>("AvisoComDesfazer")!.IsVisible.Should().BeTrue();
+        quadro.FindControl<Button>("BotaoResumoDaSemana").Should().NotBeNull();
+    });
 }

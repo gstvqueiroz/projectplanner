@@ -75,5 +75,6 @@ public static class Servicos
         .AddSingleton<IConsultorDeOrcamento>(s => new ConsultorConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
         // Bloco 43: a IA que analisa os indicadores da obra.
         .AddSingleton<IAnalistaDaObra>(s => new AnalistaDaObraConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
+        .AddSingleton<ISugestorDeChecklist>(s => new SugestorDeChecklistConformeConfiguracao(s.GetRequiredService<IConfiguracaoIA>(), s.GetRequiredService<IProvedorIA>()))
         .AddTransient<MainWindowViewModel>();
 }

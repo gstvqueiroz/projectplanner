@@ -18,6 +18,9 @@ public static class RotinasDeIa
     public const string Orcamento = "orcamento";
     public const string AnaliseDaObra = "analise-da-obra";
 
+    /// <summary>Bloco 78: o checklist de um card do Kanban.</summary>
+    public const string Checklist = "checklist";
+
     /// <summary>Bloco 51: a triagem do nível Automático (o servidor registra, não o programa).</summary>
     public const string Triagem = "triagem";
 
@@ -25,7 +28,7 @@ public static class RotinasDeIa
     public const string Outra = "outra";
 
     public static IReadOnlyList<string> Todas { get; } =
-        [Chat, Telegram, ClassificarFotos, Legendas, AvancoPelasFotos, Relatorio, Orcamento, AnaliseDaObra, Triagem];
+        [Chat, Telegram, ClassificarFotos, Legendas, AvancoPelasFotos, Relatorio, Orcamento, AnaliseDaObra, Checklist, Triagem];
 
     /// <summary>A rotina como o servidor guarda: uma das conhecidas, ou <see cref="Outra"/>.</summary>
     public static string Normalizar(string? rotina) =>
@@ -42,6 +45,7 @@ public static class RotinasDeIa
         Relatorio => "Texto do relatório",
         Orcamento => "Orçamento",
         AnaliseDaObra => "Análise da obra",
+        Checklist => "Checklist dos cards",
         Triagem => "Triagem do Automático",
         _ => "Outras",
     };

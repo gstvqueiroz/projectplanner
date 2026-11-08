@@ -52,6 +52,15 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
     /// </summary>
     public IReadOnlyList<string>? Calendario { get; init; }
 
+    /// <summary>
+    /// Bloco 78 (o gancho de IA do Kanban): o quadro, uma linha por coluna com as tarefas pelo Nº, os arquivados, os checklists
+    /// e as etiquetas. Nulo sem cards.
+    /// </summary>
+    public IReadOnlyList<string>? Quadro { get; init; }
+
+    /// <summary>Linhas do quadro no retrato, no máximo.</summary>
+    public const int LinhasDoQuadro = 60;
+
     /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
     public const int LinhasDoOrcamento = 200;
 
@@ -102,6 +111,13 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
                 t.Critica ? "sim" : "não",
                 t.Fotos.ToString(Cultura),
                 Notas(t.Notas)));
+        }
+        if (Quadro is { Count: > 0 } quadro)
+        {
+            texto.AppendLine("Quadro Kanban (cada card é uma tarefa sem subtarefas, pelo Nº; numa coluna do tipo A fazer o % é 0, numa " +
+                             "Concluída é 100; mudar o % de uma tarefa leva o card para a coluna do tipo certo):");
+            foreach (var linha in quadro.Take(LinhasDoQuadro))
+                texto.AppendLine("- " + Limpar(linha));
         }
         if (Orcamento is { Count: > 0 } orcamento)
         {

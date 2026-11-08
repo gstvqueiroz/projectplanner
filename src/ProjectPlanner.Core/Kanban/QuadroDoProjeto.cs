@@ -301,6 +301,10 @@ public sealed class QuadroDoProjeto
             _cards[card.TarefaId] = card with { Etiquetas = [.. card.Etiquetas.Where(ids.Contains)] };
     }
 
+    /// <summary>Bloco 78: como o quadro agrupa os cards em raias.</summary>
+    internal void DefinirRaias(ModoDasRaias modo) =>
+        Raias = Enum.IsDefined(modo) ? modo : throw new DomainValidationException(nameof(Raias), "Modo de raias desconhecido.");
+
     /// <summary>Bloco 77: um card desarquivado volta para o fim da coluna dele.</summary>
     internal int OrdemNoFimDe(Guid colunaId) => ProximaOrdem(colunaId);
 

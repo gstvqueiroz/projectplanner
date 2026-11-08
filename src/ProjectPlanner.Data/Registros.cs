@@ -190,6 +190,16 @@ internal sealed class CalendarioRegistro
     public required string Dados { get; set; }
 }
 
+/// <summary>Bloco 81: o Diário de Obra (RDO), em JSON (ver <see cref="FormatoDoDiario"/>); nenhuma linha sem dias.</summary>
+internal sealed class DiarioRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
 /// <summary>Bloco 75: o quadro Kanban, em JSON (ver <see cref="FormatoDoQuadro"/>); nenhuma linha num projeto sem tarefas.</summary>
 internal sealed class QuadroRegistro
 {

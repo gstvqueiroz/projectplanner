@@ -224,6 +224,8 @@ public sealed class DialogosAvalonia : IDialogosService
 
     public Task MostrarCustosAsync(ViewModels.CustosViewModel custos) => new CustosWindow(custos).ShowDialog(JanelaPrincipal);
 
+    public Task MostrarDiarioDeObraAsync(ViewModels.DiarioDeObraViewModel diario) => new DiarioDeObraWindow(diario).ShowDialog(JanelaPrincipal);
+
     public Task MostrarIndicadoresAsync(ViewModels.IndicadoresViewModel indicadores) => new IndicadoresWindow(indicadores).ShowDialog(JanelaPrincipal);
 
     public async Task<string?> SalvarComoAsync(string titulo, string nomeSugerido, string extensao)

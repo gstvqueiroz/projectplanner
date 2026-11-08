@@ -1,0 +1,159 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        x:Class="ProjectPlanner.App.Views.DiarioDeObraWindow"
+        x:DataType="vm:DiarioDeObraViewModel"
+        Title="{Binding Titulo}"
+        Width="1180" Height="760" MinWidth="900" MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 81: o Diário de Obra (RDO): os dias à esquerda; o dia escolhido à direita. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,12,0,4" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.secundario">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.remover">
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="16">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="PdfDoDia" Content="PDF do dia…" Command="{Binding PdfDoDiaCommand}" IsEnabled="{Binding TemDia}"
+                        ToolTip.Tip="O RDO do dia escolhido em PDF, para imprimir e assinar (com até 8 fotos do dia)" />
+                <Button Content="PDF do mês…" Command="{Binding PdfDoMesCommand}" IsEnabled="{Binding TemDia}"
+                        ToolTip.Tip="Todos os dias do mês do dia escolhido, num PDF só" />
+                <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+            </StackPanel>
+            <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" Margin="0,0,12,0" />
+        </DockPanel>
+
+        <!-- Os dias -->
+        <DockPanel DockPanel.Dock="Left" Width="270" Margin="0,0,16,0">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource FundoDosFiltros}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="secundario" Text="Novo dia (vem preenchido pelo cronograma)" />
+                    <DockPanel>
+                        <Button x:Name="NovoDia" DockPanel.Dock="Right" Classes="accent" Content="Novo dia" Command="{Binding NovoDiaCommand}" Margin="8,0,0,0" />
+                        <CalendarDatePicker x:Name="DataDoNovo" SelectedDate="{Binding DataDoNovo}" HorizontalAlignment="Stretch" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+            <Button DockPanel.Dock="Bottom" Content="Excluir dia…" Command="{Binding ExcluirDiaCommand}" IsEnabled="{Binding PodeEditar}" Margin="0,8,0,0"
+                    ToolTip.Tip="Só um dia aberto, e sem dias fechados depois dele (os números dos fechados não mudam)" />
+            <Panel>
+                <ListBox x:Name="ListaDeDias" ItemsSource="{Binding Dias}" SelectedItem="{Binding Selecionado}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DiaNaLista">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="{Binding Texto}" FontWeight="SemiBold" />
+                                <TextBlock Classes="secundario" Text="{Binding Resumo}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="{x:Static vm:DiarioDeObraViewModel.TextoSemDias}" IsVisible="{Binding SemDias}" TextWrapping="Wrap" Classes="secundario"
+                           Margin="8" VerticalAlignment="Top" />
+            </Panel>
+        </DockPanel>
+
+        <!-- O dia escolhido -->
+        <ScrollViewer x:Name="FormularioDoDia" IsVisible="{Binding TemDia}">
+            <StackPanel Spacing="4" Margin="0,0,12,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button x:Name="SalvarDia" Content="Salvar" Command="{Binding SalvarDiaCommand}" IsVisible="{Binding PodeEditar}" />
+                        <Button x:Name="FecharDia" Classes="accent" Content="Fechar o dia (assinar)" Command="{Binding FecharDiaCommand}" IsVisible="{Binding PodeEditar}"
+                                ToolTip.Tip="Salva e fecha o RDO: ele não muda mais, a não ser que seja reaberto" />
+                        <Button x:Name="ReabrirDia" Content="Reabrir" Command="{Binding ReabrirDiaCommand}" IsVisible="{Binding Fechado}" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock x:Name="CabecalhoDoDia" Text="{Binding Cabecalho}" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock Classes="secundario" Text="{Binding Situacao}" />
+                    </StackPanel>
+                </DockPanel>
+
+                <TextBlock Classes="secao" Text="Clima" />
+                <Grid ColumnDefinitions="60,160,12,Auto,30,60,160,12,Auto" IsEnabled="{Binding PodeEditar}">
+                    <TextBlock Classes="rotulo" Text="Manhã" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Tempos}" SelectedItem="{Binding TempoDaManha}" HorizontalAlignment="Stretch" />
+                    <CheckBox Grid.Column="3" Content="Praticável" IsChecked="{Binding ManhaPraticavel}" />
+                    <TextBlock Grid.Column="5" Classes="rotulo" Text="Tarde" />
+                    <ComboBox Grid.Column="6" ItemsSource="{Binding Tempos}" SelectedItem="{Binding TempoDaTarde}" HorizontalAlignment="Stretch" />
+                    <CheckBox Grid.Column="8" Content="Praticável" IsChecked="{Binding TardePraticavel}" />
+                </Grid>
+                <Button x:Name="MarcarSemTrabalho" Content="Marcar o dia sem trabalho no calendário" Command="{Binding MarcarSemTrabalhoCommand}"
+                        IsVisible="{Binding Impraticavel}" Margin="0,6,0,0"
+                        ToolTip.Tip="Manhã e tarde impraticáveis: o dia vira um dia sem trabalho no calendário e as tarefas andam um dia útil" />
+
+                <DockPanel Margin="0,12,0,4">
+                    <Button DockPanel.Dock="Right" Content="Preencher pelo cronograma" Command="{Binding PreencherPeloCronogramaCommand}" IsVisible="{Binding PodeEditar}"
+                            ToolTip.Tip="Repõe os serviços, o efetivo e os equipamentos que o cronograma prevê para o dia" />
+                    <TextBlock FontWeight="SemiBold" Text="Efetivo" VerticalAlignment="Bottom" />
+                </DockPanel>
+                <ItemsControl ItemsSource="{Binding Efetivo}" IsEnabled="{Binding PodeEditar}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinhaDoEfetivo">
+                            <Grid ColumnDefinitions="*,8,80,8,*,4,Auto" Margin="0,2">
+                                <TextBox Text="{Binding Funcao}" PlaceholderText="Função (pedreiro, servente…)" />
+                                <TextBox Grid.Column="2" Text="{Binding Quantidade}" PlaceholderText="Qtd." HorizontalContentAlignment="Right" />
+                                <TextBox Grid.Column="4" Text="{Binding Empresa}" PlaceholderText="Empresa (vazia: própria)" />
+                                <Button Grid.Column="6" Classes="remover" Content="✕" Command="{Binding RemoverCommand}" AutomationProperties.Name="Tirar a linha" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="+ Função" Command="{Binding AdicionarEfetivoCommand}" IsVisible="{Binding PodeEditar}" HorizontalAlignment="Left" />
+
+                <TextBlock Classes="secao" Text="Equipamentos" />
+                <ItemsControl ItemsSource="{Binding Equipamentos}" IsEnabled="{Binding PodeEditar}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinhaDoEquipamento">
+                            <Grid ColumnDefinitions="*,8,80,4,Auto" Margin="0,2">
+                                <TextBox Text="{Binding Nome}" PlaceholderText="Equipamento (betoneira, andaime…)" />
+                                <TextBox Grid.Column="2" Text="{Binding Quantidade}" PlaceholderText="Qtd." HorizontalContentAlignment="Right" />
+                                <Button Grid.Column="4" Classes="remover" Content="✕" Command="{Binding RemoverCommand}" AutomationProperties.Name="Tirar a linha" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="+ Equipamento" Command="{Binding AdicionarEquipamentoCommand}" IsVisible="{Binding PodeEditar}" HorizontalAlignment="Left" />
+
+                <DockPanel Margin="0,12,0,4">
+                    <Button DockPanel.Dock="Right" Content="Levar o % ao cronograma" Command="{Binding LevarOPercentualCommand}"
+                            ToolTip.Tip="O % ao fim do dia dos serviços que são tarefas vai para o % concluído delas no cronograma" />
+                    <TextBlock FontWeight="SemiBold" Text="Serviços executados" VerticalAlignment="Bottom" />
+                </DockPanel>
+                <ItemsControl ItemsSource="{Binding Atividades}" IsEnabled="{Binding PodeEditar}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LinhaDaAtividade">
+                            <Grid ColumnDefinitions="*,8,90,4,Auto" Margin="0,2">
+                                <TextBox Text="{Binding Descricao}" PlaceholderText="O que foi feito" />
+                                <TextBox Grid.Column="2" Text="{Binding Percentual}" PlaceholderText="% no fim" HorizontalContentAlignment="Right"
+                                         ToolTip.Tip="O % da tarefa ao fim do dia (opcional)" />
+                                <Button Grid.Column="4" Classes="remover" Content="✕" Command="{Binding RemoverCommand}" AutomationProperties.Name="Tirar a linha" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="+ Serviço" Command="{Binding AdicionarAtividadeCommand}" IsVisible="{Binding PodeEditar}" HorizontalAlignment="Left" />
+
+                <TextBlock Classes="secao" Text="Ocorrências e observações" />
+                <TextBox x:Name="Ocorrencias" Text="{Binding Ocorrencias}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" IsEnabled="{Binding PodeEditar}"
+                         PlaceholderText="Visitas, entregas de material, acidentes, paralisações, pedidos da fiscalização…" />
+                <TextBlock Classes="secundario" Text="{Binding FotosDoDia}" Margin="0,8,0,0" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

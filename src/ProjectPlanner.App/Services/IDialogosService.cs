@@ -113,6 +113,9 @@ public interface IDialogosService
     /// <summary>Bloco 37: mostra Projeto > Custos realizados… e espera ser fechada.</summary>
     Task MostrarCustosAsync(ViewModels.CustosViewModel custos);
 
+    /// <summary>Bloco 81: Projeto > Diário de obra… (o RDO), até ser fechada.</summary>
+    Task MostrarDiarioDeObraAsync(ViewModels.DiarioDeObraViewModel diario);
+
     /// <summary>Bloco 37: mostra Projeto > Indicadores… e espera ser fechada.</summary>
     Task MostrarIndicadoresAsync(ViewModels.IndicadoresViewModel indicadores);
 

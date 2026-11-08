@@ -338,6 +338,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 Dados = FormatoDoCalendario.Serializar(cronograma.Calendario),
             });
 
+        if (!cronograma.Diario.Vazio)
+            contexto.Diario.Add(new DiarioRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDoDiario.Versao,
+                Dados = FormatoDoDiario.Serializar(cronograma),
+            });
+
         if (!cronograma.Quadro.Vazio)
             contexto.Quadro.Add(new QuadroRegistro
             {
@@ -504,6 +512,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             if (!FormatoDasOrdens.Conhece(ordens.Versao))
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem as ordens de serviço num formato desconhecido.");
             FormatoDasOrdens.Ler(ordens.Dados, cronograma);
+        }
+
+        // O Diário de Obra (Bloco 81).
+        if (contexto.Diario.AsNoTracking().FirstOrDefault() is { } diario)
+        {
+            if (!FormatoDoDiario.Conhece(diario.Versao))
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o Diário de Obra num formato desconhecido.");
+            FormatoDoDiario.Ler(diario.Dados, cronograma);
         }
 
         // O quadro Kanban (Bloco 75), depois das tarefas (os cards são delas). Sem ele, o programa monta o padrão (K7).

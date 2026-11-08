@@ -3,6 +3,29 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.81.0
+
+**Diário de Obra (RDO).** Projeto > **Diário de obra…** (também pelo botão da barra e pela aba **Diário** no rodapé) guarda o
+relatório de cada dia da obra:
+
+- **Um dia novo já vem preenchido pelo cronograma:** os serviços previstos para o dia (as tarefas em andamento, com o % atual),
+  o efetivo e os equipamentos delas (pelos recursos atribuídos, somados por função, com a empresa do fornecedor) e o clima. Se o
+  calendário não tem trabalho no dia, ele já vem impraticável, com o motivo nas ocorrências. Você só ajusta o que mudou.
+- **O dia:** o clima de manhã e de tarde (bom, nublado ou chuva, e se foi praticável), o efetivo, os equipamentos, os serviços
+  executados (com o % ao fim do dia) e as ocorrências (visitas, entregas, acidentes, paralisações...). "Preencher pelo
+  cronograma" repõe os serviços, o efetivo e os equipamentos.
+- **Numeração:** RDO 001, 002... pela ordem das datas. **Fechar o dia** o assina (com o responsável dos relatórios): ele não
+  muda mais, a não ser que seja reaberto, e os números dos dias fechados nunca mudam (não dá para criar um dia antes do último
+  fechado).
+- **Levar o % ao cronograma:** o % dos serviços que são tarefas vai para o % concluído delas.
+- **Dia sem trabalho:** com manhã e tarde impraticáveis, um botão marca o dia sem trabalho no calendário ("Chuva (RDO nº 2)"),
+  e as tarefas andam um dia útil.
+- **PDF para imprimir e assinar:** o RDO do dia (com até 8 fotos tiradas no dia, com a hora e a tarefa) ou todos os dias do mês
+  num PDF só, com o cabeçalho e o logotipo dos relatórios, o dia da obra ("Dia 12 da obra") e o término previsto, e as
+  assinaturas do responsável técnico e da fiscalização. Um dia ainda aberto sai marcado como rascunho.
+- O que está no formulário é salvo ao trocar de dia e ao fechar a tela; cada mudança é um passo do Desfazer. O diário fica no
+  arquivo do projeto (.pplan).
+
 ## 0.80.1
 
 - **Servidor do Telegram:** a fila de mensagens agora é atendida uma de cada vez. Duas rotinas atendendo ao mesmo tempo podiam

@@ -116,6 +116,23 @@ namespace ProjectPlanner.Data.Migrations
                     b.ToTable("CustosDoProjeto", (string)null);
                 });
 
+            modelBuilder.Entity("ProjectPlanner.Data.DiarioRegistro", b =>
+                {
+                    b.Property<Guid>("ProjetoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Versao")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProjetoId");
+
+                    b.ToTable("DiarioDaObra", (string)null);
+                });
+
             modelBuilder.Entity("ProjectPlanner.Data.FotoImagemRegistro", b =>
                 {
                     b.Property<Guid>("FotoId")
@@ -529,6 +546,15 @@ namespace ProjectPlanner.Data.Migrations
                     b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
                         .WithOne()
                         .HasForeignKey("ProjectPlanner.Data.CustosRegistro", "ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ProjectPlanner.Data.DiarioRegistro", b =>
+                {
+                    b.HasOne("ProjectPlanner.Data.ProjetoRegistro", null)
+                        .WithOne()
+                        .HasForeignKey("ProjectPlanner.Data.DiarioRegistro", "ProjetoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

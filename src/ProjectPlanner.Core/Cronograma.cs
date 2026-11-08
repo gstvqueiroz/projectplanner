@@ -547,6 +547,9 @@ public class Cronograma
     /// </summary>
     public Kanban.QuadroDoProjeto Quadro { get; private set; }
 
+    /// <summary>Bloco 81: o Diário de Obra (RDO), um registro por dia. Volta no Desfazer, como as tarefas.</summary>
+    public Diario.DiarioDaObra Diario { get; private set; } = new();
+
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
     public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
 
@@ -586,6 +589,7 @@ public class Cronograma
         copia.Recursos = Recursos.CopiarPara(copia);
         copia.Orcamento = Orcamento.CopiarPara(copia);
         copia.Quadro = Quadro.CopiarPara(copia);
+        copia.Diario = Diario.Copiar();
         copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

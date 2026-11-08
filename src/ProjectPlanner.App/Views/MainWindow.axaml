@@ -271,6 +271,9 @@
                     <MenuItem Header="Uso de recursos…" Command="{Binding UsoDeRecursosCommand}"
                               ToolTip.Tip="O histograma de cada recurso, as superalocações e o nivelamento sugerido, e as equipes e compras por período" />
                     <Separator />
+                    <!-- Bloco 81 -->
+                    <MenuItem Header="Diário de obra…" Command="{Binding DiarioDeObraCommand}"
+                              ToolTip.Tip="O RDO de cada dia: clima, efetivo, equipamentos, serviços executados e ocorrências, já preenchido pelo cronograma, com o PDF para assinar" />
                     <!-- Bloco 36 -->
                     <MenuItem Header="Medições…" Command="{Binding MedicoesCommand}"
                               ToolTip.Tip="Os boletins de medição (por quantidade ou %), com retenção, reajuste e glosas, os aditivos e o plano de medições" />
@@ -441,6 +444,12 @@
                             ToolTip.Tip="Fotos do projeto: a linha do tempo, a importação em lote e os locais da obra" AutomationProperties.Name="Fotos do projeto">
                         <!-- Quatro fotos em grade -->
                         <Path Data="M1.5,1.5 H7 V7 H1.5 Z M9,1.5 H14.5 V7 H9 Z M1.5,9 H7 V14.5 H1.5 Z M9,9 H14.5 V14.5 H9 Z" />
+                    </Button>
+                    <!-- Bloco 81 -->
+                    <Button Tag="diario" Classes="acessoRapido" Command="{Binding DiarioDeObraCommand}"
+                            ToolTip.Tip="Diário de obra: o RDO do dia (clima, efetivo, serviços e ocorrências) e o PDF para assinar" AutomationProperties.Name="Diário de obra">
+                        <!-- Caderno com a espiral e as linhas -->
+                        <Path Data="M4,1.5 H13.5 V14.5 H4 Z M2,4 H6 M2,8 H6 M2,12 H6 M8,5 H11.5 M8,8 H11.5 M8,11 H10" />
                     </Button>
                     <Button Tag="medicoes" Classes="acessoRapido" Command="{Binding MedicoesCommand}"
                             ToolTip.Tip="Medições: os boletins, os aditivos e o plano de medições" AutomationProperties.Name="Medições">
@@ -631,6 +640,7 @@
                             Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Kanban}"
                             ToolTip.Tip="Kanban: as tarefas como cards, nas colunas do status" />
                     <Border Width="1" Margin="6,5" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                    <Button Classes="aba" Content="Diário" Command="{Binding DiarioDeObraCommand}" ToolTip.Tip="Abrir o diário de obra (o RDO do dia)" />
                     <Button Classes="aba" Content="Orçamento" Command="{Binding OrcamentoCommand}" ToolTip.Tip="Abrir o orçamento da obra" />
                     <Button Classes="aba" Content="Recursos" Command="{Binding RecursosDoProjetoCommand}" ToolTip.Tip="Abrir os recursos do projeto" />
                     <Button Classes="aba" Content="Medições" Command="{Binding MedicoesCommand}" ToolTip.Tip="Abrir as medições do contrato" />

@@ -69,6 +69,7 @@ public sealed partial class BarraDeIconesViewModel
             B("importarValores", "Importar valores", GrupoDaBarra.Planejamento),
             B("relatorio", "Relatório fotográfico", GrupoDaBarra.Obra),
             B("fotosDoProjeto", "Fotos do projeto", GrupoDaBarra.Obra),
+            B("diario", "Diário de obra", GrupoDaBarra.Obra), // Bloco 81
             B("medicoes", "Medições", GrupoDaBarra.Obra),
             B("ordensDeServico", "Ordens de serviço", GrupoDaBarra.Obra),
             B("novaOrdemDeServico", "Nova ordem de serviço", GrupoDaBarra.Obra),

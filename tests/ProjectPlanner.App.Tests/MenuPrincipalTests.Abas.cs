@@ -21,7 +21,7 @@ public partial class MenuPrincipalTests
         Pintar(a);
 
         a.Janela.Abas.Children.OfType<Button>().Select(b => (string)b.Content!).Should().Equal(
-            "Gantt", "Kanban", "Orçamento", "Recursos", "Medições", "Ordens de serviço", "Custos", "Físico-financeiro", "Indicadores", "Fotos");
+            "Gantt", "Kanban", "Diário", "Orçamento", "Recursos", "Medições", "Ordens de serviço", "Custos", "Físico-financeiro", "Indicadores", "Fotos");
         var topoDaBarra = a.Janela.BarraDeAbas.TranslatePoint(default, a.Janela)!.Value.Y;
         var fimDosPaineis = a.Janela.Paineis.TranslatePoint(new Point(0, a.Janela.Paineis.Bounds.Height), a.Janela)!.Value.Y;
         var mensagem = a.Janela.StatusMensagem.TranslatePoint(default, a.Janela)!.Value.Y;
@@ -52,7 +52,7 @@ public partial class MenuPrincipalTests
         var a = Abrir();
         foreach (var (aba, comando) in new (string, ICommand)[]
                  {
-                     ("Orçamento", a.Vm.OrcamentoCommand), ("Recursos", a.Vm.RecursosDoProjetoCommand), ("Medições", a.Vm.MedicoesCommand),
+                     ("Diário", a.Vm.DiarioDeObraCommand), ("Orçamento", a.Vm.OrcamentoCommand), ("Recursos", a.Vm.RecursosDoProjetoCommand), ("Medições", a.Vm.MedicoesCommand),
                      ("Ordens de serviço", a.Vm.OrdensDeServicoCommand), ("Custos", a.Vm.CustosRealizadosCommand),
                      ("Físico-financeiro", a.Vm.FisicoFinanceiroCommand), ("Indicadores", a.Vm.IndicadoresCommand),
                      ("Fotos", a.Vm.FotosDoProjetoCommand),

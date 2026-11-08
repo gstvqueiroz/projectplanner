@@ -424,6 +424,14 @@ public sealed class DialogosFalsos : IDialogosService
         return Task.CompletedTask;
     }
 
+    public List<DiarioDeObraViewModel> Diarios { get; } = [];
+
+    public Task MostrarDiarioDeObraAsync(DiarioDeObraViewModel diario)
+    {
+        Diarios.Add(diario);
+        return Task.CompletedTask;
+    }
+
     public List<CustosViewModel> Custos { get; } = [];
 
     public Task MostrarCustosAsync(CustosViewModel custos)

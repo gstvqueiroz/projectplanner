@@ -116,7 +116,7 @@ public partial class MenuPrincipalTests
             Linha, "Ir para a tarefa…", "Rolar até a tarefa",
             Linha, "Gerenciar fotos…", "Recursos da tarefa…");
         Titulos(a.Item("Projeto")).Should().Equal("Calendário de trabalho…", Linha, "Salvar linha de base…", "Linhas de base…", Linha,
-            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Orçamento…", "Recursos…", "Uso de recursos…", Linha, "Medições…", "Ordens de serviço…", "Nova ordem de serviço", "Relatório das ordens de serviço…", "Custos realizados…", "Indicadores…");
+            "Cronograma físico-financeiro…", "Importar valores…", Linha, "Orçamento…", "Recursos…", "Uso de recursos…", Linha, "Diário de obra…", "Medições…", "Ordens de serviço…", "Nova ordem de serviço", "Relatório das ordens de serviço…", "Custos realizados…", "Indicadores…");
         Titulos(a.Item("Conta")).Should().Equal("Entrar ou criar conta…", "Sair da conta", Linha, // Bloco 45
             "Usar esta obra no Telegram", "Buscar do Telegram", "Conectar o Telegram…"); // Bloco 49
         Titulos(a.Item("Ajuda")).Should().Equal("Abrir a pasta de registros de erros", Linha, "Baixar a versão nova…", "Sobre o ProjectPlanner…");
@@ -182,6 +182,7 @@ public partial class MenuPrincipalTests
             (a.Vm.ImportarValoresCommand, "Importar valores"),
             (a.Vm.RelatorioFotograficoCommand, "Relatório fotográfico"),
             (a.Vm.FotosDoProjetoCommand, "Fotos do projeto"),
+            (a.Vm.DiarioDeObraCommand, "Diário de obra"), // Bloco 81
             (a.Vm.MedicoesCommand, "Medições"),
             (a.Vm.OrdensDeServicoCommand, "Ordens de serviço"),
             (a.Vm.NovaOrdemDeServicoCommand, "Nova ordem de serviço"),

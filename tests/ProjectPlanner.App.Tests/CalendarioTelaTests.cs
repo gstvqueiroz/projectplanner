@@ -120,6 +120,14 @@ public sealed class CalendarioTelaTests
         retrato.Calendario![0].Should().Be("Segunda a sexta · feriados nacionais, Carnaval e Corpus Christi");
         retrato.Calendario[1].Should().StartWith("Dias sem trabalho no período (além das folgas da semana): 12/10/2026 (seg) Nossa Senhora Aparecida; 02/11/2026 (seg) Finados");
         retrato.ComoTexto().Should().Contain("Calendário de trabalho: Segunda a sexta · feriados nacionais, Carnaval e Corpus Christi; durações");
+
+        // Bloco 83: o calendário também em dados, para o servidor contar os dias úteis como o programa (/atrasadas no Telegram).
+        var dias = retrato.DiasUteis!;
+        dias.DiasDaSemana.Should().Equal(DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday);
+        dias.SemTrabalho.Should().Contain([O("2026-10-12"), O("2026-11-02"), O("2026-12-25"), O("2027-01-01")]);
+        dias.Extras.Should().BeEmpty();
+        (dias.EhDiaUtil(O("2026-10-12")), dias.EhDiaUtil(O("2026-10-13")), dias.EhDiaUtil(O("2026-10-17"))).Should().Be((false, true, false));
+        dias.ContarDiasUteis(O("2026-10-05"), O("2026-10-16")).Should().Be(9, "duas semanas menos o feriado de 12/10");
     }
 
     [Fact]

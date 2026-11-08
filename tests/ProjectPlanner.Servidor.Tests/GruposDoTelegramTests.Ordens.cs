@@ -38,8 +38,12 @@ public sealed partial class GruposDoTelegramTests
             .AtenderAsync(JsonDocument.Parse(new JsonObject { ["update_id"] = 2, ["callback_query"] = consulta }.ToJsonString()).RootElement, default);
     }
 
+    // As mensagens das OS (Bloco 83: o grupo também recebe a ajuda com botões, ao ser ligado).
     private List<(string Texto, string[] Botoes)> Cartoes() =>
-        [.. _s.Telegram.ComBotoes.Where(m => m.Chat == Grupo).Select(m => (m.Texto, m.Botoes.Select(b => b.Texto).ToArray()))];
+        [.. MensagensDasOs().Select(m => (m.Texto, m.Botoes.Select(b => b.Texto).ToArray()))];
+
+    private List<(long Chat, long Id, string Texto, IReadOnlyList<BotaoDoTelegram> Botoes)> MensagensDasOs() =>
+        [.. _s.Telegram.ComBotoes.Where(m => m.Chat == Grupo && m.Texto.StartsWith("📋 ", StringComparison.Ordinal))];
 
     [Fact]
     public async Task Publicar_SemGrupo_ZeroGrupos_ComGrupo_MandaComOsBotoes_EAtualizaAMesmaMensagem()
@@ -59,7 +63,7 @@ public sealed partial class GruposDoTelegramTests
 
         await Publicar("Cancelada");
         var edicao = _s.Telegram.Edicoes.Single();
-        (edicao.Chat, edicao.Mensagem, edicao.Botoes.Count).Should().Be((Grupo, _s.Telegram.ComBotoes.Single().Id, 0));
+        (edicao.Chat, edicao.Mensagem, edicao.Botoes.Count).Should().Be((Grupo, MensagensDasOs().Single().Id, 0));
         edicao.Texto.Should().Contain("Situação: Cancelada");
         Cartoes().Should().HaveCount(1, "a mesma mensagem foi editada");
     }
@@ -145,7 +149,7 @@ public sealed partial class GruposDoTelegramTests
         await NoGrupo(Joao, "João", "/os 14");
         Cartoes().Should().HaveCount(2, "mandou a OS de novo");
         await Publicar("Aceita");
-        _s.Telegram.Edicoes.Last().Mensagem.Should().Be(_s.Telegram.ComBotoes.Last().Id, "passa a atualizar a mensagem nova");
+        _s.Telegram.Edicoes.Last().Mensagem.Should().Be(MensagensDasOs().Last().Id, "passa a atualizar a mensagem nova");
 
         await Tocar(Joao, "João", "concluir", grupo: -999);
         _s.Telegram.RespostasAosBotoes.Last().Texto.Should().Be("Esta OS não está mais ligada a este grupo.");

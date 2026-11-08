@@ -23,12 +23,31 @@ public interface IClienteDoTelegram
     /// <summary>Bloco 59: troca o texto e os botões de uma mensagem já mandada (sem botões, eles somem).</summary>
     Task EditarAsync(long chat, long mensagem, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c);
 
+    /// <summary>Bloco 83: tira os botões de uma mensagem já mandada (o texto fica).</summary>
+    Task TirarBotoesAsync(long chat, long mensagem, CancellationToken c);
+
     /// <summary>Bloco 59: responde ao toque num botão (o aviso rápido no alto da tela de quem tocou).</summary>
     Task ResponderAoBotaoAsync(string consulta, string texto, CancellationToken c);
+
+    /// <summary>
+    /// Bloco 83: o menu de comandos do bot (o que aparece ao digitar "/" e no botão Menu ao lado do campo de mensagem), para um
+    /// tipo de chat: <see cref="EscoposDosComandos.Privados"/> ou <see cref="EscoposDosComandos.Grupos"/>.
+    /// </summary>
+    Task DefinirComandosAsync(IReadOnlyList<ComandoDoBot> comandos, string escopo, CancellationToken c);
 }
 
-/// <summary>Bloco 59: um botão embaixo de uma mensagem; os dados voltam no toque (até 64 bytes).</summary>
-public sealed record BotaoDoTelegram(string Texto, string Dados);
+/// <summary>Bloco 59: um botão embaixo de uma mensagem; os dados voltam no toque (até 64 bytes). Bloco 83: a linha do teclado.</summary>
+public sealed record BotaoDoTelegram(string Texto, string Dados, int Linha = 0);
+
+/// <summary>Bloco 83: um comando do menu do bot ("resumo", "a obra em números").</summary>
+public sealed record ComandoDoBot(string Comando, string Descricao);
+
+/// <summary>Bloco 83: os escopos do menu de comandos do Telegram (BotCommandScope).</summary>
+public static class EscoposDosComandos
+{
+    public const string Privados = "all_private_chats";
+    public const string Grupos = "all_group_chats";
+}
 
 /// <summary>A API de bots do Telegram (https://api.telegram.org/bot&lt;token&gt;/…).</summary>
 public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<OpcoesDoServidor> opcoes, ILogger<ClienteDoTelegram> log) : IClienteDoTelegram
@@ -72,14 +91,31 @@ public sealed class ClienteDoTelegram(IHttpClientFactory clientes, IOptions<Opco
             log.LogInformation("O Telegram não editou a mensagem ({Status})", (int)r.StatusCode);
     }
 
+    public async Task TirarBotoesAsync(long chat, long mensagem, CancellationToken c)
+    {
+        using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("editMessageReplyMarkup"),
+            new { chat_id = chat, message_id = mensagem, reply_markup = Teclado([]) }, c);
+        if (!r.IsSuccessStatusCode)
+            log.LogInformation("O Telegram não tirou os botões da mensagem ({Status})", (int)r.StatusCode);
+    }
+
     public async Task ResponderAoBotaoAsync(string consulta, string texto, CancellationToken c)
     {
         using var _ = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("answerCallbackQuery"),
             new { callback_query_id = consulta, text = texto.Length > 190 ? texto[..190] : texto }, c);
     }
 
-    private static object Teclado(IReadOnlyList<BotaoDoTelegram> botoes) =>
-        new { inline_keyboard = botoes.Count == 0 ? [] : new[] { botoes.Select(b => new { text = b.Texto, callback_data = b.Dados }).ToArray() } };
+    public async Task DefinirComandosAsync(IReadOnlyList<ComandoDoBot> comandos, string escopo, CancellationToken c)
+    {
+        using var r = await clientes.CreateClient(Cliente).PostAsJsonAsync(Metodo("setMyCommands"),
+            new { commands = comandos.Select(k => new { command = k.Comando, description = k.Descricao }).ToArray(), scope = new { type = escopo } }, c);
+        if (!r.IsSuccessStatusCode)
+            log.LogWarning("O Telegram recusou o menu de comandos ({Status}): {Motivo}", (int)r.StatusCode, await r.Content.ReadAsStringAsync(c));
+    }
+
+    /// <summary>Os botões em linhas (pela <see cref="BotaoDoTelegram.Linha"/>, na ordem); sem botões, o teclado some.</summary>
+    internal static object Teclado(IReadOnlyList<BotaoDoTelegram> botoes) =>
+        new { inline_keyboard = botoes.GroupBy(b => b.Linha).OrderBy(g => g.Key).Select(g => g.Select(b => new { text = b.Texto, callback_data = b.Dados }).ToArray()).ToArray() };
 
     private static string Cortar(string texto) => texto.Length > TamanhoMaximo ? texto[..TamanhoMaximo] + "…" : texto;
 
@@ -244,21 +280,27 @@ public sealed class ProcessadorDoTelegram(FilaDoTelegram fila, IServiceScopeFact
     }
 }
 
-/// <summary>Ao subir: registra o webhook no Telegram (se o token, o segredo e o endereço público estão configurados).</summary>
+/// <summary>
+/// Ao subir: registra o webhook no Telegram (se o token, o segredo e o endereço público estão configurados) e, Bloco 83, o menu
+/// de comandos do bot nos chats privados e nos grupos.
+/// </summary>
 public sealed class RegistroDoWebhook(IOptions<OpcoesDoServidor> opcoes, IClienteDoTelegram telegram, ILogger<RegistroDoWebhook> log) : IHostedService
 {
     public async Task StartAsync(CancellationToken c)
     {
         var config = opcoes.Value.Telegram;
-        if (!config.Ligado || string.IsNullOrWhiteSpace(config.UrlPublica))
+        if (!config.Ligado)
             return;
         try
         {
-            await telegram.RegistrarWebhookAsync($"{config.UrlPublica.TrimEnd('/')}/v1/telegram/webhook", config.SegredoParaOTelegram!, c);
+            if (!string.IsNullOrWhiteSpace(config.UrlPublica))
+                await telegram.RegistrarWebhookAsync($"{config.UrlPublica.TrimEnd('/')}/v1/telegram/webhook", config.SegredoParaOTelegram!, c);
+            await telegram.DefinirComandosAsync(AjudaDoTelegram.ComandosDoPrivado, EscoposDosComandos.Privados, c);
+            await telegram.DefinirComandosAsync(AjudaDoTelegram.ComandosDoGrupo, EscoposDosComandos.Grupos, c);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            log.LogWarning(ex, "Não deu para registrar o webhook do Telegram agora");
+            log.LogWarning(ex, "Não deu para registrar o webhook ou os comandos do Telegram agora");
         }
     }
 

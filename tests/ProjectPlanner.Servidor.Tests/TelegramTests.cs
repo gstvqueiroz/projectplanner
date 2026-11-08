@@ -13,7 +13,7 @@ namespace ProjectPlanner.Servidor.Tests;
 
 // Bloco 49: o assistente da obra pelo Telegram: ligar a conta, escolher a obra, perguntar e atualizar (caixa de entrada) e
 // mandar fotos; e as rotas do programa (marcar a obra com o retrato, o código de ligação e a caixa).
-public sealed class TelegramTests : IDisposable
+public sealed partial class TelegramTests : IDisposable
 {
     private const long Chat = 777_001;
     private static readonly Guid Projeto = Guid.Parse("11111111-2222-3333-4444-555555555555");
@@ -96,7 +96,8 @@ public sealed class TelegramTests : IDisposable
         _s.NoBanco(b => b.CodigosDoTelegram.Count()).Should().Be(0, "o código é de uso único");
 
         await Mandar("/ajuda");
-        _s.Telegram.Ultima.Should().Be(AtendenteDoTelegram.Ajuda);
+        _s.Telegram.UltimaComBotoes.Texto.Should().StartWith("👷 Assistente da obra no Telegram\nObra: Casa da Ana (/obra troca)");
+        _s.Telegram.UltimaComBotoes.Botoes.Select(b => b.Dados).Should().Contain(["aj:andamento", "aj:diario", "aj:comandos", "cmd:resumo"]);
         var situacao = JsonDocument.Parse(await Pedir(HttpMethod.Get, "/v1/telegram", acesso)).RootElement;
         (situacao.GetProperty("ligado").GetBoolean(), situacao.GetProperty("nome").GetString(), situacao.GetProperty("disponivel").GetBoolean())
             .Should().Be((true, "Ana", true));
@@ -168,7 +169,12 @@ public sealed class TelegramTests : IDisposable
 
         await Mandar("a alvenaria está em 60%");
 
-        _s.Telegram.Ultima.Should().Be("Anotei: alvenaria em 60%.\n\n📥 1 atualização ficou na caixa da obra Casa da Ana: confira e aplique no programa (Conta > Buscar do Telegram).");
+        var confirmacao = _s.Telegram.UltimaComBotoes;
+        confirmacao.Texto.Should().Be("Anotei: alvenaria em 60%.\n\n📥 Anotado na caixa da obra Casa da Ana:\n• 2 Alvenaria: 40% → 60% concluído\n" +
+                                      "Confira e aplique no programa (Conta > Buscar do Telegram).");
+        var noBanco = _s.NoBanco(b => b.CaixaDeEntrada.Single());
+        confirmacao.Botoes.Single().Should().Be(new BotaoDoTelegram("↩️ Desfazer", $"cx:{noBanco.Id:N}"));
+        (noBanco.ChatId, noBanco.PessoaId, noBanco.MensagemId).Should().Be(((long?)Chat, (long?)Chat, (long?)confirmacao.Id));
         _s.Telegram.Digitando.Should().Be(1);
         var enviado = JsonNode.Parse(_s.Gemini.Pedidos.Single().Corpo)!;
         var instrucoes = enviado["systemInstruction"]!["parts"]![0]!["text"]!.GetValue<string>();
@@ -213,7 +219,8 @@ public sealed class TelegramTests : IDisposable
 
         await Mandar("laje concretada", foto: "foto-1");
 
-        _s.Telegram.Ultima.Should().StartWith("📷 Foto guardada na caixa da obra Casa da Ana (\"laje concretada\")");
+        _s.Telegram.Todas.Last().Texto.Should().StartWith("📷 Foto guardada na caixa da obra Casa da Ana (\"laje concretada\")");
+        _s.Telegram.UltimaComBotoes.Botoes.Single().Texto.Should().Be("↩️ Desfazer", "Bloco 83");
         _s.Gemini.Pedidos.Should().BeEmpty("a foto não vai à IA no servidor: o programa classifica ao importar");
         var item = JsonDocument.Parse(await Pedir(HttpMethod.Get, $"/v1/obras/{Projeto}/caixa", acesso)).RootElement.EnumerateArray().Single();
         (item.GetProperty("tipo").GetString(), item.GetProperty("texto").GetString(), item.GetProperty("nomeDaFoto").GetString())
@@ -237,7 +244,7 @@ public sealed class TelegramTests : IDisposable
         _s.Telegram.Ultima.Should().Be("Obra: Galpão.");
         _s.Telegram.Arquivos["f"] = [1, 2, 3];
         await Mandar(null, foto: "f");
-        _s.Telegram.Ultima.Should().Contain("caixa da obra Galpão");
+        _s.Telegram.Todas.Last().Texto.Should().Contain("caixa da obra Galpão");
 
         await Pedir(HttpMethod.Delete, $"/v1/obras/{outra}", acesso, esperado: HttpStatusCode.NoContent);
         (_s.NoBanco(b => b.Obras.Count()), _s.NoBanco(b => b.CaixaDeEntrada.Count()), _s.NoBanco(b => b.VinculosDoTelegram.Single().ObraAtiva))
@@ -364,7 +371,7 @@ public sealed class TelegramTests : IDisposable
 
         await Mandar("a alvenaria está em 60%");
 
-        s.Telegram.Ultima.Should().StartWith("Anotei a alvenaria.").And.Contain("1 atualização ficou na caixa");
+        s.Telegram.Todas.Last().Texto.Should().StartWith("Anotei a alvenaria.").And.Contain("📥 Anotado na caixa da obra Casa da Ana:\n• 2 Alvenaria: 40% → 60% concluído");
         var enviado = JsonNode.Parse(s.Claude.Pedidos.Single().Corpo)!;
         (enviado["model"]!.GetValue<string>(), enviado["system"]![0]!["text"]!.GetValue<string>().Contains(InstrucoesDoAssistente.Telegram)).Should().Be(("claude-haiku-5-5", true));
         s.Claude.Pedidos.Single().Chave.Should().Be(Servidor.ChaveDaAnthropic, "a chave de verdade vai pela ponte");

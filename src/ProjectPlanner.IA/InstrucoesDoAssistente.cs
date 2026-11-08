@@ -184,7 +184,9 @@ public static class InstrucoesDoAssistente
         "clima, efetivo, equipamentos, serviços e ocorrências; o canteiro contando o dia é o caso mais comum aqui) vão em " +
         "\"atualizacoes\", " +
         "como sempre: elas ficam guardadas e o usuário confere e aplica quando abrir a obra no programa. Fechar (assinar) o RDO " +
-        "só no programa. Na mensagem, diga o que foi anotado.";
+        "só no programa. Na mensagem, seja breve (uma ou duas frases: o que você entendeu, ou a pergunta que falta para anotar): " +
+        "logo abaixo dela o bot lista, item por item, o que ficou anotado na caixa, então não repita a lista. Se o pedido for " +
+        "ambíguo (duas tarefas com o mesmo nome, o dia ou a quantidade que faltam), pergunte antes de anotar.";
 
     /// <summary>Os campos opcionais da resposta (Bloco 26): tipo, ficha, perguntas e plano.</summary>
     public const string RespostasEstruturadas =

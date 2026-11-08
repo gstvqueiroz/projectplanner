@@ -77,6 +77,23 @@ public sealed partial class MainWindowViewModel
         return linhas;
     }
 
+    /// <summary>
+    /// Bloco 83: os números da obra para o /resumo do Telegram: o contrato e o medido nas medições aprovadas, as OS em andamento
+    /// (emitidas, aceitas, em execução ou esperando a conferência) e as vencidas, e o término da linha de base em uso.
+    /// </summary>
+    internal AndamentoNoContexto AndamentoParaOAssistente()
+    {
+        var c = _cronograma;
+        var hoje = DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime);
+        var ordens = c.OrdensDeServico.Todas.Where(o => o.Situacao != Core.OrdensDeServico.SituacaoDaOrdem.Cancelada).ToList();
+        return new AndamentoNoContexto(
+            c.Contrato.ValorContratado,
+            c.Contrato.Medicoes.Where(m => m.Travada && m.Resumo is not null).Sum(m => m.Resumo!.MedidoNoPeriodo),
+            ordens.Count(o => Core.OrdensDeServico.TextosDaOrdem.EmAndamento(o.Situacao)),
+            ordens.Count(o => o.Vencida(hoje)),
+            c.LinhaDeBaseEmUso?.Termino is { } termino ? DateOnly.FromDateTime(termino) : null);
+    }
+
     /// <summary>Confere as atualizações propostas (os Nº pelo retrato mandado com o pedido), para o cartão.</summary>
     public IReadOnlyList<ItemDoCartao> ConferirAtualizacoes(IReadOnlyList<AtualizacaoDaObra> atualizacoes, ContextoDoProjeto retrato) =>
         AtualizacoesDoAssistente.Conferir(_cronograma, atualizacoes, retrato, _relogio.GetLocalNow().DateTime);

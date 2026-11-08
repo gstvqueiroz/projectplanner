@@ -63,6 +63,9 @@ public sealed class TrocaDeTeste : ITrocaDoCodigoDoGoogle
 public sealed class TelegramDeTeste : IClienteDoTelegram
 {
     public ConcurrentQueue<(long Chat, string Texto)> Mensagens { get; } = new();
+
+    /// <summary>Bloco 83: as mensagens mandadas, com e sem botões, na ordem.</summary>
+    public ConcurrentQueue<(long Chat, string Texto)> Todas { get; } = new();
     public ConcurrentDictionary<string, byte[]> Arquivos { get; } = new();
     public ConcurrentQueue<(string Url, string Segredo)> Webhooks { get; } = new();
     public int Digitando;
@@ -70,6 +73,7 @@ public sealed class TelegramDeTeste : IClienteDoTelegram
     public Task EnviarAsync(long chat, string texto, CancellationToken c)
     {
         Mensagens.Enqueue((chat, texto));
+        Todas.Enqueue((chat, texto));
         return Task.CompletedTask;
     }
 
@@ -104,8 +108,30 @@ public sealed class TelegramDeTeste : IClienteDoTelegram
     {
         var id = Interlocked.Increment(ref _proximaMensagem);
         ComBotoes.Enqueue((chat, id, texto, botoes));
+        Todas.Enqueue((chat, texto));
         return Task.FromResult<long?>(id);
     }
+
+    /// <summary>Bloco 83: as mensagens que perderam os botões (o chat e o id).</summary>
+    public ConcurrentQueue<(long Chat, long Mensagem)> SemBotoes { get; } = new();
+
+    public Task TirarBotoesAsync(long chat, long mensagem, CancellationToken c)
+    {
+        SemBotoes.Enqueue((chat, mensagem));
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Bloco 83: os menus de comandos registrados (o escopo e os comandos).</summary>
+    public ConcurrentQueue<(string Escopo, IReadOnlyList<ComandoDoBot> Comandos)> MenusDeComandos { get; } = new();
+
+    public Task DefinirComandosAsync(IReadOnlyList<ComandoDoBot> comandos, string escopo, CancellationToken c)
+    {
+        MenusDeComandos.Enqueue((escopo, comandos));
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Bloco 83: a última mensagem com botões.</summary>
+    public (long Chat, long Id, string Texto, IReadOnlyList<BotaoDoTelegram> Botoes) UltimaComBotoes => ComBotoes.Last();
 
     public Task EditarAsync(long chat, long mensagem, string texto, IReadOnlyList<BotaoDoTelegram> botoes, CancellationToken c)
     {

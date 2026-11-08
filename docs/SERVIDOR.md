@@ -543,6 +543,29 @@ Checks Pass**. Um commit com teste quebrado não vai ao ar; corrija e mande outr
   com a pasta do usuário trocada por "~" (nada das obras). Ficam os últimos 500 (no máximo 20 por conta por dia), e o painel
   mostra os do período, com a conta.
 
+## Bloco 83 (0.83.0): Telegram — ajuda, consultas sem IA e desfazer
+
+- **Ajuda com botões** (`AjudaDoTelegram`): `/ajuda` (e `/start` sem código, já ligado) manda o começo com um botão por
+  assunto; o toque (`callback_query` com os dados `aj:<assunto>`, `aj:menu` para voltar) edita a mesma mensagem. Os atalhos
+  `cmd:resumo`, `cmd:hoje` e `cmd:atrasadas` passam pelo mesmo caminho de quem digita o comando (o limite por minuto, a obra
+  do chat). A ajuda vai sozinha depois de ligar a conta e depois de ligar o grupo.
+- **Menu de comandos:** ao subir (com o token), o servidor chama `setMyCommands` duas vezes, com os escopos
+  `all_private_chats` e `all_group_chats` (as listas estão em `AjudaDoTelegram.ComandosDoPrivado` e `ComandosDoGrupo`).
+- **Consultas sem IA** (`ConsultasDaObra`, não gastam créditos): `/resumo` (ou `/status`), `/hoje` e `/atrasadas`, pelo último
+  retrato da obra e pelo dia de hoje em Brasília. O andamento segue as regras do programa (`AndamentoNoDia` na biblioteca da IA:
+  o previsto em dias úteis até o começo do dia; atrasada é o feito abaixo do previsto), com o calendário que o programa manda
+  em dados no retrato (`DiasUteis`: os dias da semana e as exceções do início do projeto até um ano depois). O `/resumo` usa
+  também `Andamento` (o contrato, o medido nas medições aprovadas, as OS em andamento e vencidas e o término da linha de base).
+  Um retrato de um programa mais antigo vem sem os dois: conta de segunda a sexta e não mostra o contrato nem as OS.
+- **O que foi anotado:** a resposta a uma mensagem com atualizações lista cada uma numa linha (`ResumoDasAtualizacoes`, pelo
+  pedido da IA e pelo retrato), com o botão **Desfazer** (`cx:<id do item>`). A confirmação da foto também tem o botão.
+- **Desfazer e caixa:** a tabela `CaixaDeEntrada` ganhou `ChatId`, `PessoaId` e `MensagemId` (migração `CaixaComOrigem`;
+  nulos nos itens de antes). O botão e o `/desfazer` tiram da caixa o que o programa ainda não trouxe: o botão vale para quem
+  mandou e, num grupo, para o dono e a engenharia; o `/desfazer` tira a última atualização ou foto da pessoa naquele chat (e
+  some com o botão da confirmação, por `editMessageReplyMarkup`). Os passos das OS não se desfazem por aqui. O `/caixa` lista
+  o que espera: no privado, tudo da obra; no grupo, só o que veio dele.
+- Um comando que o bot não conhece, no privado, não vai mais à IA.
+
 ## Depois
 
 - Sincronização e backup dos projetos na nuvem.

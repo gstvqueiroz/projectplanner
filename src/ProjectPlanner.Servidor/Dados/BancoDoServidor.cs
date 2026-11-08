@@ -330,6 +330,15 @@ public sealed class ItemDaCaixa
 
     public byte[]? Foto { get; set; }
     public string? NomeDaFoto { get; set; }
+
+    /// <summary>Bloco 83: o chat de onde veio (o privado do dono ou um grupo da obra): o /caixa do grupo mostra só os dele. Nulo antes do bloco.</summary>
+    public long? ChatId { get; set; }
+
+    /// <summary>Bloco 83: quem mandou (o id da pessoa no Telegram), para o /desfazer e o botão Desfazer.</summary>
+    public long? PessoaId { get; set; }
+
+    /// <summary>Bloco 83: a mensagem do bot que confirmou o item (com o botão Desfazer), para tirar o botão quando o item sai.</summary>
+    public long? MensagemId { get; set; }
 }
 
 /// <summary>Bloco 44: o banco do servidor (SQLite em desenvolvimento e nos testes; PostgreSQL em produção).</summary>

@@ -91,6 +91,9 @@ public sealed partial class GruposDoTelegramTests : IDisposable
 
     private List<string> DoGrupo() => _s.Telegram.Mensagens.Where(m => m.Chat == Grupo).Select(m => m.Texto).ToList();
 
+    // Bloco 83: também as mensagens com botões (a confirmação com o Desfazer, a ajuda).
+    private List<string> TodasDoGrupo() => _s.Telegram.Todas.Where(m => m.Chat == Grupo).Select(m => m.Texto).ToList();
+
     private async Task Ligar()
     {
         await Preparar();
@@ -154,8 +157,10 @@ public sealed partial class GruposDoTelegramTests : IDisposable
 
         var itens = _s.NoBanco(b => b.CaixaDeEntrada.OrderBy(i => i.Tipo).ToList());
         itens.Select(i => (i.Tipo, i.Texto)).Should().Equal(("atualizacoes", "João: alvenaria em 70%"), ("foto", "João: parede da cozinha"));
-        DoGrupo().Should().Contain(t => t.StartsWith("📷 Foto de João guardada na caixa da obra Casa da Ana"));
-        DoGrupo().Last().Should().Contain("1 atualização ficou na caixa da obra Casa da Ana");
+        TodasDoGrupo().Should().Contain(t => t.StartsWith("📷 Foto de João guardada na caixa da obra Casa da Ana"));
+        TodasDoGrupo().Last().Should().Be("Anotei.\n\n📥 Anotado na caixa da obra Casa da Ana:\n• 1 Alvenaria: 40% → 70% concluído\n" +
+                                         "Confira e aplique no programa (Conta > Buscar do Telegram).");
+        itens.Should().OnlyContain(i => i.ChatId == Grupo && i.PessoaId == Joao, "Bloco 83: de onde veio e quem mandou");
         _s.Gemini.Pedidos.Should().HaveCount(1, "a foto não passa pela IA");
     }
 

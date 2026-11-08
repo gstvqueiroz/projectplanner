@@ -3,6 +3,34 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.83.0
+
+**Telegram: ajuda com botões, comandos que respondem na hora e o Desfazer.** O que muda no bot vale depois da atualização do
+servidor no Render; o que vem do programa (o calendário e os números da obra para os comandos), depois de salvar a obra nesta
+versão.
+
+- **/ajuda com um botão por assunto:** andamento, diário de obra (RDO), fotos, custos e medições, ordens de serviço, Kanban,
+  equipe no grupo e comandos. Tocar num assunto troca a mesma mensagem pelos exemplos dele, com um botão para voltar. No grupo,
+  a ajuda lembra a marca #atualizacao e o @ do bot. Ela aparece sozinha logo depois de ligar a conta ou o grupo.
+- **Menu de comandos:** ao digitar "/" (ou no botão Menu, ao lado do campo de mensagem), o Telegram lista os comandos do bot
+  com a explicação de cada um, um menu para o chat privado e outro para os grupos.
+- **Comandos que respondem na hora, sem gastar créditos de IA**, pelos dados da última vez que a obra foi salva no programa:
+  - **/resumo**: o avanço físico feito e o previsto para hoje, o término (e o da linha de base), as tarefas em andamento,
+    atrasadas e concluídas, o medido do contrato, as OS e o que espera na caixa;
+  - **/hoje**: as tarefas em andamento (as que começam ou terminam hoje; as atrasadas com ⚠️), os marcos do dia, o que começa
+    nos próximos 7 dias e o RDO de hoje;
+  - **/atrasadas**: as tarefas com o feito abaixo do previsto, pelas regras e pelo calendário de trabalho do programa (feriados
+    e sábados trabalhados incluídos).
+  Os três também estão em botões, embaixo da ajuda.
+- **O que ficou anotado, item por item:** depois de uma mensagem com atualizações, o bot lista cada uma ("2.1 Alvenaria: 40% →
+  60% concluído", "RDO de hoje: tarde chuva, sem trabalho"), lida do próprio pedido, sem depender do texto da IA. A IA responde
+  mais curto e pergunta antes de anotar quando o pedido é ambíguo (duas tarefas parecidas, o dia ou a quantidade que faltam).
+- **Desfazer:** o botão **↩️ Desfazer** embaixo do que foi anotado (e da foto guardada) tira o item da caixa enquanto o
+  programa ainda não o trouxe; **/desfazer** tira a última coisa que você mandou. No grupo, só quem mandou ou quem é da
+  engenharia desfaz.
+- **/caixa** mostra o que espera o programa: no chat privado, tudo da obra; no grupo, só o que veio do grupo.
+- Um comando que o bot não conhece não vai mais para a IA: o bot avisa e indica a /ajuda.
+
 ## 0.82.1
 
 - **Telegram:** as instruções da IA no Telegram agora citam o quadro Kanban e o diário de obra (RDO) entre o que dá para anotar

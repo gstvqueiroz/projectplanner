@@ -21,7 +21,7 @@ public sealed partial class AtendenteDoTelegram
         "• para perguntar, marque o bot (@{0}) ou responda a uma mensagem dele;\n" +
         "• ordens de serviço: toque nos botões da OS (Aceitar, Comecei, Terminei); /os lista as abertas, /recusar 14 e o motivo recusa; #os14 na legenda da foto a liga à OS.\n\n" +
         "O resto da conversa do grupo o bot não lê. Tudo vai para a caixa da obra, e o dono confere e aplica no programa.\n" +
-        "/equipe mostra os papéis · /papel (respondendo à mensagem de alguém) muda o papel · /obra troca a obra · /sair desliga o grupo.";
+        "/ajuda mostra exemplos de cada assunto · /resumo, /hoje e /atrasadas respondem na hora, sem gastar créditos.";
 
     public const string GrupoSemObra =
         "Este grupo ainda não está ligado a uma obra. O dono da conta ProjectPlanner (com o chat privado do bot já ligado) manda /obra aqui.";
@@ -105,8 +105,17 @@ public sealed partial class AtendenteDoTelegram
             case "/recusar":
                 await RecusarAsync(chatId, grupo, membro, argumento, agora, c);
                 return;
-            case "/ajuda" or "/help" or "/start":
-                await telegram.EnviarAsync(chatId, string.Format(AjudaDoGrupo, NomeDoBot) + $"\n\nObra: {obra.Nome}.", c);
+            case "/ajuda" or "/help" or "/start": // Bloco 83: com os assuntos em botões
+                await AjudaAsync(chatId, grupo: true, obra.Nome, c);
+                return;
+            case "/resumo" or "/status" or "/hoje" or "/atrasadas": // Bloco 83: sem a IA, para todos os papéis
+                await ConsultaAsync(chatId, obra, comando, c);
+                return;
+            case "/caixa":
+                await CaixaAsync(chatId, obra, grupo: true, c);
+                return;
+            case "/desfazer":
+                await DesfazerAsync(chatId, pessoaId, c);
                 return;
             case not null when !mencao && !respostaAoBot && !marcada && !temFoto:
                 return; // um comando de outro bot
@@ -121,7 +130,7 @@ public sealed partial class AtendenteDoTelegram
             if (!membro.Envia)
                 await telegram.EnviarAsync(chatId, SoQuemEnvia, c);
             else
-                await FotoAsync(chatId, dono, obra, fotos, Limpar(texto), agora, c, autor: nome);
+                await FotoAsync(chatId, pessoaId, dono, obra, fotos, Limpar(texto), agora, c, autor: nome);
             return;
         }
         var limpo = Limpar(texto);
@@ -135,7 +144,7 @@ public sealed partial class AtendenteDoTelegram
             await telegram.EnviarAsync(chatId, SoQuemEnvia, c);
             return;
         }
-        await PerguntaAsync(chatId, dono, obra, limpo, agora, c, autor: nome, aceitaAtualizacoes: membro.Envia);
+        await PerguntaAsync(chatId, pessoaId, dono, obra, limpo, agora, c, autor: nome, aceitaAtualizacoes: membro.Envia);
     }
 
     /// <summary>/obra no grupo: só o dono (com o chat privado ligado). Sem número, lista as obras; com número, liga o grupo a ela.</summary>
@@ -183,8 +192,8 @@ public sealed partial class AtendenteDoTelegram
         dono.Papel = MembroDoGrupo.Engenharia;
         await banco.SaveChangesAsync(c);
         conversas.Esquecer(chatId);
-        await telegram.EnviarAsync(chatId, $"Pronto: este grupo é da obra {obra.Nome}. Quem falar com o bot entra na equipe com o papel \"campo\".\n\n" +
-                                           string.Format(AjudaDoGrupo, NomeDoBot), c);
+        await telegram.EnviarAsync(chatId, $"Pronto: este grupo é da obra {obra.Nome}. Quem falar com o bot entra na equipe com o papel \"campo\".", c);
+        await AjudaAsync(chatId, grupo: true, obra.Nome, c); // Bloco 83
     }
 
     /// <summary>/papel acompanhar|campo|engenharia, respondendo à mensagem de alguém: muda o papel dessa pessoa.</summary>

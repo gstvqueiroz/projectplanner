@@ -107,6 +107,8 @@ public sealed partial class AtendenteDoTelegram
             || !consulta.TryGetProperty("message", out var mensagem) || !mensagem.TryGetProperty("chat", out var chat)
             || !chat.TryGetProperty("id", out var idDoChat) || !idDoChat.TryGetInt64(out var chatId))
             return;
+        if (await AtenderOutroBotaoAsync(id, dados, de, pessoaId, mensagem, chat, chatId, c)) // Bloco 83: a ajuda, os atalhos e o Desfazer
+            return;
         var partes = dados.Split(':');
         if (partes.Length != 3 || partes[0] + ":" != PrefixoDosBotoes || !Guid.TryParseExact(partes[1], "N", out var ordemId))
         {
@@ -140,12 +142,12 @@ public sealed partial class AtendenteDoTelegram
                 await telegram.EnviarAsync(chatId, $"Para recusar a {ordem.Codigo}, mande /recusar {ordem.Numero} e o motivo (por exemplo: /recusar {ordem.Numero} o preço não cobre o material).", c);
             return;
         }
-        await MudarAsync(ordem, partes[2], nome, null, chatId, agora, c, botao: id);
+        await MudarAsync(ordem, partes[2], nome, pessoaId, null, chatId, agora, c, botao: id);
     }
 
     // Aplica a ação na OS (se a situação deixa), avisa a caixa, atualiza as mensagens e responde.
-    private async Task MudarAsync(OrdemNoTelegram ordem, string acao, string autor, string? motivo, long chatId, DateTime agora, CancellationToken c,
-        string? botao = null)
+    private async Task MudarAsync(OrdemNoTelegram ordem, string acao, string autor, long pessoaId, string? motivo, long chatId, DateTime agora,
+        CancellationToken c, string? botao = null)
     {
         var (permitidas, nova, feito) = acao switch
         {
@@ -170,6 +172,7 @@ public sealed partial class AtendenteDoTelegram
             Id = Guid.NewGuid(), UsuarioId = ordem.UsuarioId, ObraId = ordem.ObraId, Tipo = ItemDaCaixa.DeOrdem, CriadoEm = agora,
             Texto = Cortar($"{autor} {feito} a {ordem.Codigo}" + (motivo is null ? "" : $": {motivo}"))!,
             Conteudo = JsonSerializer.Serialize(new EventoDaOrdemNoTelegram(ordem.Id, acao, autor, agora, motivo), Json),
+            ChatId = chatId, PessoaId = pessoaId, // Bloco 83
         });
         await PublicarAsync(ordem, c);
         await banco.SaveChangesAsync(c);
@@ -228,7 +231,7 @@ public sealed partial class AtendenteDoTelegram
             await telegram.EnviarAsync(chatId, $"A OS-{n:000} não foi mandada a este grupo. /os mostra as que estão aqui.", c);
             return;
         }
-        await MudarAsync(ordem, "recusar", membro.Nome, Cortar(motivo, 300), chatId, agora, c);
+        await MudarAsync(ordem, "recusar", membro.Nome, membro.PessoaId, Cortar(motivo, 300), chatId, agora, c);
     }
 
     // O membro de quem tocou no botão (o dono é sempre da engenharia).

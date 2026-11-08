@@ -88,6 +88,21 @@ public sealed class OrdensNaGradeTests
         vm.Mensagem.Should().Be("Projeto aberto: /obras/obra.pplan Ordens de serviço: 1 vencida, 1 esperando a conferência (Projeto > Ordens de serviço…).");
     }
 
+    // Bloco 83: os números que o /resumo do Telegram mostra sem a IA vão no retrato em dados (não no texto da IA).
+    [Fact]
+    public void Retrato_LevaOsNumerosDaObraParaOTelegram()
+    {
+        _vm.RetratoParaOAssistente().Andamento.Should().Be(new IA.AndamentoNoContexto(3000m, 0m, 0, 0, null));
+
+        EmitirOS(_alvenaria, new DateTime(2026, 9, 25));
+        EmitirOS(_reboco, new DateTime(2026, 10, 9), emitir: false);
+        _vm.Cronograma.SalvarLinhaDeBase(null, new DateTime(2026, 9, 28));
+
+        var retrato = _vm.RetratoParaOAssistente();
+        retrato.Andamento.Should().Be(new IA.AndamentoNoContexto(3000m, 0m, 1, 1, retrato.Termino), "uma emitida e vencida; a outra ainda em rascunho");
+        retrato.ComoTexto().Should().NotContain("AndamentoNoContexto").And.NotContain("DiasUteis");
+    }
+
     [Fact]
     public void Assistente_VeAsOS_NaSituacaoDaObra()
     {

@@ -70,6 +70,19 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
     /// <summary>Dias do diário no retrato, no máximo (os mais recentes).</summary>
     public const int DiasDoDiario = 10;
 
+    /// <summary>
+    /// Bloco 83: o calendário de trabalho em dados, para o servidor contar os dias úteis como o programa (os comandos do Telegram
+    /// que respondem sem a IA, como /atrasadas). Não vai no texto (a IA lê o <see cref="Calendario"/>). Nulo num retrato de antes
+    /// do bloco: vale de segunda a sexta.
+    /// </summary>
+    public CalendarioNoContexto? DiasUteis { get; init; }
+
+    /// <summary>
+    /// Bloco 83: os números da obra que só o programa calcula (o contrato, o medido, as OS e o término da linha de base), para o
+    /// /resumo do Telegram. Não vai no texto (a IA lê a situação da obra). Nulo num retrato de antes do bloco.
+    /// </summary>
+    public AndamentoNoContexto? Andamento { get; init; }
+
     /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
     public const int LinhasDoOrcamento = 200;
 

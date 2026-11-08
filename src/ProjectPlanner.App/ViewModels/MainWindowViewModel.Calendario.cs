@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.Services;
 using ProjectPlanner.Core;
+using ProjectPlanner.IA;
 
 namespace ProjectPlanner.App.ViewModels;
 
@@ -77,6 +78,18 @@ public sealed partial class MainWindowViewModel
     }
 
     public const int DiasDoCalendarioNoRetrato = 40;
+
+    /// <summary>
+    /// Bloco 83: o calendário em dados no retrato (para o servidor contar os dias úteis como o programa nos comandos do Telegram):
+    /// os dias da semana e as exceções do início do projeto até um ano depois do término ou de hoje, o que vier depois.
+    /// </summary>
+    public static CalendarioNoContexto DiasUteisParaOAssistente(CalendarioDoProjeto calendario, DateOnly inicio, DateOnly termino, DateOnly hoje)
+    {
+        ArgumentNullException.ThrowIfNull(calendario);
+        var ate = (termino > hoje ? termino : hoje).AddDays(365);
+        return new CalendarioNoContexto([.. calendario.DiasDeTrabalho], [.. calendario.DiasSemTrabalho(inicio, ate).Select(d => d.Dia)],
+            [.. calendario.DiasExtras(inicio, ate).Select(d => d.Dia)]);
+    }
 
     // O término do projeto com outro calendário, numa cópia (para a prévia da tela); nulo sem tarefas ou se não fecha.
     private DateTime? TerminoCom(CalendarioDoProjeto calendario)

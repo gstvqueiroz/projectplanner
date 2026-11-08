@@ -296,6 +296,9 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<long?>("ChatId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Conteudo")
                         .HasColumnType("text");
 
@@ -305,12 +308,18 @@ namespace ProjectPlanner.Servidor.Dados.Migracoes
                     b.Property<byte[]>("Foto")
                         .HasColumnType("bytea");
 
+                    b.Property<long?>("MensagemId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("NomeDaFoto")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.Property<Guid>("ObraId")
                         .HasColumnType("uuid");
+
+                    b.Property<long?>("PessoaId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Tarefas")
                         .HasColumnType("text");

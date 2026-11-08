@@ -68,15 +68,11 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         "Olá! Este é o assistente do ProjectPlanner. Para usar, ligue a sua conta: no programa, abra Conta > Conectar o Telegram… " +
         "e toque no link (ou mande aqui /start seguido do código).";
 
+    /// <summary>Bloco 83: a ajuda curta (a completa, com os assuntos, é o /ajuda).</summary>
     public const string Ajuda =
-        "Fale da obra como falaria com o engenheiro:\n" +
-        "• \"quanto já medi?\", \"o que está atrasado?\"\n" +
-        "• \"a alvenaria está em 60%\", \"gastei R$ 1.200 de cimento na fundação\"\n" +
-        "• mande fotos (com uma legenda, se quiser)\n" +
-        "• \"abre uma OS do reboco para o João\", \"quais OS estão vencidas?\", \"cancela a OS 3\"\n\n" +
-        "As atualizações e as fotos ficam na caixa de entrada da obra: confira e aplique no programa (Conta > Buscar do Telegram).\n" +
-        "/obra mostra e troca a obra · /sair desliga este chat da conta.\n\n" +
-        "Com a equipe: crie um grupo da obra, ponha o bot nele e mande /obra lá.";
+        "Fale da obra como falaria com o engenheiro: \"a alvenaria está em 60%\", \"choveu à tarde e paramos\", " +
+        "\"gastei R$ 1.200 de cimento na fundação\", \"o que está atrasado?\". Mande fotos com uma legenda, se quiser.\n\n" +
+        "/ajuda mostra exemplos de cada assunto · /resumo, /hoje e /atrasadas respondem na hora, sem gastar créditos.";
 
     public const string NaoRespondeu = "Não consegui responder agora. Tente de novo em instantes.";
 
@@ -133,7 +129,8 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             return;
         }
 
-        if (texto.Equals("/sair", StringComparison.OrdinalIgnoreCase))
+        var (comando, argumento) = Comando(texto);
+        if (comando == "/sair")
         {
             banco.VinculosDoTelegram.Remove(vinculo);
             await banco.SaveChangesAsync(c);
@@ -141,29 +138,45 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             await telegram.EnviarAsync(chatId, "Pronto: este chat não está mais ligado à sua conta ProjectPlanner.", c);
             return;
         }
-        if (texto.StartsWith("/start", StringComparison.OrdinalIgnoreCase) || texto.StartsWith("/ajuda", StringComparison.OrdinalIgnoreCase)
-            || texto.StartsWith("/help", StringComparison.OrdinalIgnoreCase))
-        {
-            await telegram.EnviarAsync(chatId, Ajuda, c);
-            return;
-        }
 
         var obras = await banco.Obras.Where(o => o.UsuarioId == usuario.Id).OrderBy(o => o.Nome).ToListAsync(c);
-        if (texto.StartsWith("/obra", StringComparison.OrdinalIgnoreCase))
+        var obra = obras.FirstOrDefault(o => o.Id == vinculo.ObraAtiva) ?? obras.FirstOrDefault();
+        switch (comando)
         {
-            await ObraAsync(chatId, vinculo, obras, texto["/obra".Length..].Trim(), c);
-            return;
+            case "/start" or "/ajuda" or "/help": // Bloco 83: com os assuntos em botões
+                await AjudaAsync(chatId, grupo: false, obra?.Nome, c);
+                return;
+            case "/obra":
+                await ObraAsync(chatId, vinculo, obras, argumento, c);
+                return;
+            case "/desfazer":
+                await DesfazerAsync(chatId, chatId, c);
+                return;
         }
-        if (obras.Count == 0)
+        if (obra is null)
         {
             await telegram.EnviarAsync(chatId, "Nenhuma obra está no Telegram ainda. No programa, abra a obra e marque Conta > Usar esta obra no Telegram.", c);
             return;
         }
-        var obra = obras.FirstOrDefault(o => o.Id == vinculo.ObraAtiva) ?? obras[0];
+        if (EhConsulta(comando))
+        {
+            await ConsultaAsync(chatId, obra, comando!, c);
+            return;
+        }
+        if (comando == "/caixa")
+        {
+            await CaixaAsync(chatId, obra, grupo: false, c);
+            return;
+        }
+        if (comando is not null)
+        {
+            await telegram.EnviarAsync(chatId, $"Não conheço o comando {comando}. /ajuda mostra o que dá para fazer.", c);
+            return;
+        }
 
         if (mensagem.TryGetProperty("photo", out var fotos) && fotos.ValueKind == JsonValueKind.Array && fotos.GetArrayLength() > 0)
         {
-            await FotoAsync(chatId, usuario, obra, fotos, texto, agora, c);
+            await FotoAsync(chatId, chatId, usuario, obra, fotos, texto, agora, c);
             return;
         }
         if (texto.Length == 0)
@@ -171,7 +184,7 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             await telegram.EnviarAsync(chatId, "Mande um texto ou uma foto. " + Ajuda, c);
             return;
         }
-        await PerguntaAsync(chatId, usuario, obra, texto, agora, c);
+        await PerguntaAsync(chatId, chatId, usuario, obra, texto, agora, c);
     }
 
     private async Task LigarAsync(long chatId, string codigo, string? nome, DateTime agora, CancellationToken c)
@@ -195,7 +208,9 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         await telegram.EnviarAsync(chatId, $"Pronto, {usuario.Nome}! Este chat está ligado à sua conta ProjectPlanner." +
             (usuario.Plano == Planos.Profissional ? "" : "\n\n" + SoProfissional) +
             (obras.Count == 0 ? "\n\nAgora marque uma obra no programa: Conta > Usar esta obra no Telegram."
-                : $"\n\nObra: {obras[0]}" + (obras.Count > 1 ? " (/obra para trocar)" : "")) + "\n\n" + Ajuda, c);
+                : $"\n\nObra: {obras[0]}" + (obras.Count > 1 ? " (/obra para trocar)" : "")), c);
+        if (usuario.Plano == Planos.Profissional) // Bloco 83: a ajuda com os assuntos em botões
+            await AjudaAsync(chatId, grupo: false, obras.FirstOrDefault(), c);
     }
 
     private async Task ObraAsync(long chatId, VinculoDoTelegram vinculo, List<ObraNoServidor> obras, string escolha, CancellationToken c)
@@ -219,9 +234,10 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             "\n\nPara trocar, mande /obra e o número (por exemplo, /obra 2).", c);
     }
 
+    /// <param name="pessoaId">Bloco 83: quem mandou (o id no Telegram), para o /desfazer.</param>
     /// <param name="autor">Bloco 53: quem mandou, num grupo (vai junto na caixa, para o programa mostrar).</param>
-    private async Task FotoAsync(long chatId, Usuario usuario, ObraNoServidor obra, JsonElement fotos, string legenda, DateTime agora, CancellationToken c,
-        string? autor = null)
+    private async Task FotoAsync(long chatId, long pessoaId, Usuario usuario, ObraNoServidor obra, JsonElement fotos, string legenda, DateTime agora,
+        CancellationToken c, string? autor = null)
     {
         var maior = fotos.EnumerateArray().Last(); // o Telegram manda os tamanhos do menor para o maior
         var tamanho = maior.TryGetProperty("file_size", out var t) && t.TryGetInt64(out var n) ? n : 0;
@@ -242,19 +258,31 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             await telegram.EnviarAsync(chatId, "Não deu para receber a foto. Mande de novo.", c);
             return;
         }
-        banco.CaixaDeEntrada.Add(new ItemDaCaixa
+        var item = new ItemDaCaixa
         {
             Id = Guid.NewGuid(), UsuarioId = usuario.Id, ObraId = obra.Id, Tipo = ItemDaCaixa.DeFoto, CriadoEm = agora, Texto = Cortar(ComAutor(autor, legenda)),
-            Foto = bytes, NomeDaFoto = $"telegram-{agora:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..6]}.jpg",
-        });
+            Foto = bytes, NomeDaFoto = $"telegram-{agora:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..6]}.jpg", ChatId = chatId, PessoaId = pessoaId,
+        };
+        banco.CaixaDeEntrada.Add(item);
         await banco.SaveChangesAsync(c);
-        await telegram.EnviarAsync(chatId, $"📷 Foto{(autor is null ? "" : $" de {autor}")} guardada na caixa da obra {obra.Nome}" + (legenda.Length > 0 ? $" (\"{legenda}\")" : "") +
+        await ConfirmarAsync(chatId, item, $"📷 Foto{(autor is null ? "" : $" de {autor}")} guardada na caixa da obra {obra.Nome}" + (legenda.Length > 0 ? $" (\"{legenda}\")" : "") +
             ". Ela aparece para importar quando você abrir a obra no programa (Conta > Buscar do Telegram).", c);
     }
 
+    // Bloco 83: a confirmação com o botão Desfazer; o id da mensagem fica no item, para tirar o botão se ele sair pelo /desfazer.
+    private async Task ConfirmarAsync(long chatId, ItemDaCaixa item, string texto, CancellationToken c)
+    {
+        if (await telegram.EnviarComBotoesAsync(chatId, texto, [BotaoDesfazer(item)], c) is { } mensagem)
+        {
+            item.MensagemId = mensagem;
+            await banco.SaveChangesAsync(c);
+        }
+    }
+
+    /// <param name="pessoaId">Bloco 83: quem perguntou (o id no Telegram), para o /desfazer.</param>
     /// <param name="autor">Bloco 53: quem perguntou, num grupo (a IA e a caixa sabem quem foi).</param>
     /// <param name="aceitaAtualizacoes">Bloco 53: falso para quem só acompanha: as atualizações propostas não vão para a caixa.</param>
-    private async Task PerguntaAsync(long chatId, Usuario usuario, ObraNoServidor obra, string texto, DateTime agora, CancellationToken c,
+    private async Task PerguntaAsync(long chatId, long pessoaId, Usuario usuario, ObraNoServidor obra, string texto, DateTime agora, CancellationToken c,
         string? autor = null, bool aceitaAtualizacoes = true)
     {
         var planos = opcoes.Value.Planos;
@@ -274,15 +302,7 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         // 0.63.1: com a Anthropic sem crédito, o Telegram vai direto ao substituto no Gemini.
         if (saude.AnthropicSemCredito && catalogo.Substituto(modelo) is { } direto)
             modelo = direto;
-        ContextoDoProjeto? retrato;
-        try
-        {
-            retrato = JsonSerializer.Deserialize<ContextoDoProjeto>(obra.Retrato, Json);
-        }
-        catch (JsonException)
-        {
-            retrato = null;
-        }
+        var retrato = LerRetrato(obra);
         // Bloco 82: o "hoje" do retrato é o do dia em que o programa o mandou; para a IA vale o dia da mensagem, para "choveu
         // hoje" e "o RDO de ontem" caírem no dia certo.
         if (retrato is not null)
@@ -326,25 +346,33 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         Rotas.Cotas.Debitar(usuario, saldo, custo);
 
         var mensagem = resposta.Texto.Trim();
+        ItemDaCaixa? item = null;
         if (resposta.Atualizacoes.Count > 0 && !aceitaAtualizacoes)
             mensagem += "\n\n(Quem só acompanha a obra não manda atualizações: peça ao dono para mudar o seu papel com /papel.)";
         else if (resposta.Atualizacoes.Count > 0)
         {
-            banco.CaixaDeEntrada.Add(new ItemDaCaixa
+            item = new ItemDaCaixa
             {
                 Id = Guid.NewGuid(), UsuarioId = usuario.Id, ObraId = obra.Id, Tipo = ItemDaCaixa.DeAtualizacoes, CriadoEm = agora,
                 Texto = Cortar(ComAutor(autor, texto)),
                 Conteudo = JsonSerializer.Serialize(resposta.Atualizacoes, Json),
                 Tarefas = JsonSerializer.Serialize(retrato?.Tarefas.Select(t => new TarefaDaCaixa(t.Numero, t.Id)) ?? [], Json),
-            });
-            var n = resposta.Atualizacoes.Count;
-            mensagem += $"\n\n📥 {(n == 1 ? "1 atualização ficou" : $"{n} atualizações ficaram")} na caixa da obra {obra.Nome}: confira e aplique no programa (Conta > Buscar do Telegram).";
+                ChatId = chatId, PessoaId = pessoaId,
+            };
+            banco.CaixaDeEntrada.Add(item);
+            // Bloco 83: o que ficou anotado, item por item, pelo próprio pedido (não pelo texto da IA).
+            mensagem += $"\n\n📥 Anotado na caixa da obra {obra.Nome}:\n" +
+                        string.Join("\n", ResumoDasAtualizacoes.Linhas(resposta.Atualizacoes, retrato).Select(l => "• " + l)) +
+                        "\nConfira e aplique no programa (Conta > Buscar do Telegram).";
         }
         await banco.SaveChangesAsync(c);
         await Painel.ConferirAlertaAsync(banco, opcoes.Value, email, agora, log, c);
         conversas.Guardar(chatId, new MensagemChat(AutorMensagem.Usuario, ComAutor(autor, texto), relogio.GetLocalNow(), []),
             new MensagemChat(AutorMensagem.Assistente, resposta.Texto, relogio.GetLocalNow(), []));
-        await telegram.EnviarAsync(chatId, mensagem.Length == 0 ? "Anotado." : mensagem, c);
+        if (item is null)
+            await telegram.EnviarAsync(chatId, mensagem.Length == 0 ? "Anotado." : mensagem, c);
+        else
+            await ConfirmarAsync(chatId, item, mensagem.TrimStart(), c);
     }
 
     /// <summary>Bloco 82: o dia de um instante (UTC) no horário de Brasília (UTC−3, sem horário de verão desde 2019).</summary>

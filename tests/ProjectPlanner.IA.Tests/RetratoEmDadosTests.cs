@@ -114,4 +114,22 @@ public sealed class RetratoEmDadosTests
         ResumoDasAtualizacoes.Linha(new AtualizacaoDaObra("percentual", Tarefa: "2", Percentual: 60), null).Should().Be("tarefa nº 2: 60% concluído", "sem o retrato");
         ResumoDasAtualizacoes.Linha(new AtualizacaoDaObra("novidade"), retrato).Should().Be("novidade");
     }
+
+    // Bloco 84: a produção, com a conta pelo total e pelo executado da tarefa no retrato (a mesma regra do programa).
+    [Fact]
+    public void Resumo_DaProducao_ComAConta()
+    {
+        var reboco = Tarefa(3, "Reboco", "2026-10-15", "2026-11-04", 15, 30) with { Edt = "1.3", Quantidade = 200m, Unidade = "m²", Executado = 60m };
+        var limpeza = Tarefa(4, "Limpeza", "2026-10-15", "2026-10-16", 2, 0);
+        var retrato = new ContextoDoProjeto("Casa", D("2026-10-01"), D("2026-12-18"), D("2026-10-18"), [reboco, limpeza]);
+        string L(AtualizacaoDaObra a) => ResumoDasAtualizacoes.Linha(a, retrato);
+
+        L(new("producao", Tarefa: "3", Quantidade: 20)).Should().Be("1.3 Reboco: +20 m² executados (10% de 200 m²): 30% → 40% concluído");
+        L(new("producao", Tarefa: "3", Quantidade: 120, Unidade: "m²", Acao: "total")).Should().Be("1.3 Reboco: 120 m² executados no total (60% de 200 m²): 30% → 60% concluído");
+        L(new("producao", Tarefa: "3", Quantidade: 139.9m, Acao: "somar")).Should().Be("1.3 Reboco: +139,9 m² executados (70% de 200 m²): 30% → 99% concluído", "só o total conclui");
+        L(new("producao", Tarefa: "3", Quantidade: 5, Unidade: "m³")).Should().Be("1.3 Reboco: +5 m³ executados (a tarefa é medida em m²: confira no programa)");
+        L(new("producao", Tarefa: "4", Quantidade: 10, Unidade: "m²")).Should().Be("4 Limpeza: +10 m² executados", "sem o total no retrato, sem a conta");
+        L(new("diario", Tarefa: "3", Quantidade: 20, Acao: "servico")).Should().Be("RDO de hoje: serviço 1.3 Reboco, 20 m²");
+        retrato.ComoTexto().Should().Contain("- 3 (1.3 Reboco): 200 m²; executado 60").And.NotContain("(4 Limpeza)");
+    }
 }

@@ -112,6 +112,32 @@ public sealed class DiarioDeObraTelaTests : IDisposable
         d29.Atividades.Select(a => a.Descricao).Should().Equal("1 Escavação", "Limpeza do canteiro");
     }
 
+    // Bloco 84: a produção do dia nos serviços ("30 m³"; sem a unidade, vale a da tarefa).
+    [Fact]
+    public async Task Servicos_ComAQuantidadeExecutadaNoDia()
+    {
+        _escavacao.Unidade = "m³";
+        _escavacao.Quantidade = "90";
+        var tela = await Abrir();
+        tela.NovoDiaCommand.Execute(null);
+
+        tela.Atividades[0].Quantidade = "12,5";
+        tela.AdicionarAtividadeCommand.Execute(null);
+        tela.Atividades[1].Descricao = "Aterro";
+        tela.Atividades[1].Quantidade = "30 m³";
+        tela.SalvarSePreciso().Should().BeTrue();
+
+        _vm.Cronograma.Diario.Dia(D28)!.Atividades.Select(a => (a.Descricao, a.Quantidade, a.Unidade)).Should().Equal(
+            ("1 Escavação", (decimal?)12.5m, "m³"), ("Aterro", (decimal?)30m, "m³"));
+        tela.Atividades[1].Quantidade = "muito";
+        tela.SalvarSePreciso().Should().BeFalse();
+        tela.Mensagem.Should().Be("A quantidade executada de \"Aterro\" não é um número (por exemplo, 20 m²).");
+        tela.Atividades[1].Quantidade = "";
+        tela.SalvarSePreciso().Should().BeTrue();
+
+        (await Abrir()).Atividades.Select(a => a.Quantidade).Should().Equal("12,50 m³", "");
+    }
+
     [Fact]
     public async Task FecharATela_ComUmNumeroQueNaoVale_PerguntaSeFechaSemSalvar()
     {

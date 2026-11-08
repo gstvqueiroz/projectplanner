@@ -360,6 +360,8 @@ clique em Importar. O chat ganhou `importarFotos: "anexos" | "pasta"` e `abrir.t
 - **A conversa:** o servidor guarda as últimas 8 mensagens de cada chat, só na memória.
 - **No programa:** Conta > Buscar do Telegram mostra cada mensagem com atualizações como um cartão
   (`AssistenteViewModel.MostrarDoTelegram`), conferido pelas tarefas do retrato daquele momento.
+- **Bloco 83:** a resposta lista o que ficou anotado (`ResumoDasAtualizacoes`, pelo pedido, não pelo texto da IA), com o
+  botão Desfazer; a ajuda, o /resumo, o /hoje e o /atrasadas respondem sem a IA (ver SERVIDOR.md).
 
 ## A IA no programa todo (Blocos 63 a 67)
 
@@ -370,6 +372,7 @@ Desfazer volta tudo); o cronograma muda direto, como sempre. Pelo Telegram, os m
 |---|---|---|
 | Cronograma | "monta o cronograma da casa", "adia o reboco 3 dias", "liga a pintura depois do reboco" | alterações |
 | Andamento | "a alvenaria está em 60%", "mede 40 m² na medição 2", "gastei R$ 1.200 de cimento" | cartão |
+| Andamento por quantidade (Bloco 84) | "fizemos 20 m² de reboco hoje", "o contrapiso já tem 120 m² prontos" | cartão (producao: somar ou total; o % sai do executado ÷ o total da tarefa) |
 | Tarefas | "o valor da alvenaria é R$ 3.600, 120 m², prazo dia 9" | cartão (tipo tarefa) |
 | Obra | "o contratante é a Prefeitura de Volta Redonda" | cartão (tipo obra) |
 | Recursos | "cria um pedreiro a R$ 280 por dia, 4 disponíveis, e põe 2 na alvenaria" | cartão (recurso, atribuir) |
@@ -383,6 +386,18 @@ Desfazer volta tudo); o cronograma muda direto, como sempre. Pelo Telegram, os m
 Os arquivos (PDF, Word, Excel) o usuário salva na tela que a IA abrir. Ficam só na tela, sem a IA: mandar a OS ao grupo do
 Telegram e as preferências (logotipo, colunas, tema).
 
+### O andamento por quantidade (Bloco 84)
+
+A IA não calcula o %: ela manda a quantidade (`producao`, com `acao` somar, o padrão, ou total) na unidade da tarefa, e o
+programa soma ao **executado acumulado** da tarefa (`Tarefa.QuantidadeExecutada`, gravado no .pplan) e calcula o % concluído
+pelo total (`Tarefa.PercentualPeloExecutado`: 100% só no total; entre 0 e o total, de 1 a 99). Guardar o executado evita que
+os arredondamentos do % inteiro se acumulem (25 m² por dia em 1.200 m² chegam a 100%, e não a 96%). Mudar o % por outro
+caminho (a grade, o Kanban, a IA com o tipo percentual) tira o executado, e a próxima produção parte do % de então. A conta é
+feita ao aplicar: dois cartões do Telegram aplicados um depois do outro somam os dois. O retrato traz as "Quantidades das
+tarefas" (o total, a unidade e o executado); o RDO guarda a produção do dia no serviço (`AtividadeNoDia.Quantidade` e
+`Unidade`); a grade tem a coluna Executado (oculta de início). A unidade falada é conferida com a da tarefa
+(`Unidades.Mesma`: "m2", "M²" e "metros quadrados" são a mesma).
+
 ### O catálogo e a avaliação (Bloco 68)
 
 Os tipos de atualização e os campos de cada um ficam num lugar só, o `CatalogoDaIa` (ProjectPlanner.IA). Dele saem o
@@ -390,7 +405,7 @@ esquema que o Gemini segue, a leitura da resposta, a lista "CAMPOS DE CADA ATUAL
 (que o Claude, sem esquema, também lê) e as listas de telas e abas. Testes conferem que o registro `AtualizacaoDaObra`, o
 esquema, a leitura e as instruções batem com o catálogo, e que todo tipo e toda ação têm como ser aplicados no programa.
 
-Para saber se a IA acerta os pedidos de verdade, há a avaliação com 44 pedidos numa obra de exemplo: ver
+Para saber se a IA acerta os pedidos de verdade, há a avaliação com 54 pedidos numa obra de exemplo: ver
 [AVALIACAO-DA-IA.md](AVALIACAO-DA-IA.md).
 
 ## O que ainda não existe (blocos futuros)

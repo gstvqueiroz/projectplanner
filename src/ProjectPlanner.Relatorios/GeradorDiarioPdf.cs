@@ -76,8 +76,14 @@ public sealed class GeradorDiarioPdf
                 D.Efetivo.Count == 0 ? "Sem efetivo registrado." : $"Total: {D.TotalDoEfetivo} {(D.TotalDoEfetivo == 1 ? "pessoa" : "pessoas")}");
             Tabela("EQUIPAMENTOS", ["Equipamento", "Quantidade"], [0.82f, 0.18f],
                 [.. D.Equipamentos.Select(e => new[] { e.Nome, e.Quantidade.ToString(Brasil) })], D.Equipamentos.Count == 0 ? "Sem equipamentos registrados." : null);
-            Tabela("SERVIÇOS EXECUTADOS", ["Serviço", "% ao fim do dia"], [0.82f, 0.18f],
-                [.. D.Atividades.Select(a => new[] { a.Descricao, a.Percentual is { } p ? $"{p}%" : "—" })], D.Atividades.Count == 0 ? "Nenhum serviço registrado." : null);
+            // Bloco 84: a coluna da quantidade executada no dia só aparece quando algum serviço tem.
+            if (D.Atividades.Any(a => a.Quantidade is not null))
+                Tabela("SERVIÇOS EXECUTADOS", ["Serviço", "Executado no dia", "% ao fim do dia"], [0.6f, 0.22f, 0.18f],
+                    [.. D.Atividades.Select(a => new[] { a.Descricao, a.Quantidade is { } q ? $"{Core.Planejamento.Moeda.FormatarQuantidade(q)} {a.Unidade}".TrimEnd() : "—",
+                        a.Percentual is { } p ? $"{p}%" : "—" })], null);
+            else
+                Tabela("SERVIÇOS EXECUTADOS", ["Serviço", "% ao fim do dia"], [0.82f, 0.18f],
+                    [.. D.Atividades.Select(a => new[] { a.Descricao, a.Percentual is { } p ? $"{p}%" : "—" })], D.Atividades.Count == 0 ? "Nenhum serviço registrado." : null);
             Ocorrencias();
             Fotos();
             Assinaturas();

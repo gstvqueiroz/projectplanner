@@ -3,6 +3,30 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.84.0
+
+**O andamento pela quantidade executada.** Conte quanto foi feito ("fizemos 20 m² de reboco hoje"), no programa ou no
+Telegram, e o % concluído da tarefa sai da conta, sem a IA fazer contas:
+
+- **O cartão mostra a conta:** "1.3 Reboco: +20 m² executados (10% de 200 m²): 30% → 40% concluído". Também vale o total feito
+  até agora ("o contrapiso já tem 120 m² prontos") e uma correção ("errei, foram 5 m² a menos"). No Telegram, a mesma conta
+  aparece na lista do que ficou anotado.
+- **A tarefa guarda o executado acumulado**, e o % é o executado ÷ a quantidade total. Assim os arredondamentos não se
+  acumulam: 25 m² por dia numa alvenaria de 1.200 m² chegam a 100% no 48º dia (somando o % de cada dia, ficariam em 96%). A
+  tarefa só chega a 100% quando o executado chega ao total, e passa de 0% assim que começa. A conta é feita na hora de
+  aplicar: dois cartões do Telegram aplicados um depois do outro somam os dois.
+- **Para isso, a tarefa precisa da quantidade total** (colunas Unidade e Quantidade, ou o orçamento). Sem ela, a IA pergunta o
+  total; se você disser o total junto ("de 200 m²"), ela propõe os dois no mesmo cartão. A unidade falada é conferida com a da
+  tarefa ("m2", "M²" e "metros quadrados" valem igual; m³ numa tarefa em m² é recusado).
+- **Coluna Executado** na grade (Exibir > Colunas > Valores e medição): mostra o executado de cada tarefa e aceita digitar o
+  total feito, que leva o %. Mudar o % por outro caminho (a grade, o Kanban) solta o executado, e a próxima produção parte do
+  % de então. Mudar a quantidade total refaz o % pelo executado (um aditivo de quantidade baixa o %).
+- **Diário de obra:** cada serviço ganhou o campo Executado (a produção do dia, como "20 m²"; sem a unidade, vale a da tarefa),
+  que vai também ao PDF do RDO e ao que a IA lê do diário. Contando o dia ("hoje fizemos 20 m² de reboco"), a IA anota a
+  produção no cronograma e no RDO.
+- A ajuda do Telegram (/ajuda > Andamento) explica o andamento por quantidade.
+- A avaliação da IA ganhou 4 pedidos de produção (54 no total), um pelo Telegram.
+
 ## 0.83.0
 
 **Telegram: ajuda com botões, comandos que respondem na hora e o Desfazer.** O que muda no bot vale depois da atualização do

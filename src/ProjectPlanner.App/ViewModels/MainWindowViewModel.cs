@@ -120,7 +120,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             linha.Tarefa.EhCritica,
             linha.Tarefa.Notas,
             linha.Tarefa.Fotos.Count,
-            linha.Tarefa.Id)).ToList();
+            linha.Tarefa.Id)
+        {
+            // Bloco 84: a quantidade e o executado, para a produção ("fizemos 20 m²") virar % pelo total.
+            Quantidade = linha.EhResumo ? null : linha.Tarefa.Quantidade,
+            Unidade = linha.EhResumo ? null : linha.Tarefa.Unidade,
+            Executado = linha.EhResumo ? null : linha.Tarefa.ExecutadoAtual,
+        }).ToList();
         var inicio = DateOnly.FromDateTime(_cronograma.DataInicio);
         var termino = TerminoProjeto is { } fim ? DateOnly.FromDateTime(fim) : tarefas.Select(t => t.Termino).DefaultIfEmpty(inicio).Max();
         return new ContextoDoProjeto(_cronograma.Nome, inicio, termino, DateOnly.FromDateTime(_relogio.GetLocalNow().DateTime), tarefas,

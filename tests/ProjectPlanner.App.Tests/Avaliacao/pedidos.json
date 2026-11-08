@@ -357,6 +357,37 @@
       "esperado": { "atualizacoes": [{ "tipo": "diario", "acao": "ocorrencia", "data": "2026-09-25", "descricao": "~fiscaliza" }], "abrir": "nenhum" },
       "referencia": { "mensagem": "Anotei no RDO de 25/09: visita da fiscalização às 10h. Aplique quando abrir a obra no programa.",
         "alteracoes": [], "atualizacoes": [{ "tipo": "diario", "acao": "ocorrencia", "data": "2026-09-25", "descricao": "Visita da fiscalização às 10h" }] }
+    },
+    {
+      "id": "producao-reboco",
+      "pedido": "Executamos mais 24 m² de reboco.",
+      "esperado": { "atualizacoes": [{ "tipo": "producao", "tarefa": "3", "quantidade": 24 }] },
+      "referencia": { "mensagem": "Proponho +24 m² executados no reboco: o programa calcula o % pelo total da tarefa (240 m²).",
+        "alteracoes": [], "atualizacoes": [{ "tipo": "producao", "tarefa": "3", "quantidade": 24, "unidade": "m²" }] }
+    },
+    {
+      "id": "producao-total-pintura",
+      "pedido": "A pintura já tem 60 m² prontos.",
+      "esperado": { "atualizacoes": [{ "tipo": "producao", "tarefa": "4", "quantidade": 60, "acao": "total" }] },
+      "referencia": { "mensagem": "Proponho 60 m² executados no total na pintura (de 240 m²).",
+        "alteracoes": [], "atualizacoes": [{ "tipo": "producao", "tarefa": "4", "quantidade": 60, "unidade": "m²", "acao": "total" }] }
+    },
+    {
+      "id": "producao-sem-total",
+      "pedido": "Fizemos 30 pontos das instalações elétricas.",
+      "esperado": { "semMudancas": true },
+      "referencia": { "mensagem": "As instalações elétricas não têm a quantidade total no programa: quantos pontos são no total? Com o total, eu calculo o %.",
+        "alteracoes": [] }
+    },
+    {
+      "id": "telegram-producao-hoje",
+      "canal": "telegram",
+      "pedido": "hoje fizemos 24 m² de reboco",
+      "esperado": { "atualizacoes": [{ "tipo": "producao", "tarefa": "3", "quantidade": 24 },
+        { "tipo": "diario", "acao": "servico", "tarefa": "3", "quantidade": 24 }], "abrir": "nenhum" },
+      "referencia": { "mensagem": "Anotei 24 m² de reboco hoje, no andamento da tarefa e no RDO.",
+        "alteracoes": [], "atualizacoes": [{ "tipo": "producao", "tarefa": "3", "quantidade": 24, "unidade": "m²" },
+          { "tipo": "diario", "acao": "servico", "tarefa": "3", "quantidade": 24, "unidade": "m²" }] }
     }
   ]
 }

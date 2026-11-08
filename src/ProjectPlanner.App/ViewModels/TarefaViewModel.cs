@@ -91,6 +91,7 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
         nameof(NaoIniciarAntesDe), nameof(TemRestricao), nameof(DicaDoInicio), nameof(Prazo), nameof(ForaDoPrazo), nameof(DicaDoPrazo),
         nameof(InicioLinhaDeBase), nameof(TerminoLinhaDeBase), nameof(DesvioDoInicio), nameof(DesvioDoTermino), nameof(Valor),
         nameof(Unidade), nameof(Quantidade), nameof(PrecoUnitario), nameof(Recursos), nameof(CustoOrcado), nameof(Margem), nameof(MargemNegativa),
+        nameof(QuantidadeExecutada),
     ];
 
     private readonly IEdicaoCronograma _edicao;
@@ -322,6 +323,18 @@ public sealed partial class TarefaViewModel : ViewModelBase, IEditableObject
             _edicao.VerificarContrato(Tarefa);
             Tarefa.DefinirQuantidade(Core.Planejamento.Moeda.LerNumero(value));
         });
+    }
+
+    /// <summary>
+    /// Bloco 84: o executado acumulado ("120,00"), na unidade da tarefa: com ele, o % concluído é o executado ÷ a quantidade.
+    /// Digitar o executado leva o %; vazio tira o executado (o % fica). Aparece o que vale agora (o apontado ou o % sobre a quantidade).
+    /// </summary>
+    public string QuantidadeExecutada
+    {
+        get => ValorExibido(nameof(QuantidadeExecutada), Tarefa.EhResumo ? "" : Tarefa.ExecutadoAtual is { } e ? Core.Planejamento.Moeda.FormatarQuantidade(e) : "");
+        set => Alterar(nameof(QuantidadeExecutada), "Executado", value,
+            LerValor(value) is var (lido, ok) && ok && (lido is null ? Tarefa.QuantidadeExecutada is null : lido == Tarefa.ExecutadoAtual && Tarefa.QuantidadeExecutada is not null),
+            () => Tarefa.DefinirQuantidadeExecutada(Core.Planejamento.Moeda.LerNumero(value)));
     }
 
     // ---- Bloco 32: recursos, custo orçado e margem (só leitura; os recursos mudam em Tarefa > Recursos da tarefa…) ----

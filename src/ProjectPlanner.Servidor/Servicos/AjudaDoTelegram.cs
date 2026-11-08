@@ -98,7 +98,11 @@ public static class AjudaDoTelegram
                 "Conte o que foi feito, do jeito que falaria:\n" +
                 "• \"a alvenaria do térreo está em 60%\"\n" +
                 "• \"terminamos a fundação\"\n" +
+                "• \"fizemos 20 m² de reboco hoje\": eu calculo o % pelo total da tarefa (20 de 200 m² são 10% a mais)\n" +
+                "• \"o contrapiso já tem 120 m² prontos\" (o total feito até agora)\n" +
                 "• \"a pintura só começa depois do dia 20\"\n\n" +
+                "Para o % sair da quantidade, a tarefa precisa ter a quantidade total no programa (colunas Unidade e Quantidade); se " +
+                "não tiver, eu pergunto o total.\n\n" +
                 "Perguntas também valem: \"o que está atrasado?\", \"quando termina a estrutura?\", \"quanto falta do reboco?\".\n\n" +
                 "Se houver duas tarefas parecidas, eu pergunto qual é antes de anotar." + noGrupo,
             "diario" =>

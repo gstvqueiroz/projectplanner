@@ -44,6 +44,12 @@ public static class TiposDeAtualizacao
     /// </summary>
     public const string Diario = "diario";
 
+    /// <summary>
+    /// Bloco 84: a produção de uma tarefa: a quantidade executada, na unidade dela ("fizemos 20 m² de reboco hoje"); o programa
+    /// calcula o % concluído pelo total da tarefa. Com acao "total", a quantidade é o executado acumulado ("já são 120 m²").
+    /// </summary>
+    public const string Producao = "producao";
+
     /// <summary>Bloco 68: os do <see cref="CatalogoDaIa"/>, na ordem dele.</summary>
     public static IReadOnlyList<string> Todos => _todos ??= [.. CatalogoDaIa.Tipos.Select(t => t.Nome)];
 
@@ -65,6 +71,9 @@ public static class TiposDeAtualizacao
 
     /// <summary>Bloco 82: as ações de "diario".</summary>
     public static IReadOnlyList<string> AcoesDoDiario { get; } = ["clima", "efetivo", "equipamento", "servico", "ocorrencia"];
+
+    /// <summary>Bloco 84: as ações de "producao": somar (o executado no período, o padrão) ou total (o acumulado até agora).</summary>
+    public static IReadOnlyList<string> AcoesDaProducao { get; } = ["somar", "total"];
 }
 
 /// <summary>
@@ -73,7 +82,7 @@ public static class TiposDeAtualizacao
 /// </summary>
 /// <param name="Tarefa">O Nº da linha no retrato ("3"): percentual, medicao, inicio e, opcional, custo.</param>
 /// <param name="Percentual">percentual: o % concluído (0 a 100); medicao: o % medido no período, num item sem quantidade.</param>
-/// <param name="Quantidade">medicao: a quantidade medida no período, na unidade da tarefa.</param>
+/// <param name="Quantidade">medicao: a quantidade medida no período, na unidade da tarefa. Bloco 84: producao: a executada; diario (servico): a executada no dia.</param>
 /// <param name="Medicao">medicao: o nº da medição em rascunho; vazio = a última em rascunho, ou uma nova.</param>
 /// <param name="De">medicao nova: o início do período (AAAA-MM-DD).</param>
 /// <param name="Ate">medicao nova: o fim do período (AAAA-MM-DD).</param>
@@ -92,7 +101,7 @@ public static class TiposDeAtualizacao
 /// <param name="Pagamento">os: "empreitada", "medicao" ou "diaria".</param>
 /// <param name="Retencao">os: a retenção de garantia em %.</param>
 /// <param name="Acao">situacaoOs: emitir, aceitar, recusar, iniciar, concluir, conferir, reprovar, cancelar ou rascunho.</param>
-/// <param name="Unidade">Bloco 67: tarefa e recurso: a unidade (m², m³, un, dia…).</param>
+/// <param name="Unidade">Bloco 67: tarefa e recurso: a unidade (m², m³, un, dia…). Bloco 84: producao e diario (servico): a unidade da quantidade executada.</param>
 /// <param name="Contratante">Bloco 67: obra.</param>
 /// <param name="Contrato">Bloco 67: obra: o número ou o nome do contrato.</param>
 /// <param name="Endereco">Bloco 67: obra.</param>

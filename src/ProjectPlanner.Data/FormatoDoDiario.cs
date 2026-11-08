@@ -27,7 +27,7 @@ internal static class FormatoDoDiario
             new Clima(d.Manha.Tempo, d.Manha.Praticavel ? null : false), new Clima(d.Tarde.Tempo, d.Tarde.Praticavel ? null : false),
             d.Efetivo.Count == 0 ? null : [.. d.Efetivo.Select(e => new Pessoas(e.Funcao, e.Quantidade, e.Empresa))],
             d.Equipamentos.Count == 0 ? null : [.. d.Equipamentos.Select(e => new Equipamento(e.Nome, e.Quantidade))],
-            d.Atividades.Count == 0 ? null : [.. d.Atividades.Select(a => new Atividade(a.TarefaId, a.Descricao, a.Percentual))],
+            d.Atividades.Count == 0 ? null : [.. d.Atividades.Select(a => new Atividade(a.TarefaId, a.Descricao, a.Percentual, a.Quantidade, a.Unidade))],
             d.Ocorrencias, d.Fechamento?.Quando, d.Fechamento?.Responsavel))]), Opcoes);
 
     /// <exception cref="InvalidDataException">JSON com defeito ou dias que o diário não aceita.</exception>
@@ -42,7 +42,7 @@ internal static class FormatoDoDiario
                 Tarde = new ClimaDoPeriodo(d.Tarde?.Tempo ?? TempoNoPeriodo.Bom, d.Tarde?.Praticavel ?? true),
                 Efetivo = [.. (d.Efetivo ?? []).Select(e => new EfetivoNoDia(e.Funcao ?? "", e.Quantidade, e.Empresa))],
                 Equipamentos = [.. (d.Equipamentos ?? []).Select(e => new EquipamentoNoDia(e.Nome ?? "", e.Quantidade))],
-                Atividades = [.. (d.Atividades ?? []).Select(a => new AtividadeNoDia(a.Tarefa, a.Descricao ?? "", a.Percentual))],
+                Atividades = [.. (d.Atividades ?? []).Select(a => new AtividadeNoDia(a.Tarefa, a.Descricao ?? "", a.Percentual, a.Quantidade, a.Unidade))],
                 Ocorrencias = d.Ocorrencias,
                 Fechamento = d.FechadoEm is { } quando ? new FechamentoDoDia(quando, d.FechadoPor) : null,
             }));
@@ -64,5 +64,6 @@ internal static class FormatoDoDiario
 
     private sealed record Equipamento(string? Nome, int Quantidade);
 
-    private sealed record Atividade(Guid? Tarefa, string? Descricao, int? Percentual);
+    // Bloco 84: a quantidade e a unidade são opcionais (os arquivos de antes não têm, e a versão continua a 1).
+    private sealed record Atividade(Guid? Tarefa, string? Descricao, int? Percentual, decimal? Quantidade = null, string? Unidade = null);
 }

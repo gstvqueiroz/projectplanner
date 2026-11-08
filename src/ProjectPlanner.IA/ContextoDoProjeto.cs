@@ -32,7 +32,16 @@ public sealed record TarefaNoContexto(
     bool Critica,
     string? Notas,
     int Fotos,
-    Guid Id = default);
+    Guid Id = default)
+{
+    /// <summary>Bloco 84: a quantidade total da tarefa (a contratada), na <see cref="Unidade"/>; nula sem quantidade.</summary>
+    public decimal? Quantidade { get; init; }
+
+    public string? Unidade { get; init; }
+
+    /// <summary>Bloco 84: o executado acumulado que vale agora (o apontado, ou o % sobre a quantidade); nulo sem quantidade.</summary>
+    public decimal? Executado { get; init; }
+}
 
 /// <summary>
 /// Retrato só de leitura do cronograma aberto (Bloco 23), montado pelo App a cada envio. O assistente nunca recebe o
@@ -86,6 +95,9 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
     /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
     public const int LinhasDoOrcamento = 200;
 
+    /// <summary>Bloco 84: tarefas com quantidade no retrato, no máximo.</summary>
+    public const int LinhasDasQuantidades = 200;
+
     /// <summary>Notas mais longas que isso são cortadas no retrato.</summary>
     public const int TamanhoMaximoDasNotas = 500;
 
@@ -134,6 +146,17 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
                 t.Fotos.ToString(Cultura),
                 Notas(t.Notas)));
         }
+        // Bloco 84: as quantidades, para a produção ("fizemos 20 m²") virar % pelo total da tarefa.
+        var comQuantidade = Tarefas.Where(t => t.Quantidade is not null && t.Tipo != TipoNoContexto.Resumo).ToList();
+        if (comQuantidade.Count > 0)
+        {
+            texto.AppendLine("Quantidades das tarefas (Nº: o total na unidade e o executado até agora; o % concluído é o executado ÷ o total):");
+            foreach (var t in comQuantidade.Take(LinhasDasQuantidades))
+                texto.AppendLine($"- {t.Numero.ToString(Cultura)} ({t.Edt} {Limpar(t.Nome)}): {Numero(t.Quantidade!.Value)} {Limpar(t.Unidade ?? "")}".TrimEnd() +
+                                 $"; executado {Numero(t.Executado ?? 0)}");
+            if (comQuantidade.Count > LinhasDasQuantidades)
+                texto.AppendLine($"- (mais {comQuantidade.Count - LinhasDasQuantidades} tarefas com quantidade)");
+        }
         if (Quadro is { Count: > 0 } quadro)
         {
             texto.AppendLine("Quadro Kanban (cada card é uma tarefa sem subtarefas, pelo Nº; numa coluna do tipo A fazer o % é 0, numa " +
@@ -167,6 +190,8 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
     }
 
     private static string Data(DateOnly data) => data.ToString("dd/MM/yyyy", Cultura);
+
+    private static string Numero(decimal valor) => valor.ToString("#,##0.####", Cultura);
 
     // O "|" separa as colunas e as quebras de linha separam as tarefas: dentro de um campo viram "/" e " / ".
     private static string Limpar(string texto) =>

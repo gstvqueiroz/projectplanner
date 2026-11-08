@@ -236,6 +236,7 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
             Valor = t.EhResumo ? null : t.Valor,
             Unidade = t.EhResumo ? null : t.Unidade,
             Quantidade = t.EhResumo ? null : t.Quantidade,
+            QuantidadeExecutada = t.EhResumo ? null : t.QuantidadeExecutada,
         }));
 
         contexto.Recursos.AddRange(cronograma.Recursos.Lista.Select((r, ordem) => new RecursoRegistro
@@ -435,6 +436,10 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 tarefa.DefinirValor(registro.Valor);
                 tarefa.DefinirUnidade(registro.Unidade);
                 tarefa.DefinirQuantidade(registro.Quantidade);
+                // Bloco 84: o executado só volta se ainda bate com o % gravado (o % gravado é o que vale).
+                if (registro.QuantidadeExecutada is { } executado && registro.Quantidade is { } total
+                    && Tarefa.PercentualPeloExecutado(executado, total) == registro.PercentualConcluido)
+                    tarefa.DefinirQuantidadeExecutada(executado);
             }
             tarefa.DefinirPrazo(registro.Prazo);
             cronograma.AdicionarTarefa(tarefa, registro.TarefaPaiId);

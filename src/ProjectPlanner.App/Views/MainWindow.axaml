@@ -850,6 +850,7 @@
                 <!-- Bloco 36: unidade e quantidade (para medir por quantidade) e o preço unitário (valor ÷ quantidade). -->
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Unidade" Header="Unidade" Width="70" Binding="{Binding Unidade}" />
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="Quantidade" Header="Quantidade" Width="100" Binding="{Binding Quantidade}" />
+                <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="QuantidadeExecutada" Header="Executado" Width="100" Binding="{Binding QuantidadeExecutada}" />
                 <DataGridTextColumn x:DataType="vm:TarefaViewModel" Tag="PrecoUnitario" Header="Preço&#x0a;unitário (R$)" Width="110"
                                     Binding="{Binding PrecoUnitario}" IsReadOnly="True" />
                 <!-- Bloco 32: os recursos (um duplo clique abre Recursos da tarefa), o custo orçado por eles e a margem (Valor − custo). -->

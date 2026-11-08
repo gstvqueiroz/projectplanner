@@ -48,7 +48,7 @@ public static class CatalogoDaIa
         new("pagamento", FormatoDoCampo.Texto, ["empreitada", "medicao", "diaria"]),
         new("retencao", FormatoDoCampo.Numero),
         new("acao", FormatoDoCampo.Texto, [.. TiposDeAtualizacao.AcoesDaOs.Concat(TiposDeAtualizacao.AcoesDaMedicao).Concat(TiposDeAtualizacao.AcoesDoCalendario)
-            .Concat(TiposDeAtualizacao.AcoesDoQuadro).Concat(TiposDeAtualizacao.AcoesDoDiario).Distinct()]),
+            .Concat(TiposDeAtualizacao.AcoesDoQuadro).Concat(TiposDeAtualizacao.AcoesDoDiario).Concat(TiposDeAtualizacao.AcoesDaProducao).Distinct()]),
         new("unidade", FormatoDoCampo.Texto),
         new("contratante", FormatoDoCampo.Texto),
         new("contrato", FormatoDoCampo.Texto),
@@ -79,8 +79,9 @@ public static class CatalogoDaIa
         new(TiposDeAtualizacao.MedicaoDoContrato, ["medicao", "acao", "data"], TiposDeAtualizacao.AcoesDaMedicao),
         new(TiposDeAtualizacao.Calendario, ["acao", "data", "de", "ate", "nome", "descricao", "dias"], TiposDeAtualizacao.AcoesDoCalendario), // Bloco 71
         new(TiposDeAtualizacao.Quadro, ["acao", "tarefa", "coluna", "descricao", "nome"], TiposDeAtualizacao.AcoesDoQuadro), // Bloco 80
-        new(TiposDeAtualizacao.Diario, ["acao", "data", "periodo", "nome", "praticavel", "quantidade", "fornecedor", "tarefa", "descricao", "percentual"],
-            TiposDeAtualizacao.AcoesDoDiario), // Bloco 82
+        new(TiposDeAtualizacao.Diario, ["acao", "data", "periodo", "nome", "praticavel", "quantidade", "fornecedor", "tarefa", "descricao", "percentual",
+            "unidade"], TiposDeAtualizacao.AcoesDoDiario), // Bloco 82 (Bloco 84: a unidade da quantidade executada no serviço)
+        new(TiposDeAtualizacao.Producao, ["tarefa", "quantidade", "unidade", "acao"], TiposDeAtualizacao.AcoesDaProducao), // Bloco 84
     ];
 
     public static CampoDaAtualizacao Campo(string nome) => Campos.First(c => c.Nome == nome);

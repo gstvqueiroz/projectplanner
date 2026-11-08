@@ -30,6 +30,7 @@ public static class ResumoDasAtualizacoes
         return a.Tipo switch
         {
             TiposDeAtualizacao.Percentual => Percentual(a, tarefa, nome),
+            TiposDeAtualizacao.Producao => Producao(a, tarefa, nome, acao == "total"),
             TiposDeAtualizacao.Medicao => $"Medição{Numero(a.Medicao)}: {Com(nome)}" +
                                           (a.Quantidade is { } q ? $", {N(q)} {a.Unidade}".TrimEnd() : a.Percentual is { } p ? $", {N(p)}%" : ""),
             TiposDeAtualizacao.Custo => $"Custo: {(a.Valor is { } v ? Reais(v) : "?")}" + Junto(a.Descricao) +
@@ -64,6 +65,29 @@ public static class ResumoDasAtualizacoes
         return tarefa is null ? $"{Com(nome)}: {novo}% concluído" : $"{nome}: {tarefa.PercentualConcluido}% → {novo}% concluído";
     }
 
+    // Bloco 84: "+20 m² executados (10% de 200 m²): 30% → 40% concluído", pela quantidade e pelo executado da tarefa no retrato.
+    private static string Producao(AtualizacaoDaObra a, TarefaNoContexto? tarefa, string nome, bool total)
+    {
+        var unidade = string.IsNullOrWhiteSpace(a.Unidade) ? tarefa?.Unidade : a.Unidade.Trim();
+        var quanto = a.Quantidade is { } q ? $"{N(q)} {unidade}".TrimEnd() : "?";
+        var texto = total ? $"{Com(nome)}: {quanto} executados no total" : $"{Com(nome)}: +{quanto} executados";
+        if (tarefa?.Quantidade is not { } totalDaTarefa || totalDaTarefa <= 0 || a.Quantidade is not { } quantidade)
+            return texto;
+        if (!string.IsNullOrWhiteSpace(a.Unidade) && !string.IsNullOrWhiteSpace(tarefa.Unidade) && Simples(a.Unidade) != Simples(tarefa.Unidade))
+            return $"{texto} (a tarefa é medida em {tarefa.Unidade}: confira no programa)";
+        var antes = tarefa.Executado ?? totalDaTarefa * tarefa.PercentualConcluido / 100m;
+        var depois = total ? quantidade : antes + quantidade;
+        return $"{texto} ({N(Math.Round(quantidade / totalDaTarefa * 100, 1))}% de {N(totalDaTarefa)} {tarefa.Unidade}".TrimEnd() +
+               $"): {tarefa.PercentualConcluido}% → {PercentualPeloExecutado(depois, totalDaTarefa)}% concluído";
+    }
+
+    /// <summary>A mesma regra da tarefa no programa: 100% só no total; entre 0 e o total, de 1 a 99.</summary>
+    private static int PercentualPeloExecutado(decimal executado, decimal total) =>
+        executado <= 0 ? 0 : executado >= total ? 100 : (int)Math.Clamp(Math.Round(executado / total * 100, MidpointRounding.AwayFromZero), 1, 99);
+
+    private static string Simples(string unidade) =>
+        unidade.Trim().ToLowerInvariant().Replace("²", "2").Replace("³", "3").Replace(" ", "").Replace(".", "");
+
     private static string Calendario(AtualizacaoDaObra a, string? acao) => acao switch
     {
         "feriado" or "feriadoAnual" => $"Calendário: feriado em {Dia(a.Data ?? a.De)}" + (string.IsNullOrWhiteSpace(a.Nome) ? "" : $" ({a.Nome.Trim()})") +
@@ -97,7 +121,9 @@ public static class ResumoDasAtualizacoes
                        (a.Praticavel switch { "nao" => ", sem trabalho", "sim" => ", praticável", _ => "" }),
             "efetivo" => a.Quantidade is 0 ? $"tirar {a.Nome}" : $"{N(a.Quantidade ?? 1)} {a.Nome}" + (string.IsNullOrWhiteSpace(a.Fornecedor) ? "" : $" ({a.Fornecedor.Trim()})"),
             "equipamento" => a.Quantidade is 0 ? $"tirar {a.Nome}" : $"{N(a.Quantidade ?? 1)} {a.Nome}",
-            "servico" => "serviço " + (tarefa is not null ? nome : a.Descricao ?? nome) + (a.Percentual is { } p ? $" ({N(p)}%)" : ""),
+            "servico" => "serviço " + (tarefa is not null ? nome : a.Descricao ?? nome) +
+                         (a.Quantidade is { } qs ? $", {N(qs)} {(string.IsNullOrWhiteSpace(a.Unidade) ? tarefa?.Unidade : a.Unidade.Trim())}".TrimEnd() : "") +
+                         (a.Percentual is { } p ? $" ({N(p)}%)" : ""),
             "ocorrencia" => $"ocorrência: {a.Descricao}",
             _ => "diário",
         };

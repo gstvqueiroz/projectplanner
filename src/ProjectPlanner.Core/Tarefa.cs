@@ -157,6 +157,14 @@ public class Tarefa
     public decimal? Quantidade { get; private set; }
 
     /// <summary>
+    /// Bloco 84: o executado acumulado, na <see cref="Unidade"/>, quando o andamento vem por quantidade ("fizemos 20 m² hoje"). Com
+    /// ele, o % concluído é o executado ÷ a <see cref="Quantidade"/> (<see cref="PercentualPeloExecutado"/>): guardar o executado
+    /// evita que os arredondamentos do % inteiro se acumulem de um apontamento para o outro. Nulo quando o andamento é só pelo %:
+    /// mudar o % por outro caminho (a grade, o Kanban, a IA) o tira, e a próxima produção parte do % de então.
+    /// </summary>
+    public decimal? QuantidadeExecutada { get; private set; }
+
+    /// <summary>
     /// Bloco 32: os recursos da tarefa (por dia nos profissionais e equipamentos; o total nos materiais). Mudam por
     /// <see cref="Recursos.RecursosDoProjeto.Atribuir"/>, que confere os recursos do projeto. Vazio num resumo.
     /// </summary>
@@ -379,6 +387,79 @@ public class Tarefa
         if (quantidade > QuantidadeMaxima)
             throw new DomainValidationException(nameof(Quantidade), "A quantidade passa do máximo aceito (999.999.999,9999).");
         Quantidade = quantidade is { } q ? Math.Round(q, 4, MidpointRounding.AwayFromZero) : null;
+        // Bloco 84: com o executado guardado, o % segue o executado ÷ o total novo (um aditivo de quantidade baixa o %); sem o
+        // total, o executado não vale mais.
+        if (Quantidade is not { } total)
+            QuantidadeExecutada = null;
+        else if (QuantidadeExecutada is { } executado)
+            PercentualConcluido = PercentualPeloExecutado(executado, total);
+    }
+
+    /// <summary>Bloco 84: a recusa da produção numa tarefa sem a quantidade total.</summary>
+    public const string SemQuantidadeTotal =
+        "A tarefa não tem a quantidade total: preencha a quantidade (e a unidade) para o % sair do executado.";
+
+    /// <summary>
+    /// Bloco 84: o % concluído de um executado: 0 sem nada executado; 100 só quando o executado chega ao total (ou passa dele);
+    /// entre os dois, o executado ÷ o total arredondado, de 1 a 99 (começou, mas não terminou).
+    /// </summary>
+    public static int PercentualPeloExecutado(decimal executado, decimal total)
+    {
+        if (executado <= 0 || total <= 0)
+            return 0;
+        if (executado >= total)
+            return 100;
+        return (int)Math.Clamp(Math.Round(executado / total * 100, MidpointRounding.AwayFromZero), 1, 99);
+    }
+
+    /// <summary>
+    /// Bloco 84: o executado que vale agora: o guardado, se ainda bate com o % concluído; senão, o % de agora sobre a quantidade.
+    /// Nulo sem a quantidade total.
+    /// </summary>
+    public decimal? ExecutadoAtual => Quantidade is not { } total ? null
+        : QuantidadeExecutada is { } executado && PercentualPeloExecutado(executado, total) == PercentualConcluido ? executado
+        : Math.Round(total * PercentualConcluido / 100m, 4, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Bloco 84: soma a produção (o que foi executado no período, na unidade da tarefa; negativa corrige um apontamento a mais) ao
+    /// executado e leva o % concluído ao executado ÷ a quantidade.
+    /// </summary>
+    /// <exception cref="DomainValidationException">Resumo, sem a quantidade total, produção zero, ou o executado ficaria negativo.</exception>
+    public void ApontarProducao(decimal quantidade)
+    {
+        var total = TotalParaAProducao();
+        if (quantidade == 0)
+            throw new DomainValidationException(nameof(QuantidadeExecutada), "Informe a quantidade executada.");
+        DefinirExecutado(ExecutadoAtual!.Value + quantidade, total);
+    }
+
+    /// <summary>Bloco 84: o executado acumulado até agora ("já fizemos 120 m²"), que leva o %; nulo tira o executado (o % fica).</summary>
+    /// <exception cref="DomainValidationException">Resumo, sem a quantidade total, ou executado negativo.</exception>
+    public void DefinirQuantidadeExecutada(decimal? executado)
+    {
+        if (executado is not { } valor)
+        {
+            RecusarSeResumo(nameof(QuantidadeExecutada), "O andamento de um resumo vem das tarefas dentro dele");
+            QuantidadeExecutada = null;
+            return;
+        }
+        DefinirExecutado(valor, TotalParaAProducao());
+    }
+
+    private decimal TotalParaAProducao()
+    {
+        RecusarSeResumo(nameof(QuantidadeExecutada), "O andamento de um resumo vem das tarefas dentro dele");
+        return Quantidade ?? throw new DomainValidationException(nameof(QuantidadeExecutada), SemQuantidadeTotal);
+    }
+
+    private void DefinirExecutado(decimal executado, decimal total)
+    {
+        if (executado < 0)
+            throw new DomainValidationException(nameof(QuantidadeExecutada), "O executado não pode ficar negativo.");
+        if (executado > QuantidadeMaxima)
+            throw new DomainValidationException(nameof(QuantidadeExecutada), "O executado passa do máximo aceito (999.999.999,9999).");
+        QuantidadeExecutada = Math.Round(executado, 4, MidpointRounding.AwayFromZero);
+        PercentualConcluido = PercentualPeloExecutado(QuantidadeExecutada.Value, total);
     }
 
     /// <summary>Bloco 35: o valor de um resumo, a soma das tarefas dentro dele (ver <see cref="CalculadoraResumos"/>).</summary>
@@ -394,6 +475,9 @@ public class Tarefa
             throw new DomainValidationException(nameof(PercentualConcluido),
                 $"O percentual concluído deve estar entre 0 e 100 (informado: {percentual}).");
 
+        // Bloco 84: o % mudou por outro caminho (não pelo executado): o executado guardado não vale mais.
+        if (QuantidadeExecutada is { } executado && Quantidade is { } total && PercentualPeloExecutado(executado, total) != percentual)
+            QuantidadeExecutada = null;
         PercentualConcluido = percentual;
     }
 
@@ -459,6 +543,7 @@ public class Tarefa
             Valor = Valor,
             Unidade = Unidade,
             Quantidade = Quantidade,
+            QuantidadeExecutada = QuantidadeExecutada,
         };
         copia._fotos.AddRange(_fotos);
         copia._atribuicoes.AddRange(_atribuicoes);
@@ -471,7 +556,7 @@ public class Tarefa
     {
         if (ehResumo && !EhResumo)
         {
-            (NaoIniciarAntesDe, Valor, Unidade, Quantidade) = (null, null, null, null);
+            (NaoIniciarAntesDe, Valor, Unidade, Quantidade, QuantidadeExecutada) = (null, null, null, null, null);
             _atribuicoes.Clear(); // Bloco 32: os recursos vão nas tarefas dentro do resumo
         }
         else if (!ehResumo && EhResumo)

@@ -520,7 +520,7 @@ public partial class MenuPrincipalTests
         itens[soltas.Count].Should().BeOfType<Separator>();
         var grupos = itens.Skip(soltas.Count + 1).Take(MainWindow.GruposDeColunas.Count).Cast<MenuItem>().ToList();
         grupos.Select(g => g.Header).Should().Equal("Linha de base e prazos", "Valores e medição", "Recursos e custos");
-        grupos[1].Items.Cast<MenuItem>().Select(i => i.Header).Should().Equal("Valor (R$)", "Unidade", "Quantidade", "Preço unitário (R$)");
+        grupos[1].Items.Cast<MenuItem>().Select(i => i.Header).Should().Equal("Valor (R$)", "Unidade", "Quantidade", "Executado", "Preço unitário (R$)");
         // Bloco 31: as caixas das colunas ocultas por padrão começam desmarcadas.
         itens.Take(soltas.Count).Concat(grupos.SelectMany(g => g.Items)).Cast<MenuItem>().Should().HaveCount(colunas.Count).And.OnlyContain(i =>
             i.ToggleType == MenuItemToggleType.CheckBox && i.StaysOpenOnClick

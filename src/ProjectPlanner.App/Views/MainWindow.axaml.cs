@@ -256,7 +256,7 @@ public partial class MainWindow : Window
     internal static readonly IReadOnlyList<(string Titulo, string[] Colunas)> GruposDeColunas =
     [
         ("Linha de base e prazos", ["NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino"]),
-        ("Valores e medição", ["Valor", "Unidade", "Quantidade", "PrecoUnitario"]),
+        ("Valores e medição", ["Valor", "Unidade", "Quantidade", "QuantidadeExecutada", "PrecoUnitario"]),
         ("Recursos e custos", ["Recursos", "CustoOrcado", "Margem"]),
     ];
 
@@ -498,7 +498,7 @@ public partial class MainWindow : Window
     }
 
     // Bloco 36: num resumo, a unidade e a quantidade não existem (são das tarefas dentro dele).
-    private static readonly HashSet<string> SemUnidadeNoResumo = ["Unidade", "Quantidade"];
+    private static readonly HashSet<string> SemUnidadeNoResumo = ["Unidade", "Quantidade", "QuantidadeExecutada"];
 
     private void GradeBeginningEdit(object? sender, DataGridBeginningEditEventArgs e)
     {

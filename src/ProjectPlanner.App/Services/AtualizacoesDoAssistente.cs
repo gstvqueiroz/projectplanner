@@ -25,6 +25,23 @@ public sealed record PercentualDaTarefa(Guid TarefaId, int Percentual) : Operaca
     public override void Aplicar(Cronograma c, DateTime agora) => Tarefa(c, TarefaId).AtualizarPercentualConcluido(Percentual);
 }
 
+/// <summary>
+/// Bloco 84: a produção de uma tarefa ("fizemos 20 m² hoje"): soma ao executado dela (com <paramref name="Total"/>, é o executado
+/// acumulado) e o % concluído sai do executado ÷ a quantidade total. A conta é feita ao aplicar, sobre o executado de então: dois
+/// cartões do Telegram aplicados um depois do outro somam os dois.
+/// </summary>
+public sealed record ProducaoDaTarefa(Guid TarefaId, decimal Quantidade, bool Total = false) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var tarefa = Tarefa(c, TarefaId);
+        if (Total)
+            tarefa.DefinirQuantidadeExecutada(Quantidade);
+        else
+            tarefa.ApontarProducao(Quantidade);
+    }
+}
+
 /// <param name="Numero">A medição em rascunho; nulo, a última em rascunho ou uma nova (De a Ate).</param>
 public sealed record MedirNaMedicao(int? Numero, DateOnly De, DateOnly Ate, Guid TarefaId, decimal Valor) : OperacaoDaObra
 {
@@ -411,9 +428,11 @@ public sealed record MudarOQuadro(string Acao, Guid? TarefaId, string? Texto) : 
 /// <param name="Tarde">clima: muda a tarde.</param>
 /// <param name="Quantidade">efetivo e equipamento: quantos no dia; 0 tira a linha.</param>
 /// <param name="Percentual">servico: o % da tarefa ao fim do dia (não muda o cronograma).</param>
+/// <param name="Executado">Bloco 84: servico: a quantidade executada no dia (a produção), na <paramref name="Unidade"/>.</param>
+/// <param name="Unidade">Bloco 84: servico: a unidade da quantidade executada; vazia, a da tarefa.</param>
 public sealed record MudarODiario(DateOnly Data, string Acao, bool Manha = false, bool Tarde = false, TempoNoPeriodo? Tempo = null,
     bool? Praticavel = null, string? Nome = null, int? Quantidade = null, string? Empresa = null, Guid? TarefaId = null,
-    string? Descricao = null, int? Percentual = null) : OperacaoDaObra
+    string? Descricao = null, int? Percentual = null, decimal? Executado = null, string? Unidade = null) : OperacaoDaObra
 {
     public override void Aplicar(Cronograma c, DateTime agora)
     {
@@ -470,12 +489,17 @@ public sealed record MudarODiario(DateOnly Data, string Acao, bool Manha = false
     {
         var lista = dia.Atividades.ToList();
         var i = TarefaId is { } id ? lista.FindIndex(a => a.TarefaId == id) : lista.FindIndex(a => MesmoNome(a.Descricao, Descricao));
+        var unidade = Executado is null ? null : Unidade ?? (TarefaId is { } daTarefa ? Tarefa(c, daTarefa).Unidade : null);
         if (i >= 0)
-            lista[i] = lista[i] with { Descricao = Descricao ?? lista[i].Descricao, Percentual = Percentual ?? lista[i].Percentual };
+            lista[i] = lista[i] with
+            {
+                Descricao = Descricao ?? lista[i].Descricao, Percentual = Percentual ?? lista[i].Percentual,
+                Quantidade = Executado ?? lista[i].Quantidade, Unidade = Executado is null ? lista[i].Unidade : unidade,
+            };
         else if (TarefaId is { } tarefa)
-            lista.Add(new AtividadeNoDia(tarefa, Descricao ?? $"{c.NumeracaoEdt()[tarefa]} {Tarefa(c, tarefa).Nome}", Percentual));
+            lista.Add(new AtividadeNoDia(tarefa, Descricao ?? $"{c.NumeracaoEdt()[tarefa]} {Tarefa(c, tarefa).Nome}", Percentual, Executado, unidade));
         else
-            lista.Add(new AtividadeNoDia(null, Descricao ?? "", Percentual));
+            lista.Add(new AtividadeNoDia(null, Descricao ?? "", Percentual, Executado, unidade));
         return lista;
     }
 
@@ -569,6 +593,8 @@ public static class AtualizacoesDoAssistente
                 return new($"{nome}: {tarefa.PercentualConcluido}% → {novo}% concluído", new PercentualDaTarefa(tarefa.Id, novo),
                     tarefa.EhResumo ? "o % de um resumo é calculado (atualize as tarefas dentro dele)" : null);
             }
+            case TiposDeAtualizacao.Producao: // Bloco 84
+                return tarefa is null ? SemTarefa($"{nome}: produção") : Producao(a, tarefa, nome);
             case TiposDeAtualizacao.Medicao:
             {
                 if (tarefa is null)
@@ -737,6 +763,36 @@ public static class AtualizacoesDoAssistente
         }
     }
 
+    // Bloco 84: "1.2 Reboco: +20 m² executados (10% de 200 m²): 30% → 40% concluído". A prévia é pelo executado de agora; ao
+    // aplicar, a conta é refeita sobre o executado de então.
+    private static ItemDoCartao Producao(AtualizacaoDaObra a, Tarefa tarefa, string nome)
+    {
+        var acao = Normal(a.Acao);
+        var total = acao == "total";
+        var unidade = string.IsNullOrWhiteSpace(a.Unidade) ? tarefa.Unidade : a.Unidade.Trim();
+        string Quanto(decimal q, string? u) => $"{q.ToString("#,##0.####", Brasil)} {u}".TrimEnd();
+        if (a.Quantidade is not { } quantidade)
+            return new($"{nome}: produção ?", null, "informe a quantidade executada");
+        var texto = total ? $"{nome}: {Quanto(quantidade, unidade)} executados no total"
+            : $"{nome}: {(quantidade > 0 ? "+" : "")}{Quanto(quantidade, unidade)} executados";
+        if (acao is not ("" or "somar" or "total"))
+            return new(texto, null, "a ação é somar (o executado no período) ou total (o acumulado até agora)");
+        if (quantidade == 0 || (total && quantidade < 0))
+            return new(texto, null, "informe a quantidade executada");
+        if (tarefa.EhResumo)
+            return new(texto, null, "o andamento de um resumo vem das tarefas dentro dele (informe uma delas)");
+        if (Core.Planejamento.Unidades.Mesma(a.Unidade, tarefa.Unidade) is false)
+            return new(texto, null, $"a tarefa é medida em {tarefa.Unidade}: confira a unidade ({a.Unidade!.Trim()})");
+        if (tarefa.Quantidade is { } totalDaTarefa && tarefa.ExecutadoAtual is { } antes)
+        {
+            var depois = total ? quantidade : antes + quantidade;
+            texto += $" ({(quantidade / totalDaTarefa * 100).ToString("0.#", Brasil)}% de {Quanto(totalDaTarefa, tarefa.Unidade)}): " +
+                     $"{tarefa.PercentualConcluido}% → {Tarefa.PercentualPeloExecutado(depois, totalDaTarefa)}% concluído" +
+                     (depois > totalDaTarefa ? $"; passa do total em {Quanto(depois - totalDaTarefa, tarefa.Unidade)}" : "");
+        }
+        return new(texto, new ProducaoDaTarefa(tarefa.Id, quantidade, total), null);
+    }
+
     // Bloco 80: o quadro Kanban. O card pelo Nº da tarefa; a coluna pelo nome; os itens em descricao; a etiqueta em nome.
     private static ItemDoCartao Quadro(Cronograma c, AtualizacaoDaObra a, Tarefa? tarefa, string nome)
     {
@@ -842,8 +898,15 @@ public static class AtualizacoesDoAssistente
             case "servico":
             {
                 int? percentual = a.Percentual is { } pc ? (int)Math.Round(pc) : null;
+                // Bloco 84: a quantidade executada no dia (a produção), na unidade dada ou na da tarefa.
+                var unidadeDoServico = string.IsNullOrWhiteSpace(a.Unidade) ? tarefa?.Unidade : a.Unidade.Trim();
                 var texto = $"serviço {(tarefa is null ? descricao ?? nome : descricao is null ? nome : $"{nome}: {descricao}")}" +
+                            (a.Quantidade is { } executado ? $", {$"{executado.ToString("#,##0.####", Brasil)} {unidadeDoServico}".TrimEnd()} executados" : "") +
                             (percentual is { } x ? $" ({x}% no fim do dia)" : "");
+                if (a.Quantidade is < 0)
+                    return Item(texto, null, "a quantidade executada não pode ser negativa");
+                if (tarefa is not null && Core.Planejamento.Unidades.Mesma(a.Unidade, tarefa.Unidade) is false)
+                    return Item(texto, null, $"a tarefa é medida em {tarefa.Unidade}: confira a unidade");
                 if (a.Tarefa is not null && tarefa is null)
                     return Item(texto, null, $"não há a tarefa nº {a.Tarefa} no cronograma");
                 if (tarefa is null && descricao is null)
@@ -852,7 +915,8 @@ public static class AtualizacoesDoAssistente
                     return Item(texto, null, $"\"{tarefa.Nome}\" é um resumo: informe uma tarefa sem subtarefas");
                 if (a.Percentual is { } fora && (fora < 0 || fora > 100))
                     return Item(texto, null, "o % precisa ir de 0 a 100");
-                return Item(texto, new MudarODiario(data, acao, TarefaId: tarefa?.Id, Descricao: descricao, Percentual: percentual));
+                return Item(texto, new MudarODiario(data, acao, TarefaId: tarefa?.Id, Descricao: descricao, Percentual: percentual,
+                    Executado: a.Quantidade, Unidade: a.Quantidade is null ? null : unidadeDoServico));
             }
             case "ocorrencia":
                 return descricao is null

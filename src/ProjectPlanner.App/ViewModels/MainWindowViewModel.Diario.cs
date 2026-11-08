@@ -47,7 +47,9 @@ public sealed partial class MainWindowViewModel
             if (d.Equipamentos.Count > 0)
                 partes.Add("equipamentos: " + string.Join(", ", d.Equipamentos.Select(e => $"{e.Nome} {e.Quantidade}")));
             if (d.Atividades.Count > 0)
-                partes.Add("serviços: " + string.Join("; ", d.Atividades.Select(a => a.Percentual is { } p ? $"{a.Descricao} {p}%" : a.Descricao)));
+                partes.Add("serviços: " + string.Join("; ", d.Atividades.Select(a => a.Descricao +
+                    (a.Quantidade is { } q ? $" {q.ToString("#,##0.####", CultureInfo.GetCultureInfo("pt-BR"))} {a.Unidade}".TrimEnd() : "") + // Bloco 84
+                    (a.Percentual is { } p ? $" {p}%" : ""))));
             if (d.Ocorrencias is { } ocorrencias)
                 partes.Add("ocorrências: " + (ocorrencias.Length > 300 ? ocorrencias[..300] + "…" : ocorrencias));
             return string.Join(" · ", partes);

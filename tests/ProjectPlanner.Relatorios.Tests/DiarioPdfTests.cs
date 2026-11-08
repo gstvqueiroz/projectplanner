@@ -56,6 +56,20 @@ public sealed class DiarioPdfTests
         Paginas(Pdf(ComFotos(12))).Should().Be(2, "entram até oito fotos, duas linhas de quatro");
     }
 
+    // Bloco 84: com a produção do dia nos serviços, a tabela ganha a coluna do executado (e um dia comum continua numa página).
+    [Fact]
+    public void ServicosComAProducaoDoDia_CabemNumaPagina()
+    {
+        var dia = Dia(new DateOnly(2026, 9, 28)) with
+        {
+            Atividades = [new AtividadeNoDia(null, "2.1 Reboco interno", 40, 20.5m, "m²"), new AtividadeNoDia(null, "Limpeza do canteiro")],
+        };
+
+        Paginas(Pdf(new DiaNoPdf(dia, 1, []))).Should().Be(1);
+        Paginas(Pdf(new DiaNoPdf(dia with { Atividades = [.. Enumerable.Range(1, 40).Select(i => new AtividadeNoDia(null, $"Serviço {i}", null, i, "m²"))] }, 1, [])))
+            .Should().BeGreaterThan(1, "muitos serviços continuam na página seguinte, com a coluna nova");
+    }
+
     [Fact]
     public void VariosDias_UmaPaginaCada_EMuitaCoisaContinuaNaSeguinte()
     {

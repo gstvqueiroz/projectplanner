@@ -49,11 +49,15 @@ public sealed partial class LinhaDaAtividade(DiarioDeObraViewModel tela, Guid? t
     [ObservableProperty] public partial string Descricao { get; set; } = "";
     [ObservableProperty] public partial string Percentual { get; set; } = "";
 
+    /// <summary>Bloco 84: a quantidade executada no dia, com a unidade ("20 m²"; sem a unidade, vale a da tarefa).</summary>
+    [ObservableProperty] public partial string Quantidade { get; set; } = "";
+
     [RelayCommand]
     private void Remover() => tela.Remover(this);
 
     partial void OnDescricaoChanged(string value) => tela.Mudou();
     partial void OnPercentualChanged(string value) => tela.Mudou();
+    partial void OnQuantidadeChanged(string value) => tela.Mudou();
 }
 
 /// <summary>Bloco 81: um dia na lista: "RDO 012 · 28/09/2026 · seg" e o resumo ("9 pessoas · chuva à tarde · fechado").</summary>
@@ -357,7 +361,23 @@ public sealed partial class DiarioDeObraViewModel : ViewModelBase
                     return Recusar($"O % de \"{linha.Descricao.Trim()}\" não é um número.");
                 percentual = p;
             }
-            atividades.Add(new AtividadeNoDia(linha.TarefaId, linha.Descricao, percentual));
+            // Bloco 84: a produção do dia ("20 m²", "20,5", "1.200 un").
+            var (executado, unidade) = (default(decimal?), default(string));
+            if (linha.Quantidade.Trim() is { Length: > 0 } quanto)
+            {
+                var numero = new string(quanto.TakeWhile(ch => char.IsAsciiDigit(ch) || ch is '.' or ',').ToArray());
+                try
+                {
+                    executado = numero.Length == 0 ? throw new FormatException() : Core.Planejamento.Moeda.LerNumero(numero);
+                }
+                catch (FormatException)
+                {
+                    return Recusar($"A quantidade executada de \"{linha.Descricao.Trim()}\" não é um número (por exemplo, 20 m²).");
+                }
+                unidade = quanto[numero.Length..].Trim() is { Length: > 0 } u ? u
+                    : linha.TarefaId is { } id ? _cronograma.Tarefas.FirstOrDefault(t => t.Id == id)?.Unidade : null;
+            }
+            atividades.Add(new AtividadeNoDia(linha.TarefaId, linha.Descricao, percentual, executado, unidade));
         }
         return atual with
         {
@@ -612,7 +632,11 @@ public sealed partial class DiarioDeObraViewModel : ViewModelBase
             Equipamentos.Add(new LinhaDoEquipamento(this) { Nome = e.Nome, Quantidade = e.Quantidade.ToString(Brasil) });
         Atividades.Clear();
         foreach (var a in dia.Atividades)
-            Atividades.Add(new LinhaDaAtividade(this, a.TarefaId) { Descricao = a.Descricao, Percentual = a.Percentual?.ToString(Brasil) ?? "" });
+            Atividades.Add(new LinhaDaAtividade(this, a.TarefaId)
+            {
+                Descricao = a.Descricao, Percentual = a.Percentual?.ToString(Brasil) ?? "",
+                Quantidade = a.Quantidade is { } q ? $"{Core.Planejamento.Moeda.FormatarQuantidade(q)} {a.Unidade}".TrimEnd() : "", // Bloco 84
+            });
     }
 
     // Hoje, se ainda não está no diário; senão, o dia depois do último.

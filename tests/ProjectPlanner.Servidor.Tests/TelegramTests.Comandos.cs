@@ -216,6 +216,31 @@ public sealed partial class TelegramTests
         _s.Telegram.RespostasAosBotoes.Last().Texto.Should().StartWith("Isto já foi para o programa");
     }
 
+    // Bloco 84: "fizemos 12 m² de alvenaria hoje": a IA manda a produção (e o serviço no RDO) e o bot mostra a conta pelo total.
+    [Fact]
+    public async Task Producao_ABotMostraAContaPeloTotalDaTarefa()
+    {
+        var acesso = await Preparar();
+        var retrato = Retrato() with
+        {
+            Tarefas = [Retrato().Tarefas[0], Retrato().Tarefas[1] with { Quantidade = 120m, Unidade = "m²", Executado = 48m }],
+        };
+        await Pedir(HttpMethod.Put, $"/v1/obras/{Projeto}", acesso, new { nome = "Casa da Ana", retrato });
+        _s.Gemini.Resposta = Resposta("""
+            {"mensagem":"Anotei a alvenaria de hoje.","alteracoes":[],"atualizacoes":[{"tipo":"producao","tarefa":"2","quantidade":12,"unidade":"m²"},
+             {"tipo":"diario","acao":"servico","tarefa":"2","quantidade":12,"unidade":"m²"}]}
+            """);
+
+        await Mandar("fizemos 12 m² de alvenaria hoje");
+
+        _s.Telegram.UltimaComBotoes.Texto.Should().Be("Anotei a alvenaria de hoje.\n\n📥 Anotado na caixa da obra Casa da Ana:\n" +
+                                                      "• 2 Alvenaria: +12 m² executados (10% de 120 m²): 40% → 50% concluído\n" +
+                                                      "• RDO de hoje: serviço 2 Alvenaria, 12 m²\n" +
+                                                      "Confira e aplique no programa (Conta > Buscar do Telegram).");
+        var instrucoes = JsonNode.Parse(_s.Gemini.Pedidos.Last().Corpo)!["systemInstruction"]!["parts"]![0]!["text"]!.GetValue<string>();
+        instrucoes.Should().Contain("ANDAMENTO POR QUANTIDADE").And.Contain("- 2 (2 Alvenaria): 120 m²; executado 48");
+    }
+
     [Fact]
     public async Task ComandoDesconhecido_NaoVaiParaAIA_ESemObraAvisa()
     {

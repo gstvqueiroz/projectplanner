@@ -138,11 +138,13 @@
                 <ItemsControl ItemsSource="{Binding Atividades}" IsEnabled="{Binding PodeEditar}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:LinhaDaAtividade">
-                            <Grid ColumnDefinitions="*,8,90,4,Auto" Margin="0,2">
+                            <Grid ColumnDefinitions="*,8,110,8,90,4,Auto" Margin="0,2">
                                 <TextBox Text="{Binding Descricao}" PlaceholderText="O que foi feito" />
-                                <TextBox Grid.Column="2" Text="{Binding Percentual}" PlaceholderText="% no fim" HorizontalContentAlignment="Right"
+                                <TextBox Grid.Column="2" Text="{Binding Quantidade}" PlaceholderText="Executado" HorizontalContentAlignment="Right"
+                                         ToolTip.Tip="A quantidade executada no dia, com a unidade (por exemplo, 20 m²; sem a unidade, vale a da tarefa). Opcional." />
+                                <TextBox Grid.Column="4" Text="{Binding Percentual}" PlaceholderText="% no fim" HorizontalContentAlignment="Right"
                                          ToolTip.Tip="O % da tarefa ao fim do dia (opcional)" />
-                                <Button Grid.Column="4" Classes="remover" Content="✕" Command="{Binding RemoverCommand}" AutomationProperties.Name="Tirar a linha" />
+                                <Button Grid.Column="6" Classes="remover" Content="✕" Command="{Binding RemoverCommand}" AutomationProperties.Name="Tirar a linha" />
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

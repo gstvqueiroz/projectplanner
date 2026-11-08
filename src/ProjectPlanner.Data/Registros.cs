@@ -46,6 +46,9 @@ internal sealed class TarefaRegistro
 
     /// <summary>Bloco 36: a quantidade contratada; nula sem quantidade (medida em %) e nos resumos.</summary>
     public decimal? Quantidade { get; set; }
+
+    /// <summary>Bloco 84: o executado acumulado, quando o andamento vem por quantidade; nulo sem ele e nos resumos.</summary>
+    public decimal? QuantidadeExecutada { get; set; }
 }
 
 /// <summary>Bloco 32: um recurso do projeto.</summary>

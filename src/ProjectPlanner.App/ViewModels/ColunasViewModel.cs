@@ -84,6 +84,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
         ("Valor", "Valor (R$)", 120),
         ("Unidade", "Unidade", 70),
         ("Quantidade", "Quantidade", 100),
+        ("QuantidadeExecutada", "Executado", 100), // Bloco 84
         ("PrecoUnitario", "Preço unitário (R$)", 110),
         ("Recursos", "Recursos", 200),
         ("CustoOrcado", "Custo orçado (R$)", 120),
@@ -92,7 +93,7 @@ public sealed partial class ColunasViewModel : ViewModelBase
 
     /// <summary>As colunas que começam ocultas (as que só servem a quem usa linha de base, prazos e valores).</summary>
     public static readonly IReadOnlySet<string> OcultasPorPadrao = new HashSet<string>
-        { "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor", "Unidade", "Quantidade", "PrecoUnitario",
+        { "NaoIniciarAntesDe", "Prazo", "InicioLinhaDeBase", "TerminoLinhaDeBase", "DesvioDoInicio", "DesvioDoTermino", "Valor", "Unidade", "Quantidade", "QuantidadeExecutada", "PrecoUnitario",
           "Recursos", "CustoOrcado", "Margem" };
 
     private readonly IPreferenciasColunas _preferencias;

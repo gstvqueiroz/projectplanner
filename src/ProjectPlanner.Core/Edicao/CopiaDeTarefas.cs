@@ -9,10 +9,11 @@ namespace ProjectPlanner.Core.Edicao;
 /// <param name="Unidade">Bloco 36: a unidade (só nas tarefas que não são resumo).</param>
 /// <param name="Quantidade">Bloco 36: a quantidade (só nas tarefas que não são resumo).</param>
 /// <param name="Atribuicoes">Bloco 32: os recursos (ao colar em outro projeto, só os que existem nele).</param>
+/// <param name="QuantidadeExecutada">Bloco 84: o executado acumulado (só nas tarefas que não são resumo).</param>
 public sealed record TarefaCopiada(
     Guid Original, Guid? PaiOriginal, string Nome, DateTime DataInicio, int Duracao, int PercentualConcluido, string? Notas, bool EhResumo,
     DateTime? NaoIniciarAntesDe = null, DateTime? Prazo = null, decimal? Valor = null, string? Unidade = null, decimal? Quantidade = null,
-    IReadOnlyList<Recursos.AtribuicaoDeRecurso>? Atribuicoes = null);
+    IReadOnlyList<Recursos.AtribuicaoDeRecurso>? Atribuicoes = null, decimal? QuantidadeExecutada = null);
 
 /// <summary>
 /// Bloco 30: tarefas copiadas, com as subtarefas e os vínculos entre elas (os vínculos com tarefas de fora ficam de
@@ -80,7 +81,7 @@ public static class CopiaDeTarefas
             copiadas.Add(new TarefaCopiada(tarefa.Id, ehRaiz ? null : tarefa.TarefaPaiId, tarefa.Nome, tarefa.DataInicio, tarefa.Duracao,
                 tarefa.PercentualConcluido, tarefa.Notas, tarefa.EhResumo, tarefa.NaoIniciarAntesDe, tarefa.Prazo,
                 tarefa.EhResumo ? null : tarefa.Valor, tarefa.EhResumo ? null : tarefa.Unidade, tarefa.EhResumo ? null : tarefa.Quantidade,
-                tarefa.Atribuicoes.Count == 0 ? null : [.. tarefa.Atribuicoes]));
+                tarefa.Atribuicoes.Count == 0 ? null : [.. tarefa.Atribuicoes], tarefa.EhResumo ? null : tarefa.QuantidadeExecutada));
         }
         var vinculos = cronograma.Predecessoras
             .Where(p => incluidas.Contains(p.TarefaOrigemId) && incluidas.Contains(p.TarefaDestinoId))
@@ -139,6 +140,9 @@ public static class CopiaDeTarefas
                     continue;
                 nova.DefinirValor(copiada.Valor);
                 nova.DefinirQuantidade(copiada.Quantidade);
+                if (copiada.QuantidadeExecutada is { } executado && copiada.Quantidade is { } total
+                    && Tarefa.PercentualPeloExecutado(executado, total) == copiada.PercentualConcluido) // Bloco 84: só se ainda bate com o %
+                    nova.DefinirQuantidadeExecutada(executado);
             }
             foreach (var vinculo in trecho.Vinculos)
                 cronograma.AdicionarPredecessora(new Predecessora(novas[vinculo.TarefaOrigemId].Id, novas[vinculo.TarefaDestinoId].Id,

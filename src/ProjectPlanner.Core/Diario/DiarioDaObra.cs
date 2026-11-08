@@ -32,9 +32,10 @@ public sealed record EquipamentoNoDia(string Nome, int Quantidade);
 
 /// <summary>
 /// Bloco 81: um serviço executado no dia: a tarefa do cronograma (nula num serviço que não é uma tarefa), o que foi feito e o %
-/// da tarefa ao fim do dia (opcional; vai ao cronograma só quando o usuário pede).
+/// da tarefa ao fim do dia (opcional; vai ao cronograma só quando o usuário pede). Bloco 84: a quantidade executada no dia e a
+/// unidade dela (a produção: "20 m²"), opcionais.
 /// </summary>
-public sealed record AtividadeNoDia(Guid? TarefaId, string Descricao, int? Percentual = null);
+public sealed record AtividadeNoDia(Guid? TarefaId, string Descricao, int? Percentual = null, decimal? Quantidade = null, string? Unidade = null);
 
 /// <summary>Bloco 81: quando o dia foi fechado (assinado) e por quem.</summary>
 public sealed record FechamentoDoDia(DateTime Quando, string? Responsavel);
@@ -211,6 +212,17 @@ public sealed class DiarioDaObra
             throw new DomainValidationException(nameof(DiaDaObra.Atividades), $"\"{comprida.Descricao[..20]}…\" passa de {TamanhoMaximoDaDescricao} caracteres.");
         if (atividades.FirstOrDefault(a => a.Percentual is < 0 or > 100) is { } fora)
             throw new DomainValidationException(nameof(DiaDaObra.Atividades), $"O % de \"{fora.Descricao}\" precisa ir de 0 a 100.");
+        // Bloco 84: a produção do dia.
+        if (atividades.FirstOrDefault(a => a.Quantidade is < 0 or > Tarefa.QuantidadeMaxima) is { } producao)
+            throw new DomainValidationException(nameof(DiaDaObra.Atividades), $"A quantidade de \"{producao.Descricao}\" não pode ser negativa nem passar do máximo.");
+        atividades = [.. atividades.Select(a => a with
+        {
+            Quantidade = a.Quantidade is { } q ? Math.Round(q, 4, MidpointRounding.AwayFromZero) : null,
+            Unidade = a.Quantidade is null || string.IsNullOrWhiteSpace(a.Unidade) ? null : a.Unidade.Trim(),
+        })];
+        if (atividades.FirstOrDefault(a => a.Unidade?.Length > Tarefa.TamanhoMaximoDaUnidade) is { } unidade)
+            throw new DomainValidationException(nameof(DiaDaObra.Atividades),
+                $"A unidade de \"{unidade.Descricao}\" passa de {Tarefa.TamanhoMaximoDaUnidade} caracteres.");
         var ocorrencias = string.IsNullOrWhiteSpace(dia.Ocorrencias) ? null : dia.Ocorrencias.Trim();
         if (ocorrencias?.Length > TamanhoMaximoDasOcorrencias)
             throw new DomainValidationException(nameof(DiaDaObra.Ocorrencias), $"As ocorrências passam de {TamanhoMaximoDasOcorrencias} caracteres.");

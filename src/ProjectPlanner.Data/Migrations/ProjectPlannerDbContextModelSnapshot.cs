@@ -468,6 +468,9 @@ namespace ProjectPlanner.Data.Migrations
                     b.Property<decimal?>("Quantidade")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("QuantidadeExecutada")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("TarefaPaiId")
                         .HasColumnType("TEXT");
 

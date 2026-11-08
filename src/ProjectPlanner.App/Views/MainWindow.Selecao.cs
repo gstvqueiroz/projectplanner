@@ -75,7 +75,8 @@ public partial class MainWindow
     }
 
     private bool NaAreaDasTarefas(Avalonia.Visual? origem) =>
-        origem is not null && origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Grade) || ReferenceEquals(v, Gantt) || ReferenceEquals(v, QuadroKanban));
+        origem is not null && (origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Grade) || ReferenceEquals(v, Gantt))
+                               || QuadroKanban.NaAreaDosCards(origem)); // Bloco 77: no painel do card e nos filtros, não
 
     private void FecharOAviso(object? sender, RoutedEventArgs? e)
     {

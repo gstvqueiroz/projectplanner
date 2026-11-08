@@ -280,6 +280,30 @@ public sealed class QuadroDoProjeto
         _colunas.AddRange(validas);
     }
 
+    /// <summary>Bloco 77: troca o card da tarefa pela versão mudada (checklist, etiquetas, arquivado).</summary>
+    /// <exception cref="DomainValidationException">A tarefa não tem card no quadro.</exception>
+    internal void AlterarCard(Guid tarefaId, Func<CardDoQuadro, CardDoQuadro> mudanca)
+    {
+        var card = _cards.GetValueOrDefault(tarefaId)
+                   ?? throw new DomainValidationException(nameof(Cards), "A tarefa não tem card no quadro (é um resumo, ou não existe mais).");
+        _cards[tarefaId] = mudanca(card);
+    }
+
+    /// <summary>Bloco 77: põe as etiquetas do projeto (já com a mudança); as que saíram somem dos cards.</summary>
+    /// <exception cref="DomainValidationException">Nome vazio ou longo demais, cor inválida, ids repetidos.</exception>
+    internal void TrocarEtiquetas(IEnumerable<EtiquetaDoQuadro> etiquetas)
+    {
+        var validas = ValidarEtiquetas(etiquetas);
+        var ids = validas.Select(e => e.Id).ToHashSet();
+        _etiquetas.Clear();
+        _etiquetas.AddRange(validas);
+        foreach (var card in _cards.Values.Where(c => c.Etiquetas.Any(e => !ids.Contains(e))).ToList())
+            _cards[card.TarefaId] = card with { Etiquetas = [.. card.Etiquetas.Where(ids.Contains)] };
+    }
+
+    /// <summary>Bloco 77: um card desarquivado volta para o fim da coluna dele.</summary>
+    internal int OrdemNoFimDe(Guid colunaId) => ProximaOrdem(colunaId);
+
     /// <summary>Bloco 76: os cards que não aparecem (arquivados, de resumos) de uma coluna que vai sair passam para outra.</summary>
     internal void MoverOcultos(Guid de, Guid para)
     {

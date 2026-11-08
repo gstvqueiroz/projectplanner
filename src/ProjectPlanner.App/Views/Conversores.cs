@@ -48,6 +48,22 @@ public static class Conversores
     public static readonly IValueConverter Cor = new FuncValueConverter<string?, IBrush>(cor =>
         cor is { Length: > 0 } && Color.TryParse(cor, out var c) ? new SolidColorBrush(c) : new SolidColorBrush(Color.FromRgb(0x8A, 0x8F, 0x98)));
 
+    /// <summary>
+    /// Bloco 77: o texto sobre uma cor de etiqueta: branco, menos nas cores claras (o amarelo), onde o branco não se lê.
+    /// </summary>
+    public static readonly IValueConverter TextoSobreACor = new FuncValueConverter<string?, IBrush>(cor =>
+    {
+        if (cor is not { Length: > 0 } || !Color.TryParse(cor, out var c))
+            return Brushes.White;
+        static double Linear(byte canal)
+        {
+            var v = canal / 255.0;
+            return v <= 0.04045 ? v / 12.92 : Math.Pow((v + 0.055) / 1.055, 2.4);
+        }
+        var luminancia = 0.2126 * Linear(c.R) + 0.7152 * Linear(c.G) + 0.0722 * Linear(c.B);
+        return luminancia > 0.4 ? new SolidColorBrush(Color.FromRgb(0x1F, 0x23, 0x28)) : Brushes.White;
+    });
+
     public static readonly IValueConverter OpacoSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 1 : 0);
 
     /// <summary>Linhas de resumo em negrito, como no MS Project.</summary>

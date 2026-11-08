@@ -184,7 +184,7 @@ public class KanbanTests
         _vm.Kanban.CardDe(_escavar.Tarefa.Id)!.Should().Match<CardNoKanban>(k => k.Atrasada && k.Datas == "01/09 – 01/09");
         _escavar.PercentualConcluido = 100;
         _vm.Kanban.CardDe(_escavar.Tarefa.Id)!.Atrasada.Should().BeFalse();
-        _vm.Kanban.CardDe(_escavar.Tarefa.Id)!.Dica.Should().Be("1.1 · Escavar · 01/09/2026 a 01/09/2026 · 100%");
+        _vm.Kanban.CardDe(_escavar.Tarefa.Id)!.Dica.Should().Be("1.1 · Escavar · 01/09/2026 a 01/09/2026 · 100% (duplo clique abre o card)");
     }
 
     [Fact]

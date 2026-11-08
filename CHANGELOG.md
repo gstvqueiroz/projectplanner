@@ -3,6 +3,29 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.77.0
+
+**Os cards do Kanban** (o plano "Delete, arrastar e Kanban", K4 e K5).
+
+- **Painel do card:** duplo clique num card abre, ao lado do quadro, todos os campos da tarefa (nome, início, término, duração,
+  % concluído, predecessoras e responsáveis), a descrição, as etiquetas e o checklist. São os mesmos campos da grade, com as
+  mesmas validações e o mesmo Desfazer: o que muda ali muda no cronograma (o % move o card).
+- **Checklist:** itens com marcar, mudar o texto (sair do campo grava) e tirar; Enter adiciona. O card mostra "2/5". Marcar itens
+  não muda o % concluído.
+- **Etiquetas do projeto:** criadas pelo painel (já marcadas no card) ou pelo botão Etiquetas, no alto do quadro, que também
+  renomeia, muda a cor e exclui (excluir tira de todos os cards). Cada etiqueta nova ganha uma cor ainda sem uso.
+- **+ Adicionar card** no pé de cada coluna cria a tarefa no fim do cronograma (com 1 dia) e põe o card no fim da coluna, com
+  a regra do % dela (numa Concluída, a tarefa nasce com 100%).
+- **Arquivar** (no painel ou no botão direito do card) esconde o card do quadro; a tarefa continua no cronograma. O botão
+  Arquivados, no alto do quadro, abre o card ou o traz de volta (no fim da coluna dele).
+- **Menu do card** (botão direito): Abrir card, Mover para (as colunas, com a regra do %), Arquivar e Excluir tarefa; com vários
+  selecionados, vale para todos.
+- **Filtros:** busca por texto no nome e na descrição (sem diferença de maiúsculas e acentos), responsável, etiqueta, resumo
+  (as tarefas dentro dele, em qualquer nível), atrasadas e "vencem nesta semana" (término de hoje até domingo). Com filtro, a
+  contagem da coluna fica "2 de 5", e soltar um card entre os visíveis cai no lugar certo entre todos; o limite de cards conta
+  todos. Limpar filtros mostra tudo de novo.
+- O Delete não exclui tarefas com o foco no painel do card ou nos filtros (E1).
+
 ## 0.76.0
 
 **As colunas do Kanban** (o plano "Delete, arrastar e Kanban", K2): cada coluna tem o menu ⋯ (também no botão direito do

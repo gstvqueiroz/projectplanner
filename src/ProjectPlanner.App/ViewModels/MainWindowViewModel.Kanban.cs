@@ -18,6 +18,8 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
         Kanban.PreverMovimento = PreverMovimentoNoQuadro;
         Kanban.Mover = MoverCards;
         Kanban.Acoes = this;
+        Kanban.AcoesDosCards = this; // Bloco 77
+        Kanban.LinhaDa = tarefaId => Tarefas.FirstOrDefault(l => l.Tarefa.Id == tarefaId);
     }
 
     /// <summary>O que aconteceria ao soltar os cards das tarefas na coluna, na lacuna dada (0 é antes do primeiro card). Não muda nada.</summary>
@@ -93,7 +95,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
             "Nome da coluna nova (ela entra antes de Concluída, do tipo Em andamento; o tipo e o lugar mudam pelo menu ⋯ dela):", "Em revisão");
         if (nome is null)
             return;
-        MudarAsColunas($"Adicionar coluna \"{nome.Trim()}\"", () => ($"Coluna \"{RegrasDasColunas.Adicionar(_cronograma, nome).Nome}\" adicionada.", false));
+        MudarOQuadro($"Adicionar coluna \"{nome.Trim()}\"", () => ($"Coluna \"{RegrasDasColunas.Adicionar(_cronograma, nome).Nome}\" adicionada.", false));
     }
 
     async Task IAcoesDasColunas.RenomearColunaAsync(Guid colunaId)
@@ -103,7 +105,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
         var nome = await _dialogos.PedirTextoAsync("Renomear coluna", "Nome da coluna:", coluna.Nome);
         if (nome is null || nome.Trim() == coluna.Nome)
             return;
-        MudarAsColunas($"Renomear coluna \"{coluna.Nome}\"", () =>
+        MudarOQuadro($"Renomear coluna \"{coluna.Nome}\"", () =>
         {
             RegrasDasColunas.Renomear(_cronograma, colunaId, nome);
             return ($"A coluna \"{coluna.Nome}\" agora é \"{nome.Trim()}\".", false);
@@ -114,7 +116,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
     {
         if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna || coluna.Cor == cor)
             return;
-        MudarAsColunas($"Cor da coluna \"{coluna.Nome}\"", () =>
+        MudarOQuadro($"Cor da coluna \"{coluna.Nome}\"", () =>
         {
             RegrasDasColunas.Colorir(_cronograma, colunaId, cor);
             return ($"Cor da coluna \"{coluna.Nome}\" mudada.", false);
@@ -142,7 +144,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
         }
         if (limite == coluna.Limite)
             return;
-        MudarAsColunas($"Limite de cards de \"{coluna.Nome}\"", () =>
+        MudarOQuadro($"Limite de cards de \"{coluna.Nome}\"", () =>
         {
             RegrasDasColunas.DefinirLimite(_cronograma, colunaId, limite);
             return (limite is { } l ? $"A coluna \"{coluna.Nome}\" fica destacada com mais de {l} cards." : $"A coluna \"{coluna.Nome}\" não tem mais limite de cards.", false);
@@ -156,7 +158,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
         var indice = _cronograma.Quadro.Colunas.ToList().IndexOf(coluna) + Math.Sign(passo);
         if (indice < 0 || indice >= _cronograma.Quadro.Colunas.Count)
             return;
-        MudarAsColunas($"Mover coluna \"{coluna.Nome}\"", () =>
+        MudarOQuadro($"Mover coluna \"{coluna.Nome}\"", () =>
         {
             RegrasDasColunas.Mover(_cronograma, colunaId, passo);
             return ($"A coluna \"{coluna.Nome}\" agora é a {indice + 1}ª do quadro.", false);
@@ -167,7 +169,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
     {
         if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna || coluna.Tipo == tipo)
             return;
-        MudarAsColunas($"Tipo da coluna \"{coluna.Nome}\"", () =>
+        MudarOQuadro($"Tipo da coluna \"{coluna.Nome}\"", () =>
         {
             RegrasDasColunas.MudarTipo(_cronograma, colunaId, tipo);
             return ($"A coluna \"{coluna.Nome}\" agora é do tipo {QuadroDoProjeto.NomeDoTipo(tipo)}" + tipo switch
@@ -206,7 +208,7 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
                 return;
             destino = plano.Destinos[i].Id;
         }
-        if (MudarAsColunas($"Excluir coluna \"{plano.Coluna.Nome}\"", () =>
+        if (MudarOQuadro($"Excluir coluna \"{plano.Coluna.Nome}\"", () =>
             {
                 var resultado = RegrasDasColunas.Excluir(_cronograma, colunaId, destino);
                 return (resultado.Texto, resultado.MudouPercentual);
@@ -214,9 +216,9 @@ public sealed partial class MainWindowViewModel : IAcoesDasColunas
             AvisoComDesfazer = Mensagem;
     }
 
-    // Uma mudança nas colunas: um passo do Desfazer; só recalcula se algum % mudou. As regras conferem antes de mexer: recusada,
-    // nada muda e o motivo vai para a barra de status.
-    private bool MudarAsColunas(string descricao, Func<(string Texto, bool Recalcular)> mudanca)
+    // Uma mudança no quadro (colunas, cards, etiquetas): um passo do Desfazer; só recalcula se algum % mudou. As regras conferem
+    // antes de mexer: recusada, nada muda e o motivo vai para a barra de status.
+    private bool MudarOQuadro(string descricao, Func<(string Texto, bool Recalcular)> mudanca)
     {
         (string Texto, bool Recalcular) resultado;
         try

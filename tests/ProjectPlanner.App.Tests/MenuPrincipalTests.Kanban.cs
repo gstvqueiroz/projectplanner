@@ -190,4 +190,94 @@ public partial class MenuPrincipalTests
         ColunaNaTela(a, "Em revisão").IsVisible.Should().BeTrue();
         a.Vm.TarefaSelecionada!.Nome.Should().Be("B", "clicar no botão não é clicar numa área vazia");
     });
+
+    // Bloco 77 (K4 e K5): o painel do card (duplo clique), o menu do card e os filtros, na janela de verdade.
+    [Fact]
+    public Task Kanban_DuploCliqueAbreOPainel_EnterAdicionaItem_EDeleteNoPainelNaoExclui() => Tela.Executar(() =>
+    {
+        var a = NoKanban();
+        var b = Meio(a, CardNaTela(a, "B"));
+
+        a.Janela.MouseDown(b, MouseButton.Left);
+        a.Janela.MouseUp(b, MouseButton.Left);
+        a.Janela.MouseDown(b, MouseButton.Left);
+        a.Janela.MouseUp(b, MouseButton.Left);
+        Pintar(a);
+
+        var quadro = a.Janela.QuadroKanban;
+        quadro.FindControl<Border>("PainelDoCard")!.IsVisible.Should().BeTrue();
+        quadro.FindControl<TextBox>("NomeNoPainel")!.Text.Should().Be("B");
+
+        var novoItem = quadro.FindControl<TextBox>("NovoItemDoChecklist")!;
+        novoItem.Focus();
+        novoItem.Text = "Conferir o nível";
+        Apertar(a, Key.Enter, RawInputModifiers.None, PhysicalKey.Enter);
+        a.Vm.Kanban.CardDe(a.Vm.Tarefas[1].Tarefa.Id)!.Checklist.Should().Be("0/1");
+        novoItem.Text.Should().BeEmpty();
+
+        Apertar(a, Key.Delete, RawInputModifiers.None, PhysicalKey.Delete);
+        quadro.FindControl<Button>("BotaoArquivados")!.Focus();
+        Apertar(a, Key.Delete, RawInputModifiers.None, PhysicalKey.Delete);
+        a.Vm.Tarefas.Should().HaveCount(4, "no painel e na barra dos filtros, o Delete não exclui tarefas (E1)");
+
+        var nome = quadro.FindControl<TextBox>("NomeNoPainel")!;
+        nome.Focus();
+        nome.Text = "B revisada";
+        quadro.FindControl<TextBox>("PercentualNoPainel")!.Focus(); // sair do campo grava
+        Pintar(a);
+        a.Vm.Tarefas[1].Nome.Should().Be("B revisada");
+        CardsDa(a, "A fazer").Should().Contain("B revisada");
+    });
+
+    [Fact]
+    public Task Kanban_MenuDoCard_MoverParaConcluida_EArquivar() => Tela.Executar(() =>
+    {
+        var a = NoKanban();
+        var cardA = Meio(a, CardNaTela(a, "A"));
+
+        a.Janela.MouseDown(cardA, MouseButton.Right);
+        a.Janela.MouseUp(cardA, MouseButton.Right);
+
+        var menu = a.Janela.QuadroKanban.MenuAberto!;
+        Titulos(menu).Should().Equal("Abrir card", "Mover para", Linha, "Arquivar", "Excluir tarefa");
+        var mover = menu.Items.OfType<MenuItem>().Single(i => (string)i.Header! == "Mover para");
+        mover.Items.OfType<MenuItem>().Select(i => ((string)i.Header!, i.IsEnabled))
+            .Should().Equal(("A fazer", false), ("Em andamento", true), ("Impedida", true), ("Concluída", true));
+        var concluida = mover.Items.OfType<MenuItem>().Last();
+        concluida.Command!.Execute(null);
+        menu.Close();
+        Pintar(a);
+
+        (CardsDa(a, "Concluída"), a.Vm.Tarefas[0].PercentualConcluido).Should().BeEquivalentTo((new[] { "A" }, 100));
+
+        var cardB = Meio(a, CardNaTela(a, "B"));
+        a.Janela.MouseDown(cardB, MouseButton.Right);
+        a.Janela.MouseUp(cardB, MouseButton.Right);
+        menu = a.Janela.QuadroKanban.MenuAberto!;
+        var arquivar = menu.Items.OfType<MenuItem>().Single(i => (string)i.Header! == "Arquivar");
+        arquivar.Command!.Execute(null);
+        menu.Close();
+        Pintar(a);
+        CardsDa(a, "A fazer").Should().Equal("C", "D");
+        a.Janela.QuadroKanban.FindControl<Button>("BotaoArquivados")!.Content.Should().Be("Arquivados (1)");
+    });
+
+    [Fact]
+    public Task Kanban_BuscaNaBarra_EscondeCards_ELimparFiltrosMostraTodos() => Tela.Executar(() =>
+    {
+        var a = NoKanban();
+        var quadro = a.Janela.QuadroKanban;
+        var limpar = quadro.FindControl<Button>("BotaoLimparFiltros")!;
+        limpar.IsVisible.Should().BeFalse();
+
+        quadro.FindControl<TextBox>("BuscaNoQuadro")!.Text = "c";
+        Pintar(a);
+
+        CardsDa(a, "A fazer").Should().Equal("C");
+        ColunaNaTela(a, "A fazer").GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).Should().Contain("1 de 4");
+        limpar.IsVisible.Should().BeTrue();
+        a.ClicarComOMouse(limpar);
+        Pintar(a);
+        CardsDa(a, "A fazer").Should().Equal("A", "B", "C", "D");
+    });
 }

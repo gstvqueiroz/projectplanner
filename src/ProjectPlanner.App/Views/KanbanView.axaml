@@ -74,6 +74,26 @@
             <Setter Property="Foreground" Value="{DynamicResource TextoSecundarioDoCard}" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
+        <Style Selector="Button.adicionarCard">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Margin" Value="8,0,8,8" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Foreground" Value="{DynamicResource TextoSecundarioDoCard}" />
+        </Style>
+        <Style Selector="TextBlock.rotulo">
+            <Setter Property="Foreground" Value="{DynamicResource TextoSecundarioDoCard}" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
+        <Style Selector="Border.painel">
+            <Setter Property="Background" Value="{DynamicResource FundoDaColunaDoQuadro}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Margin" Value="0,10,10,10" />
+            <Setter Property="Width" Value="{x:Static v:KanbanView.LarguraDoPainel}" />
+        </Style>
         <Style Selector="ProgressBar.percentual">
             <Setter Property="MinHeight" Value="4" />
             <Setter Property="Height" Value="4" />
@@ -84,6 +104,48 @@
     </UserControl.Styles>
 
     <Panel>
+      <DockPanel>
+        <!-- Bloco 77 (K5): os filtros (busca, responsável, etiqueta, resumo, atrasadas, vencem nesta semana), as etiquetas do projeto
+             e os cards arquivados. -->
+        <WrapPanel x:Name="BarraDoQuadro" DockPanel.Dock="Top" Margin="10,8,10,0" Orientation="Horizontal">
+            <TextBox x:Name="BuscaNoQuadro" Width="200" Margin="0,0,8,4" PlaceholderText="Buscar nos cards" Text="{Binding Busca}"
+                     AutomationProperties.Name="Buscar nos cards" />
+            <ComboBox x:Name="FiltroDeResponsavel" Margin="0,0,8,4" MinWidth="170" ItemsSource="{Binding OpcoesDeResponsavel}" SelectedItem="{Binding FiltroResponsavel}"
+                      AutomationProperties.Name="Filtrar por responsável">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OpcaoDeFiltro">
+                        <TextBlock Text="{Binding Nome}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox x:Name="FiltroDeEtiqueta" Margin="0,0,8,4" MinWidth="150" ItemsSource="{Binding OpcoesDeEtiqueta}" SelectedItem="{Binding FiltroEtiqueta}"
+                      AutomationProperties.Name="Filtrar por etiqueta">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OpcaoDeFiltro">
+                        <TextBlock Text="{Binding Nome}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox x:Name="FiltroDeResumo" Margin="0,0,8,4" MinWidth="150" MaxWidth="260" ItemsSource="{Binding OpcoesDeResumo}" SelectedItem="{Binding FiltroResumo}"
+                      AutomationProperties.Name="Filtrar por resumo">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OpcaoDeFiltro">
+                        <TextBlock Text="{Binding Nome}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ToggleButton x:Name="FiltroAtrasadas" Margin="0,0,8,4" Content="Atrasadas" IsChecked="{Binding SoAtrasadas}"
+                          ToolTip.Tip="Só os cards com término antes de hoje e abaixo de 100%" />
+            <ToggleButton x:Name="FiltroDaSemana" Margin="0,0,8,4" Content="Vencem nesta semana" IsChecked="{Binding SoDestaSemana}"
+                          ToolTip.Tip="Só os cards com término de hoje até domingo, abaixo de 100%" />
+            <Button x:Name="BotaoLimparFiltros" Margin="0,0,16,4" Content="Limpar filtros" Command="{Binding LimparFiltrosCommand}" IsVisible="{Binding HaFiltro}" />
+            <Button x:Name="BotaoEtiquetas" Margin="0,0,8,4" Content="Etiquetas" Click="AbrirMenuDasEtiquetas"
+                    ToolTip.Tip="As etiquetas do projeto: criar, renomear, mudar a cor e excluir" />
+            <Button x:Name="BotaoArquivados" Margin="0,0,8,4" Content="{Binding TextoDosArquivados}" Click="AbrirMenuDosArquivados"
+                    ToolTip.Tip="Os cards arquivados (as tarefas continuam no cronograma): abrir ou trazer de volta ao quadro" />
+        </WrapPanel>
+        <Grid ColumnDefinitions="*,Auto">
+        <Panel>
         <ScrollViewer x:Name="Rolagem" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
           <StackPanel Orientation="Horizontal">
             <ItemsControl x:Name="ListaDeColunas" ItemsSource="{Binding Colunas}">
@@ -108,6 +170,9 @@
                                                Text="{Binding Contagem}" VerticalAlignment="Center" Margin="8,0,0,0" />
                                     <TextBlock Text="{Binding Nome}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                 </DockPanel>
+                                <!-- Bloco 77 (K5) -->
+                                <Button DockPanel.Dock="Bottom" Classes="adicionarCard" Content="+ Adicionar card" Command="{Binding AdicionarCardCommand}"
+                                        ToolTip.Tip="Uma tarefa nova no fim do cronograma (com 1 dia), com o card no fim desta coluna" />
                                 <ScrollViewer Classes="cartoes" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                     <ItemsControl Classes="cartoes" ItemsSource="{Binding Cards}" Margin="8,0,8,10">
                                         <ItemsControl.ItemsPanel>
@@ -135,7 +200,8 @@
                                                                 <ItemsControl.ItemTemplate>
                                                                     <DataTemplate x:DataType="vm:EtiquetaNoCard">
                                                                         <Border Classes="etiqueta" Background="{Binding Cor, Converter={x:Static v:Conversores.Cor}}">
-                                                                            <TextBlock Text="{Binding Nome}" FontSize="11" Foreground="White" />
+                                                                            <TextBlock Text="{Binding Nome}" FontSize="11"
+                                                                                       Foreground="{Binding Cor, Converter={x:Static v:Conversores.TextoSobreACor}}" />
                                                                         </Border>
                                                                     </DataTemplate>
                                                                 </ItemsControl.ItemTemplate>
@@ -186,6 +252,106 @@
         <TextBlock x:Name="AvisoSemCards" IsVisible="{Binding SemCards}" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
                    TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420" Classes="secundario" FontSize="13"
                    Text="As tarefas do cronograma aparecem aqui como cards (as que não têm subtarefas). Adicione tarefas pelo menu Tarefa." />
+
+        <TextBlock x:Name="AvisoDoFiltro" IsVisible="{Binding NenhumNoFiltro}" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Classes="secundario" FontSize="13" Text="Nenhum card com esses filtros. Use Limpar filtros, no alto do quadro, para ver todos." />
+        </Panel>
+
+        <!-- Bloco 77 (K4): o painel do card (duplo clique num card). Os campos são os da linha da tarefa na grade: as mesmas
+             validações e o mesmo Desfazer. -->
+        <Border x:Name="PainelDoCard" Grid.Column="1" Classes="painel" IsVisible="{Binding Painel, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <DockPanel DataContext="{Binding Painel}" x:DataType="vm:PainelDoCard">
+                <DockPanel DockPanel.Dock="Top" Margin="14,10,8,0">
+                    <Button DockPanel.Dock="Right" Classes="opcoes" Content="✕" Command="{Binding FecharCommand}" ToolTip.Tip="Fechar o card"
+                            AutomationProperties.Name="Fechar o card" />
+                    <TextBlock Classes="secundario" Text="{Binding Identificacao}" VerticalAlignment="Center" />
+                </DockPanel>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="14,4,14,14" Spacing="4">
+                        <Border Classes="etiqueta" HorizontalAlignment="Left" Background="{DynamicResource FundoDaEtiquetaDoResumo}"
+                                IsVisible="{Binding Resumo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding Resumo}" FontSize="11" />
+                        </Border>
+                        <TextBox x:Name="NomeNoPainel" Text="{Binding Linha.Nome, UpdateSourceTrigger=LostFocus}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"
+                                 AutomationProperties.Name="Nome da tarefa" />
+                        <TextBlock Classes="secundario" Text="{Binding Coluna, StringFormat=Na coluna {0}}" />
+                        <TextBlock Classes="atrasada" Text="Arquivado: o card não aparece no quadro (a tarefa continua no cronograma)." TextWrapping="Wrap"
+                                   IsVisible="{Binding Arquivado}" />
+                        <Grid ColumnDefinitions="*,10,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                            <TextBlock Classes="rotulo" Text="Início" />
+                            <CalendarDatePicker Grid.Row="1" HorizontalAlignment="Stretch" SelectedDate="{Binding Linha.DataInicio}" />
+                            <TextBlock Grid.Column="2" Classes="rotulo" Text="Término" />
+                            <CalendarDatePicker Grid.Row="1" Grid.Column="2" HorizontalAlignment="Stretch" SelectedDate="{Binding Linha.DataTermino}" />
+                            <TextBlock Grid.Row="2" Classes="rotulo" Text="Duração (dias úteis)" />
+                            <TextBox Grid.Row="3" Text="{Binding Linha.Duracao, UpdateSourceTrigger=LostFocus}" />
+                            <TextBlock Grid.Row="2" Grid.Column="2" Classes="rotulo" Text="% concluído" />
+                            <TextBox x:Name="PercentualNoPainel" Grid.Row="3" Grid.Column="2" Text="{Binding Linha.PercentualConcluido, UpdateSourceTrigger=LostFocus}" />
+                        </Grid>
+                        <TextBlock Classes="rotulo" Text="Predecessoras" />
+                        <TextBox Text="{Binding Linha.Predecessoras, UpdateSourceTrigger=LostFocus}" PlaceholderText="ex.: 2; 3II+2" />
+                        <TextBlock Classes="rotulo" Text="Responsáveis" />
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Recursos…" Command="{Binding RecursosCommand}" Margin="8,0,0,0"
+                                    ToolTip.Tip="Os recursos da tarefa (os profissionais são os responsáveis)" />
+                            <TextBlock Text="{Binding Responsaveis, TargetNullValue=Nenhum profissional na tarefa}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <TextBlock Classes="rotulo" Text="Etiquetas" />
+                        <WrapPanel>
+                            <ItemsControl ItemsSource="{Binding Etiquetas}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EtiquetaNoPainel">
+                                        <CheckBox IsChecked="{Binding Marcada}" Margin="0,0,10,0">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <Ellipse Width="9" Height="9" Fill="{Binding Cor, Converter={x:Static v:Conversores.Cor}}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Nome}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Classes="adicionarCard" Margin="0" Content="+ Nova etiqueta…" Command="{Binding NovaEtiquetaCommand}" HorizontalAlignment="Left" />
+                        </WrapPanel>
+                        <TextBlock Classes="rotulo" Text="Descrição" />
+                        <TextBox Text="{Binding Linha.Notas, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72"
+                                 PlaceholderText="As notas da tarefa (as mesmas da grade)" />
+                        <DockPanel Margin="0,6,0,0">
+                            <TextBlock DockPanel.Dock="Right" Classes="secundario" Text="{Binding ProgressoDoChecklist}" VerticalAlignment="Bottom" />
+                            <TextBlock Classes="rotulo" Margin="0" Text="Checklist" />
+                        </DockPanel>
+                        <ItemsControl x:Name="ChecklistNoPainel" ItemsSource="{Binding Checklist}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ItemNoPainel">
+                                    <DockPanel Margin="0,1">
+                                        <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Feito}" MinWidth="0" Margin="0,0,4,0" />
+                                        <Button DockPanel.Dock="Right" Classes="opcoes" Content="✕" FontSize="12" Command="{Binding RemoverCommand}"
+                                                ToolTip.Tip="Tirar o item do checklist" AutomationProperties.Name="Tirar o item" />
+                                        <TextBox Text="{Binding Texto, UpdateSourceTrigger=LostFocus}" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Adicionar" Command="{Binding AdicionarItemCommand}" Margin="8,0,0,0" />
+                            <TextBox x:Name="NovoItemDoChecklist" Text="{Binding NovoItem}" PlaceholderText="Novo item do checklist (Enter adiciona)" />
+                        </DockPanel>
+                        <TextBlock Classes="secundario" TextWrapping="Wrap" Text="Marcar os itens não muda o % concluído." />
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+                            <Button Content="Arquivar card" Command="{Binding ArquivarCommand}" IsVisible="{Binding !Arquivado}"
+                                    ToolTip.Tip="Esconde o card do quadro; a tarefa continua no cronograma" />
+                            <Button Content="Desarquivar" Command="{Binding DesarquivarCommand}" IsVisible="{Binding Arquivado}" />
+                            <Button Content="Excluir tarefa" Command="{Binding ExcluirCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+        </Grid>
+      </DockPanel>
 
         <!-- O arraste: o card fantasma junto do cursor, a guia azul onde ele vai cair e a dica. -->
         <Canvas x:Name="Sobreposicao" IsHitTestVisible="False" />

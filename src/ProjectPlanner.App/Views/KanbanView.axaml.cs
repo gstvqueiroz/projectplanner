@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.App.ViewModels;
 using ProjectPlanner.Core.Kanban;
 
@@ -24,6 +25,9 @@ public partial class KanbanView : UserControl
     /// <summary>A largura de cada coluna.</summary>
     public const double LarguraDaColuna = 272;
 
+    /// <summary>Bloco 77: a largura do painel do card.</summary>
+    public const double LarguraDoPainel = 360;
+
     private const double LimiarDoArraste = 5;
     private const double BordaDaRolagem = 40;
     private static readonly TimeSpan SegurarNoToque = TimeSpan.FromMilliseconds(400);
@@ -36,6 +40,7 @@ public partial class KanbanView : UserControl
     private Point _ultimoPonto;
     private IPointer? _ponteiro;
     private bool _selecionarAoSoltar;
+    private bool _abrirAoSoltar;
     private IReadOnlyList<Guid>? _arrastadas;
     private readonly DispatcherTimer _rolagemDoArraste = new() { Interval = TimeSpan.FromMilliseconds(30) };
     private readonly DispatcherTimer _seguraDoToque = new() { Interval = SegurarNoToque };
@@ -49,6 +54,14 @@ public partial class KanbanView : UserControl
         AddHandler(PointerCaptureLostEvent, (_, _) => Encerrar(), RoutingStrategies.Bubble);
         AddHandler(KeyDownEvent, TeclaApertada, RoutingStrategies.Tunnel);
         _rolagemDoArraste.Tick += (_, _) => RolarDuranteOArraste();
+        NovoItemDoChecklist.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter && Vm?.Painel is { } painel)
+            {
+                painel.AdicionarItemCommand.Execute(null);
+                e.Handled = true;
+            }
+        };
         _seguraDoToque.Tick += (_, _) =>
         {
             _seguraDoToque.Stop();
@@ -71,16 +84,23 @@ public partial class KanbanView : UserControl
         if (Vm is not { } vm)
             return;
         var origem = e.Source as Visual;
-        if (origem?.GetSelfAndVisualAncestors().Any(v => v is ScrollBar or Button) == true)
-            return; // nas barras de rolagem é só rolar; os botões (⋯, + Adicionar coluna) cuidam de si
+        // Só a área dos cards: a barra dos filtros e o painel do card cuidam de si (o foco fica neles).
+        if (origem is null || !origem.GetSelfAndVisualAncestors().Contains(Rolagem))
+            return;
+        if (origem.GetSelfAndVisualAncestors().Any(v => v is ScrollBar or Button))
+            return; // nas barras de rolagem é só rolar; os botões (⋯, + Adicionar coluna, + Adicionar card) cuidam de si
         var propriedades = e.GetCurrentPoint(this).Properties;
         Focus(); // o Delete vale no quadro (E1)
         var card = CardSob(origem);
         if (propriedades.IsRightButtonPressed)
         {
-            if (card is { Selecionado: false })
-                vm.ClicarNoCard(card.TarefaId, adicionar: false, intervalo: false);
-            else if (card is null && origem?.GetSelfAndVisualAncestors().OfType<DockPanel>().FirstOrDefault(d => d.Classes.Contains("cabecalho")) is
+            if (card is not null)
+            {
+                if (!card.Selecionado)
+                    vm.ClicarNoCard(card.TarefaId, adicionar: false, intervalo: false);
+                AbrirMenu(MenuDoCard(vm, card), (Control)origem); // Bloco 77
+            }
+            else if (origem.GetSelfAndVisualAncestors().OfType<DockPanel>().FirstOrDefault(d => d.Classes.Contains("cabecalho")) is
                      { DataContext: ColunaNoKanban coluna } cabecalho)
                 AbrirMenu(coluna, cabecalho); // Bloco 76: o menu da coluna também no botão direito
             return;
@@ -105,6 +125,8 @@ public partial class KanbanView : UserControl
         e.Handled = true;
         if (!semTeclas)
             return;
+        // Bloco 77 (K4): duplo clique abre o painel do card, ao soltar sem ter arrastado (o segundo aperto ainda pode arrastar).
+        _abrirAoSoltar = e.ClickCount >= 2;
         _apertado = card;
         _pontoDoClique = _ultimoPonto = e.GetPosition(this);
         _ponteiro = e.Pointer;
@@ -151,14 +173,16 @@ public partial class KanbanView : UserControl
             var destino = DestinoEm(_ultimoPonto);
             Encerrar();
             if (destino is not null)
-                vm?.Mover?.Invoke(arrastadas, destino.Coluna.Id, destino.Lacuna);
+                vm?.Soltar(arrastadas, destino.Coluna.Id, destino.Lacuna);
         }
         else
         {
-            var soEle = _selecionarAoSoltar;
+            var (soEle, abrir) = (_selecionarAoSoltar, _abrirAoSoltar);
             Encerrar();
             if (soEle)
                 vm?.ClicarNoCard(card.TarefaId, adicionar: false, intervalo: false);
+            if (abrir)
+                vm?.AbrirCard(card.TarefaId);
         }
         e.Handled = true;
     }
@@ -172,11 +196,117 @@ public partial class KanbanView : UserControl
             AbrirMenu(coluna, botao);
     }
 
-    private void AbrirMenu(ColunaNoKanban coluna, Control alvo)
+    private void AbrirMenu(ColunaNoKanban coluna, Control alvo) => AbrirMenu(MenuDaColuna(coluna), alvo);
+
+    private void AbrirMenu(ContextMenu menu, Control alvo)
     {
         MenuAberto?.Close();
-        MenuAberto = MenuDaColuna(coluna);
+        MenuAberto = menu;
         MenuAberto.Open(alvo);
+    }
+
+    /// <summary>Bloco 77: com o foco no quadro (num card), o Delete exclui; no painel do card e nos filtros, não (E1).</summary>
+    internal bool NaAreaDosCards(Visual origem) => ReferenceEquals(origem, this) || origem.GetSelfAndVisualAncestors().Contains(Rolagem);
+
+    /// <summary>
+    /// Bloco 77: o menu do card (botão direito): Abrir card, Mover para (as colunas), Arquivar e Excluir tarefa, para os
+    /// selecionados se o card é um deles.
+    /// </summary>
+    internal static ContextMenu MenuDoCard(KanbanViewModel vm, CardNoKanban card)
+    {
+        var selecionados = vm.OrdemDosCards.Where(id => vm.CardDe(id)?.Selecionado == true).ToList();
+        IReadOnlyList<Guid> ids = selecionados.Contains(card.TarefaId) ? selecionados : [card.TarefaId];
+        var varios = ids.Count > 1;
+        var menu = new ContextMenu();
+        menu.Items.Add(new MenuItem { Header = "Abrir card", Command = new RelayCommand(() => vm.AbrirCard(card.TarefaId)) });
+        var mover = new MenuItem { Header = varios ? $"Mover {ids.Count} cards para" : "Mover para" };
+        foreach (var coluna in vm.Colunas)
+            mover.Items.Add(new MenuItem
+            {
+                Header = coluna.Nome,
+                Command = new RelayCommand(() => vm.Mover?.Invoke(ids, coluna.Id, int.MaxValue)),
+                IsEnabled = ids.Any(id => vm.ColunaDe(id) != coluna),
+            });
+        menu.Items.Add(mover);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem
+        {
+            Header = varios ? $"Arquivar {ids.Count} cards" : "Arquivar",
+            Command = new RelayCommand(() => vm.AcoesDosCards?.Arquivar(ids)),
+        });
+        menu.Items.Add(new MenuItem
+        {
+            Header = varios ? $"Excluir {ids.Count} tarefas" : "Excluir tarefa",
+            Command = new AsyncRelayCommand(() => vm.AcoesDosCards?.ExcluirTarefasAsync(ids) ?? Task.CompletedTask),
+        });
+        return menu;
+    }
+
+    private void AbrirMenuDasEtiquetas(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is Control botao)
+            AbrirMenu(MenuDasEtiquetas(vm), botao);
+    }
+
+    /// <summary>Bloco 77: as etiquetas do projeto: para cada uma, Renomear…, Cor e Excluir; e Nova etiqueta….</summary>
+    internal static ContextMenu MenuDasEtiquetas(KanbanViewModel vm)
+    {
+        var menu = new ContextMenu();
+        foreach (var etiqueta in vm.EtiquetasDoProjeto)
+        {
+            var item = new MenuItem
+            {
+                Header = etiqueta.Nome,
+                Icon = new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.Parse(etiqueta.Cor)) },
+            };
+            item.Items.Add(new MenuItem { Header = "Renomear…", Command = new AsyncRelayCommand(() => vm.AcoesDosCards?.RenomearEtiquetaAsync(etiqueta.Id) ?? Task.CompletedTask) });
+            var cores = new MenuItem { Header = "Cor" };
+            foreach (var (nome, cor) in RegrasDasColunas.Paleta)
+                cores.Items.Add(new MenuItem
+                {
+                    Header = nome,
+                    ToggleType = MenuItemToggleType.Radio,
+                    GroupName = "cor",
+                    IsChecked = string.Equals(etiqueta.Cor, cor, StringComparison.OrdinalIgnoreCase),
+                    Icon = new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.Parse(cor)) },
+                    Command = new RelayCommand(() => vm.AcoesDosCards?.ColorirEtiqueta(etiqueta.Id, cor)),
+                });
+            item.Items.Add(cores);
+            item.Items.Add(new MenuItem { Header = "Excluir", Command = new RelayCommand(() => vm.AcoesDosCards?.ExcluirEtiqueta(etiqueta.Id)) });
+            menu.Items.Add(item);
+        }
+        if (vm.EtiquetasDoProjeto.Count > 0)
+            menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = "Nova etiqueta…", Command = new AsyncRelayCommand(() => vm.AcoesDosCards?.NovaEtiquetaAsync(null) ?? Task.CompletedTask) });
+        return menu;
+    }
+
+    private void AbrirMenuDosArquivados(object? sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is Control botao)
+            AbrirMenu(MenuDosArquivados(vm), botao);
+    }
+
+    /// <summary>Bloco 77: os cards arquivados: abrir (no painel) ou trazer de volta ao quadro.</summary>
+    internal static ContextMenu MenuDosArquivados(KanbanViewModel vm)
+    {
+        var menu = new ContextMenu();
+        if (vm.Arquivados.Count == 0)
+        {
+            menu.Items.Add(new MenuItem { Header = "Nenhum card arquivado", IsEnabled = false });
+            return menu;
+        }
+        foreach (var arquivado in vm.Arquivados)
+        {
+            var item = new MenuItem { Header = arquivado.Nome };
+            item.Items.Add(new MenuItem { Header = "Abrir card", Command = new RelayCommand(() => vm.AbrirCard(arquivado.TarefaId)) });
+            item.Items.Add(new MenuItem { Header = "Desarquivar", Command = new RelayCommand(() => vm.AcoesDosCards?.Desarquivar([arquivado.TarefaId])) });
+            menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var todos = vm.Arquivados.Select(a => a.TarefaId).ToList();
+        menu.Items.Add(new MenuItem { Header = "Desarquivar todos", Command = new RelayCommand(() => vm.AcoesDosCards?.Desarquivar(todos)) });
+        return menu;
     }
 
     /// <summary>
@@ -242,7 +372,7 @@ public partial class KanbanView : UserControl
             return;
         var selecionados = vm.OrdemDosCards.Where(id => vm.CardDe(id)?.Selecionado == true).ToList();
         _arrastadas = selecionados.Contains(card.TarefaId) ? selecionados : [card.TarefaId];
-        _selecionarAoSoltar = false;
+        (_selecionarAoSoltar, _abrirAoSoltar) = (false, false);
         foreach (var id in _arrastadas)
             if (vm.CardDe(id) is { } arrastado)
                 arrastado.Arrastado = true;
@@ -265,7 +395,7 @@ public partial class KanbanView : UserControl
             Cursor = CursorProibido;
             return;
         }
-        var plano = vm.PreverMovimento?.Invoke(arrastadas, destino.Coluna.Id, destino.Lacuna);
+        var plano = vm.PreverSoltar(arrastadas, destino.Coluna.Id, destino.Lacuna);
         vm.MovimentoEmCurso = plano is null ? null : new MovimentoNoKanban(destino.Coluna.Id, destino.Lacuna, plano);
         Cursor = CursorArrastando;
         if (plano is { Valido: true, MudaAlgo: true })
@@ -336,7 +466,9 @@ public partial class KanbanView : UserControl
             return;
         var p = _ultimoPonto;
         var rolou = false;
-        var dx = p.X < BordaDaRolagem ? -Passo(p.X) : p.X > Bounds.Width - BordaDaRolagem ? Passo(Bounds.Width - p.X) : 0;
+        var quadro = Area(Rolagem);
+        var dx = p.X < quadro.Left + BordaDaRolagem ? -Passo(p.X - quadro.Left)
+            : p.X > quadro.Right - BordaDaRolagem ? Passo(quadro.Right - p.X) : 0;
         if (dx != 0)
         {
             var x = Math.Clamp(Rolagem.Offset.X + dx, 0, Math.Max(0, Rolagem.Extent.Width - Rolagem.Viewport.Width));
@@ -384,7 +516,7 @@ public partial class KanbanView : UserControl
         }
         _arrastadas = null;
         _apertado = null;
-        _selecionarAoSoltar = false;
+        (_selecionarAoSoltar, _abrirAoSoltar) = (false, false);
         Sobreposicao.Children.Clear();
         Cursor = null;
         if (ponteiro?.Captured == this)
@@ -396,8 +528,8 @@ public partial class KanbanView : UserControl
 
     private Destino? DestinoEm(Point ponto)
     {
-        if (Vm is null || ponto.X < 0 || ponto.Y < 0 || ponto.X > Bounds.Width || ponto.Y > Bounds.Height)
-            return null;
+        if (Vm is null || !Area(Rolagem).Contains(ponto))
+            return null; // fora da área dos cards (na barra dos filtros, no painel, fora do quadro): soltar cancela
         (ColunaNoKanban Coluna, Control Raiz, Rect Area)? alvo = null;
         var menor = double.MaxValue;
         foreach (var (coluna, raiz) in ColunasNaTela())

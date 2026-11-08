@@ -323,6 +323,16 @@ public sealed class DialogosFalsos : IDialogosService
 
     public List<RelatorioDasOrdensViewModel> RelatoriosDasOrdens { get; } = [];
 
+    // ---- Bloco 88 ----
+
+    public List<RelatorioPersonalizadoViewModel> RelatoriosPersonalizados { get; } = [];
+
+    public Task MostrarRelatorioPersonalizadoAsync(RelatorioPersonalizadoViewModel relatorio)
+    {
+        RelatoriosPersonalizados.Add(relatorio);
+        return Task.CompletedTask;
+    }
+
     public Task MostrarRelatorioDasOrdensAsync(RelatorioDasOrdensViewModel relatorio)
     {
         RelatoriosDasOrdens.Add(relatorio);
@@ -581,11 +591,14 @@ public sealed class Ambiente
     /// <summary>Bloco 71: o calendário dos projetos novos; nulo (o padrão dos testes), os projetos novos ficam no de segunda a sexta sem feriados.</summary>
     public PreferenciasDoCalendarioEmMemoria? PreferenciasDoCalendario { get; set; }
 
+    /// <summary>Bloco 88: os modelos de relatório do usuário.</summary>
+    public ModelosDeRelatorioEmMemoria ModelosDeRelatorio { get; } = new();
+
     public MainWindowViewModel CriarViewModel() =>
         new(Repositorio, Calculadora, Dialogos, Relogio, Preferencias, Assistente, PreferenciasInterface, Processador, ConfiguracaoAssistente,
             analistaDeFotos: Analista, catalogoDeRecursos: Catalogo, bibliotecaDeReferencias: Biblioteca,
             consultorDeOrcamento: Consultor, analistaDaObra: AnalistaDaObra, conta: Conta, telegram: Telegram,
-            preferenciasDoCalendario: PreferenciasDoCalendario, sugestorDeChecklist: Sugestor);
+            preferenciasDoCalendario: PreferenciasDoCalendario, sugestorDeChecklist: Sugestor, modelosDeRelatorio: ModelosDeRelatorio);
 
     /// <summary>Adiciona uma tarefa pela grid, como o usuário faria.</summary>
     public static TarefaViewModel AdicionarTarefa(MainWindowViewModel vm, string nome, int duracao, string predecessoras = "")

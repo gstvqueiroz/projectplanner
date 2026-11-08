@@ -17,6 +17,19 @@ public sealed partial class MainWindowViewModel
     [RelayCommand]
     private Task RelatorioFotografico() => _dialogos.MostrarRelatorioFotograficoAsync(NovoRelatorioFotografico());
 
+    private readonly IModelosDeRelatorio _modelosDeRelatorio;
+
+    /// <summary>Bloco 88: Arquivo > Relatório personalizado… (as seções, a aparência e os modelos do usuário).</summary>
+    [RelayCommand]
+    private Task RelatorioPersonalizado() => _dialogos.MostrarRelatorioPersonalizadoAsync(NovoRelatorioPersonalizado());
+
+    /// <summary>Bloco 88: o relatório personalizado com o cronograma recalculado, o cabeçalho dos relatórios e as fotos do projeto.</summary>
+    internal RelatorioPersonalizadoViewModel NovoRelatorioPersonalizado()
+    {
+        Recalcular();
+        return new RelatorioPersonalizadoViewModel(_cronograma, _dialogos, _relogio, _modelosDeRelatorio, CabecalhoDosRelatorios, _fotos.Imagem);
+    }
+
     /// <summary>O relatório fotográfico com o cronograma recalculado (as datas, a situação e o andamento vêm do cálculo).</summary>
     internal RelatorioFotograficoViewModel NovoRelatorioFotografico()
     {

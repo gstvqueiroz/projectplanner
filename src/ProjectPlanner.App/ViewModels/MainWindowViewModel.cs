@@ -44,8 +44,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         IAnalistaDeFotos? analistaDeFotos = null, ICatalogoDeRecursos? catalogoDeRecursos = null, IBibliotecaDeReferencias? bibliotecaDeReferencias = null,
         IConsultorDeOrcamento? consultorDeOrcamento = null, IAnalistaDaObra? analistaDaObra = null, IContaProjectPlanner? conta = null,
         ITelegramDaConta? telegram = null, IConversorDeHeic? conversorDeHeic = null, IPreferenciasDoCalendario? preferenciasDoCalendario = null,
-        ISugestorDeChecklist? sugestorDeChecklist = null)
+        ISugestorDeChecklist? sugestorDeChecklist = null, IModelosDeRelatorio? modelosDeRelatorio = null)
     {
+        _modelosDeRelatorio = modelosDeRelatorio ?? new ModelosDeRelatorioEmMemoria(); // Bloco 88
         _sugestorDeChecklist = sugestorDeChecklist ?? new SugestorDeChecklistIndisponivel(); // Bloco 78
         _preferenciasDoCalendario = preferenciasDoCalendario;
         _conta = conta ?? new SemContaProjectPlanner();

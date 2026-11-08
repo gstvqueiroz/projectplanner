@@ -1,0 +1,220 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ProjectPlanner.App.ViewModels"
+        xmlns:v="using:ProjectPlanner.App.Views"
+        xmlns:sys="using:System"
+        x:Class="ProjectPlanner.App.Views.RelatorioPersonalizadoWindow"
+        x:DataType="vm:RelatorioPersonalizadoViewModel"
+        Title="{Binding TituloDaJanela}"
+        Width="1220" Height="820" MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterOwner">
+
+    <!-- Bloco 88: o relatório personalizado. À esquerda, o modelo (os prontos e os salvos), o período, a aparência e as seções (ligar,
+         ordenar e as opções de cada uma); à direita, a prévia da página, montada de novo a cada mudança. -->
+    <Window.Styles>
+        <Style Selector="TextBlock.secao">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,14,0,6" />
+        </Style>
+        <Style Selector="TextBlock.dica">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Border.secaoDoRelatorio">
+            <Setter Property="Background" Value="{DynamicResource FundoDosFiltros}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style Selector="Button.pequeno">
+            <Setter Property="Padding" Value="7,2" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ListBox.cores ListBoxItem">
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="CornerRadius" Value="14" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel>
+        <!-- O modelo -->
+        <Border DockPanel.Dock="Top" Padding="16,12" Background="{DynamicResource FundoDosFiltros}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button x:Name="SalvarModelo" Content="Salvar o modelo" Command="{Binding SalvarModeloCommand}"
+                            ToolTip.Tip="Guarda as escolhas neste modelo (um modelo pronto vira um modelo seu, com outro nome)" />
+                    <Button x:Name="SalvarComo" Content="Salvar como…" Command="{Binding SalvarComoCommand}" />
+                    <Button x:Name="ExcluirModelo" Content="Excluir" Command="{Binding ExcluirModeloCommand}" ToolTip.Tip="Excluir este modelo seu" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="Modelo" VerticalAlignment="Center" FontWeight="SemiBold" />
+                    <ComboBox x:Name="Modelos" ItemsSource="{Binding Modelos}" SelectedItem="{Binding ModeloEscolhido}" MinWidth="320"
+                              AutomationProperties.Name="Modelo do relatório">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ModeloNaLista">
+                                <TextBlock Text="{Binding Texto}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Gerar -->
+        <Border DockPanel.Dock="Bottom" Padding="16,10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Fechar" Click="Fechar" IsCancel="True" />
+                    <Button x:Name="GerarPdf" Classes="accent" Content="Gerar PDF…" Command="{Binding GerarPdfCommand}" />
+                </StackPanel>
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <TextBlock x:Name="Erro" Text="{Binding Erro}" Foreground="{DynamicResource TextoDeErro}" TextWrapping="Wrap"
+                               IsVisible="{Binding Erro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock x:Name="Avisos" Classes="dica" Text="{Binding Avisos}"
+                               IsVisible="{Binding Avisos, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock x:Name="Mensagem" Text="{Binding Mensagem}" TextWrapping="Wrap" FontSize="12" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="430,*">
+            <!-- As escolhas -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="16,4,12,12">
+                <StackPanel>
+                    <TextBlock Classes="secao" Text="Período" />
+                    <Grid ColumnDefinitions="*,8,Auto,8,*">
+                        <CalendarDatePicker x:Name="De" SelectedDate="{Binding De}" HorizontalAlignment="Stretch" />
+                        <TextBlock Grid.Column="2" Text="a" VerticalAlignment="Center" />
+                        <CalendarDatePicker x:Name="Ate" Grid.Column="4" SelectedDate="{Binding Ate}" HorizontalAlignment="Stretch" />
+                    </Grid>
+                    <WrapPanel Margin="0,6,0,0">
+                        <Button Classes="pequeno" Content="Esta semana" Command="{Binding EstaSemanaCommand}" Margin="0,0,4,0" />
+                        <Button Classes="pequeno" Content="Este mês" Command="{Binding EsteMesCommand}" Margin="0,0,4,0" />
+                        <Button Classes="pequeno" Content="Mês passado" Command="{Binding MesPassadoCommand}" Margin="0,0,4,0" />
+                        <Button Classes="pequeno" Content="Desde o início" Command="{Binding DesdeOInicioCommand}" />
+                    </WrapPanel>
+
+                    <TextBlock Classes="secao" Text="Título do relatório" />
+                    <TextBox x:Name="Titulo" Text="{Binding Titulo}" />
+
+                    <TextBlock Classes="secao" Text="Aparência" />
+                    <ListBox x:Name="Cores" Classes="cores" ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.Cores}" SelectedItem="{Binding Cor}"
+                             Background="Transparent" AutomationProperties.Name="A cor do relatório">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="sys:String">
+                                <Border Width="24" Height="24" CornerRadius="12" Background="{Binding Converter={x:Static v:Conversores.Cor}}"
+                                        ToolTip.Tip="{Binding}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Grid ColumnDefinitions="Auto,8,110,16,Auto,8,*" Margin="0,6,0,0">
+                        <TextBlock Text="Cor" VerticalAlignment="Center" />
+                        <TextBox x:Name="CorPropria" Grid.Column="2" Text="{Binding Cor}" ToolTip.Tip="A cor da sua empresa, no formato #RRGGBB" />
+                        <TextBlock Grid.Column="4" Text="Papel" VerticalAlignment="Center" />
+                        <ComboBox x:Name="Papel" Grid.Column="6" ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.Papeis}" SelectedItem="{Binding Papel}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:OpcaoDePapel">
+                                    <TextBlock Text="{Binding Nome}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,6,0,0">
+                        <CheckBox x:Name="Paisagem" IsChecked="{Binding Paisagem}" Content="Paisagem" />
+                        <CheckBox x:Name="ComLogotipo" IsChecked="{Binding ComLogotipo}" Content="Logotipo"
+                                  ToolTip.Tip="O logotipo das preferências dos relatórios (o mesmo do relatório fotográfico), na capa e no alto das páginas" />
+                    </StackPanel>
+                    <TextBox x:Name="Rodape" Text="{Binding Rodape}" Margin="0,6,0,0" PlaceholderText="Rodapé de todas as páginas (a empresa, o CNPJ, o telefone)" />
+
+                    <TextBlock Classes="secao" Text="Seções" />
+                    <TextBlock Classes="dica" Margin="0,-2,0,8"
+                               Text="Ligue e desligue cada uma, mude a ordem com as setas e abra as opções na engrenagem. A prévia ao lado acompanha." />
+                    <ItemsControl x:Name="Secoes" ItemsSource="{Binding Secoes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SecaoNaTela">
+                                <Border Classes="secaoDoRelatorio">
+                                    <StackPanel Spacing="6">
+                                        <DockPanel>
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Classes="pequeno" Content="↑" Command="{Binding SubirCommand}" ToolTip.Tip="Subir" AutomationProperties.Name="Subir a seção" />
+                                                <Button Classes="pequeno" Content="↓" Command="{Binding DescerCommand}" ToolTip.Tip="Descer" AutomationProperties.Name="Descer a seção" />
+                                                <Button Classes="pequeno" Content="⚙" Command="{Binding AlternarOpcoesCommand}" ToolTip.Tip="As opções da seção"
+                                                        AutomationProperties.Name="Opções da seção" />
+                                                <Button Classes="pequeno" Content="✕" Command="{Binding RemoverCommand}" ToolTip.Tip="Tirar a seção do modelo"
+                                                        AutomationProperties.Name="Tirar a seção" />
+                                            </StackPanel>
+                                            <CheckBox IsChecked="{Binding Ativa}" VerticalAlignment="Top">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Nome}" FontWeight="SemiBold" />
+                                                    <TextBlock Classes="dica" Text="{Binding Descricao}" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DockPanel>
+                                        <StackPanel IsVisible="{Binding Aberta}" Spacing="6" Margin="28,0,0,4">
+                                            <TextBox Text="{Binding Titulo}" PlaceholderText="{Binding Nome, StringFormat='Título (vazio: {0})'}" IsVisible="{Binding !EhCapa}" />
+                                            <TextBlock Classes="dica" Text="{Binding RotuloDoTexto}" IsVisible="{Binding TemTexto}" />
+                                            <TextBox Text="{Binding Texto}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" IsVisible="{Binding TemTexto}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding TemFiltro}">
+                                                <TextBlock Text="Quais" VerticalAlignment="Center" />
+                                                <ComboBox ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.Filtros}" SelectedItem="{Binding Filtro}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:OpcaoDeFiltroDeTarefas">
+                                                            <TextBlock Text="{Binding Nome}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding TemDias}">
+                                                <TextBlock Text="Os próximos" VerticalAlignment="Center" />
+                                                <ComboBox ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.OpcoesDeDias}" SelectedItem="{Binding Dias}" />
+                                                <TextBlock Text="dias" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding TemFotos}">
+                                                <ComboBox ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.OpcoesDeFotosPorPagina}" SelectedItem="{Binding FotosPorPagina}" />
+                                                <TextBlock Text="por página, no máximo" VerticalAlignment="Center" />
+                                                <ComboBox ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.OpcoesDeMaximoDeFotos}" SelectedItem="{Binding MaximoDeFotos}" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding TemNivel}">
+                                                <TextBlock Text="Até o nível" VerticalAlignment="Center" />
+                                                <ComboBox ItemsSource="{x:Static vm:RelatorioPersonalizadoViewModel.OpcoesDeNivel}" SelectedItem="{Binding Nivel}" />
+                                                <TextBlock Classes="dica" Text="(1 = só as etapas)" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <CheckBox IsChecked="{Binding ComFoto}" Content="Com a foto mais recente do período" IsVisible="{Binding EhCapa}" />
+                                            <CheckBox IsChecked="{Binding PaginaNova}" Content="Começar numa página nova" IsVisible="{Binding !EhCapa}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button x:Name="AdicionarSecao" Content="+ Adicionar seção" Margin="0,4,0,0" Click="AbrirMenuDeSecoes"
+                            ToolTip.Tip="Uma seção a mais (a mesma pode entrar mais de uma vez, com filtros diferentes)" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- A prévia -->
+            <Border Grid.Column="1" Background="{DynamicResource FundoDaColunaDoQuadro}" Padding="16,12">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10" Margin="0,8,0,0">
+                        <Button x:Name="PaginaAnterior" Content="◀" Command="{Binding PaginaAnteriorCommand}" AutomationProperties.Name="Página anterior" />
+                        <TextBlock x:Name="TextoDaPagina" Text="{Binding TextoDaPagina}" VerticalAlignment="Center" MinWidth="110" TextAlignment="Center" />
+                        <Button x:Name="ProximaPagina" Content="▶" Command="{Binding ProximaPaginaCommand}" AutomationProperties.Name="Próxima página" />
+                    </StackPanel>
+                    <Border Background="White" BoxShadow="0 2 10 0 #26000000" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Image x:Name="Previa" Source="{Binding Previa, Converter={x:Static v:Conversores.Imagem}}" Stretch="Uniform" />
+                    </Border>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

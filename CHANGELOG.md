@@ -3,6 +3,26 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.88.0
+
+**Relatório personalizado: monte o relatório do seu jeito.** Em Arquivo > Relatório personalizado…:
+
+- **Modelos prontos para começar**: o relatório mensal ao cliente, o semanal da obra, o resumo executivo e o financeiro. Escolha
+  um e mude o que quiser.
+- **O relatório em seções**: capa, a obra em números, indicadores e Curva S, andamento das etapas, cronograma em barras, tarefas
+  (todas, em andamento, atrasadas ou concluídas), próximas atividades, fotos do período, diário de obra, medições, custos, ordens
+  de serviço, um texto seu e as assinaturas. Ligue e desligue cada uma, mude a ordem com as setas e abra as opções na engrenagem
+  (o título, o filtro das tarefas, quantas fotos por página, até que nível vai o cronograma, começar numa página nova). A mesma
+  seção pode entrar mais de uma vez: duas tabelas de tarefas, uma das atrasadas e outra das em andamento.
+- **Com a cara da sua empresa**: a cor do relatório (uma das oito da paleta ou a sua, como #1565C0), A4 ou Carta, retrato ou
+  paisagem, o logotipo e um rodapé em todas as páginas (a empresa, o CNPJ, o telefone).
+- **O período com atalhos** (esta semana, este mês, o mês passado, desde o início). O previsto, as atrasadas e o medido são os
+  do último dia do período.
+- **A prévia ao lado** acompanha cada mudança, página por página. As seções sem nada no período avisam embaixo ("Fotos do
+  período: nenhuma foto de 01/08/2026 a 31/08/2026").
+- **Salve como um modelo seu**: ele fica na lista para qualquer obra, e a tela abre no último modelo usado.
+- **Gerar PDF…** com o nome já sugerido ("Relatório mensal de obra - Casa da Ana - 2026-08-31").
+
 ## 0.87.0
 
 **Kanban com raias mais fácil de ler.**

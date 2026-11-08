@@ -198,6 +198,11 @@ public sealed class DialogosAvalonia : IDialogosService
     public Task MostrarRelatorioDasOrdensAsync(ViewModels.RelatorioDasOrdensViewModel relatorio) =>
         new RelatorioDasOrdensWindow(relatorio).ShowDialog(JanelaPrincipal);
 
+    // ---- Bloco 88 ----
+
+    public Task MostrarRelatorioPersonalizadoAsync(ViewModels.RelatorioPersonalizadoViewModel relatorio) =>
+        new RelatorioPersonalizadoWindow(relatorio).ShowDialog(JanelaPrincipal);
+
     // ---- Bloco 58 ----
 
     public Task MostrarOrdensDeServicoAsync(ViewModels.OrdensDeServicoViewModel ordens) =>

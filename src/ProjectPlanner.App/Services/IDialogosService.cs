@@ -86,6 +86,9 @@ public interface IDialogosService
     /// <summary>Bloco 64: mostra Projeto > Relatório das ordens de serviço… e espera ser fechada.</summary>
     Task MostrarRelatorioDasOrdensAsync(ViewModels.RelatorioDasOrdensViewModel relatorio);
 
+    /// <summary>Bloco 88: Arquivo > Relatório personalizado….</summary>
+    Task MostrarRelatorioPersonalizadoAsync(ViewModels.RelatorioPersonalizadoViewModel relatorio);
+
     /// <summary>Bloco 58: mostra Projeto > Ordens de serviço… e espera ser fechada.</summary>
     Task MostrarOrdensDeServicoAsync(ViewModels.OrdensDeServicoViewModel ordens);
 

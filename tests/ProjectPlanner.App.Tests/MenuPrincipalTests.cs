@@ -108,7 +108,7 @@ public partial class MenuPrincipalTests
             "Abrir a pasta de cópias de segurança");
         Titulos(a.Item("Editar")).Should().Equal("Desfazer", "Refazer", Linha, "Copiar tarefa", "Colar tarefa", "Duplicar tarefa");
         Titulos(a.Item("Exibir")).Should().Equal("Seleção", "Caminho crítico", "Fotos", "Folga", "Linha de base", "Linha Hoje", Linha,
-            "Dividido", "Somente Tabela", "Somente Gantt", "Kanban", Linha, "Colunas", "Barra de ícones", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
+            "Dividido", "Somente Tabela", "Somente Gantt", "Kanban", Linha, "Colunas", "Barra de ícones", "Abas no rodapé", Linha, "Resumo do projeto…", "Fotos do projeto…", "Assistente (IA)", Linha, "Tema");
         Titulos(a.Item("Tarefa")).Should().Equal(
             "Adicionar tarefa", "Inserir tarefa acima", "Inserir tarefa abaixo", "Adicionar subtarefa",
             "Adicionar marco", "Adicionar resumo", Linha,

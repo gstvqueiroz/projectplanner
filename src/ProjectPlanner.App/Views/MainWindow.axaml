@@ -37,6 +37,30 @@
         <Style Selector="Button.acessoRapido.ativo /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource FundoDoBotaoAtivo}" />
         </Style>
+        <!-- Bloco 79: as abas de atalho no rodapé, como as planilhas do Excel: a da visão atual fica clara, em negrito e sublinhada. -->
+        <Style Selector="Button.aba">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="14,5,14,4" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+        </Style>
+        <Style Selector="Button.aba:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource FundoSutil}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+        <Style Selector="Button.aba.ativa">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+        <Style Selector="Button.aba.ativa /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource FundoDaAbaAtiva}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+        </Style>
         <!-- Botões − e + do zoom flutuante: redondos, sem fundo até o mouse passar. -->
         <Style Selector="Button.zoom">
             <Setter Property="Background" Value="Transparent" />
@@ -146,6 +170,10 @@
                     <MenuItem x:Name="MenuColunas" Header="Colunas" />
                     <!-- Bloco 39: quais botões a barra de ícones mostra (interface.json); montado em MainWindow.axaml.cs. -->
                     <MenuItem x:Name="MenuBarra" Header="Barra de ícones" />
+                    <!-- Bloco 79 -->
+                    <MenuItem x:Name="ItemAbas" Header="Abas no rodapé" ToggleType="CheckBox" IsChecked="{Binding MostrarAbas, Mode=OneWay}"
+                              Command="{Binding AlternarAbasCommand}"
+                              ToolTip.Tip="As abas de atalho no rodapé (Gantt, Kanban, Orçamento, Medições…), como as planilhas do Excel" />
                     <Separator />
                     <!-- Bloco 25 (C7) -->
                     <MenuItem Header="Resumo do projeto…" Command="{Binding ResumoDoProjetoCommand}"
@@ -588,6 +616,32 @@
                 <TextBlock x:Name="StatusMensagem" Text="{Binding MensagemNaBarra}" ToolTip.Tip="{Binding Mensagem}"
                            TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
             </DockPanel>
+        </Border>
+
+        <!-- Bloco 79: as abas de atalho, no rodapé à esquerda, como as planilhas do Excel. Gantt e Kanban trocam a visão aqui mesmo
+             (a da visão atual fica marcada); as outras abrem as telas, com os mesmos comandos do menu. -->
+        <Border x:Name="BarraDeAbas" DockPanel.Dock="Bottom" IsVisible="{Binding MostrarAbas}" Background="{DynamicResource FundoDasAbas}"
+                BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="Abas" Orientation="Horizontal" Margin="6,0,0,0" Spacing="1">
+                    <Button Classes="aba" Classes.ativa="{Binding EhCronograma}" Content="Gantt"
+                            Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{Binding ModoDoCronograma}"
+                            ToolTip.Tip="Gantt: a tabela de tarefas e o gráfico de Gantt" />
+                    <Button Classes="aba" Classes.ativa="{Binding EhKanban}" Content="Kanban"
+                            Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Kanban}"
+                            ToolTip.Tip="Kanban: as tarefas como cards, nas colunas do status" />
+                    <Border Width="1" Margin="6,5" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                    <Button Classes="aba" Content="Orçamento" Command="{Binding OrcamentoCommand}" ToolTip.Tip="Abrir o orçamento da obra" />
+                    <Button Classes="aba" Content="Recursos" Command="{Binding RecursosDoProjetoCommand}" ToolTip.Tip="Abrir os recursos do projeto" />
+                    <Button Classes="aba" Content="Medições" Command="{Binding MedicoesCommand}" ToolTip.Tip="Abrir as medições do contrato" />
+                    <Button Classes="aba" Content="Ordens de serviço" Command="{Binding OrdensDeServicoCommand}" ToolTip.Tip="Abrir as ordens de serviço" />
+                    <Button Classes="aba" Content="Custos" Command="{Binding CustosRealizadosCommand}" ToolTip.Tip="Abrir os custos realizados" />
+                    <Button Classes="aba" Content="Físico-financeiro" Command="{Binding FisicoFinanceiroCommand}"
+                            ToolTip.Tip="Abrir o cronograma físico-financeiro" />
+                    <Button Classes="aba" Content="Indicadores" Command="{Binding IndicadoresCommand}" ToolTip.Tip="Abrir os indicadores da obra" />
+                    <Button Classes="aba" Content="Fotos" Command="{Binding FotosDoProjetoCommand}" ToolTip.Tip="Abrir as fotos do projeto" />
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Grid à esquerda e Gantt à direita, com divisor arrastável. As linhas e o cabeçalho dos dois

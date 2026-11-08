@@ -47,6 +47,9 @@ public partial class MenuPrincipalTests
         ["FundoDaEtiquetaDoResumo"] = "#E3EAF3",
         ["TextoSecundarioDoCard"] = "#5F6B76",
         ["TrilhoDoPercentual"] = "#1F000000",
+        // Bloco 79: as abas de atalho no rodapé
+        ["FundoDasAbas"] = "#F1F3F5",
+        ["FundoDaAbaAtiva"] = "#FFFFFF",
     };
 
     private static void VoltarAoTemaPadrao() => Application.Current!.RequestedThemeVariant = ThemeVariant.Default;

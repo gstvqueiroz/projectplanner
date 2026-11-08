@@ -3,6 +3,17 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.79.0
+
+**Abas de atalho no rodapé**, à esquerda, como as planilhas do Excel.
+
+- **Gantt** e **Kanban** trocam a visão na própria janela, e a aba da visão atual fica marcada (clara, em negrito e
+  sublinhada). A aba Gantt volta para a visão do cronograma que estava antes do Kanban: a tabela e o Gantt lado a lado, ou só
+  um deles.
+- **Orçamento, Recursos, Medições, Ordens de serviço, Custos, Físico-financeiro, Indicadores e Fotos** abrem as telas, com os
+  mesmos comandos do menu.
+- Exibir > **Abas no rodapé** mostra ou esconde a faixa; a escolha fica salva para as próximas vezes.
+
 ## 0.78.0
 
 **Raias no Kanban e a IA no quadro** (o plano "Delete, arrastar e Kanban", K6 e os ganchos de IA do K7).

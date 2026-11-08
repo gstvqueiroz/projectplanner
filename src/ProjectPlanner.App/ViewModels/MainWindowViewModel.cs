@@ -71,6 +71,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         _preferenciasInterface = preferenciasInterface;
         Barra = new BarraDeIconesViewModel(preferenciasInterface);
         Tema = preferenciasInterface.Carregar()?.Tema ?? TemaDaInterface.Sistema;
+        MostrarAbas = preferenciasInterface.Carregar()?.OcultarAbas != true; // Bloco 79
         _cronograma = NovoCronograma();
         Gantt.BarraClicada += ClicarNaTarefa; // Bloco 72: com Ctrl e Shift, a seleção múltipla
         Gantt.VazioClicado += () => TarefaSelecionada = null;
@@ -243,7 +244,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MostrarTabela), nameof(MostrarGantt), nameof(EhDividido), nameof(EhSomenteTabela), nameof(EhSomenteGantt),
-        nameof(EhKanban))]
+        nameof(EhKanban), nameof(EhCronograma))]
     public partial ModoVisualizacao ModoVisualizacao { get; set; } = ModoVisualizacao.Dividido;
 
     /// <summary>A grid de tarefas aparece (Dividido ou Somente Tabela).</summary>

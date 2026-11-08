@@ -44,6 +44,9 @@
                     <SolidColorBrush x:Key="FundoDaEtiquetaDoResumo" Color="#E3EAF3" />
                     <SolidColorBrush x:Key="TextoSecundarioDoCard" Color="#5F6B76" />
                     <SolidColorBrush x:Key="TrilhoDoPercentual" Color="#1F000000" />
+                    <!-- Bloco 79: as abas de atalho no rodapé -->
+                    <SolidColorBrush x:Key="FundoDasAbas" Color="#F1F3F5" />
+                    <SolidColorBrush x:Key="FundoDaAbaAtiva" Color="#FFFFFF" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="FundoDoBotaoAtivo" Color="#34506E" />
@@ -77,6 +80,9 @@
                     <SolidColorBrush x:Key="FundoDaEtiquetaDoResumo" Color="#2E3A48" />
                     <SolidColorBrush x:Key="TextoSecundarioDoCard" Color="#A7B1BA" />
                     <SolidColorBrush x:Key="TrilhoDoPercentual" Color="#2EFFFFFF" />
+                    <!-- Bloco 79: as abas de atalho no rodapé -->
+                    <SolidColorBrush x:Key="FundoDasAbas" Color="#1B1E21" />
+                    <SolidColorBrush x:Key="FundoDaAbaAtiva" Color="#2A2F35" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
             <!-- Bloco 27: selos sobre as fotos (sobre a imagem, iguais nos dois temas). -->

@@ -179,10 +179,12 @@ public static class InstrucoesDoAssistente
         "\"alteracoes\" vazia e não use \"abrir\", \"importarFotos\", perguntas nem plano: daqui não dá para mudar a estrutura do " +
         "cronograma nem abrir telas (se pedirem, diga que isso se faz no programa). Atualizações da obra (% concluído, medição, " +
         "custo, não iniciar antes de, linha de base), as ordens de serviço (criar, alterar, mudar a situação, medir, pagar; uma " +
-        "tarefa nova para a OS vai junto, em novaTarefa), os dados das tarefas, da obra, os recursos e o calendário (chuva, " +
-        "paralisação, feriado) vão em \"atualizacoes\", " +
-        "como sempre: elas ficam guardadas e o usuário confere e aplica quando abrir a obra no programa. Na mensagem, diga o que " +
-        "foi anotado.";
+        "tarefa nova para a OS vai junto, em novaTarefa), os dados das tarefas, da obra, os recursos, o calendário (chuva, " +
+        "paralisação, feriado), o quadro Kanban (mover o card, checklist, etiquetas, arquivar) e o diário de obra (o RDO do dia: " +
+        "clima, efetivo, equipamentos, serviços e ocorrências; o canteiro contando o dia é o caso mais comum aqui) vão em " +
+        "\"atualizacoes\", " +
+        "como sempre: elas ficam guardadas e o usuário confere e aplica quando abrir a obra no programa. Fechar (assinar) o RDO " +
+        "só no programa. Na mensagem, diga o que foi anotado.";
 
     /// <summary>Os campos opcionais da resposta (Bloco 26): tipo, ficha, perguntas e plano.</summary>
     public const string RespostasEstruturadas =

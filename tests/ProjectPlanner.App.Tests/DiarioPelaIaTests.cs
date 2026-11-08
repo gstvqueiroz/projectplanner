@@ -189,6 +189,8 @@ public class DiarioPelaIaTests
         InstrucoesDoAssistente.Controle.Should().Contain("registre com o tipo diario").And.Contain("fechar o dia é com o usuário no programa")
             .And.Contain("diario com de = o dia");
         InstrucoesDoAssistente.Obra.Should().Contain("ou o dia (de) do diario");
+        InstrucoesDoAssistente.Telegram.Should().Contain("o quadro Kanban").And.Contain("o diário de obra (o RDO do dia")
+            .And.Contain("Fechar (assinar) o RDO só no programa", "senão a IA do Telegram recusa o RDO e o Kanban");
         CatalogoDaIa.Referencia.Should().Contain("diario: acao, data, periodo, nome, praticavel, quantidade, fornecedor, tarefa, descricao, percentual")
             .And.Contain("periodo = manha, tarde, dia").And.Contain("praticavel = sim, nao");
     }

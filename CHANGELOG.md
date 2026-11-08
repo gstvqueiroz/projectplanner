@@ -3,6 +3,11 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.82.1
+
+- **Telegram:** as instruções da IA no Telegram agora citam o quadro Kanban e o diário de obra (RDO) entre o que dá para anotar
+  de lá; antes ela podia responder que isso só se fazia no programa. Vale depois da atualização do servidor no Render.
+
 ## 0.82.0
 
 **O Diário de Obra pela IA, no programa e no Telegram.** Conte o dia para o assistente ("RDO de hoje: choveu à tarde e

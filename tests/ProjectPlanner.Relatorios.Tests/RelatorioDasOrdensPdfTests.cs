@@ -62,7 +62,6 @@ public sealed class RelatorioDasOrdensPdfTests
         r.PorMes.Should().Equal(new MesNoRelatorio(new DateOnly(2026, 10, 1), 6000, 3000));
         var simples = Paginas(Pdf(r));
         Paginas(Pdf(r, detalhar: true)).Should().BeGreaterThan(simples);
-        File.WriteAllBytes("/private/tmp/claude-501/-Users-gustavodossantosqueiroz-Documents-Project/c210a034-3e6a-4dd5-9d65-1c296228fb41/scratchpad/relatorio-os-65.pdf", Pdf(r, detalhar: true));
     }
 
     [Fact]
@@ -79,7 +78,6 @@ public sealed class RelatorioDasOrdensPdfTests
             new Dictionary<Guid, string>(), Agora, relatorio);
 
         Paginas(pdf.ToArray()).Should().Be(1);
-        File.WriteAllBytes("/private/tmp/claude-501/-Users-gustavodossantosqueiroz-Documents-Project/c210a034-3e6a-4dd5-9d65-1c296228fb41/scratchpad/boletim-os.pdf", pdf.ToArray());
         relatorio.Position = 0;
         using var livro = DocumentFormat.OpenXml.Packaging.SpreadsheetDocument.Open(relatorio, false);
         livro.WorkbookPart!.Workbook.Sheets!.Elements<DocumentFormat.OpenXml.Spreadsheet.Sheet>().Select(a => a.Name!.Value)

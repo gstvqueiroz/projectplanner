@@ -3,6 +3,28 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.82.0
+
+**O Diário de Obra pela IA, no programa e no Telegram.** Conte o dia para o assistente ("RDO de hoje: choveu à tarde e
+paramos às 14h; vieram 4 pedreiros e 3 serventes da Construtora Silva; o reboco chegou a 60%") e ele propõe, num cartão para
+você aplicar (um passo do Desfazer):
+
+- **Clima** de manhã, de tarde ou do dia todo (bom, nublado ou chuva) e se foi praticável.
+- **Efetivo** (a função, quantos e a empresa) e **equipamentos**; quantidade 0 tira a linha. O nome vale sem diferença de
+  maiúsculas, acentos e plural ("serventes" é a linha "Servente").
+- **Serviços executados** (a tarefa do cronograma e/ou o que foi feito, com o % no fim do dia) e **ocorrências** (visitas,
+  entregas, acidentes, paralisações). O % do diário não muda o cronograma: quando você conta o andamento de uma tarefa, a IA
+  propõe também o % concluído.
+- **O dia que ainda não está no diário é criado**, com o clima do calendário e as listas só com o que você contou (o "Preencher
+  pelo cronograma" continua na tela). Um dia fechado (assinado) não muda, e fechar o dia continua sendo com você, no programa.
+- "**Abre o RDO de ontem**": o assistente abre o diário no dia (um dia que não existe fica escolhido para o Novo dia).
+- Os últimos 10 dias do diário vão no retrato que a IA recebe ("quantos pedreiros tivemos ontem?").
+- **No Telegram**, a mesma coisa. O RDO sem data é o do dia em que a mensagem chegou, mesmo que você só busque as mensagens no
+  programa dias depois. Correção: o "hoje" que a IA do Telegram usava era o do último retrato mandado pelo programa (o dia
+  em que a obra foi salva); agora é o dia da mensagem, no horário de Brasília. O servidor só passa a conhecer o tipo novo
+  depois da atualização dele no Render.
+- A avaliação da IA ganhou 3 pedidos do diário (50 no total), um deles pelo Telegram.
+
 ## 0.81.0
 
 **Diário de Obra (RDO).** Projeto > **Diário de obra…** (também pelo botão da barra e pela aba **Diário** no rodapé) guarda o

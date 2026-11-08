@@ -83,7 +83,8 @@ public sealed partial class MainWindowViewModel
         var (cartoes, fotos, falhas) = (0, new List<string>(), 0);
         foreach (var item in itens.Where(i => i.Tipo == ItemDoTelegram.DeAtualizacoes && i.Atualizacoes is { Count: > 0 }))
         {
-            Assistente.MostrarDoTelegram(item.Texto, item.CriadoEm, ConferirAtualizacoes(item.Atualizacoes!, RetratoDoTelegram(item.Tarefas)));
+            Assistente.MostrarDoTelegram(item.Texto, item.CriadoEm,
+                ConferirAtualizacoes(NoDiaDaMensagem(item.Atualizacoes!, item.CriadoEm), RetratoDoTelegram(item.Tarefas)));
             cartoes++;
             falhas += await Levar(item) ? 0 : 1;
         }
@@ -151,6 +152,15 @@ public sealed partial class MainWindowViewModel
         {
             return false; // fica no servidor: vem de novo na próxima busca
         }
+    }
+
+    // Bloco 82: o RDO sem data é o do dia em que a mensagem chegou (não o dia em que o programa buscou a caixa).
+    private IReadOnlyList<AtualizacaoDaObra> NoDiaDaMensagem(IReadOnlyList<AtualizacaoDaObra> atualizacoes, DateTime chegouEm)
+    {
+        var dia = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(chegouEm, DateTimeKind.Utc), _relogio.LocalTimeZone));
+        return [.. atualizacoes.Select(a => a.Tipo == TiposDeAtualizacao.Diario && string.IsNullOrWhiteSpace(a.Data)
+            ? a with { Data = dia.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) }
+            : a)];
     }
 
     // As tarefas como estavam quando a mensagem chegou (o Nº que a IA citou e o id), para achar a tarefa certa.

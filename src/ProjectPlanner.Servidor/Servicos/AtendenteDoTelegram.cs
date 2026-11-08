@@ -283,6 +283,10 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
         {
             retrato = null;
         }
+        // Bloco 82: o "hoje" do retrato é o do dia em que o programa o mandou; para a IA vale o dia da mensagem, para "choveu
+        // hoje" e "o RDO de ontem" caírem no dia certo.
+        if (retrato is not null)
+            retrato = retrato with { Hoje = DiaNoBrasil(agora) };
         await telegram.DigitandoAsync(chatId, c);
 
         RespostaIA resposta;
@@ -342,6 +346,9 @@ public sealed partial class AtendenteDoTelegram(BancoDoServidor banco, IOptions<
             new MensagemChat(AutorMensagem.Assistente, resposta.Texto, relogio.GetLocalNow(), []));
         await telegram.EnviarAsync(chatId, mensagem.Length == 0 ? "Anotado." : mensagem, c);
     }
+
+    /// <summary>Bloco 82: o dia de um instante (UTC) no horário de Brasília (UTC−3, sem horário de verão desde 2019).</summary>
+    public static DateOnly DiaNoBrasil(DateTime utc) => DateOnly.FromDateTime(utc.AddHours(-3));
 
     private static string ComAutor(string? autor, string texto) => autor is null ? texto : $"{autor}: {texto}";
 

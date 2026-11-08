@@ -144,6 +144,22 @@ public sealed class TelegramTests : IDisposable
         _s.Gemini.Pedidos.Should().BeEmpty();
     }
 
+    // Bloco 82: o "hoje" que vai para a IA é o dia da mensagem, no horário de Brasília (não o do último retrato que o programa
+    // mandou), para "choveu hoje" e "o RDO de ontem" caírem no dia certo.
+    [Fact]
+    public async Task Pergunta_OHojeDoRetratoEODiaDaMensagem_NoHorarioDeBrasilia()
+    {
+        await Preparar();
+        _s.Gemini.Resposta = RespostaComAtualizacao;
+        _s.Relogio.Agora = new DateTimeOffset(2026, 10, 21, 2, 30, 0, TimeSpan.Zero); // 23:30 de 20/10 em Brasília
+
+        await Mandar("choveu hoje à tarde");
+
+        var instrucoes = JsonNode.Parse(_s.Gemini.Pedidos.Last().Corpo)!["systemInstruction"]!["parts"]![0]!["text"]!.GetValue<string>();
+        instrucoes.Should().Contain("Hoje: 20/10/2026").And.NotContain("Hoje: 18/10/2026");
+        AtendenteDoTelegram.DiaNoBrasil(new DateTime(2026, 10, 21, 3, 0, 0, DateTimeKind.Utc)).Should().Be(new DateOnly(2026, 10, 21));
+    }
+
     [Fact]
     public async Task Pergunta_UsaOAssistenteComORetrato_ERespondeNoChat_EAtualizacaoVaiParaACaixa()
     {

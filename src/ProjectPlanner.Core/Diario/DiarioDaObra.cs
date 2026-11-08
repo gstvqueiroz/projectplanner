@@ -78,6 +78,9 @@ public sealed record DiaDaObra(DateOnly Data)
 public sealed class DiarioDaObra
 {
     public const int LinhasMaximas = 60;
+
+    /// <summary>Bloco 82: a quantidade máxima de uma linha do efetivo ou dos equipamentos.</summary>
+    public const int QuantidadeMaxima = 999;
     public const int TamanhoMaximoDoNome = 80;
     public const int TamanhoMaximoDaDescricao = 300;
     public const int TamanhoMaximoDasOcorrencias = 4000;
@@ -197,10 +200,10 @@ public sealed class DiarioDaObra
         var atividades = dia.Atividades.Select(a => a with { Descricao = (a.Descricao ?? "").Trim() }).Where(a => a.Descricao.Length > 0).ToList();
         if (efetivo.Count > LinhasMaximas || equipamentos.Count > LinhasMaximas || atividades.Count > LinhasMaximas)
             throw new DomainValidationException(nameof(DiaDaObra.Efetivo), $"Cada lista do dia pode ter até {LinhasMaximas} linhas.");
-        if (efetivo.FirstOrDefault(e => e.Quantidade is < 1 or > 999) is { } pessoas)
-            throw new DomainValidationException(nameof(DiaDaObra.Efetivo), $"A quantidade de \"{pessoas.Funcao}\" precisa ir de 1 a 999.");
-        if (equipamentos.FirstOrDefault(e => e.Quantidade is < 1 or > 999) is { } equipamento)
-            throw new DomainValidationException(nameof(DiaDaObra.Equipamentos), $"A quantidade de \"{equipamento.Nome}\" precisa ir de 1 a 999.");
+        if (efetivo.FirstOrDefault(e => e.Quantidade is < 1 or > QuantidadeMaxima) is { } pessoas)
+            throw new DomainValidationException(nameof(DiaDaObra.Efetivo), $"A quantidade de \"{pessoas.Funcao}\" precisa ir de 1 a {QuantidadeMaxima}.");
+        if (equipamentos.FirstOrDefault(e => e.Quantidade is < 1 or > QuantidadeMaxima) is { } equipamento)
+            throw new DomainValidationException(nameof(DiaDaObra.Equipamentos), $"A quantidade de \"{equipamento.Nome}\" precisa ir de 1 a {QuantidadeMaxima}.");
         if (efetivo.Select(e => e.Funcao).Concat(efetivo.Select(e => e.Empresa ?? "")).Concat(equipamentos.Select(e => e.Nome))
                 .FirstOrDefault(n => n.Length > TamanhoMaximoDoNome) is { } longo)
             throw new DomainValidationException(nameof(DiaDaObra.Efetivo), $"\"{longo[..20]}…\" passa de {TamanhoMaximoDoNome} caracteres.");

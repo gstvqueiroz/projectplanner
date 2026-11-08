@@ -323,6 +323,40 @@
       "esperado": { "atualizacoes": [{ "tipo": "quadro", "acao": "arquivar", "tarefa": "1" }], "abrir": "nenhum" },
       "referencia": { "mensagem": "Anotei: arquivar o card da Fundação (a tarefa continua no cronograma). Aplique quando abrir a obra no programa.",
         "alteracoes": [], "atualizacoes": [{ "tipo": "quadro", "acao": "arquivar", "tarefa": "1" }] }
+    },
+    {
+      "id": "diario-clima-efetivo",
+      "pedido": "RDO de hoje: manhã de sol, mas choveu forte à tarde e paramos às 14h. Vieram 4 pedreiros e 3 serventes da Construtora Silva.",
+      "esperado": { "atualizacoes": [
+        { "tipo": "diario", "acao": "clima", "periodo": "tarde", "nome": "chuva", "praticavel": "nao" },
+        { "tipo": "diario", "acao": "efetivo", "nome": "~pedreiro", "quantidade": 4 },
+        { "tipo": "diario", "acao": "efetivo", "nome": "~servente", "quantidade": 3 }] },
+      "referencia": { "mensagem": "Proponho no RDO de hoje: tarde com chuva e impraticável, 4 pedreiros e 3 serventes da Construtora Silva.", "alteracoes": [],
+        "atualizacoes": [
+          { "tipo": "diario", "acao": "clima", "periodo": "tarde", "nome": "chuva", "praticavel": "nao" },
+          { "tipo": "diario", "acao": "efetivo", "nome": "Pedreiro", "quantidade": 4, "fornecedor": "Construtora Silva" },
+          { "tipo": "diario", "acao": "efetivo", "nome": "Servente", "quantidade": 3, "fornecedor": "Construtora Silva" }] }
+    },
+    {
+      "id": "diario-servico-percentual",
+      "pedido": "No diário de hoje: o reboco chegou a 60% e fizemos a limpeza do canteiro.",
+      "esperado": { "atualizacoes": [
+        { "tipo": "diario", "acao": "servico", "tarefa": "3", "percentual": 60 },
+        { "tipo": "diario", "acao": "servico", "descricao": "~limpeza" },
+        { "tipo": "percentual", "tarefa": "3", "percentual": 60 }] },
+      "referencia": { "mensagem": "Proponho no RDO de hoje o reboco em 60% e a limpeza do canteiro, e o reboco em 60% no cronograma.", "alteracoes": [],
+        "atualizacoes": [
+          { "tipo": "diario", "acao": "servico", "tarefa": "3", "percentual": 60 },
+          { "tipo": "diario", "acao": "servico", "descricao": "Limpeza do canteiro" },
+          { "tipo": "percentual", "tarefa": "3", "percentual": 60 }] }
+    },
+    {
+      "id": "telegram-diario-ocorrencia",
+      "canal": "telegram",
+      "pedido": "anota no RDO de sexta, 25/09: visita da fiscalização às 10h",
+      "esperado": { "atualizacoes": [{ "tipo": "diario", "acao": "ocorrencia", "data": "2026-09-25", "descricao": "~fiscaliza" }], "abrir": "nenhum" },
+      "referencia": { "mensagem": "Anotei no RDO de 25/09: visita da fiscalização às 10h. Aplique quando abrir a obra no programa.",
+        "alteracoes": [], "atualizacoes": [{ "tipo": "diario", "acao": "ocorrencia", "data": "2026-09-25", "descricao": "Visita da fiscalização às 10h" }] }
     }
   ]
 }

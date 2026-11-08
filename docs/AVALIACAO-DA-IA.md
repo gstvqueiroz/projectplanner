@@ -1,6 +1,6 @@
 # Avaliação da IA (Bloco 68)
 
-Um conjunto de **47 pedidos reais**, do jeito que um engenheiro escreve no chat ou no Telegram ("paga a OS-001 com a NF 123",
+Um conjunto de **50 pedidos reais**, do jeito que um engenheiro escreve no chat ou no Telegram ("paga a OS-001 com a NF 123",
 "coloca 2 serventes no reboco", "imprime o Gantt em A3"). Cada pedido tem o que se espera da resposta e uma resposta de
 referência, numa obra de exemplo. Serve para saber se a IA continua acertando quando as instruções, o catálogo dos campos ou o
 modelo mudam.
@@ -30,7 +30,7 @@ O que vier a mais (uma atualização que ninguém pediu) é **aviso**, não falh
 
 ## Rodar com a IA de verdade
 
-Cada rodada manda os 47 pedidos (cerca de 8 mil tokens cada) e custa alguns centavos no Gemini 2.5 Flash. Rode no Terminal, na
+Cada rodada manda os 50 pedidos (cerca de 8 mil tokens cada) e custa alguns centavos no Gemini 2.5 Flash. Rode no Terminal, na
 pasta do projeto. A chave e o token **não** devem ir para o chat.
 
 **Pelo Gemini, com a sua chave** (a mesma variável que o programa usa):
@@ -58,7 +58,7 @@ Outras variáveis:
 | `PROJECTPLANNER_SERVIDOR` | Outro servidor (o mesmo que o programa aceita) |
 | `PROJECTPLANNER_ACESSO` | Pela conta, um token de acesso no lugar da sessão do programa |
 
-O teste mostra `ok` ou `FALHA` em cada pedido e termina com "N de 47 pedidos passaram. Relatório: …". O relatório (Markdown)
+O teste mostra `ok` ou `FALHA` em cada pedido e termina com "N de 50 pedidos passaram. Relatório: …". O relatório (Markdown)
 tem a tabela dos pedidos, o que falhou e cada resposta da IA (a mensagem, as atualizações, as alterações e a tela). O teste
 falha se algum pedido falhar.
 

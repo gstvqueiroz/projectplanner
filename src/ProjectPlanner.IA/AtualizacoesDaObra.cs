@@ -38,6 +38,12 @@ public static class TiposDeAtualizacao
     /// </summary>
     public const string Quadro = "quadro";
 
+    /// <summary>
+    /// Bloco 82: o diário de obra (RDO) de um dia: o clima, o efetivo, os equipamentos, os serviços executados e as ocorrências. O
+    /// dia que não existe é criado.
+    /// </summary>
+    public const string Diario = "diario";
+
     /// <summary>Bloco 68: os do <see cref="CatalogoDaIa"/>, na ordem dele.</summary>
     public static IReadOnlyList<string> Todos => _todos ??= [.. CatalogoDaIa.Tipos.Select(t => t.Nome)];
 
@@ -56,6 +62,9 @@ public static class TiposDeAtualizacao
     /// <summary>Bloco 80: as ações de "quadro".</summary>
     public static IReadOnlyList<string> AcoesDoQuadro { get; } =
         ["mover", "item", "marcarItem", "etiqueta", "tirarEtiqueta", "arquivar", "desarquivar", "coluna", "raias"];
+
+    /// <summary>Bloco 82: as ações de "diario".</summary>
+    public static IReadOnlyList<string> AcoesDoDiario { get; } = ["clima", "efetivo", "equipamento", "servico", "ocorrencia"];
 }
 
 /// <summary>
@@ -92,6 +101,8 @@ public static class TiposDeAtualizacao
 /// <param name="Recurso">Bloco 67: atribuir: o nome do recurso.</param>
 /// <param name="Dias">Bloco 71: calendario (acao dias): os dias da semana de trabalho ("segunda a sábado").</param>
 /// <param name="Coluna">Bloco 80: quadro (acao mover): o nome da coluna do quadro para onde o card vai.</param>
+/// <param name="Periodo">Bloco 82: diario (acao clima): manha, tarde ou dia (os dois).</param>
+/// <param name="Praticavel">Bloco 82: diario (acao clima): "sim" ou "nao" (deu para trabalhar no período).</param>
 public sealed record AtualizacaoDaObra(
     string Tipo,
     string? Tarefa = null,
@@ -126,7 +137,9 @@ public sealed record AtualizacaoDaObra(
     string? Fornecedor = null,
     string? Recurso = null,
     string? Dias = null,
-    string? Coluna = null);
+    string? Coluna = null,
+    string? Periodo = null,
+    string? Praticavel = null);
 
 /// <summary>Bloco 42: de onde vêm as fotos que o assistente pede para importar.</summary>
 public static class OrigensDasFotos
@@ -154,10 +167,11 @@ public static class TelasDoPrograma
     public const string OrdensDeServico = "ordensDeServico"; // Bloco 64
     public const string RelatorioDasOrdens = "relatorioDasOrdens";
     public const string ImprimirGantt = "imprimirGantt"; // Bloco 67
+    public const string Diario = "diario"; // Bloco 82: o diário de obra, no dia "de"
 
     public static IReadOnlyList<string> Todas { get; } =
         [Indicadores, Orcamento, Medicoes, Custos, Recursos, UsoDeRecursos, FisicoFinanceiro, RelatorioFotografico, FotosDoProjeto, Resumo, LinhasDeBase,
-         OrdensDeServico, RelatorioDasOrdens, ImprimirGantt];
+         OrdensDeServico, RelatorioDasOrdens, ImprimirGantt, Diario];
 
     /// <summary>As abas de cada tela que tem abas.</summary>
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Abas { get; } = new Dictionary<string, IReadOnlyList<string>>
@@ -186,6 +200,7 @@ public static class TelasDoPrograma
         OrdensDeServico => "Ordens de serviço",
         RelatorioDasOrdens => "Relatório das ordens de serviço",
         ImprimirGantt => "Imprimir o Gantt",
+        Diario => "Diário de obra",
         _ => tela,
     };
 }

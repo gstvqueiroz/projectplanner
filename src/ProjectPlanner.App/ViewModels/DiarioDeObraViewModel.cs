@@ -207,6 +207,20 @@ public sealed partial class DiarioDeObraViewModel : ViewModelBase
     [RelayCommand]
     private void AdicionarAtividade() => MudarLista(() => Atividades.Add(new LinhaDaAtividade(this, null)));
 
+    /// <summary>
+    /// Bloco 82: a tela já no dia (pela IA: "abre o RDO de ontem"). Um dia que não está no diário fica escolhido para o Novo dia.
+    /// </summary>
+    public void Escolher(DateOnly data)
+    {
+        if (Dias.FirstOrDefault(d => d.Data == data) is { } dia)
+            Selecionado = dia;
+        else
+        {
+            DataDoNovo = data.ToDateTime(TimeOnly.MinValue);
+            Mensagem = $"O diário ainda não tem o dia {data:dd/MM/yyyy}: use Novo dia para criá-lo, já preenchido pelo cronograma.";
+        }
+    }
+
     // ---- Os dias ----
 
     /// <summary>Um dia novo na data escolhida, já preenchido pelo cronograma.</summary>

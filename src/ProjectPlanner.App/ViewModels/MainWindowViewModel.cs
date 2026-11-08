@@ -128,6 +128,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         {
             Calendario = CalendarioParaOAssistente(_cronograma.Calendario, inicio, termino), // Bloco 71
             Quadro = QuadroParaOAssistente(), // Bloco 78
+            Diario = DiarioParaOAssistente(), // Bloco 82
         };
     }
 

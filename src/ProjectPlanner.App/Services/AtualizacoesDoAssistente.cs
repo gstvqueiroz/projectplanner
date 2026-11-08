@@ -1,5 +1,6 @@
 using System.Globalization;
 using ProjectPlanner.Core;
+using ProjectPlanner.Core.Diario;
 using ProjectPlanner.Core.Kanban;
 using ProjectPlanner.Core.Indicadores;
 using ProjectPlanner.Core.OrdensDeServico;
@@ -401,6 +402,103 @@ public sealed record MudarOQuadro(string Acao, Guid? TarefaId, string? Texto) : 
             .Where(ch => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray());
 }
 
+/// <summary>
+/// Bloco 82: uma mudança no diário de obra (RDO) pedida pela IA, no programa ou pelo Telegram: o clima de um período, uma função
+/// do efetivo, um equipamento, um serviço executado ou uma ocorrência. O dia que não existe é criado só com o clima do
+/// calendário: as listas vêm do que o canteiro contou ("Preencher pelo cronograma" fica na tela). Um dia fechado não muda.
+/// </summary>
+/// <param name="Manha">clima: muda a manhã.</param>
+/// <param name="Tarde">clima: muda a tarde.</param>
+/// <param name="Quantidade">efetivo e equipamento: quantos no dia; 0 tira a linha.</param>
+/// <param name="Percentual">servico: o % da tarefa ao fim do dia (não muda o cronograma).</param>
+public sealed record MudarODiario(DateOnly Data, string Acao, bool Manha = false, bool Tarde = false, TempoNoPeriodo? Tempo = null,
+    bool? Praticavel = null, string? Nome = null, int? Quantidade = null, string? Empresa = null, Guid? TarefaId = null,
+    string? Descricao = null, int? Percentual = null) : OperacaoDaObra
+{
+    public override void Aplicar(Cronograma c, DateTime agora)
+    {
+        var diario = c.Diario;
+        var dia = diario.Dia(Data) ?? diario.Abrir(RegrasDoDiario.Sugerir(c, Data) with { Atividades = [], Efetivo = [], Equipamentos = [] });
+        diario.Salvar(Acao switch
+        {
+            "clima" => dia with { Manha = Manha ? Clima(dia.Manha) : dia.Manha, Tarde = Tarde ? Clima(dia.Tarde) : dia.Tarde },
+            "efetivo" => dia with { Efetivo = Efetivo(dia) },
+            "equipamento" => dia with { Equipamentos = Equipamentos(dia) },
+            "servico" => dia with { Atividades = Atividades(c, dia) },
+            "ocorrencia" => dia with { Ocorrencias = Ocorrencia(dia) },
+            _ => throw new DomainValidationException(nameof(Acao), $"Ação desconhecida no diário: {Acao}."),
+        });
+    }
+
+    private ClimaDoPeriodo Clima(ClimaDoPeriodo atual) => new(Tempo ?? atual.Tempo, Praticavel ?? atual.Praticavel);
+
+    private List<EfetivoNoDia> Efetivo(DiaDaObra dia)
+    {
+        var lista = dia.Efetivo.ToList();
+        var i = lista.FindIndex(e => MesmoNome(e.Funcao, Nome) && (Empresa is null || MesmoNome(e.Empresa, Empresa)));
+        if (Quantidade is 0)
+        {
+            if (i < 0)
+                throw new DomainValidationException(nameof(Nome), $"O efetivo de {Data:dd/MM/yyyy} não tem \"{Nome}\".");
+            lista.RemoveAt(i);
+        }
+        else if (i >= 0)
+            lista[i] = lista[i] with { Quantidade = Quantidade ?? lista[i].Quantidade, Empresa = Empresa ?? lista[i].Empresa };
+        else
+            lista.Add(new EfetivoNoDia(Nome ?? "", Quantidade ?? 1, Empresa));
+        return lista;
+    }
+
+    private List<EquipamentoNoDia> Equipamentos(DiaDaObra dia)
+    {
+        var lista = dia.Equipamentos.ToList();
+        var i = lista.FindIndex(e => MesmoNome(e.Nome, Nome));
+        if (Quantidade is 0)
+        {
+            if (i < 0)
+                throw new DomainValidationException(nameof(Nome), $"Os equipamentos de {Data:dd/MM/yyyy} não têm \"{Nome}\".");
+            lista.RemoveAt(i);
+        }
+        else if (i >= 0)
+            lista[i] = lista[i] with { Quantidade = Quantidade ?? lista[i].Quantidade };
+        else
+            lista.Add(new EquipamentoNoDia(Nome ?? "", Quantidade ?? 1));
+        return lista;
+    }
+
+    private List<AtividadeNoDia> Atividades(Cronograma c, DiaDaObra dia)
+    {
+        var lista = dia.Atividades.ToList();
+        var i = TarefaId is { } id ? lista.FindIndex(a => a.TarefaId == id) : lista.FindIndex(a => MesmoNome(a.Descricao, Descricao));
+        if (i >= 0)
+            lista[i] = lista[i] with { Descricao = Descricao ?? lista[i].Descricao, Percentual = Percentual ?? lista[i].Percentual };
+        else if (TarefaId is { } tarefa)
+            lista.Add(new AtividadeNoDia(tarefa, Descricao ?? $"{c.NumeracaoEdt()[tarefa]} {Tarefa(c, tarefa).Nome}", Percentual));
+        else
+            lista.Add(new AtividadeNoDia(null, Descricao ?? "", Percentual));
+        return lista;
+    }
+
+    private string Ocorrencia(DiaDaObra dia)
+    {
+        var texto = (Descricao ?? "").Trim();
+        return dia.Ocorrencias is not { Length: > 0 } atuais ? texto
+            : atuais.Contains(texto, StringComparison.CurrentCultureIgnoreCase) ? atuais
+            : atuais + "\n" + texto;
+    }
+
+    /// <summary>O mesmo nome, sem diferença de maiúsculas, acentos e plural ("Serventes" é "Servente").</summary>
+    public static bool MesmoNome(string? a, string? b)
+    {
+        var (x, y) = (Normal(a), Normal(b));
+        return x.Length > 0 && (x == y || x + "s" == y || y + "s" == x || x + "es" == y || y + "es" == x);
+    }
+
+    private static string Normal(string? texto) =>
+        new string((texto ?? "").Trim().ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD)
+            .Where(ch => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray());
+}
+
 /// <summary>Um item do cartão: o texto para o usuário e a operação, ou o motivo de não dar para aplicar.</summary>
 public sealed record ItemDoCartao(string Texto, OperacaoDaObra? Operacao, string? Problema)
 {
@@ -630,6 +728,8 @@ public static class AtualizacoesDoAssistente
                 return Calendario(a, hoje);
             case TiposDeAtualizacao.Quadro: // Bloco 80
                 return Quadro(c, a, tarefa, nome);
+            case TiposDeAtualizacao.Diario: // Bloco 82
+                return Diario(c, a, tarefa, nome, hoje);
             case TiposDeAtualizacao.LinhaDeBase:
                 return new(a.Nome is { } n2 ? $"Salvar a linha de base \"{n2}\"" : "Salvar uma linha de base (o cronograma de agora)", new SalvarLinhaDeBase(a.Nome), null);
             default:
@@ -685,6 +785,88 @@ public static class AtualizacoesDoAssistente
             return null;
         }
     }
+
+    // Bloco 82: o diário de obra (RDO): o dia em data (vazia é hoje), um dado por atualização. O dia que não existe é criado.
+    private static ItemDoCartao Diario(Cronograma c, AtualizacaoDaObra a, Tarefa? tarefa, string nome, DateOnly hoje)
+    {
+        var acao = TiposDeAtualizacao.AcoesDoDiario.FirstOrDefault(x => string.Equals(x, a.Acao?.Trim(), StringComparison.OrdinalIgnoreCase));
+        var data = Data(a.Data) ?? hoje;
+        var dia = $"RDO de {data:dd/MM/yyyy}" + (c.Diario.Dia(data) is null ? " (dia novo)" : "");
+        var oQue = (a.Nome ?? "").Trim();
+        int? quantidade = a.Quantidade is { } q && q == Math.Round(q) && q is >= 0 and <= DiarioDaObra.QuantidadeMaxima ? (int)q : null;
+        var empresa = string.IsNullOrWhiteSpace(a.Fornecedor) ? null : a.Fornecedor.Trim();
+        var descricao = string.IsNullOrWhiteSpace(a.Descricao) ? null : a.Descricao.Trim();
+        ItemDoCartao Item(string texto, OperacaoDaObra? operacao, string? problema = null) =>
+            new($"{dia}: {texto}", problema is null ? operacao : null, problema);
+        if (!string.IsNullOrWhiteSpace(a.Data) && Data(a.Data) is null)
+            return Item(acao ?? a.Acao ?? "?", null, "não entendi a data (AAAA-MM-DD)");
+        switch (acao)
+        {
+            case "clima":
+            {
+                var periodo = Normal(a.Periodo);
+                var (manha, tarde) = periodo switch { "manha" => (true, false), "tarde" => (false, true), _ => (true, true) };
+                TempoNoPeriodo? tempo = Normal(a.Nome) switch
+                {
+                    "" => null,
+                    "bom" or "sol" or "ensolarado" or "limpo" => TempoNoPeriodo.Bom,
+                    "nublado" => TempoNoPeriodo.Nublado,
+                    "chuva" or "chuvoso" => TempoNoPeriodo.Chuva,
+                    _ => (TempoNoPeriodo)(-1),
+                };
+                bool? praticavel = Normal(a.Praticavel) switch { "sim" => true, "nao" => false, _ => null };
+                var partes = new[] { tempo is { } t && Enum.IsDefined(t) ? ClimaDoPeriodo.NomeDoTempo(t).ToLowerInvariant() : null,
+                    praticavel is { } p ? p ? "praticável" : "impraticável" : null }.OfType<string>();
+                var texto = $"{(manha && tarde ? "manhã e tarde" : manha ? "manhã" : "tarde")}: {string.Join(", ", partes)}";
+                if (periodo is not ("" or "manha" or "tarde" or "dia"))
+                    return Item(texto, null, "o período é manha, tarde ou dia");
+                if (tempo is { } desconhecido && !Enum.IsDefined(desconhecido))
+                    return Item($"clima \"{oQue}\"", null, "o tempo é bom, nublado ou chuva");
+                if (tempo is null && praticavel is null)
+                    return Item("clima", null, "informe o tempo (bom, nublado ou chuva) ou se foi praticável");
+                return Item(texto, new MudarODiario(data, acao, manha, tarde, tempo, praticavel));
+            }
+            case "efetivo" or "equipamento":
+            {
+                var lista = acao == "efetivo" ? "efetivo" : "equipamento";
+                var texto = quantidade is 0 ? $"tirar {oQue} {(acao == "efetivo" ? "do efetivo" : "dos equipamentos")}"
+                    : $"{lista} {oQue} = {quantidade?.ToString(Brasil) ?? "?"}{(acao == "efetivo" && empresa is not null ? $" ({empresa})" : "")}";
+                if (oQue.Length == 0)
+                    return Item(lista, null, acao == "efetivo" ? "informe a função (nome)" : "informe o equipamento (nome)");
+                if (a.Quantidade is null)
+                    return Item(texto, null, "informe a quantidade");
+                if (quantidade is null)
+                    return Item(texto, null, $"a quantidade vai de 0 a {DiarioDaObra.QuantidadeMaxima} (0 tira)");
+                return Item(texto, new MudarODiario(data, acao, Nome: oQue, Quantidade: quantidade, Empresa: acao == "efetivo" ? empresa : null));
+            }
+            case "servico":
+            {
+                int? percentual = a.Percentual is { } pc ? (int)Math.Round(pc) : null;
+                var texto = $"serviço {(tarefa is null ? descricao ?? nome : descricao is null ? nome : $"{nome}: {descricao}")}" +
+                            (percentual is { } x ? $" ({x}% no fim do dia)" : "");
+                if (a.Tarefa is not null && tarefa is null)
+                    return Item(texto, null, $"não há a tarefa nº {a.Tarefa} no cronograma");
+                if (tarefa is null && descricao is null)
+                    return Item("serviço", null, "informe a tarefa ou a descrição do serviço");
+                if (tarefa is { EhResumo: true })
+                    return Item(texto, null, $"\"{tarefa.Nome}\" é um resumo: informe uma tarefa sem subtarefas");
+                if (a.Percentual is { } fora && (fora < 0 || fora > 100))
+                    return Item(texto, null, "o % precisa ir de 0 a 100");
+                return Item(texto, new MudarODiario(data, acao, TarefaId: tarefa?.Id, Descricao: descricao, Percentual: percentual));
+            }
+            case "ocorrencia":
+                return descricao is null
+                    ? Item("ocorrência", null, "informe a ocorrência (descricao)")
+                    : Item($"ocorrência \"{descricao}\"", new MudarODiario(data, acao, Descricao: descricao));
+            default:
+                return Item(a.Acao ?? "?", null, "ação desconhecida (" + string.Join(", ", TiposDeAtualizacao.AcoesDoDiario) + ")");
+        }
+    }
+
+    // Sem maiúsculas, acentos e espaços nas pontas.
+    private static string Normal(string? texto) =>
+        new string((texto ?? "").Trim().ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD)
+            .Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark).ToArray());
 
     // Bloco 71: o calendário de trabalho (o dia: data ou de; o fim: ate; o nome: nome ou descricao).
     private static ItemDoCartao Calendario(AtualizacaoDaObra a, DateOnly hoje)

@@ -61,6 +61,15 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
     /// <summary>Linhas do quadro no retrato, no máximo.</summary>
     public const int LinhasDoQuadro = 60;
 
+    /// <summary>
+    /// Bloco 82: o diário de obra (RDO). A primeira linha resume (quantos dias, o último fechado); as outras são os dias mais
+    /// recentes, um por linha, em ordem de data. Nulo sem diário.
+    /// </summary>
+    public IReadOnlyList<string>? Diario { get; init; }
+
+    /// <summary>Dias do diário no retrato, no máximo (os mais recentes).</summary>
+    public const int DiasDoDiario = 10;
+
     /// <summary>Linhas do orçamento no retrato, no máximo.</summary>
     public const int LinhasDoOrcamento = 200;
 
@@ -117,6 +126,12 @@ public sealed record ContextoDoProjeto(string Nome, DateOnly Inicio, DateOnly Te
             texto.AppendLine("Quadro Kanban (cada card é uma tarefa sem subtarefas, pelo Nº; numa coluna do tipo A fazer o % é 0, numa " +
                              "Concluída é 100; mudar o % de uma tarefa leva o card para a coluna do tipo certo):");
             foreach (var linha in quadro.Take(LinhasDoQuadro))
+                texto.AppendLine("- " + Limpar(linha));
+        }
+        if (Diario is { Count: > 0 } diario)
+        {
+            texto.AppendLine($"Diário de obra (RDO): {Limpar(diario[0])}");
+            foreach (var linha in diario.Skip(1).TakeLast(DiasDoDiario))
                 texto.AppendLine("- " + Limpar(linha));
         }
         if (Orcamento is { Count: > 0 } orcamento)

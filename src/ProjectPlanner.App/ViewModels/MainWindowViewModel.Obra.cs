@@ -114,6 +114,12 @@ public sealed partial class MainWindowViewModel
             DateOnly.TryParseExact(texto?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
         switch (tela.Tela)
         {
+            case TelasDoPrograma.Diario: // Bloco 82: no dia pedido ("o RDO de ontem")
+                var diario = NovoDiario();
+                if (Data(tela.De) is { } dia)
+                    diario.Escolher(dia);
+                await _dialogos.MostrarDiarioDeObraAsync(diario);
+                break;
             case TelasDoPrograma.Indicadores:
                 Recalcular();
                 await _dialogos.MostrarIndicadoresAsync(new IndicadoresViewModel(_cronograma, _dialogos, _relogio, _analistaDaObra) { AbaEscolhida = Aba(tela) });

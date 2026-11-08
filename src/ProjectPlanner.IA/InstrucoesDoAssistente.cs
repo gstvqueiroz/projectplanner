@@ -36,11 +36,21 @@ public static class InstrucoesDoAssistente
         "criada), arquivar ou desarquivar (tarefa: o card sai do quadro ou volta; a tarefa continua no cronograma), coluna (nome: " +
         "uma coluna nova, antes de Concluída) ou raias (nome: resumo, responsavel ou nenhuma). Um card por atualização. Para " +
         "\"concluir\" uma tarefa, mover para a coluna Concluída é o mesmo que pôr 100%.\n" +
+        "- Diário de obra (RDO, o do retrato): quando o canteiro conta o dia (clima, quem trabalhou, o que foi feito, o que " +
+        "aconteceu), registre com o tipo diario, um dado por atualização, com data (AAAA-MM-DD; vazia é hoje): acao clima (periodo " +
+        "manha, tarde ou dia; nome bom, nublado ou chuva; praticavel sim ou nao: se deu para trabalhar), efetivo (nome: a função, " +
+        "como Pedreiro; quantidade: quantos no dia, 0 tira; fornecedor: a empresa, se não for a própria), equipamento (nome e " +
+        "quantidade), servico (tarefa, o Nº, e/ou descricao do que foi feito; percentual: o % da tarefa no fim do dia) ou " +
+        "ocorrencia (descricao: visita, entrega de material, acidente, paralisação). O dia que não está no diário é criado; um dia " +
+        "fechado (assinado) não muda, e fechar o dia é com o usuário no programa. O % do diário não muda o cronograma: se o " +
+        "usuário contar o andamento de uma tarefa, proponha também o percentual. Choveu e a obra parou o dia todo: além do clima, " +
+        "proponha parar no calendário.\n" +
         "- Ordens de serviço: tipos os e situacaoOs (acima). Também acao pagar (paga as medições abertas da OS, com o documento em " +
         "documento: lança nos custos realizados), liberar (paga a retenção, depois de conferida e paga) e duplicar.\n" +
         "- Orçamento (composições, preços, BDI, equipes): \"orcamento\" pede as sugestões, que o usuário aplica na tela.\n" +
         "- Fotos: \"importarFotos\". Relatórios e telas: \"abrir\" (relatório fotográfico de um período ou de uma OS, com o texto; " +
-        "relatório das OS com de, ate e aba = abertas, encerradas ou vencidas; imprimirGantt com aba = a folha, A4 a A0; " +
+        "relatório das OS com de, ate e aba = abertas, encerradas ou vencidas; imprimirGantt com aba = a folha, A4 a A0; diario " +
+        "com de = o dia (o RDO de ontem, de 25/09); " +
         "medições, orçamento, indicadores…). Os arquivos (PDF, Excel) o usuário salva na tela que você abrir.\n" +
         "- Estimar: quando faltar um número (duração, quantidade, preço, equipe), estime com base no tipo de obra e nos documentos, " +
         "diga que é estimativa e proponha; o usuário confere no cartão.\n" +
@@ -55,7 +65,7 @@ public static class InstrucoesDoAssistente
         "ABRIR TELAS. Quando o usuário pedir para ver ou abrir algo (\"mostra a Curva S\", \"abre a medição 2\", \"relatório " +
         "fotográfico de setembro\"), preencha \"abrir\" com a tela (" + string.Join(", ", TelasDoPrograma.Todas) + ") e, quando fizer " +
         "sentido, a aba (" + string.Join("; ", TelasDoPrograma.Abas.Select(a => $"{a.Key}: {string.Join(", ", a.Value)}")) + "), o nº " +
-        "da medição, ou o período (de, ate em AAAA-MM-DD) do relatório fotográfico e do relatório das OS. " +
+        "da medição, o período (de, ate em AAAA-MM-DD) do relatório fotográfico e do relatório das OS, ou o dia (de) do diario. " +
         "Com \"os\" (o número), relatorioFotografico abre o relatório das fotos dessa OS (no período dela) e ordensDeServico abre " +
         "já nela. O programa abre a tela; na mensagem, diga em uma frase o que ela mostra. Para o relatório fotográfico, \"texto\": true já " +
         "pede à IA o texto do andamento (quando o usuário pedir para gerar ou montar o relatório).\n" +

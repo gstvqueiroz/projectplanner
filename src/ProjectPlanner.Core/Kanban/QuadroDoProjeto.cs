@@ -271,6 +271,22 @@ public sealed class QuadroDoProjeto
             _cards[id] = _cards[id] with { Ordem = ordem++ };
     }
 
+    /// <summary>Bloco 76: põe as colunas (já com a mudança), com as regras de <see cref="ValidarColunas"/>; recusadas, nada muda.</summary>
+    /// <exception cref="DomainValidationException">As colunas não seguem as regras.</exception>
+    internal void TrocarColunas(IEnumerable<ColunaDoQuadro> colunas)
+    {
+        var validas = ValidarColunas(colunas);
+        _colunas.Clear();
+        _colunas.AddRange(validas);
+    }
+
+    /// <summary>Bloco 76: os cards que não aparecem (arquivados, de resumos) de uma coluna que vai sair passam para outra.</summary>
+    internal void MoverOcultos(Guid de, Guid para)
+    {
+        foreach (var card in _cards.Values.Where(k => k.ColunaId == de).ToList())
+            _cards[card.TarefaId] = card with { ColunaId = para, Ordem = ProximaOrdem(para) };
+    }
+
     /// <summary>Um quadro igual a este, para a cópia do cronograma (o Desfazer guarda cópias); os cards são registros imutáveis.</summary>
     internal QuadroDoProjeto CopiarPara(Cronograma copia)
     {

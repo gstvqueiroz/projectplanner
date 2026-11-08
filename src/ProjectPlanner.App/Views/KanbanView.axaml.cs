@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ProjectPlanner.App.ViewModels;
+using ProjectPlanner.Core.Kanban;
 
 namespace ProjectPlanner.App.Views;
 
@@ -70,8 +71,8 @@ public partial class KanbanView : UserControl
         if (Vm is not { } vm)
             return;
         var origem = e.Source as Visual;
-        if (origem?.GetSelfAndVisualAncestors().OfType<ScrollBar>().Any() == true)
-            return; // nas barras de rolagem, é só rolar
+        if (origem?.GetSelfAndVisualAncestors().Any(v => v is ScrollBar or Button) == true)
+            return; // nas barras de rolagem é só rolar; os botões (⋯, + Adicionar coluna) cuidam de si
         var propriedades = e.GetCurrentPoint(this).Properties;
         Focus(); // o Delete vale no quadro (E1)
         var card = CardSob(origem);
@@ -79,6 +80,9 @@ public partial class KanbanView : UserControl
         {
             if (card is { Selecionado: false })
                 vm.ClicarNoCard(card.TarefaId, adicionar: false, intervalo: false);
+            else if (card is null && origem?.GetSelfAndVisualAncestors().OfType<DockPanel>().FirstOrDefault(d => d.Classes.Contains("cabecalho")) is
+                     { DataContext: ColunaNoKanban coluna } cabecalho)
+                AbrirMenu(coluna, cabecalho); // Bloco 76: o menu da coluna também no botão direito
             return;
         }
         if (!propriedades.IsLeftButtonPressed)
@@ -157,6 +161,69 @@ public partial class KanbanView : UserControl
                 vm?.ClicarNoCard(card.TarefaId, adicionar: false, intervalo: false);
         }
         e.Handled = true;
+    }
+
+    /// <summary>Bloco 76: o último menu de coluna aberto (os testes o leem).</summary>
+    internal ContextMenu? MenuAberto { get; private set; }
+
+    private void AbrirMenuDaColuna(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control botao && botao.DataContext is ColunaNoKanban coluna)
+            AbrirMenu(coluna, botao);
+    }
+
+    private void AbrirMenu(ColunaNoKanban coluna, Control alvo)
+    {
+        MenuAberto?.Close();
+        MenuAberto = MenuDaColuna(coluna);
+        MenuAberto.Open(alvo);
+    }
+
+    /// <summary>
+    /// Bloco 76 (K2): Renomear…, Cor, Tipo, Limite de cards…, Mover para a esquerda/direita e Excluir coluna…. Montado na hora (a cor
+    /// e o tipo marcados são os de agora).
+    /// </summary>
+    internal static ContextMenu MenuDaColuna(ColunaNoKanban coluna)
+    {
+        var cores = new MenuItem { Header = "Cor" };
+        foreach (var (nome, cor) in RegrasDasColunas.Paleta)
+            cores.Items.Add(new MenuItem
+            {
+                Header = nome,
+                Command = coluna.ColorirCommand,
+                CommandParameter = cor,
+                ToggleType = MenuItemToggleType.Radio,
+                GroupName = "cor",
+                IsChecked = string.Equals(coluna.Cor, cor, StringComparison.OrdinalIgnoreCase),
+                Icon = new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.Parse(cor)) },
+            });
+        var tipos = new MenuItem { Header = "Tipo" };
+        foreach (var tipo in Enum.GetValues<TipoDeColuna>())
+            tipos.Items.Add(new MenuItem
+            {
+                Header = QuadroDoProjeto.NomeDoTipo(tipo) + tipo switch
+                {
+                    TipoDeColuna.AFazer => " (o card vai a 0%)",
+                    TipoDeColuna.Concluida => " (o card vai a 100%)",
+                    _ => " (o card mantém o %)",
+                },
+                Command = coluna.MudarTipoCommand,
+                CommandParameter = tipo,
+                ToggleType = MenuItemToggleType.Radio,
+                GroupName = "tipo",
+                IsChecked = coluna.Tipo == tipo,
+            });
+        var menu = new ContextMenu();
+        menu.Items.Add(new MenuItem { Header = "Renomear…", Command = coluna.RenomearCommand });
+        menu.Items.Add(cores);
+        menu.Items.Add(tipos);
+        menu.Items.Add(new MenuItem { Header = "Limite de cards…", Command = coluna.DefinirLimiteCommand });
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = "Mover para a esquerda", Command = coluna.MoverParaAEsquerdaCommand, IsEnabled = coluna.PodeIrParaAEsquerda });
+        menu.Items.Add(new MenuItem { Header = "Mover para a direita", Command = coluna.MoverParaADireitaCommand, IsEnabled = coluna.PodeIrParaADireita });
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = "Excluir coluna…", Command = coluna.ExcluirCommand });
+        return menu;
     }
 
     private void TeclaApertada(object? sender, KeyEventArgs e)

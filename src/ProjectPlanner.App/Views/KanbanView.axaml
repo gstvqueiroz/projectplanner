@@ -55,6 +55,25 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,0,4,0" />
         </Style>
+        <Style Selector="Button.opcoes">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,0,6,2" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Margin" Value="4,0,-6,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.adicionarColuna">
+            <Setter Property="Width" Value="220" />
+            <Setter Property="Margin" Value="10" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Background" Value="{DynamicResource FundoDaColunaDoQuadro}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextoSecundarioDoCard}" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
         <Style Selector="ProgressBar.percentual">
             <Setter Property="MinHeight" Value="4" />
             <Setter Property="Height" Value="4" />
@@ -66,17 +85,23 @@
 
     <Panel>
         <ScrollViewer x:Name="Rolagem" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+          <StackPanel Orientation="Horizontal">
             <ItemsControl x:Name="ListaDeColunas" ItemsSource="{Binding Colunas}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="10" />
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="10,10,0,10" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ColunaNoKanban">
                         <Border Classes="coluna" Classes.acimaDoLimite="{Binding PassouDoLimite}">
                             <DockPanel>
-                                <DockPanel DockPanel.Dock="Top" Margin="12,10,12,8">
+                                <!-- Bloco 76: o menu ⋯ (também com o botão direito no cabeçalho) renomeia, colore, muda o tipo, põe o
+                                     limite de cards, reordena e exclui a coluna. -->
+                                <DockPanel DockPanel.Dock="Top" Classes="cabecalho" Margin="12,10,12,8" Background="Transparent">
+                                    <Button DockPanel.Dock="Right" Classes="opcoes" Content="⋯" Click="AbrirMenuDaColuna"
+                                            ToolTip.Tip="Opções da coluna: renomear, cor, tipo, limite de cards, mover e excluir"
+                                            AutomationProperties.Name="Opções da coluna" />
                                     <Border DockPanel.Dock="Left" Width="10" Height="10" CornerRadius="5" Margin="0,0,8,0" VerticalAlignment="Center"
                                             Background="{Binding Cor, Converter={x:Static v:Conversores.Cor}}" />
                                     <TextBlock DockPanel.Dock="Right" Classes="secundario" Classes.atrasada="{Binding PassouDoLimite}"
@@ -151,6 +176,10 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <!-- Bloco 76 -->
+            <Button x:Name="BotaoAdicionarColuna" Classes="adicionarColuna" Content="+ Adicionar coluna" Command="{Binding AdicionarColunaCommand}"
+                    ToolTip.Tip="Uma coluna nova, antes de Concluída (do tipo Em andamento, como uma &quot;Em revisão&quot;)" />
+          </StackPanel>
         </ScrollViewer>
 
         <!-- Sem nenhum card: o que é o quadro e como os cards chegam nele. -->

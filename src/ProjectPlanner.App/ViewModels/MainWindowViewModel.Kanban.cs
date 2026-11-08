@@ -5,8 +5,8 @@ namespace ProjectPlanner.App.ViewModels;
 
 // Bloco 75 (o plano "Delete, arrastar e Kanban", K1 a K7): o quadro Kanban, uma visão das mesmas tarefas. Clicar num card
 // seleciona a tarefa (a mesma seleção da grade e do Gantt); soltar cards numa coluna aplica as regras do quadro (o % segue o
-// card) num passo só do Desfazer; o Delete num card exclui a tarefa com as regras de sempre.
-public sealed partial class MainWindowViewModel
+// card) num passo só do Desfazer; o Delete num card exclui a tarefa com as regras de sempre. Bloco 76: o menu das colunas.
+public sealed partial class MainWindowViewModel : IAcoesDasColunas
 {
     /// <summary>O quadro Kanban (Exibir > Kanban), refeito a cada alteração, como o Gantt.</summary>
     public KanbanViewModel Kanban { get; } = new();
@@ -17,6 +17,7 @@ public sealed partial class MainWindowViewModel
         Kanban.VazioClicado += () => TarefaSelecionada = null;
         Kanban.PreverMovimento = PreverMovimentoNoQuadro;
         Kanban.Mover = MoverCards;
+        Kanban.Acoes = this;
     }
 
     /// <summary>O que aconteceria ao soltar os cards das tarefas na coluna, na lacuna dada (0 é antes do primeiro card). Não muda nada.</summary>
@@ -51,17 +52,7 @@ public sealed partial class MainWindowViewModel
         }
         var resultado = RegrasDoQuadro.Aplicar(_cronograma, plano);
         DefinirSelecao(plano.Tarefas.Select(LinhaDe), LinhaDe(plano.Tarefas[0]));
-        if (plano.SoOQuadro)
-        {
-            // Só os cards mudaram de lugar: nenhuma data nem % muda, e o cronograma não é recalculado.
-            AvisoComDesfazer = null;
-            RegistrarNoHistorico(resultado.Descricao);
-            PossuiAlteracoesNaoSalvas = true;
-            OnPropertyChanged(nameof(Titulo));
-            AtualizarQuadro();
-        }
-        else
-            MarcarAlteracao(resultado.Descricao); // o % dos resumos, a Curva S, os indicadores...
+        RegistrarMudancaDoQuadro(resultado.Descricao, recalcular: !plano.SoOQuadro);
         Mensagem = resultado.Texto;
         if (plano.ZeraProgresso)
             AvisoComDesfazer = resultado.Texto;
@@ -92,6 +83,169 @@ public sealed partial class MainWindowViewModel
             DefinirSelecao(ordem.Skip(Math.Min(de, ate)).Take(Math.Abs(ate - de) + 1).Select(LinhaDe), linha);
         else
             DefinirSelecao([linha], linha);
+    }
+
+    // ---- Bloco 76 (K2): as colunas ----
+
+    async Task IAcoesDasColunas.AdicionarColunaAsync()
+    {
+        var nome = await _dialogos.PedirTextoAsync("Nova coluna",
+            "Nome da coluna nova (ela entra antes de Concluída, do tipo Em andamento; o tipo e o lugar mudam pelo menu ⋯ dela):", "Em revisão");
+        if (nome is null)
+            return;
+        MudarAsColunas($"Adicionar coluna \"{nome.Trim()}\"", () => ($"Coluna \"{RegrasDasColunas.Adicionar(_cronograma, nome).Nome}\" adicionada.", false));
+    }
+
+    async Task IAcoesDasColunas.RenomearColunaAsync(Guid colunaId)
+    {
+        if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna)
+            return;
+        var nome = await _dialogos.PedirTextoAsync("Renomear coluna", "Nome da coluna:", coluna.Nome);
+        if (nome is null || nome.Trim() == coluna.Nome)
+            return;
+        MudarAsColunas($"Renomear coluna \"{coluna.Nome}\"", () =>
+        {
+            RegrasDasColunas.Renomear(_cronograma, colunaId, nome);
+            return ($"A coluna \"{coluna.Nome}\" agora é \"{nome.Trim()}\".", false);
+        });
+    }
+
+    void IAcoesDasColunas.ColorirColuna(Guid colunaId, string cor)
+    {
+        if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna || coluna.Cor == cor)
+            return;
+        MudarAsColunas($"Cor da coluna \"{coluna.Nome}\"", () =>
+        {
+            RegrasDasColunas.Colorir(_cronograma, colunaId, cor);
+            return ($"Cor da coluna \"{coluna.Nome}\" mudada.", false);
+        });
+    }
+
+    async Task IAcoesDasColunas.DefinirLimiteDaColunaAsync(Guid colunaId)
+    {
+        if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna)
+            return;
+        var texto = await _dialogos.PedirTextoAsync("Limite de cards",
+            $"Quantos cards a coluna \"{coluna.Nome}\" pode ter? Passou disso, ela fica destacada. Deixe vazio para não ter limite.",
+            coluna.Limite?.ToString(System.Globalization.CultureInfo.CurrentCulture));
+        if (texto is null)
+            return;
+        int? limite = null;
+        if (!string.IsNullOrWhiteSpace(texto))
+        {
+            if (!int.TryParse(texto.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.CurrentCulture, out var numero))
+            {
+                Mensagem = "O limite de cards é um número inteiro (vazio: sem limite).";
+                return;
+            }
+            limite = numero;
+        }
+        if (limite == coluna.Limite)
+            return;
+        MudarAsColunas($"Limite de cards de \"{coluna.Nome}\"", () =>
+        {
+            RegrasDasColunas.DefinirLimite(_cronograma, colunaId, limite);
+            return (limite is { } l ? $"A coluna \"{coluna.Nome}\" fica destacada com mais de {l} cards." : $"A coluna \"{coluna.Nome}\" não tem mais limite de cards.", false);
+        });
+    }
+
+    void IAcoesDasColunas.MoverColuna(Guid colunaId, int passo)
+    {
+        if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna)
+            return;
+        var indice = _cronograma.Quadro.Colunas.ToList().IndexOf(coluna) + Math.Sign(passo);
+        if (indice < 0 || indice >= _cronograma.Quadro.Colunas.Count)
+            return;
+        MudarAsColunas($"Mover coluna \"{coluna.Nome}\"", () =>
+        {
+            RegrasDasColunas.Mover(_cronograma, colunaId, passo);
+            return ($"A coluna \"{coluna.Nome}\" agora é a {indice + 1}ª do quadro.", false);
+        });
+    }
+
+    void IAcoesDasColunas.MudarTipoDaColuna(Guid colunaId, TipoDeColuna tipo)
+    {
+        if (_cronograma.Quadro.Coluna(colunaId) is not { } coluna || coluna.Tipo == tipo)
+            return;
+        MudarAsColunas($"Tipo da coluna \"{coluna.Nome}\"", () =>
+        {
+            RegrasDasColunas.MudarTipo(_cronograma, colunaId, tipo);
+            return ($"A coluna \"{coluna.Nome}\" agora é do tipo {QuadroDoProjeto.NomeDoTipo(tipo)}" + tipo switch
+            {
+                TipoDeColuna.Concluida => ": o card que entrar nela vai a 100%.",
+                TipoDeColuna.AFazer => ": o card que entrar nela vai a 0%.",
+                _ => ": o card que entrar nela mantém o %.",
+            }, false);
+        });
+    }
+
+    /// <summary>K2: excluir uma coluna com cards pergunta para onde eles vão (com a regra do % de lá); a última de um tipo não sai.</summary>
+    async Task IAcoesDasColunas.ExcluirColunaAsync(Guid colunaId)
+    {
+        if (_cronograma.Quadro.Coluna(colunaId) is null)
+            return;
+        var plano = RegrasDasColunas.PlanejarExclusao(_cronograma, colunaId);
+        if (plano.Motivo is { } motivo)
+        {
+            Mensagem = motivo;
+            return;
+        }
+        Guid? destino = null;
+        if (plano.Cards > 0)
+        {
+            var opcoes = plano.Destinos.Select(d => $"Mover para \"{d.Nome}\"" + (d.Tipo == plano.Coluna.Tipo ? "" : d.Tipo switch
+            {
+                TipoDeColuna.Concluida => " (vão a 100%)",
+                TipoDeColuna.AFazer => " (o % volta a 0)",
+                _ => plano.Coluna.Tipo == TipoDeColuna.Concluida ? " (voltam ao % de antes)" : "",
+            })).ToList();
+            var cards = plano.Cards == 1 ? "1 card" : $"{plano.Cards} cards";
+            var escolha = await _dialogos.EscolherAsync("Excluir coluna",
+                $"A coluna \"{plano.Coluna.Nome}\" tem {cards}. Para onde {(plano.Cards == 1 ? "ele vai" : "eles vão")}? As tarefas continuam no cronograma.", opcoes);
+            if (escolha is not { } i || i < 0 || i >= plano.Destinos.Count)
+                return;
+            destino = plano.Destinos[i].Id;
+        }
+        if (MudarAsColunas($"Excluir coluna \"{plano.Coluna.Nome}\"", () =>
+            {
+                var resultado = RegrasDasColunas.Excluir(_cronograma, colunaId, destino);
+                return (resultado.Texto, resultado.MudouPercentual);
+            }))
+            AvisoComDesfazer = Mensagem;
+    }
+
+    // Uma mudança nas colunas: um passo do Desfazer; só recalcula se algum % mudou. As regras conferem antes de mexer: recusada,
+    // nada muda e o motivo vai para a barra de status.
+    private bool MudarAsColunas(string descricao, Func<(string Texto, bool Recalcular)> mudanca)
+    {
+        (string Texto, bool Recalcular) resultado;
+        try
+        {
+            resultado = mudanca();
+        }
+        catch (DomainValidationException ex)
+        {
+            Mensagem = ex.Message;
+            return false;
+        }
+        RegistrarMudancaDoQuadro(descricao, resultado.Recalcular);
+        Mensagem = resultado.Texto;
+        return true;
+    }
+
+    // Um passo do Desfazer para o que mudou no quadro. Sem % mudado, nenhuma data muda: não recalcula (como reordenar na grade).
+    private void RegistrarMudancaDoQuadro(string descricao, bool recalcular)
+    {
+        if (recalcular)
+        {
+            MarcarAlteracao(descricao); // o % dos resumos, a Curva S, os indicadores...
+            return;
+        }
+        AvisoComDesfazer = null;
+        RegistrarNoHistorico(descricao);
+        PossuiAlteracoesNaoSalvas = true;
+        OnPropertyChanged(nameof(Titulo));
+        AtualizarQuadro();
     }
 
     private void AtualizarQuadro() =>

@@ -3,6 +3,22 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.76.0
+
+**As colunas do Kanban** (o plano "Delete, arrastar e Kanban", K2): cada coluna tem o menu ⋯ (também no botão direito do
+cabeçalho), e o quadro termina com "+ Adicionar coluna".
+
+- **Adicionar coluna:** a nova entra antes de Concluída, do tipo Em andamento (como uma "Em revisão"), com uma cor ainda sem uso.
+- **Renomear, Cor e Mover para a esquerda/direita:** os cards vão junto com a coluna. Nomes repetidos são recusados.
+- **Tipo** (A fazer, Em andamento ou Concluída): só muda se os cards da coluna já combinam com o tipo novo, e nenhum % muda por
+  isso.
+- **Limite de cards (WIP)**, opcional: passou do limite, a coluna fica destacada e a contagem ("4/2") em vermelho. Vazio tira o
+  limite.
+- **Excluir coluna:** com cards, pergunta para onde eles vão, e lá vale a regra do % (para Concluída vão a 100%, para A fazer
+  voltam a 0); as tarefas continuam no cronograma. O aviso traz o Desfazer. A última coluna de um tipo não sai, porque é para
+  onde vão as tarefas com aquele %.
+- Cada mudança é um passo do Desfazer; mexer só nas colunas não recalcula o cronograma.
+
 ## 0.75.0
 
 **Kanban** (o plano "Delete, arrastar e Kanban", K1 a K7): um quadro estilo Trello que é uma nova visão das mesmas tarefas, em

@@ -141,4 +141,53 @@ public partial class MenuPrincipalTests
         a.ClicarComOMouse(a.Janela.FindControl<Button>("DesfazerDoAviso")!);
         CardsDa(a, "A fazer").Should().Equal("A", "B", "C", "D");
     });
+
+    // Bloco 76 (K2): o menu ⋯ da coluna (também no botão direito do cabeçalho) e o "+ Adicionar coluna".
+    private static IEnumerable<string> Titulos(ContextMenu menu) =>
+        menu.Items.Select(i => i is Separator ? Linha : (string)((MenuItem)i!).Header!);
+
+    [Fact]
+    public Task Kanban_MenuDaColuna_PeloBotaoEPeloBotaoDireito() => Tela.Executar(() =>
+    {
+        var a = NoKanban();
+        var impedida = ColunaNaTela(a, "Impedida");
+
+        a.ClicarComOMouse(impedida.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("opcoes")));
+
+        var menu = a.Janela.QuadroKanban.MenuAberto!;
+        Titulos(menu).Should().Equal("Renomear…", "Cor", "Tipo", "Limite de cards…", Linha, "Mover para a esquerda", "Mover para a direita", Linha,
+            "Excluir coluna…");
+        var tipo = menu.Items.OfType<MenuItem>().Single(i => (string)i.Header! == "Tipo");
+        tipo.Items.OfType<MenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header!).Should().Equal("Em andamento (o card mantém o %)");
+        menu.Items.OfType<MenuItem>().Single(i => (string)i.Header! == "Cor").Items.OfType<MenuItem>().Should().HaveCount(8);
+        var excluir = menu.Items.OfType<MenuItem>().Single(i => (string)i.Header! == "Excluir coluna…");
+        excluir.Command!.Execute(excluir.CommandParameter);
+        menu.Close();
+        Pintar(a);
+        a.Vm.Kanban.Colunas.Select(c => c.Nome).Should().Equal("A fazer", "Em andamento", "Concluída");
+        a.Janela.FindControl<Border>("AvisoComDesfazer")!.IsVisible.Should().BeTrue();
+
+        var cabecalho = ColunaNaTela(a, "A fazer").GetVisualDescendants().OfType<DockPanel>().First(d => d.Classes.Contains("cabecalho"));
+        a.Janela.MouseDown(Meio(a, cabecalho), MouseButton.Right);
+        a.Janela.MouseUp(Meio(a, cabecalho), MouseButton.Right);
+        menu = a.Janela.QuadroKanban.MenuAberto!;
+        menu.Items.OfType<MenuItem>().Single(i => (string)i.Header! == "Mover para a esquerda").IsEnabled.Should().BeFalse("é a primeira");
+        menu.Close();
+    });
+
+    [Fact]
+    public Task Kanban_AdicionarColuna_PeloBotao_SemPerderASelecao() => Tela.Executar(() =>
+    {
+        var a = NoKanban();
+        a.Janela.MouseDown(Meio(a, CardNaTela(a, "B")), MouseButton.Left);
+        a.Janela.MouseUp(Meio(a, CardNaTela(a, "B")), MouseButton.Left);
+        a.Ambiente.Dialogos.TextoDigitado = "Em revisão";
+
+        a.ClicarComOMouse(a.Janela.QuadroKanban.FindControl<Button>("BotaoAdicionarColuna")!);
+        Pintar(a);
+
+        a.Vm.Kanban.Colunas.Select(c => c.Nome).Should().Equal("A fazer", "Em andamento", "Impedida", "Em revisão", "Concluída");
+        ColunaNaTela(a, "Em revisão").IsVisible.Should().BeTrue();
+        a.Vm.TarefaSelecionada!.Nome.Should().Be("B", "clicar no botão não é clicar numa área vazia");
+    });
 }

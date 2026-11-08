@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ProjectPlanner.Core;
 using ProjectPlanner.Core.Kanban;
 
@@ -66,10 +67,62 @@ public sealed partial class CardNoKanban(Guid tarefaId) : ObservableObject
     partial void OnPercentualChanged(int value) => OnPropertyChanged(nameof(Fracao));
 }
 
-/// <summary>Bloco 75: uma coluna do quadro, com os cards dela na ordem do quadro.</summary>
-public sealed partial class ColunaNoKanban(Guid id) : ObservableObject
+/// <summary>
+/// Bloco 76 (K2): o que o menu de uma coluna pede ao programa (que aplica as regras de <see cref="RegrasDasColunas"/> e registra o
+/// Desfazer).
+/// </summary>
+public interface IAcoesDasColunas
+{
+    Task AdicionarColunaAsync();
+
+    Task RenomearColunaAsync(Guid colunaId);
+
+    void ColorirColuna(Guid colunaId, string cor);
+
+    Task DefinirLimiteDaColunaAsync(Guid colunaId);
+
+    void MoverColuna(Guid colunaId, int passo);
+
+    void MudarTipoDaColuna(Guid colunaId, TipoDeColuna tipo);
+
+    Task ExcluirColunaAsync(Guid colunaId);
+}
+
+/// <summary>Bloco 75: uma coluna do quadro, com os cards dela na ordem do quadro; Bloco 76: os comandos do menu dela.</summary>
+public sealed partial class ColunaNoKanban(Guid id, Func<IAcoesDasColunas?>? acoes = null) : ObservableObject
 {
     public Guid Id { get; } = id;
+
+    private IAcoesDasColunas? Acoes => acoes?.Invoke();
+
+    /// <summary>Não é a primeira: dá para levar para a esquerda.</summary>
+    [ObservableProperty]
+    public partial bool PodeIrParaAEsquerda { get; set; }
+
+    /// <summary>Não é a última: dá para levar para a direita.</summary>
+    [ObservableProperty]
+    public partial bool PodeIrParaADireita { get; set; }
+
+    [RelayCommand]
+    private Task Renomear() => Acoes?.RenomearColunaAsync(Id) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private void Colorir(string cor) => Acoes?.ColorirColuna(Id, cor);
+
+    [RelayCommand]
+    private Task DefinirLimite() => Acoes?.DefinirLimiteDaColunaAsync(Id) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private void MoverParaAEsquerda() => Acoes?.MoverColuna(Id, -1);
+
+    [RelayCommand]
+    private void MoverParaADireita() => Acoes?.MoverColuna(Id, 1);
+
+    [RelayCommand]
+    private void MudarTipo(TipoDeColuna tipo) => Acoes?.MudarTipoDaColuna(Id, tipo);
+
+    [RelayCommand]
+    private Task Excluir() => Acoes?.ExcluirColunaAsync(Id) ?? Task.CompletedTask;
 
     [ObservableProperty]
     public partial string Nome { get; set; } = "";
@@ -116,6 +169,13 @@ public sealed partial class KanbanViewModel : ObservableObject
     [ObservableProperty]
     public partial bool SemCards { get; private set; } = true;
 
+    /// <summary>Bloco 76: quem aplica o que o menu das colunas pede (o programa).</summary>
+    public IAcoesDasColunas? Acoes { get; set; }
+
+    /// <summary>Bloco 76: "+ Adicionar coluna", no fim do quadro.</summary>
+    [RelayCommand]
+    private Task AdicionarColuna() => Acoes?.AdicionarColunaAsync() ?? Task.CompletedTask;
+
     /// <summary>O arraste em curso (a janela mostra a guia e a dica); nulo sem arraste.</summary>
     [ObservableProperty]
     public partial MovimentoNoKanban? MovimentoEmCurso { get; set; }
@@ -161,8 +221,9 @@ public sealed partial class KanbanViewModel : ObservableObject
         foreach (var coluna in quadro.Colunas)
         {
             if (!_colunas.TryGetValue(coluna.Id, out var naTela))
-                _colunas[coluna.Id] = naTela = new ColunaNoKanban(coluna.Id);
+                _colunas[coluna.Id] = naTela = new ColunaNoKanban(coluna.Id, () => Acoes);
             (naTela.Nome, naTela.Tipo, naTela.Cor, naTela.Limite) = (coluna.Nome, coluna.Tipo, coluna.Cor, coluna.Limite);
+            (naTela.PodeIrParaAEsquerda, naTela.PodeIrParaADireita) = (colunas.Count > 0, colunas.Count < quadro.Colunas.Count - 1);
             var cards = new List<CardNoKanban>();
             foreach (var card in porColuna[coluna.Id])
             {

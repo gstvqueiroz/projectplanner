@@ -73,6 +73,7 @@ public sealed partial class MainWindowViewModel
     private void SelecaoAtualizada(bool avisarAGrade)
     {
         AtualizarDestaqueNoGantt();
+        Kanban.DefinirSelecao(Selecionadas.Select(l => l.Tarefa.Id).ToHashSet()); // Bloco 75
         RemoverTarefaCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(Selecionadas));
         if (avisarAGrade)

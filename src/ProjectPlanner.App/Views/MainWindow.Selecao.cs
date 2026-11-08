@@ -75,7 +75,7 @@ public partial class MainWindow
     }
 
     private bool NaAreaDasTarefas(Avalonia.Visual? origem) =>
-        origem is not null && origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Grade) || ReferenceEquals(v, Gantt));
+        origem is not null && origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Grade) || ReferenceEquals(v, Gantt) || ReferenceEquals(v, QuadroKanban));
 
     private void FecharOAviso(object? sender, RoutedEventArgs? e)
     {

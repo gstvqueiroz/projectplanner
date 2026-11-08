@@ -52,6 +52,7 @@ public class Cronograma
         Contrato = new Medicoes.ContratoDoProjeto(this);
         Recursos = new Recursos.RecursosDoProjeto(this);
         Orcamento = new Orcamento.OrcamentoDoProjeto(this);
+        Quadro = new Kanban.QuadroDoProjeto(this);
     }
 
     public Guid Id { get; }
@@ -540,6 +541,12 @@ public class Cronograma
     /// <summary>Bloco 58: as ordens de serviço da obra. Voltam no Desfazer, como as tarefas.</summary>
     public OrdensDeServico.OrdensDeServicoDoProjeto OrdensDeServico { get; private set; } = new();
 
+    /// <summary>
+    /// Bloco 75: o quadro Kanban (as colunas e os cards das tarefas). Volta no Desfazer, como as tarefas; segue o % concluído
+    /// pelo <see cref="Kanban.QuadroDoProjeto.Sincronizar"/>.
+    /// </summary>
+    public Kanban.QuadroDoProjeto Quadro { get; private set; }
+
     /// <summary>Bloco 27: os relatórios fotográficos já gerados, do primeiro ao último.</summary>
     public IReadOnlyList<RelatorioGerado> Relatorios => _relatorios.AsReadOnly();
 
@@ -578,6 +585,7 @@ public class Cronograma
         copia.OrdensDeServico = OrdensDeServico.Copiar();
         copia.Recursos = Recursos.CopiarPara(copia);
         copia.Orcamento = Orcamento.CopiarPara(copia);
+        copia.Quadro = Quadro.CopiarPara(copia);
         copia._linhasDeBase.AddRange(_linhasDeBase);
         copia._relatorios.AddRange(_relatorios);
         copia._tarefas.AddRange(_tarefas.Select(t => t.Copiar()));

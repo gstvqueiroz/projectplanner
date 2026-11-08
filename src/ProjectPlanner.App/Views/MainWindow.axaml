@@ -135,6 +135,11 @@
                               IsChecked="{Binding EhSomenteGantt, Mode=OneWay}"
                               Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.SomenteGantt}"
                               ToolTip.Tip="Só o Gantt, na largura toda" />
+                    <!-- Bloco 75 -->
+                    <MenuItem x:Name="ItemKanban" Header="Kanban" ToggleType="Radio" GroupName="ModoVisualizacao"
+                              IsChecked="{Binding EhKanban, Mode=OneWay}"
+                              Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Kanban}"
+                              ToolTip.Tip="O quadro Kanban: as tarefas como cards, nas colunas do status" />
                     <Separator />
                     <!-- Mostrar/ocultar colunas e restaurar o layout padrão. Ordem e largura mudam arrastando os
                          cabeçalhos; tudo fica salvo em colunas.json (ver ArquivoPreferenciasColunas). -->
@@ -485,6 +490,13 @@
                         <!-- Barras em escada -->
                         <Path Data="M1.5,3.5 H7 M5,8 H11 M9.5,12.5 H14.5" StrokeThickness="2.4" />
                     </Button>
+                    <!-- Bloco 75 -->
+                    <Button Tag="kanban" Classes="acessoRapido" Classes.ativo="{Binding EhKanban}"
+                            Command="{Binding DefinirModoVisualizacaoCommand}" CommandParameter="{x:Static vm:ModoVisualizacao.Kanban}"
+                            ToolTip.Tip="Kanban: as tarefas como cards, nas colunas do status" AutomationProperties.Name="Kanban">
+                        <!-- Três colunas com cards -->
+                        <Path Data="M1.5,2.5 H5 V13.5 H1.5 Z M6.25,2.5 H9.75 V9.5 H6.25 Z M11,2.5 H14.5 V11.5 H11 Z" />
+                    </Button>
                     <!-- Bloco 39: as opções do Gantt; o botão fica marcado quando ligada (as mesmas de Exibir). -->
                     <Button Tag="caminhoCritico" Classes="acessoRapido" Classes.ativo="{Binding Gantt.MostrarCaminhoCritico}"
                             Command="{Binding AlternarCaminhoCriticoCommand}"
@@ -834,6 +846,9 @@
 
         <!-- Painel do assistente de IA (Bloco 19), à direita, em qualquer modo de visualização. As colunas 3 e 4
              só ganham largura quando ele está visível (ver AplicarPainelDoAssistente). -->
+        <!-- Bloco 75: o quadro Kanban, no lugar da grade e do Gantt (Exibir > Kanban); ver AplicarModoVisualizacao. -->
+        <v:KanbanView x:Name="QuadroKanban" Grid.Column="0" Grid.ColumnSpan="3" DataContext="{Binding Kanban}" IsVisible="False" />
+
         <GridSplitter x:Name="DivisorDoAssistente" Grid.Column="3" ResizeDirection="Columns" Background="Transparent" />
         <v:AssistenteView x:Name="PainelAssistente" Grid.Column="4" DataContext="{Binding Assistente}" />
 

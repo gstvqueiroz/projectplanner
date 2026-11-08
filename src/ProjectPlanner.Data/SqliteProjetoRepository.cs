@@ -338,6 +338,14 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 Dados = FormatoDoCalendario.Serializar(cronograma.Calendario),
             });
 
+        if (!cronograma.Quadro.Vazio)
+            contexto.Quadro.Add(new QuadroRegistro
+            {
+                ProjetoId = cronograma.Id,
+                Versao = FormatoDoQuadro.Versao,
+                Dados = FormatoDoQuadro.Serializar(cronograma),
+            });
+
         if (!cronograma.OrdensDeServico.Vazio)
             contexto.Ordens.Add(new OrdensRegistro
             {
@@ -497,6 +505,15 @@ public sealed class SqliteProjetoRepository(TimeProvider? relogio = null, Action
                 throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem as ordens de serviço num formato desconhecido.");
             FormatoDasOrdens.Ler(ordens.Dados, cronograma);
         }
+
+        // O quadro Kanban (Bloco 75), depois das tarefas (os cards são delas). Sem ele, o programa monta o padrão (K7).
+        if (contexto.Quadro.AsNoTracking().FirstOrDefault() is { } quadro)
+        {
+            if (!FormatoDoQuadro.Conhece(quadro.Versao))
+                throw new InvalidDataException($"O arquivo \"{caminhoArquivo}\" tem o quadro Kanban num formato desconhecido.");
+            FormatoDoQuadro.Ler(quadro.Dados, cronograma);
+        }
+        cronograma.Quadro.Sincronizar();
 
         // Dados da obra e histórico dos relatórios (Bloco 27); um JSON que não dá para ler é recusado como os outros dados.
         if (contexto.Relatorio.AsNoTracking().FirstOrDefault() is { } relatorio)

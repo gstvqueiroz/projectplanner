@@ -153,6 +153,7 @@ public partial class MenuPrincipalTests
         a.Item("Arquivo", "Salvar").InputGesture.Should().Be(AtalhosDeTeclado.Gesto(AcaoComAtalho.Salvar, mac));
         a.Item("Arquivo", "Salvar como…").InputGesture.Should().Be(AtalhosDeTeclado.Gesto(AcaoComAtalho.SalvarComo, mac));
         a.Item("Exibir", "Somente Gantt").InputGesture.Should().Be(AtalhosDeTeclado.Gesto(AcaoComAtalho.SomenteGantt, mac));
+        a.Item("Exibir", "Kanban").InputGesture.Should().Be(AtalhosDeTeclado.Gesto(AcaoComAtalho.Kanban, mac));
         a.Item("Tarefa", "Recalcular cronograma").InputGesture.Should().Be(new KeyGesture(Key.F9));
         a.Item("Tarefa", "Gerenciar fotos…").InputGesture.Should().Be(AtalhosDeTeclado.Gesto(AcaoComAtalho.FotosDaTarefa, mac));
         a.Janela.MenuPrincipal.Close();

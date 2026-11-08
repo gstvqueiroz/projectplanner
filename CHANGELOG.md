@@ -3,6 +3,31 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.75.0
+
+**Kanban** (o plano "Delete, arrastar e Kanban", K1 a K7): um quadro estilo Trello que é uma nova visão das mesmas tarefas, em
+Exibir > Kanban (⌘4 no Mac, Ctrl+4 no Windows) ou pelo botão da barra. Editar em qualquer tela atualiza as outras, e o Desfazer
+e as regras valem igual.
+
+- **O que vira card:** as tarefas sem subtarefas (as que de fato se executam); os marcos entram com o ◆. O resumo aparece como
+  etiqueta no card. Tarefa que vira resumo sai do quadro; resumo que fica sem subtarefas volta com o que o card tinha.
+- **Colunas padrão:** A fazer · Em andamento · Impedida · Concluída. Cada coluna tem um tipo (A fazer, Em andamento ou
+  Concluída); "Impedida" é do tipo Em andamento.
+- **O card mostra** o nome, o resumo, o início e o término, a barra do %, os responsáveis (os profissionais da tarefa, se o
+  projeto usa recursos), as etiquetas e o checklist. Atrasada (término antes de hoje e abaixo de 100%): a data em vermelho.
+- **O % segue o card:** soltar numa coluna Concluída põe 100%; tirar de Concluída volta ao % de antes (0% se não houver); soltar
+  numa A fazer põe 0%, com o Desfazer no aviso; numa Em andamento o % não muda. Concluir pelo quadro não grava término real.
+- **O card segue o %:** mudar o % na grade (ou pelo assistente) leva o card: acima de 0 sai de A fazer, 100 vai para Concluída,
+  abaixo de 100 sai de Concluída.
+- **Arrastar** cards entre as colunas e dentro delas (a ordem no quadro não muda o cronograma nem recalcula), com o card junto
+  do cursor, a linha azul onde ele vai cair, a dica do que acontece com o % e a rolagem automática perto das bordas. Esc ou
+  soltar fora do quadro cancela; no tablet, segurando 0,4 s.
+- **Seleção:** clicar num card seleciona a tarefa na grade e no Gantt; Ctrl+clique (⌘ no Mac) e Shift+clique selecionam
+  vários, que vão juntos no arrasto. O Delete exclui com as mesmas regras da grade, e a seleção passa para o card que ficou no
+  lugar.
+- **No arquivo:** o quadro fica no mesmo .pplan. Um arquivo de antes abre com as colunas padrão, distribuindo os cards pelo %
+  (0% em A fazer, 1 a 99% em Em andamento, 100% em Concluída).
+
 ## 0.74.0
 
 **Regras no gráfico de Gantt** (o plano "Delete, arrastar e Kanban", G1 a G5): no Gantt vale o mesmo que na grade.

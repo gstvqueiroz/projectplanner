@@ -44,6 +44,10 @@ public static class Conversores
         }
     });
 
+    /// <summary>Bloco 75: "#RRGGBB" (a cor de uma coluna ou etiqueta do quadro) para o pincel; vazia ou inválida, cinza.</summary>
+    public static readonly IValueConverter Cor = new FuncValueConverter<string?, IBrush>(cor =>
+        cor is { Length: > 0 } && Color.TryParse(cor, out var c) ? new SolidColorBrush(c) : new SolidColorBrush(Color.FromRgb(0x8A, 0x8F, 0x98)));
+
     public static readonly IValueConverter OpacoSeVerdadeiro = new FuncValueConverter<bool, double>(valor => valor ? 1 : 0);
 
     /// <summary>Linhas de resumo em negrito, como no MS Project.</summary>

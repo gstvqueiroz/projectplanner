@@ -14,6 +14,7 @@ public enum AcaoComAtalho
     Dividido,
     SomenteTabela,
     SomenteGantt,
+    Kanban,
     Assistente,
     IrParaTarefa,
     Desfazer,
@@ -50,6 +51,7 @@ public static class AtalhosDeTeclado
         new(AcaoComAtalho.Dividido, Key.D1),
         new(AcaoComAtalho.SomenteTabela, Key.D2),
         new(AcaoComAtalho.SomenteGantt, Key.D3),
+        new(AcaoComAtalho.Kanban, Key.D4), // Bloco 75
         new(AcaoComAtalho.Assistente, Key.J),
         new(AcaoComAtalho.IrParaTarefa, Key.G),
         new(AcaoComAtalho.Desfazer, Key.Z, ForaDoTexto: true),

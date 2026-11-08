@@ -134,6 +134,7 @@ public sealed partial class MainWindowViewModel
 
         var ids = selecionadas.Select(l => l.Tarefa.Id).ToHashSet();
         var lugar = LinhasVisiveis.Select((l, i) => (l, i)).Where(x => ids.Contains(x.l.Tarefa.Id)).Select(x => x.i).DefaultIfEmpty(0).Min();
+        var substituta = EhKanban ? Kanban.Substituta(ids) : null; // Bloco 75 (E7 no quadro): o card que fica no lugar
         try
         {
             RegrasDeExclusao.Aplicar(_cronograma.Copiar(), plano, modo); // primeiro numa cópia: se o domínio recusar, nada muda
@@ -147,7 +148,8 @@ public sealed partial class MainWindowViewModel
         SincronizarLinhas();
         foreach (var linha in Tarefas)
             linha.AtualizarTela(); // a EDT e as predecessoras (pelo Nº das linhas, que mudou)
-        TarefaSelecionada = LinhasVisiveis.Count == 0 ? null : LinhasVisiveis[Math.Clamp(lugar, 0, LinhasVisiveis.Count - 1)];
+        TarefaSelecionada = EhKanban ? (substituta is { } s ? Tarefas.FirstOrDefault(l => l.Tarefa.Id == s) : null)
+            : LinhasVisiveis.Count == 0 ? null : LinhasVisiveis[Math.Clamp(lugar, 0, LinhasVisiveis.Count - 1)];
         MarcarAlteracao(plano.Selecionadas.Count == 1 ? $"Excluir \"{plano.Selecionadas[0].Nome}\"" : $"Excluir {plano.Selecionadas.Count} tarefas");
         Mensagem = resultado.Texto;
         AvisoComDesfazer = resultado.Texto;

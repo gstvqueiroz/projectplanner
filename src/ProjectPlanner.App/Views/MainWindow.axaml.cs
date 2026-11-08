@@ -195,9 +195,10 @@ public partial class MainWindow : Window
         (colunas[0].Width, colunas[1].Width, colunas[2].Width) = modo switch
         {
             ModoVisualizacao.SomenteTabela => (GridLength.Star, new GridLength(0), new GridLength(0)),
-            ModoVisualizacao.SomenteGantt => (new GridLength(0), new GridLength(0), GridLength.Star),
+            ModoVisualizacao.SomenteGantt or ModoVisualizacao.Kanban => (new GridLength(0), new GridLength(0), GridLength.Star),
             _ => (_larguraDaTabela, new GridLength(6), GridLength.Star),
         };
+        QuadroKanban.IsVisible = _viewModel.EhKanban; // Bloco 75: o quadro fica no lugar da grade e do Gantt
         Divisor.IsVisible = modo == ModoVisualizacao.Dividido;
         LimitarLarguraDaTabela();
         PainelGantt.IsVisible = _viewModel.MostrarGantt;
@@ -532,6 +533,7 @@ public partial class MainWindow : Window
                      (ItemSalvarComo, AcaoComAtalho.SalvarComo), (ItemRecalcular, AcaoComAtalho.Recalcular),
                      (ItemFotos, AcaoComAtalho.FotosDaTarefa), (ItemDividido, AcaoComAtalho.Dividido),
                      (ItemSomenteTabela, AcaoComAtalho.SomenteTabela), (ItemSomenteGantt, AcaoComAtalho.SomenteGantt),
+                     (ItemKanban, AcaoComAtalho.Kanban),
                      (ItemAssistente, AcaoComAtalho.Assistente), (ItemIrParaTarefa, AcaoComAtalho.IrParaTarefa),
                      (ItemDesfazer, AcaoComAtalho.Desfazer), (ItemRefazer, AcaoComAtalho.Refazer),
                      (ItemCopiar, AcaoComAtalho.Copiar), (ItemColar, AcaoComAtalho.Colar), (ItemDuplicar, AcaoComAtalho.Duplicar),
@@ -544,7 +546,7 @@ public partial class MainWindow : Window
                      ("Novo projeto", AcaoComAtalho.Novo), ("Abrir projeto", AcaoComAtalho.Abrir), ("Ir para a tarefa", AcaoComAtalho.IrParaTarefa),
                      ("Salvar", AcaoComAtalho.Salvar), ("Recalcular cronograma", AcaoComAtalho.Recalcular),
                      ("Dividido", AcaoComAtalho.Dividido), ("Somente Tabela", AcaoComAtalho.SomenteTabela),
-                     ("Somente Gantt", AcaoComAtalho.SomenteGantt), ("Assistente", AcaoComAtalho.Assistente),
+                     ("Somente Gantt", AcaoComAtalho.SomenteGantt), ("Kanban", AcaoComAtalho.Kanban), ("Assistente", AcaoComAtalho.Assistente),
                      ("Imprimir o Gantt", AcaoComAtalho.ImprimirGantt),
                  })
         {
@@ -589,6 +591,7 @@ public partial class MainWindow : Window
             AcaoComAtalho.Dividido => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.Dividido),
             AcaoComAtalho.SomenteTabela => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteTabela),
             AcaoComAtalho.SomenteGantt => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.SomenteGantt),
+            AcaoComAtalho.Kanban => (vm.DefinirModoVisualizacaoCommand, ModoVisualizacao.Kanban),
             AcaoComAtalho.Assistente => ((System.Windows.Input.ICommand)vm.Assistente.AlternarVisibilidadeCommand, (object?)null),
             AcaoComAtalho.IrParaTarefa => (vm.IrParaTarefaCommand, null),
             AcaoComAtalho.Desfazer => (vm.DesfazerAlteracaoCommand, null),

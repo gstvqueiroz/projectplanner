@@ -23,6 +23,7 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
     public DbSet<CustosRegistro> Custos => Set<CustosRegistro>();
     public DbSet<OrdensRegistro> Ordens => Set<OrdensRegistro>();
     public DbSet<CalendarioRegistro> Calendario => Set<CalendarioRegistro>(); // Bloco 71
+    public DbSet<QuadroRegistro> Quadro => Set<QuadroRegistro>(); // Bloco 75
     public DbSet<RecursoRegistro> Recursos => Set<RecursoRegistro>();
     public DbSet<OrcamentoRegistro> Orcamento => Set<OrcamentoRegistro>();
     public DbSet<AtribuicaoRegistro> Atribuicoes => Set<AtribuicaoRegistro>();
@@ -165,6 +166,15 @@ internal sealed class ProjectPlannerDbContext(DbContextOptions<ProjectPlannerDbC
             calendario.HasKey(c => c.ProjetoId);
             calendario.HasOne<ProjetoRegistro>().WithOne()
                 .HasForeignKey<CalendarioRegistro>(c => c.ProjetoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // O quadro Kanban (Bloco 75), em JSON.
+        modelBuilder.Entity<QuadroRegistro>(quadro =>
+        {
+            quadro.ToTable("QuadroDoProjeto");
+            quadro.HasKey(q => q.ProjetoId);
+            quadro.HasOne<ProjetoRegistro>().WithOne()
+                .HasForeignKey<QuadroRegistro>(q => q.ProjetoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // As ordens de serviço (Bloco 58), em JSON.

@@ -190,6 +190,16 @@ internal sealed class CalendarioRegistro
     public required string Dados { get; set; }
 }
 
+/// <summary>Bloco 75: o quadro Kanban, em JSON (ver <see cref="FormatoDoQuadro"/>); nenhuma linha num projeto sem tarefas.</summary>
+internal sealed class QuadroRegistro
+{
+    public Guid ProjetoId { get; set; }
+
+    public int Versao { get; set; }
+
+    public required string Dados { get; set; }
+}
+
 /// <summary>Bloco 58: as ordens de serviço, em JSON (ver <see cref="FormatoDasOrdens"/>); nenhuma linha sem OS.</summary>
 internal sealed class OrdensRegistro
 {

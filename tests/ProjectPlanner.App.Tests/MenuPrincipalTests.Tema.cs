@@ -38,6 +38,15 @@ public partial class MenuPrincipalTests
         ["GanttMarco"] = "#212121",
         ["GanttResumo"] = "#37474F",
         ["GanttContornoDaSelecao"] = "#263238",
+        // Bloco 75: o quadro Kanban
+        ["FundoDaColunaDoQuadro"] = "#EEF1F4",
+        ["FundoDaColunaAcimaDoLimite"] = "#FDECEA",
+        ["FundoDoCard"] = "#FFFFFF",
+        ["BordaDoCard"] = "#1F000000",
+        ["ContornoDoCardSelecionado"] = "#2F80ED",
+        ["FundoDaEtiquetaDoResumo"] = "#E3EAF3",
+        ["TextoSecundarioDoCard"] = "#5F6B76",
+        ["TrilhoDoPercentual"] = "#1F000000",
     };
 
     private static void VoltarAoTemaPadrao() => Application.Current!.RequestedThemeVariant = ThemeVariant.Default;
@@ -140,8 +149,17 @@ public partial class MenuPrincipalTests
 
         foreach (var fundo in new[] { "FundoDoBotaoAtivo", "FundoDoControleDeZoom", "FundoDeAviso", "FundoSutil", "FundoDeSucesso",
                      "FundoDoBalaoDoUsuario", "FundoDoBalaoDoAssistente", "FundoDoBalaoDeErro", "FundoDosFiltros", "FundoDaMiniatura",
-                     "FundoDaMiniaturaSelecionada" })
+                     "FundoDaMiniaturaSelecionada", "FundoDaColunaDoQuadro", "FundoDaColunaAcimaDoLimite", "FundoDoCard", "FundoDaEtiquetaDoResumo" })
             Contraste(texto, Cor(fundo, escuro), preto).Should().BeGreaterThanOrEqualTo(4.5, $"texto do tema sobre {fundo}");
+        // Bloco 75: as datas, o % e a contagem dos cards, e a data atrasada, nos dois temas.
+        foreach (var tema in new[] { ThemeVariant.Light, escuro })
+            foreach (var fundo in new[] { "FundoDoCard", "FundoDaColunaDoQuadro" })
+            {
+                Contraste(Cor("TextoSecundarioDoCard", tema), Cor(fundo, tema), tema == escuro ? preto : Colors.White)
+                    .Should().BeGreaterThanOrEqualTo(4.5, $"texto secundário sobre {fundo} ({tema})");
+                Contraste(Cor("TextoDeErro", tema), Cor(fundo, tema), tema == escuro ? preto : Colors.White)
+                    .Should().BeGreaterThanOrEqualTo(4.5, $"data atrasada sobre {fundo} ({tema})");
+            }
         Contraste(Cor("TextoDeAviso", escuro), Cor("FundoDeAviso", escuro), preto).Should().BeGreaterThanOrEqualTo(4.5);
         Contraste(Cor("TextoDeLink", escuro), Cor("FundoDeAviso", escuro), preto).Should().BeGreaterThanOrEqualTo(4.5);
         Contraste(Cor("TextoDeErro", escuro), preto, preto).Should().BeGreaterThanOrEqualTo(4.5);

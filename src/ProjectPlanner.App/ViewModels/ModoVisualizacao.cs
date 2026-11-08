@@ -11,4 +11,7 @@ public enum ModoVisualizacao
 
     /// <summary>Só o Gantt, na largura toda.</summary>
     SomenteGantt,
+
+    /// <summary>Bloco 75: o quadro Kanban, uma visão das mesmas tarefas (cada card é uma tarefa sem subtarefas).</summary>
+    Kanban,
 }

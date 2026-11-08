@@ -66,6 +66,7 @@ public sealed partial class MainWindowViewModel
     /// <summary>Uma alteração do cronograma entra no histórico do Desfazer.</summary>
     private PassoDoHistorico RegistrarNoHistorico(string descricao)
     {
+        _cronograma.Quadro.Sincronizar(); // Bloco 75 (K3): o card segue o % (e entra ou sai) antes de o passo ser guardado
         var passo = _historico.Registrar(descricao, _cronograma);
         HistoricoMudou();
         return passo;

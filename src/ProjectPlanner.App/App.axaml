@@ -35,6 +35,15 @@
                     <SolidColorBrush x:Key="GanttMarco" Color="#212121" />
                     <SolidColorBrush x:Key="GanttResumo" Color="#37474F" />
                     <SolidColorBrush x:Key="GanttContornoDaSelecao" Color="#263238" />
+                    <!-- Bloco 75: o quadro Kanban -->
+                    <SolidColorBrush x:Key="FundoDaColunaDoQuadro" Color="#EEF1F4" />
+                    <SolidColorBrush x:Key="FundoDaColunaAcimaDoLimite" Color="#FDECEA" />
+                    <SolidColorBrush x:Key="FundoDoCard" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="BordaDoCard" Color="#1F000000" />
+                    <SolidColorBrush x:Key="ContornoDoCardSelecionado" Color="#2F80ED" />
+                    <SolidColorBrush x:Key="FundoDaEtiquetaDoResumo" Color="#E3EAF3" />
+                    <SolidColorBrush x:Key="TextoSecundarioDoCard" Color="#5F6B76" />
+                    <SolidColorBrush x:Key="TrilhoDoPercentual" Color="#1F000000" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="FundoDoBotaoAtivo" Color="#34506E" />
@@ -59,6 +68,15 @@
                     <SolidColorBrush x:Key="GanttMarco" Color="#E0E0E0" />
                     <SolidColorBrush x:Key="GanttResumo" Color="#B0BEC5" />
                     <SolidColorBrush x:Key="GanttContornoDaSelecao" Color="#ECEFF1" />
+                    <!-- Bloco 75: o quadro Kanban -->
+                    <SolidColorBrush x:Key="FundoDaColunaDoQuadro" Color="#1E2226" />
+                    <SolidColorBrush x:Key="FundoDaColunaAcimaDoLimite" Color="#3A1F1D" />
+                    <SolidColorBrush x:Key="FundoDoCard" Color="#2A2F35" />
+                    <SolidColorBrush x:Key="BordaDoCard" Color="#2EFFFFFF" />
+                    <SolidColorBrush x:Key="ContornoDoCardSelecionado" Color="#8AB4F8" />
+                    <SolidColorBrush x:Key="FundoDaEtiquetaDoResumo" Color="#2E3A48" />
+                    <SolidColorBrush x:Key="TextoSecundarioDoCard" Color="#A7B1BA" />
+                    <SolidColorBrush x:Key="TrilhoDoPercentual" Color="#2EFFFFFF" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
             <!-- Bloco 27: selos sobre as fotos (sobre a imagem, iguais nos dois temas). -->

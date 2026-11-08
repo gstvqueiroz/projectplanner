@@ -83,6 +83,7 @@ public sealed partial class BarraDeIconesViewModel
             B("dividido", "Dividido", GrupoDaBarra.Exibicao),
             B("somenteTabela", "Somente Tabela", GrupoDaBarra.Exibicao),
             B("somenteGantt", "Somente Gantt", GrupoDaBarra.Exibicao),
+            B("kanban", "Kanban", GrupoDaBarra.Exibicao), // Bloco 75
             B("caminhoCritico", "Caminho crítico", GrupoDaBarra.Exibicao),
             B("linhaDeBaseNoGantt", "Linha de base no Gantt", GrupoDaBarra.Exibicao),
             B("linhaHoje", "Linha de hoje", GrupoDaBarra.Exibicao),

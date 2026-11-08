@@ -77,6 +77,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
         Gantt.Ligacoes = this;
         Gantt.DicaDaTarefa = DicaDaTarefaNoGantt;
         Gantt.FotosPedidas += tarefaId => _ = MostrarFotosAsync(tarefaId);
+        LigarOQuadro(); // Bloco 75
         // Um controle só para o caminho crítico: o do Gantt também liga e desliga o fundo das linhas na grid.
         Gantt.PropertyChanged += (_, e) =>
         {
@@ -238,18 +239,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     /// muda a largura e a visibilidade dos painéis, que continuam com os dados de antes.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(MostrarTabela), nameof(MostrarGantt), nameof(EhDividido), nameof(EhSomenteTabela), nameof(EhSomenteGantt))]
+    [NotifyPropertyChangedFor(nameof(MostrarTabela), nameof(MostrarGantt), nameof(EhDividido), nameof(EhSomenteTabela), nameof(EhSomenteGantt),
+        nameof(EhKanban))]
     public partial ModoVisualizacao ModoVisualizacao { get; set; } = ModoVisualizacao.Dividido;
 
     /// <summary>A grid de tarefas aparece (Dividido ou Somente Tabela).</summary>
-    public bool MostrarTabela => ModoVisualizacao != ModoVisualizacao.SomenteGantt;
+    public bool MostrarTabela => ModoVisualizacao is ModoVisualizacao.Dividido or ModoVisualizacao.SomenteTabela;
 
     /// <summary>O Gantt aparece (Dividido ou Somente Gantt).</summary>
-    public bool MostrarGantt => ModoVisualizacao != ModoVisualizacao.SomenteTabela;
+    public bool MostrarGantt => ModoVisualizacao is ModoVisualizacao.Dividido or ModoVisualizacao.SomenteGantt;
 
     public bool EhDividido => ModoVisualizacao == ModoVisualizacao.Dividido;
     public bool EhSomenteTabela => ModoVisualizacao == ModoVisualizacao.SomenteTabela;
     public bool EhSomenteGantt => ModoVisualizacao == ModoVisualizacao.SomenteGantt;
+
+    /// <summary>Bloco 75: o quadro Kanban aparece, no lugar da grid e do Gantt.</summary>
+    public bool EhKanban => ModoVisualizacao == ModoVisualizacao.Kanban;
 
     /// <summary>Troca o modo de visualização (itens de Exibir e botões da faixa de acesso rápido).</summary>
     [RelayCommand]
@@ -521,6 +526,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
             Gantt.Limpar();
             calculou = false;
         }
+        AtualizarQuadro(); // Bloco 75: as datas, o % e os cards que entraram ou saíram
 
         foreach (var linha in Tarefas)
             linha.AtualizarTela();
@@ -533,6 +539,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IEdicaoCronogra
     private void Carregar(Cronograma cronograma, string? caminho)
     {
         _cronograma = cronograma;
+        _cronograma.Quadro.Sincronizar(); // Bloco 75 (K7): um arquivo de antes do quadro distribui os cards pelo %
         _fotos.Recomecar(caminho);
         RecomecarHistorico();
         Assistente.RecomecarParaOutroProjeto();

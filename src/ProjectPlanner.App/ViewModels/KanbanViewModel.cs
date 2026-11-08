@@ -170,17 +170,44 @@ public sealed partial class RaiaNoKanban(string chave) : ObservableObject
     [ObservableProperty]
     public partial string Contagem { get; set; } = "";
 
+    /// <summary>Bloco 87: o andamento das tarefas da raia, ponderado pela duração ("40% concluído"); vazio sem cards.</summary>
+    [ObservableProperty]
+    public partial string Andamento { get; set; } = "";
+
+    /// <summary>Bloco 87: o % das tarefas da raia (para a barrinha no cabeçalho dela).</summary>
+    [ObservableProperty]
+    public partial int Percentual { get; set; }
+
+    /// <summary>
+    /// Bloco 87: a raia recolhida mostra só uma linha fina, com quantos cards ela tem em cada coluna (dá para soltar cards nela).
+    /// Fica assim enquanto o quadro estiver aberto; uma raia nova, com todos os cards concluídos, já aparece recolhida.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Seta), nameof(DicaDaSeta))]
+    public partial bool Recolhida { get; set; }
+
+    public string Seta => Recolhida ? "▸" : "▾";
+
+    public string DicaDaSeta => Recolhida ? "Expandir a raia (mostrar os cards)" : "Recolher a raia (só a contagem de cada coluna)";
+
+    [RelayCommand]
+    private void Alternar() => Recolhida = !Recolhida;
+
     public ObservableCollection<CelulaNoKanban> Celulas { get; } = [];
 }
 
 /// <summary>Bloco 78: uma célula do quadro com raias: os cards da coluna que são da raia.</summary>
-public sealed class CelulaNoKanban(ColunaNoKanban coluna, RaiaNoKanban raia)
+public sealed partial class CelulaNoKanban(ColunaNoKanban coluna, RaiaNoKanban raia) : ObservableObject
 {
     public ColunaNoKanban Coluna { get; } = coluna;
 
     public RaiaNoKanban Raia { get; } = raia;
 
     public ObservableCollection<CardNoKanban> Cards { get; } = [];
+
+    /// <summary>Bloco 87: na raia recolhida, quantos cards a célula tem ("2 cards"; vazia, "—").</summary>
+    [ObservableProperty]
+    public partial string Contagem { get; set; } = "—";
 }
 
 /// <summary>Bloco 78: uma opção do seletor de raias.</summary>
@@ -331,6 +358,22 @@ public sealed partial class KanbanViewModel : ObservableObject
     /// <summary>A raia em que o card está (a chave); nula sem raias.</summary>
     public string? RaiaDoCard(Guid tarefaId) => _raiaDoCard.GetValueOrDefault(tarefaId);
 
+    /// <summary>Bloco 87: recolhe todas as raias (só a linha com as contagens de cada uma).</summary>
+    [RelayCommand]
+    private void RecolherRaias()
+    {
+        foreach (var raia in RaiasNaTela)
+            raia.Recolhida = true;
+    }
+
+    /// <summary>Bloco 87: expande todas as raias.</summary>
+    [RelayCommand]
+    private void ExpandirRaias()
+    {
+        foreach (var raia in RaiasNaTela)
+            raia.Recolhida = false;
+    }
+
     // A lacuna entre os cards da coluna que aparecem, correspondente à lacuna entre os cards da célula.
     private static int LacunaNaColuna(CelulaNoKanban celula, int lacunaNaCelula)
     {
@@ -384,11 +427,14 @@ public sealed partial class KanbanViewModel : ObservableObject
         }
         _raiaDoCard = colunas.SelectMany(c => c.TodasAsTarefas).ToDictionary(id => id, id => RegrasDasRaias.RaiaDe(cronograma, modo, porId[id]));
         var raias = new List<RaiaNoKanban>();
+        var todasAsChaves = new HashSet<string>(); // também as escondidas pelo filtro: elas guardam se estavam recolhidas
         foreach (var raia in RegrasDasRaias.Raias(cronograma, modo))
         {
-            if (!_raias.TryGetValue(raia.Chave, out var naTela))
+            todasAsChaves.Add(raia.Chave);
+            var nova = !_raias.TryGetValue(raia.Chave, out var naTela);
+            if (nova)
                 _raias[raia.Chave] = naTela = new RaiaNoKanban(raia.Chave);
-            naTela.Nome = raia.Nome;
+            naTela!.Nome = raia.Nome;
             var celulas = new List<CelulaNoKanban>();
             var cards = 0;
             foreach (var coluna in colunas)
@@ -397,15 +443,29 @@ public sealed partial class KanbanViewModel : ObservableObject
                     _celulas[(raia.Chave, coluna.Id)] = celula = new CelulaNoKanban(coluna, naTela);
                 var daRaia = coluna.Cards.Where(k => _raiaDoCard.GetValueOrDefault(k.TarefaId) == raia.Chave).ToList();
                 Reordenar(celula.Cards, daRaia);
+                celula.Contagem = daRaia.Count == 0 ? "—" : daRaia.Count == 1 ? "1 card" : $"{daRaia.Count} cards";
                 cards += daRaia.Count;
                 celulas.Add(celula);
             }
             Reordenar(naTela.Celulas, celulas);
             naTela.Contagem = cards == 1 ? "1 card" : $"{cards} cards";
+            // Bloco 87: o andamento da raia, por todas as tarefas dela (com ou sem filtro), ponderado pela duração.
+            var tarefas = colunas.SelectMany(c => c.TodasAsTarefas).Where(id => _raiaDoCard.GetValueOrDefault(id) == raia.Chave).Select(id => porId[id]).ToList();
+            var pesos = tarefas.Sum(t => (long)t.Duracao);
+            naTela.Percentual = tarefas.Count == 0 ? 0
+                : (int)Math.Round(pesos == 0 ? tarefas.Average(t => t.PercentualConcluido) : tarefas.Sum(t => (double)t.Duracao * t.PercentualConcluido) / pesos,
+                    MidpointRounding.AwayFromZero);
+            naTela.Andamento = tarefas.Count == 0 ? "" : $"{naTela.Percentual}% concluído";
+            // Bloco 87: uma raia nova com tudo concluído já vem recolhida (as etapas prontas não tomam o quadro).
+            if (nova)
+                naTela.Recolhida = tarefas.Count > 0 && tarefas.All(t => t.PercentualConcluido == 100);
+            // Com um filtro, as raias sem nenhum card que passe nele saem (voltam ao limpar o filtro).
+            if (HaFiltro && cards == 0)
+                continue;
             raias.Add(naTela);
         }
         Reordenar(RaiasNaTela, raias);
-        var chaves = raias.Select(r => r.Chave).ToHashSet();
+        var chaves = todasAsChaves;
         foreach (var chave in _raias.Keys.Where(c => !chaves.Contains(c)).ToList())
             _raias.Remove(chave);
         foreach (var chave in _celulas.Keys.Where(c => !chaves.Contains(c.Raia) || !_colunas.ContainsKey(c.Coluna)).ToList())

@@ -3,6 +3,21 @@
 A versão segue MAJOR.MINOR.PATCH, com o MINOR igual ao número do bloco de melhoria (ver PUBLISHING.md). A seção da
 versão atual aparece também em Ajuda > Sobre o ProjectPlanner.
 
+## 0.87.0
+
+**Kanban com raias mais fácil de ler.**
+
+- **Os nomes das colunas ficam no alto** ao rolar as raias para baixo (A fazer, Em andamento…), e acompanham a rolagem para o
+  lado.
+- **O nome da raia que passou do alto** aparece numa etiqueta no canto do quadro ("2 Terraplenagem e locação · 3 cards"), para
+  saber em que etapa você está.
+- **Cada raia recolhe e expande** (clique no nome dela): recolhida, vira uma linha fina com quantos cards ela tem em cada coluna, e
+  ainda dá para soltar cards nela. Os botões **Recolher raias** e **Expandir raias**, no alto do quadro, fazem isso em todas.
+- **As etapas já concluídas aparecem recolhidas**, para não tomarem o quadro com colunas vazias; clique para abrir.
+- **O andamento de cada raia** no cabeçalho dela: a barrinha e "40% concluído" (ponderado pela duração das tarefas).
+- **Com um filtro** (busca, responsável, etiqueta…), as raias sem nenhum card que passe nele saem do quadro, e voltam como estavam
+  ao limpar.
+
 ## 0.86.0
 
 **O Telegram fica sabendo o que foi feito no programa.** Quando você aplica (ou descarta) no programa um cartão que veio do

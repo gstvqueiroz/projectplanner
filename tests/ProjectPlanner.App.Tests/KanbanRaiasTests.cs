@@ -58,6 +58,48 @@ public class KanbanRaiasTests
         (_vm.Kanban.Raias!.Modo, _vm.Kanban.ComRaias, _vm.Kanban.RaiasNaTela.Count).Should().Be((ModoDasRaias.Nenhuma, false, 0));
     }
 
+    // Bloco 87: cada raia recolhe e expande (recolhida, só a contagem de cada coluna), com o andamento dela no cabeçalho.
+    [Fact]
+    public void Raias_RecolherEExpandir_AContagemDeCadaColuna_EOAndamento()
+    {
+        _vm.DefinirModoDasRaias(ModoDasRaias.PorResumo);
+        var fundacao = _vm.Kanban.RaiasNaTela.Single(r => r.Nome == "1 Fundação");
+
+        (fundacao.Recolhida, fundacao.Seta, fundacao.Andamento, fundacao.Percentual).Should().Be((false, "▾", "20% concluído", 20),
+            "Escavação 0% e Sapatas 40%, com a mesma duração");
+        (Celula("1 Fundação", "A fazer").Contagem, Celula("1 Fundação", "Concluída").Contagem).Should().Be(("1 card", "—"));
+        _vm.Kanban.RaiasNaTela.Select(r => r.Andamento).Should().Equal("20% concluído", "0% concluído", "0% concluído");
+
+        fundacao.AlternarCommand.Execute(null);
+        (fundacao.Recolhida, fundacao.Seta).Should().Be((true, "▸"));
+        _vm.Kanban.ExpandirRaiasCommand.Execute(null);
+        _vm.Kanban.RaiasNaTela.Should().OnlyContain(r => !r.Recolhida);
+        _vm.Kanban.RecolherRaiasCommand.Execute(null);
+        _vm.Kanban.RaiasNaTela.Should().OnlyContain(r => r.Recolhida);
+        _vm.TextoDesfazer.Should().Be("Desfazer Raias por resumo", "recolher é só da tela: não entra no Desfazer");
+    }
+
+    // Bloco 87: a raia que aparece com tudo concluído já vem recolhida; o que a pessoa escolhe fica ao mudar o quadro; com um filtro,
+    // as raias sem nenhum card que passe nele saem (e voltam como estavam).
+    [Fact]
+    public void RaiaConcluida_JaVemRecolhida_AEscolhaFica_EComFiltroAsVaziasSaem()
+    {
+        _escavacao.PercentualConcluido = 100;
+        _sapatas.PercentualConcluido = 100;
+        _vm.DefinirModoDasRaias(ModoDasRaias.PorResumo);
+        var fundacao = _vm.Kanban.RaiasNaTela.Single(r => r.Nome == "1 Fundação");
+        _vm.Kanban.RaiasNaTela.Select(r => r.Recolhida).Should().Equal(true, false, false);
+
+        fundacao.AlternarCommand.Execute(null);
+        _pilares.PercentualConcluido = 30;
+        _vm.Kanban.RaiasNaTela.Single(r => r.Nome == "1 Fundação").Should().BeSameAs(fundacao).And.Match<RaiaNoKanban>(r => !r.Recolhida);
+
+        _vm.Kanban.Busca = "Pilares";
+        _vm.Kanban.RaiasNaTela.Select(r => r.Nome).Should().Equal("2 Estrutura");
+        _vm.Kanban.Busca = "";
+        _vm.Kanban.RaiasNaTela.Select(r => (r.Nome, r.Recolhida)).Should().Equal(("1 Fundação", false), ("2 Estrutura", false), ("Sem resumo", false));
+    }
+
     [Fact]
     public void ArrastarParaOutraRaia_MudaOResumo_ATarefaVaiParaOFimDoGrupo_NumPassoDoDesfazer()
     {

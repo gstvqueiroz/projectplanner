@@ -83,6 +83,13 @@
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="Foreground" Value="{DynamicResource TextoSecundarioDoCard}" />
         </Style>
+        <!-- Bloco 87: o cabeçalho da raia, que recolhe e expande -->
+        <Style Selector="Button.raia">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
         <Style Selector="TextBlock.rotulo">
             <Setter Property="Foreground" Value="{DynamicResource TextoSecundarioDoCard}" />
             <Setter Property="FontSize" Value="11.5" />
@@ -205,6 +212,11 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+            <!-- Bloco 87 -->
+            <Button x:Name="BotaoRecolherRaias" Margin="0,0,4,4" Content="Recolher raias" Command="{Binding RecolherRaiasCommand}" IsVisible="{Binding ComRaias}"
+                    ToolTip.Tip="Todas as raias numa linha só, com a contagem de cada coluna" />
+            <Button x:Name="BotaoExpandirRaias" Margin="0,0,8,4" Content="Expandir raias" Command="{Binding ExpandirRaiasCommand}" IsVisible="{Binding ComRaias}"
+                    ToolTip.Tip="Todas as raias com os cards" />
             <Button x:Name="BotaoEtiquetas" Margin="0,0,8,4" Content="Etiquetas" Click="AbrirMenuDasEtiquetas"
                     ToolTip.Tip="As etiquetas do projeto: criar, renomear, mudar a cor e excluir" />
             <!-- Bloco 78: o gancho de IA do quadro -->
@@ -262,11 +274,13 @@
           </StackPanel>
         </ScrollViewer>
 
-        <!-- Bloco 78 (K6): as raias × colunas. Os cabeçalhos das colunas em cima; cada raia com uma célula por coluna. Arrastar um
-             card para outra raia muda o resumo ou o responsável da tarefa. -->
-        <ScrollViewer x:Name="RolagemDasRaias" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsVisible="{Binding ComRaias}">
-            <StackPanel Margin="10" Spacing="10">
-                <ItemsControl ItemsSource="{Binding Colunas}">
+        <!-- Bloco 78 (K6): as raias × colunas, cada raia com uma célula por coluna. Arrastar um card para outra raia muda o resumo
+             ou o responsável da tarefa. Bloco 87: os cabeçalhos das colunas ficam fixos no alto (a rolagem horizontal deles segue a
+             das raias, pelo KanbanView.axaml.cs); o nome da raia que passou do alto fica numa etiqueta; cada raia recolhe e expande
+             (recolhida, só a contagem de cada coluna, e ainda dá para soltar cards nela). -->
+        <DockPanel x:Name="QuadroComRaias" IsVisible="{Binding ComRaias}">
+            <ScrollViewer x:Name="CabecalhoDasRaias" DockPanel.Dock="Top" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Colunas}" Margin="10,10,10,6">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="10" />
@@ -289,46 +303,78 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <ItemsControl x:Name="ListaDeRaias" ItemsSource="{Binding RaiasNaTela}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Spacing="12" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:RaiaNoKanban">
-                            <StackPanel Spacing="4">
-                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,0,0,0">
-                                    <TextBlock Text="{Binding Nome}" FontWeight="SemiBold" />
-                                    <TextBlock Classes="secundario" Text="{Binding Contagem}" VerticalAlignment="Bottom" />
+            </ScrollViewer>
+            <Panel>
+                <ScrollViewer x:Name="RolagemDasRaias" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ListaDeRaias" ItemsSource="{Binding RaiasNaTela}" Margin="10,4,10,10">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="12" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RaiaNoKanban">
+                                <StackPanel Spacing="4">
+                                    <Button Classes="raia" Command="{Binding AlternarCommand}" ToolTip.Tip="{Binding DicaDaSeta}"
+                                            AutomationProperties.Name="{Binding Nome}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Seta}" Width="12" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Nome}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Classes="secundario" Text="{Binding Contagem}" VerticalAlignment="Center" />
+                                            <ProgressBar Classes="percentual" Width="70" Minimum="0" Maximum="100" Value="{Binding Percentual}" Margin="6,0,0,0"
+                                                         IsVisible="{Binding Andamento, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <TextBlock Classes="secundario" Text="{Binding Andamento}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <ItemsControl ItemsSource="{Binding Celulas}" IsVisible="{Binding !Recolhida}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="10" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:CelulaNoKanban">
+                                                <Border Classes="celula" Width="{x:Static v:KanbanView.LarguraDaColuna}" MinHeight="46" CornerRadius="8" Padding="8"
+                                                        Background="{DynamicResource FundoDaColunaDoQuadro}">
+                                                    <ItemsControl Classes="cartoes" ItemsSource="{Binding Cards}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Spacing="6" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <!-- Bloco 87: recolhida, uma linha fina com a contagem de cada coluna (soltar um card aqui leva para a raia). -->
+                                    <ItemsControl ItemsSource="{Binding Celulas}" IsVisible="{Binding Recolhida}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="10" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:CelulaNoKanban">
+                                                <Border Classes="celula recolhida" Width="{x:Static v:KanbanView.LarguraDaColuna}" Height="30" CornerRadius="6" Padding="12,0"
+                                                        Background="{DynamicResource FundoDaColunaDoQuadro}">
+                                                    <TextBlock Classes="secundario" Text="{Binding Contagem}" VerticalAlignment="Center" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
-                                <ItemsControl ItemsSource="{Binding Celulas}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="10" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:CelulaNoKanban">
-                                            <Border Classes="celula" Width="{x:Static v:KanbanView.LarguraDaColuna}" MinHeight="46" CornerRadius="8" Padding="8"
-                                                    Background="{DynamicResource FundoDaColunaDoQuadro}">
-                                                <ItemsControl Classes="cartoes" ItemsSource="{Binding Cards}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <StackPanel Spacing="6" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                </ItemsControl>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </ScrollViewer>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <!-- Bloco 87: a raia cujo nome já passou do alto, para saber onde se está ao rolar. -->
+                <Border x:Name="RaiaNoAlto" IsVisible="False" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top"
+                        Margin="10,0,0,0" Padding="10,4" CornerRadius="0,0,6,6" Background="{DynamicResource FundoDaColunaDoQuadro}">
+                    <TextBlock x:Name="TextoDaRaiaNoAlto" FontWeight="SemiBold" FontSize="12" />
+                </Border>
+            </Panel>
+        </DockPanel>
 
         <!-- Sem nenhum card: o que é o quadro e como os cards chegam nele. -->
         <TextBlock x:Name="AvisoSemCards" IsVisible="{Binding SemCards}" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"

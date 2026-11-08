@@ -38,6 +38,55 @@ public partial class MenuPrincipalTests
         return a;
     }
 
+    // Bloco 87: com as raias, os cabeçalhos das colunas ficam no alto ao rolar para baixo e seguem a rolagem para o lado; o nome
+    // da raia que passou do alto aparece na etiqueta do canto; uma raia recolhida vira uma linha fina.
+    [Fact]
+    public Task Raias_OsCabecalhosFicamNoAlto_ESeguemARolagemParaOLado() => Tela.Executar(() =>
+    {
+        var a = Abrir();
+        foreach (var etapa in new[] { "Fundação", "Estrutura", "Alvenaria", "Cobertura", "Instalações", "Acabamento" })
+        {
+            var resumo = Ambiente.AdicionarTarefa(a.Vm, etapa, 1);
+            for (var i = 1; i <= 3; i++)
+            {
+                a.Vm.TarefaSelecionada = resumo;
+                a.Vm.AdicionarSubtarefaCommand.Execute(null);
+                a.Vm.TarefaSelecionada!.Nome = $"{etapa} {i}";
+            }
+        }
+        a.Clicar("Exibir", "Kanban");
+        a.Janela.Width = 900; // as quatro colunas (1.138 px) não cabem: o quadro rola para o lado
+        a.Vm.DefinirModoDasRaias(ProjectPlanner.Core.Kanban.ModoDasRaias.PorResumo);
+        Pintar(a);
+        var quadro = a.Janela.QuadroKanban;
+        var rolagem = quadro.FindControl<ScrollViewer>("RolagemDasRaias")!;
+        var cabecalho = quadro.FindControl<ScrollViewer>("CabecalhoDasRaias")!;
+        Border Cabecalho(string nome) => cabecalho.GetVisualDescendants().OfType<Border>()
+            .Single(b => b.Classes.Contains("coluna") && (b.DataContext as ColunaNoKanban)?.Nome == nome);
+        double Topo(Control c) => c.TranslatePoint(new Point(0, 0), quadro)!.Value.Y;
+        var topoAntes = Topo(Cabecalho("A fazer"));
+        (rolagem.Extent.Height > rolagem.Viewport.Height, rolagem.Extent.Width > rolagem.Viewport.Width).Should().Be((true, true), "o quadro rola nos dois sentidos");
+
+        rolagem.Offset = new Vector(180, 700);
+        Pintar(a);
+
+        Topo(Cabecalho("A fazer")).Should().Be(topoAntes, "o cabeçalho não sai do alto");
+        cabecalho.Offset.X.Should().Be(180, "e segue a rolagem para o lado");
+        Cabecalho("A fazer").TranslatePoint(new Point(0, 0), quadro)!.Value.X
+            .Should().BeApproximately(quadro.FindControl<ItemsControl>("ListaDeRaias")!.GetVisualDescendants().OfType<Border>()
+                .First(b => b.Classes.Contains("celula") && b.IsEffectivelyVisible).TranslatePoint(new Point(0, 0), quadro)!.Value.X, 0.5,
+                "alinhado com as células de baixo");
+        (quadro.FindControl<Border>("RaiaNoAlto")!.IsVisible, quadro.FindControl<TextBlock>("TextoDaRaiaNoAlto")!.Text)
+            .Should().Be((true, $"{quadro.RaiaNoAltoAgora!.Nome} · 3 cards"));
+
+        a.Vm.Kanban.RecolherRaiasCommand.Execute(null);
+        rolagem.Offset = new Vector(0, 0);
+        Pintar(a);
+        quadro.FindControl<ItemsControl>("ListaDeRaias")!.GetVisualDescendants().OfType<Border>()
+            .Where(b => b.Classes.Contains("celula") && b.IsEffectivelyVisible).Should().OnlyContain(b => b.Classes.Contains("recolhida") && b.Bounds.Height == 30);
+        quadro.FindControl<Border>("RaiaNoAlto")!.IsVisible.Should().BeFalse();
+    });
+
     [Fact]
     public Task Kanban_PeloMenu_MostraOQuadroNoLugarDaGradeEDoGantt() => Tela.Executar(() =>
     {

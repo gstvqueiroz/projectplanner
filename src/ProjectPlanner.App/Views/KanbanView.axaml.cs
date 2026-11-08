@@ -54,6 +54,13 @@ public partial class KanbanView : UserControl
         AddHandler(PointerCaptureLostEvent, (_, _) => Encerrar(), RoutingStrategies.Bubble);
         AddHandler(KeyDownEvent, TeclaApertada, RoutingStrategies.Tunnel);
         _rolagemDoArraste.Tick += (_, _) => RolarDuranteOArraste();
+        // Bloco 87: os cabeçalhos fixos acompanham a rolagem horizontal das raias (e o contrário, rolando sobre eles).
+        RolagemDasRaias.ScrollChanged += (_, _) => AcompanharRolagemDasRaias();
+        CabecalhoDasRaias.ScrollChanged += (_, _) =>
+        {
+            if (Math.Abs(CabecalhoDasRaias.Offset.X - RolagemDasRaias.Offset.X) > 0.5)
+                RolagemDasRaias.Offset = RolagemDasRaias.Offset.WithX(CabecalhoDasRaias.Offset.X);
+        };
         NovoItemDoChecklist.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter && Vm?.Painel is { } painel)
@@ -74,6 +81,32 @@ public partial class KanbanView : UserControl
     }
 
     private KanbanViewModel? Vm => DataContext as KanbanViewModel;
+
+    /// <summary>
+    /// Bloco 87: com as raias, os cabeçalhos das colunas ficam fora da rolagem vertical e seguem a horizontal; a raia cujo nome já
+    /// passou do alto aparece na etiqueta do canto (o nome e quantos cards).
+    /// </summary>
+    internal void AcompanharRolagemDasRaias()
+    {
+        if (Math.Abs(CabecalhoDasRaias.Offset.X - RolagemDasRaias.Offset.X) > 0.5)
+            CabecalhoDasRaias.Offset = CabecalhoDasRaias.Offset.WithX(RolagemDasRaias.Offset.X);
+        RaiaNoAltoAgora = null;
+        if (Vm is { ComRaias: true } vm)
+            for (var i = 0; i < vm.RaiasNaTela.Count; i++)
+            {
+                if (ListaDeRaias.ContainerFromIndex(i) is not { } raia || raia.TranslatePoint(new Point(0, 0), RolagemDasRaias) is not { } topo)
+                    continue;
+                if (topo.Y > -4)
+                    break; // esta e as de baixo ainda mostram o próprio nome
+                if (topo.Y + raia.Bounds.Height > 24)
+                    RaiaNoAltoAgora = vm.RaiasNaTela[i];
+            }
+        RaiaNoAlto.IsVisible = RaiaNoAltoAgora is not null;
+        TextoDaRaiaNoAlto.Text = RaiaNoAltoAgora is { } r ? $"{r.Nome} · {r.Contagem}" : "";
+    }
+
+    /// <summary>Bloco 87: a raia que está no alto com o nome dela já fora da tela (nula se nenhuma).</summary>
+    internal RaiaNoKanban? RaiaNoAltoAgora { get; private set; }
 
     /// <summary>Se há um arraste de cards em curso.</summary>
     public bool Arrastando => _arrastadas is not null;
@@ -209,7 +242,8 @@ public partial class KanbanView : UserControl
 
     /// <summary>Bloco 77: com o foco no quadro (num card), o Delete exclui; no painel do card e nos filtros, não (E1).</summary>
     internal bool NaAreaDosCards(Visual origem) =>
-        ReferenceEquals(origem, this) || origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Rolagem) || ReferenceEquals(v, RolagemDasRaias));
+        ReferenceEquals(origem, this) || origem.GetSelfAndVisualAncestors().Any(v => ReferenceEquals(v, Rolagem) || ReferenceEquals(v, RolagemDasRaias)
+                                                                               || ReferenceEquals(v, CabecalhoDasRaias));
 
     /// <summary>
     /// Bloco 77: o menu do card (botão direito): Abrir card, Mover para (as colunas), Arquivar e Excluir tarefa, para os
@@ -587,7 +621,7 @@ public partial class KanbanView : UserControl
             return null;
         (CelulaNoKanban Celula, Control Raiz, Rect Area)? alvo = null;
         var menor = double.MaxValue;
-        foreach (var raiz in RolagemDasRaias.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("celula")))
+        foreach (var raiz in RolagemDasRaias.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("celula") && b.IsEffectivelyVisible))
         {
             if (raiz.DataContext is not CelulaNoKanban celula)
                 continue;
